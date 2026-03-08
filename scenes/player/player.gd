@@ -56,8 +56,35 @@ var current_animation: String = FALLBACK_ANIM
 # NODE REFERENCES — resolved at runtime via @onready
 # ══════════════════════════════════════════════════════════════════════════════
 
-@onready var _sprite: AnimatedSprite3D      = $AnimatedSprite3D
+@onready var _sprite: AnimatedSprite3D        = $AnimatedSprite3D
 @onready var _sync:   MultiplayerSynchronizer = $MultiplayerSynchronizer
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BUILDING SYSTEM — private state
+# ══════════════════════════════════════════════════════════════════════════════
+
+## How wide/long/tall a placed stone brick is, in world-units.
+## Proportions deliberately wider and longer than tall (realistic masonry).
+const BLOCK_SIZE := Vector3(2.0, 0.8, 1.0)
+
+## Grid cell size governs snapping.  X and Z snap to BLOCK_SIZE.x / BLOCK_SIZE.z.
+const GRID_SNAP_X := 2.0   # matches BLOCK_SIZE.x
+const GRID_SNAP_Z := 1.0   # matches BLOCK_SIZE.z
+
+## Y-offset so the block sits on top of the ground plane (y = 0).
+## Half the block height, because the mesh origin is centred.
+const BLOCK_Y := BLOCK_SIZE.y * 0.5   # = 0.4
+
+## Stone-grey material colour.
+const STONE_COLOR := Color(0.55, 0.52, 0.48)
+
+## The ghost (preview) node, created once and reused every frame.
+var _ghost: MeshInstance3D = null
+
+## True while the RMB is held (stone-throw charge); we skip placement then.
+## (Populated by the combat system when it exists — defaulting false for now.)
+var _charging_throw: bool = false
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -67,6 +94,7 @@ var current_animation: String = FALLBACK_ANIM
 func _ready() -> void:
 	_setup_multiplayer_sync()
 	_resolve_camera()
+	_init_building_system()
 
 
 func _setup_multiplayer_sync() -> void:
@@ -292,3 +320,167 @@ func _apply_remote_animation() -> void:
 		return
 	if _sprite.sprite_frames != null and _sprite.sprite_frames.has_animation(current_animation):
 		_sprite.play(current_animation)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BUILDING SYSTEM
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Flow:
+#   _init_building_system()    — called once from _ready()
+#   _update_ghost_block()      — called every _process() frame (authority only)
+#   _unhandled_input()         — fires _place_block() on LMB just-pressed
+#   _place_block(grid_pos)     — instances the real block into the scene
+#
+# The ghost and placed blocks are added to get_tree().current_scene (the
+# running main scene Node3D), NOT to get_tree().root (the Window).
+# Adding 3D nodes to the Window root works but puts them outside the scene's
+# world node, which breaks environment, lighting, and scene-save logic.
+# ─────────────────────────────────────────────────────────────────────────────
+
+func _init_building_system() -> void:
+	## Create the ghost (preview) MeshInstance3D once and park it off-screen.
+	## Only the authority player gets a ghost — remote players never see it.
+	if not is_multiplayer_authority():
+		return
+
+	_ghost = MeshInstance3D.new()
+	_ghost.name = "GhostBlock"
+
+	# Brick-proportioned box mesh — same dimensions as the real placed block.
+	var mesh := BoxMesh.new()
+	mesh.size = BLOCK_SIZE
+	_ghost.mesh = mesh
+
+	# Semi-transparent blue-white preview material.
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.6, 0.8, 1.0, 0.45)
+	mat.transparency  = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode  = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_ghost.material_override = mat
+
+	# Disable the ghost's own shadow so it doesn't cast a confusing preview shadow.
+	_ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	# Start invisible until a valid ground position is under the cursor.
+	_ghost.visible = false
+
+	# Add to the running scene, not to the Window root.
+	get_tree().current_scene.add_child(_ghost)
+
+
+func _process(_delta: float) -> void:
+	if not is_multiplayer_authority():
+		return
+	_update_ghost_block()
+
+
+func _update_ghost_block() -> void:
+	## Casts a ray from the camera through the mouse cursor and snaps the
+	## ghost block to the nearest grid cell on the y = 0 ground plane.
+	## Hides the ghost when the cursor is not over the ground.
+
+	if _ghost == null or _camera == null:
+		return
+
+	var viewport := get_viewport()
+	var mouse_pos := viewport.get_mouse_position()
+
+	# Build a ray from the camera through the cursor into the 3D world.
+	var ray_origin := _camera.project_ray_origin(mouse_pos)
+	var ray_dir    := _camera.project_ray_normal(mouse_pos)
+
+	# Intersect with the y = 0 plane analytically (no physics query needed).
+	# Ray: P = ray_origin + t * ray_dir   →  solve for ray_origin.y + t*ray_dir.y = 0
+	if abs(ray_dir.y) < 0.001:
+		# Ray is nearly parallel to the ground plane — hide ghost.
+		_ghost.visible = false
+		return
+
+	var t := -ray_origin.y / ray_dir.y
+	if t < 0.0:
+		# Intersection is behind the camera.
+		_ghost.visible = false
+		return
+
+	var hit := ray_origin + ray_dir * t   # world-space XZ hit point, y ≈ 0
+
+	# Snap X and Z to the brick grid independently (bricks are not square).
+	var snapped_x := snappedf(hit.x, GRID_SNAP_X)
+	var snapped_z := snappedf(hit.z, GRID_SNAP_Z)
+
+	_ghost.global_position = Vector3(snapped_x, BLOCK_Y, snapped_z)
+	_ghost.visible = true
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	## LMB just-pressed → place block.
+	## Using _unhandled_input (not _input) so UI controls that consume click
+	## events (buttons, menus) block placement correctly.
+	##
+	## "mouse_left" is NOT defined in project.godot's input map, so we check
+	## the raw mouse button rather than a named action.
+
+	if not is_multiplayer_authority():
+		return
+
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			# Don't place a block while the RMB throw-charge is active.
+			if _charging_throw:
+				return
+			if _ghost != null and _ghost.visible:
+				_place_block(_ghost.global_position)
+
+
+func _place_block(snapped_world_pos: Vector3) -> void:
+	## Instances a solid stone-brick block at `snapped_world_pos` and adds it
+	## to the running scene so all players can walk on it.
+	##
+	## The block is a plain Node3D containing:
+	##   MeshInstance3D      — visual
+	##   StaticBody3D        → CollisionShape3D  — physics (players can walk on top)
+
+	var grid_x := int(round(snapped_world_pos.x / GRID_SNAP_X))
+	var grid_z := int(round(snapped_world_pos.z / GRID_SNAP_Z))
+
+	# ── Root container ────────────────────────────────────────────────────────
+	var block := Node3D.new()
+	block.name = "Block_%d_%d" % [grid_x, grid_z]
+	block.global_position = snapped_world_pos
+
+	# ── Visual mesh ───────────────────────────────────────────────────────────
+	var mesh_inst := MeshInstance3D.new()
+	mesh_inst.name = "Mesh"
+
+	var box := BoxMesh.new()
+	box.size = BLOCK_SIZE
+	mesh_inst.mesh = box
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color   = STONE_COLOR
+	# Roughness gives the surface a matte, carved-stone feel.
+	mat.roughness      = 0.85
+	mat.metallic       = 0.0
+	mesh_inst.material_override = mat
+
+	block.add_child(mesh_inst)
+
+	# ── Collision (StaticBody3D + CollisionShape3D) ───────────────────────────
+	var body := StaticBody3D.new()
+	body.name = "Body"
+
+	var col := CollisionShape3D.new()
+	col.name = "Shape"
+	var shape := BoxShape3D.new()
+	shape.size = BLOCK_SIZE        # collision volume matches visual exactly
+	col.shape = shape
+
+	body.add_child(col)
+	block.add_child(body)
+
+	# ── Add to scene ──────────────────────────────────────────────────────────
+	# current_scene is the running main scene Node3D — the correct owner for
+	# persistent world geometry.  Never use get_tree().root (the Window node).
+	get_tree().current_scene.add_child(block)
