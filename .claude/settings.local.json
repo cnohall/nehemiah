@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Godot/**)",
+      "Bash(certutil -hashfile \"c:/Godot/steam_api64.dll\" SHA256)",
+      "Bash(certutil -hashfile \"c:/Programming/nehemiah/addons/godotsteam/win64/steam_api64.dll\" SHA256)",
+      "Bash(certutil -hashfile \"c:/Programming/nehemiah/steam_api64.dll\" SHA256)",
+      "Bash(xargs cat)",
+      "Bash(xxd /c/Programming/nehemiah/steam_appid.txt)",
+      "Bash(powershell.exe -Command \"reg query ''HKCU\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\AppCompatFlags\\\\Layers'' 2>&1\")",
+      "Bash(powershell.exe -Command \"reg query ''HKLM\\\\Software\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\AppCompatFlags\\\\Layers'' 2>&1\")",
+      "Read(//dev/**)",
+      "Bash(xxd \"C:/Godot/steam_appid.txt\")",
+      "Bash(xxd \"c:/Programming/nehemiah/steam_appid.txt\")",
+      "Read(//c/Program Files \\(x86\\)/Steam/logs/**)",
+      "Read(//c/Program Files/Steam/**)",
+      "Bash(tail -50 \"C:/Program Files \\(x86\\)/Steam/logs/gameprocess_log.txt\")",
+      "Bash(tail -100 \"C:/Program Files \\(x86\\)/Steam/logs/console_log.txt\")",
+      "Bash(powershell -command \"\\(Get-Item ''c:/Programming/nehemiah/addons/godotsteam/win64/steam_api64.dll''\\).VersionInfo | Select-Object FileVersion, ProductVersion\")",
+      "Bash(powershell -command \"\\(Get-Item ''C:/Program Files \\(x86\\)/Steam/steam_api64.dll''\\).VersionInfo | Select-Object FileVersion, ProductVersion\")",
+      "Read(//c/Program Files \\(x86\\)/Steam/bin/**)"
+    ]
+  }
+}

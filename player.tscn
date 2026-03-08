@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://boqp7a8va63hp"]
+
+[ext_resource type="Script" uid="uid://b7vt7wyvxjg4x" path="res://player.gd" id="1_4flbx"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_onrkg"]
+radius = 0.35
+height = 1.6
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_i3pqv"]
+properties/0/path = NodePath(".:global_position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:current_animation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_4flbx"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_player"]
+albedo_color = Color(0.72, 0.53, 0.35, 1)
+
+[node name="Player" type="CharacterBody3D" unique_id=993794756]
+script = ExtResource("1_4flbx")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1756234614]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CapsuleShape3D_onrkg")
+
+[node name="AnimatedSprite3D" type="AnimatedSprite3D" parent="." unique_id=362270476]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+billboard = 2
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=720147181]
+root_path = NodePath("..")
+replication_config = SubResource("SceneReplicationConfig_i3pqv")
+replication_interval = 0.05
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=240187078]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("CapsuleMesh_4flbx")
+surface_material_override/0 = SubResource("StandardMaterial3D_player")

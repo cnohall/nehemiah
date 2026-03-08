@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://kl2ub4po0hoj"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_maingd"]
+[ext_resource type="PackedScene" uid="uid://boqp7a8va63hp" path="res://player.tscn" id="2_player"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.55, 0.45, 0.30, 1)
+
+[node name="Main" type="Node3D" unique_id=1563412225]
+script = ExtResource("1_maingd")
+
+[node name="Floor" type="CSGBox3D" parent="." unique_id=1687261339]
+use_collision = true
+size = Vector3(20, 1, 20)
+material = SubResource("StandardMaterial3D_floor")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=843850505]
+transform = Transform3D(0.7071068, -0.5, 0.5, 0, 0.7071068, 0.7071068, -0.7071068, -0.5, 0.5, 6, 10, 6)
+projection = 1
+size = 10.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1511204832]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7745576, 0)
+shadow_enabled = true
+
+[node name="Players" type="Node3D" parent="." unique_id=1000000001]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=1000000002]
+spawn_path = NodePath("Players")
+spawn_limit = 0
+auto_spawning = false
+_spawnable_scenes/0 = "res://player.tscn"
