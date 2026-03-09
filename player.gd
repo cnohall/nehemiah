@@ -56,6 +56,18 @@ var _ghost_block: MeshInstance3D = null
 var _blocks_container: Node3D = null
 var _building_rotation: float = 0.0
 
+## Combat System
+var _is_charging: bool = false
+var _throw_power: float = 0.0
+var _reload_timer: float = 0.0
+const MAX_THROW_POWER: float = 50.0  # Much faster projectiles
+const CHARGE_SPEED: float = 40.0     # Reaches max faster
+const RELOAD_TIME: float = 0.5       # Snappier reload
+
+## HUD & Targeting
+var _power_bar: ProgressBar = null
+var _target_mesh: MeshInstance3D = null
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # REPLICATED STATE
@@ -79,9 +91,12 @@ var current_animation: String = FALLBACK_ANIM
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _ready() -> void:
+	add_to_group("players")
 	_setup_multiplayer_sync()
 	_resolve_camera()
 	_init_building_system()
+	_init_hud()
+	_init_targeter()
 
 
 func _setup_multiplayer_sync() -> void:
@@ -101,18 +116,74 @@ func _resolve_camera() -> void:
 		)
 
 
+func _init_hud() -> void:
+	## Only create HUD elements for the local player.
+	if not is_multiplayer_authority():
+		return
+	
+	var canvas := CanvasLayer.new()
+	add_child(canvas)
+	
+	# Simple progress bar that will show charge power.
+	_power_bar = ProgressBar.new()
+	_power_bar.custom_minimum_size = Vector2(200, 20)
+	_power_bar.show_percentage = false
+	_power_bar.max_value = MAX_THROW_POWER
+	_power_bar.visible = false
+	
+	# Position it at the bottom center of the screen.
+	_power_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_power_bar.position.y -= 100 # Move it up slightly from the very bottom
+	_power_bar.position.x -= 100 # Center it (half of width)
+	
+	# Style the bar to match the stone theme.
+	var style_bg := StyleBoxFlat.new()
+	style_bg.bg_color = Color(0.1, 0.1, 0.1, 0.5)
+	_power_bar.add_theme_stylebox_override("background", style_bg)
+	
+	var style_fill := StyleBoxFlat.new()
+	style_fill.bg_color = Color(0.9, 0.7, 0.2) # Gold/Stone-ish
+	_power_bar.add_theme_stylebox_override("fill", style_fill)
+	
+	canvas.add_child(_power_bar)
+
+
+func _init_targeter() -> void:
+	if not is_multiplayer_authority():
+		return
+		
+	_target_mesh = MeshInstance3D.new()
+	var ring := CylinderMesh.new()
+	ring.top_radius = 0.4
+	ring.bottom_radius = 0.4
+	ring.height = 0.05
+	_target_mesh.mesh = ring
+	
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1, 0, 0, 0.4)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_target_mesh.material_override = mat
+	_target_mesh.visible = false
+	
+	get_tree().current_scene.add_child.call_deferred(_target_mesh)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # PROCESS
 # ══════════════════════════════════════════════════════════════════════════════
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if is_multiplayer_authority():
 		_update_ghost_block()
+		_update_combat(delta)
 
 
 func _exit_tree() -> void:
 	if is_instance_valid(_ghost_block):
 		_ghost_block.queue_free()
+	if is_instance_valid(_target_mesh):
+		_target_mesh.queue_free()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -313,17 +384,11 @@ func _init_building_system() -> void:
 
 
 func _update_ghost_block() -> void:
-	if _ghost_block == null or _camera == null:
+	if _ghost_block == null or _camera == null or _is_charging:
+		if _ghost_block: _ghost_block.visible = false
 		return
 
-	var mouse_pos := get_viewport().get_mouse_position()
-	var ray_origin := _camera.project_ray_origin(mouse_pos)
-	var ray_dir    := _camera.project_ray_normal(mouse_pos)
-
-	var space_state := get_world_3d().direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_origin + ray_dir * 1000.0)
-	var result := space_state.intersect_ray(query)
-
+	var result := _get_ground_hit()
 	if result.is_empty():
 		_ghost_block.visible = false
 		return
@@ -343,6 +408,27 @@ func _update_ghost_block() -> void:
 	_ghost_block.visible = true
 
 
+func _get_ground_hit() -> Dictionary:
+	## Shared helper for building and combat to find where the mouse is pointing on the floor.
+	if _camera == null: return {}
+	
+	var mouse_pos := get_viewport().get_mouse_position()
+	var ray_origin := _camera.project_ray_origin(mouse_pos)
+	var ray_dir    := _camera.project_ray_normal(mouse_pos)
+
+	var space_state := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_origin + ray_dir * 1000.0)
+	
+	# Detect Floor, Blocks, AND Enemies (assuming layer 1, 2, 4)
+	query.collision_mask = 1 | 2 | 4 
+	
+	# CRITICAL: Exclude the local player so we can shoot "through" our own head
+	# when aiming toward the top of the screen.
+	query.exclude = [get_rid()]
+	
+	return space_state.intersect_ray(query)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_multiplayer_authority():
 		return
@@ -352,6 +438,98 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
+		
+		# LMB -> Place Block
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			if _ghost_block != null and _ghost_block.visible:
+			if not _is_charging and _ghost_block != null and _ghost_block.visible:
 				get_tree().current_scene.request_place_block.rpc_id(1, _ghost_block.global_position, _building_rotation)
+		
+		# RMB -> Charge Throw
+		if mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				_start_charging()
+			else:
+				_release_throw()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COMBAT SYSTEM
+# ══════════════════════════════════════════════════════════════════════════════
+
+func _start_charging() -> void:
+	if _reload_timer > 0.0:
+		return # Still reloading
+		
+	_is_charging = true
+	_throw_power = 10.0 # Start with some base oomph
+	
+	if _power_bar:
+		_power_bar.visible = true
+		_power_bar.value = _throw_power
+	
+	if _target_mesh:
+		_target_mesh.visible = true
+
+func _release_throw() -> void:
+	if not _is_charging:
+		return
+	
+	_is_charging = false
+	if _power_bar:
+		_power_bar.visible = false
+	if _target_mesh:
+		_target_mesh.visible = false
+	
+	if _camera == null:
+		return
+
+	# Intersect the camera ray with the y=0 ground plane geometrically.
+	# Using physics (_get_ground_hit) can hit stale stones on the ground
+	# and corrupt the aim direction.
+	var mouse_pos := get_viewport().get_mouse_position()
+	var ray_origin := _camera.project_ray_origin(mouse_pos)
+	var ray_dir    := _camera.project_ray_normal(mouse_pos)
+
+	var world_dir_flat: Vector3
+	if ray_dir.y < -0.001:
+		var t := -ray_origin.y / ray_dir.y
+		var ground_point := ray_origin + ray_dir * t
+		world_dir_flat = Vector3(ground_point.x - global_position.x, 0.0, ground_point.z - global_position.z).normalized()
+	else:
+		# Aimed at or above the horizon — use horizontal component of the ray.
+		world_dir_flat = Vector3(ray_dir.x, 0.0, ray_dir.z).normalized()
+
+	var spawn_pos := global_position + Vector3(0, 1.8, 0)
+	var final_dir := (world_dir_flat + Vector3(0, 0.2, 0)).normalized()
+	
+	get_tree().current_scene.request_throw_stone.rpc_id(1, spawn_pos, final_dir, _throw_power, get_path())
+	
+	_throw_power = 0.0
+	_reload_timer = RELOAD_TIME
+
+func _update_combat(delta: float) -> void:
+	# Handle reload cooldown
+	if _reload_timer > 0.0:
+		_reload_timer = max(0.0, _reload_timer - delta)
+		if _reload_timer > 0.0:
+			_sprite.modulate = Color(0.7, 0.7, 0.7)
+		else:
+			_sprite.modulate = Color.WHITE
+
+	# Handle charging
+	if _is_charging:
+		_throw_power = min(_throw_power + CHARGE_SPEED * delta, MAX_THROW_POWER)
+		if _power_bar:
+			_power_bar.value = _throw_power
+			if _throw_power >= MAX_THROW_POWER:
+				_power_bar.modulate = Color.RED if Engine.get_frames_drawn() % 10 < 5 else Color.WHITE
+			else:
+				_power_bar.modulate = Color.WHITE
+		
+		# Update targeter position
+		var result := _get_ground_hit()
+		if not result.is_empty() and _target_mesh:
+			_target_mesh.global_position = result.position + Vector3(0, 0.1, 0)
+			_target_mesh.visible = true
+		elif _target_mesh:
+			_target_mesh.visible = false

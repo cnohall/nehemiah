@@ -4,10 +4,12 @@ extends Node3D
 const PLAYER_SCENE: PackedScene = preload("res://player.tscn")
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/enemy.tscn")
 const BLOCK_SCENE: PackedScene = preload("res://scenes/building_block/building_block.tscn")
+const STONE_SCENE: PackedScene = preload("res://scenes/player/stone.tscn")
 
 @onready var _players: Node3D  = $Players
 @onready var _enemies: Node3D  = $Enemies
 @onready var _blocks:  Node3D  = $Blocks
+@onready var _stones:  Node3D  = $Stones
 @onready var _camera:  Camera3D = $Camera3D
 @onready var _nav_region: NavigationRegion3D = $NavigationRegion3D
 @onready var _spawn_timer: Timer = $EnemySpawnTimer
@@ -148,6 +150,27 @@ func _receive_roster(player_ids: Array, block_data: Array) -> void:
 		_spawn_player(int(id))
 	for data in block_data:
 		do_place_block(data.pos, data.rot)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COMBAT SYSTEM RPCs
+# ══════════════════════════════════════════════════════════════════════════════
+
+@rpc("any_peer", "call_local", "reliable")
+func request_throw_stone(origin: Vector3, direction: Vector3, power: float, thrower_path: NodePath = NodePath("")) -> void:
+	if not multiplayer.is_server():
+		return
+	
+	var stone := STONE_SCENE.instantiate() as RigidBody3D
+	stone.position = origin
+	_stones.add_child(stone, true)
+
+	# set_thrower must be called AFTER add_child so the stone is in the scene
+	# tree and get_node_or_null can resolve the absolute thrower path.
+	if stone.has_method("set_thrower"):
+		stone.set_thrower(thrower_path)
+
+	var impulse = direction.normalized() * power
+	stone.apply_central_impulse(impulse)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SPAWN HELPER
