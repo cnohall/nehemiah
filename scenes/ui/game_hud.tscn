@@ -1,0 +1,239 @@
+[gd_scene load_steps=6 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.15, 0.12, 0.1, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.35, 0.3, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health"]
+bg_color = Color(0.7, 0.15, 0.15, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9, 0.3, 0.3, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_power"]
+bg_color = Color(0.8, 0.6, 0.1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.8, 0.4, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.2, 0.18, 0.15, 0.9)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.5, 0.45, 0.4, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_size = 4
+shadow_offset = Vector2(2, 2)
+
+[sub_resource type="GDScript" id="GDScript_1"]
+script/source = "extends CanvasLayer
+
+@onready var health_bar = $TopLeft/HealthBar
+@onready var wave_label = $TopRight/WaveLabel
+@onready var progress_label = $TopRight/ProgressLabel
+@onready var pause_menu = $PauseMenu
+@onready var power_bar = $BottomCenter/PowerBar
+
+var _target_health: float = 100.0
+var _target_power: float = 0.0
+
+func _ready():
+	pause_menu.visible = false
+	power_bar.visible = false
+	health_bar.value = 100.0
+
+func _process(delta: float):
+	health_bar.value = lerp(health_bar.value, _target_health, 10.0 * delta)
+	power_bar.value = lerp(power_bar.value, _target_power, 15.0 * delta)
+	
+	if power_bar.visible and _target_power <= 0.1 and power_bar.value <= 0.1:
+		power_bar.visible = false
+
+func update_health(val: float):
+	_target_health = val
+
+func update_wave(wave: int):
+	wave_label.text = \"WAVE: %d\" % wave
+	_punch_label(wave_label)
+
+func update_progress(current: int, target: int):
+	progress_label.text = \"WALLS: %d/%d\" % [current, target]
+	_punch_label(progress_label)
+
+func _punch_label(label: Label):
+	var tween = create_tween()
+	tween.tween_property(label, \"scale\", Vector2(1.2, 1.2), 0.1)
+	tween.tween_property(label, \"scale\", Vector2(1.0, 1.0), 0.1)
+
+func toggle_pause(should_pause: bool):
+	pause_menu.visible = should_pause
+	if should_pause:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func update_power(val: float, max_val: float):
+	power_bar.max_value = max_val
+	_target_power = val
+	if val > 0:
+		power_bar.visible = true
+"
+
+[node name="GameHUD" type="CanvasLayer"]
+script = SubResource("GDScript_1")
+
+[node name="TopLeft" type="VBoxContainer" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 220.0
+offset_bottom = 60.0
+
+[node name="Label" type="Label" parent="TopLeft"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "HEALTH"
+
+[node name="HealthBar" type="ProgressBar" parent="TopLeft"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_health")
+value = 100.0
+show_percentage = false
+
+[node name="TopRight" type="VBoxContainer" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 72.0
+grow_horizontal = 0
+
+[node name="WaveLabel" type="Label" parent="TopRight"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "WAVE: 0"
+horizontal_alignment = 2
+pivot_offset = Vector2(200, 13)
+
+[node name="ProgressLabel" type="Label" parent="TopRight"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "WALLS: 0/50"
+horizontal_alignment = 2
+pivot_offset = Vector2(200, 13)
+
+[node name="BottomLeft" type="PanelContainer" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -200.0
+offset_right = 200.0
+offset_bottom = -20.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="BottomLeft"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Label" type="Label" parent="BottomLeft/Margin"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = " CONTROLS 
+ WASD: Move 
+ SPACE: Jump 
+ R: Rotate Block 
+ LMB: Place Block 
+ RMB: Charge Throw 
+ SCROLL: Zoom 
+ ESC: Menu "
+
+[node name="BottomCenter" type="CenterContainer" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -120.0
+offset_right = 100.0
+offset_bottom = -100.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="PowerBar" type="ProgressBar" parent="BottomCenter"]
+custom_minimum_size = Vector2(200, 15)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_power")
+show_percentage = false
+
+[node name="PauseMenu" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="PauseMenu"]
+custom_minimum_size = Vector2(250, 180)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="PauseMenu/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Label" type="Label" parent="PauseMenu/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="ResumeBtn" type="Button" parent="PauseMenu/Panel/VBox"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "RESUME"
+
+[node name="QuitBtn" type="Button" parent="PauseMenu/Panel/VBox"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "QUIT"

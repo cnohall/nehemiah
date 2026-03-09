@@ -23,6 +23,8 @@ height = 1.0
 radius = 0.6
 
 [node name="Enemy" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 3
 script = ExtResource("1_script")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
@@ -42,6 +44,7 @@ replication_config = SubResource("SceneReplicationConfig_1")
 
 [node name="AttackArea" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+collision_mask = 3
 monitorable = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="AttackArea"]
