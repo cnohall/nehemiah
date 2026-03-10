@@ -324,10 +324,19 @@ func _on_temple_breached(body: Node) -> void:
 func _end_game(win: bool) -> void:
 	is_game_over = true
 	if _wave_manager: _wave_manager.is_active = false
-	var msg = "VICTORY!" if win else "DEFEAT!"
-	_spawn_floating_text.rpc(Vector3(0, 5, 0), msg, Color.GOLD if win else Color.RED, 5.0)
 	add_shake(0.5)
 	_update_global_hud()
+	var day: int = _wave_manager.current_wave if is_instance_valid(_wave_manager) else 0
+	_show_game_over_screen.rpc(win, day)
+
+@rpc("authority", "call_local", "reliable")
+func _show_game_over_screen(win: bool, day: int) -> void:
+	for player in _players.get_children():
+		if player.is_multiplayer_authority():
+			var hud = player.get("_hud")
+			if hud and hud.has_method("show_game_over"):
+				hud.show_game_over(win, day)
+			return
 
 @rpc("authority", "call_local", "reliable")
 func _spawn_floating_text(pos: Vector3, text: String, color: Color, dur: float = 1.5) -> void:
@@ -407,13 +416,7 @@ func request_place_block(snapped_world_pos: Vector3, rotation_y: float) -> void:
 	player.stones_carried -= 1
 	if player.has_method("sync_stones_to_hud"):
 		player.sync_stones_to_hud()
-	_spawn_floating_text.rpc(
-		snapped_world_pos + Vector3(0, 1.5, 0),
-		"Building...", Color(0.85, 0.92, 1.0), 2.0
-	)
-	get_tree().create_timer(2.0).timeout.connect(
-		func(): do_place_block.rpc(snapped_world_pos, rotation_y)
-	)
+	do_place_block.rpc(snapped_world_pos, rotation_y)
 
 @rpc("authority", "call_local", "reliable")
 func do_place_block(snapped_world_pos: Vector3, rotation_y: float) -> void:

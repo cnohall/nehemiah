@@ -30,6 +30,20 @@ const BLUEPRINT_SNAP_RANGE: float = 3.5
 var stones_carried: int = 0
 const MAX_STONES: int = 5
 
+## Stamina System
+var stamina: float = 100.0
+const MAX_STAMINA: float = 100.0
+const SPRINT_SPEED_MULT: float = 1.6
+const SPRINT_STAMINA_DRAIN: float = 30.0
+const STAMINA_REGEN_RATE: float = 20.0
+const PLACE_STAMINA_COST: float = 20.0
+
+## Place System
+var _lmb_held: bool = false
+var _is_placing: bool = false
+var _place_timer: float = 0.0
+const PLACE_DURATION: float = 2.0
+
 ## Combat System
 var _is_charging: bool = false
 var _throw_power: float = 0.0
@@ -111,9 +125,10 @@ func _play_death_effect() -> void:
 func respawn(spawn_pos: Vector3) -> void:
 	if not multiplayer.is_server():
 		return
-		
+
 	health = 100.0
 	_is_dead = false
+	stamina = MAX_STAMINA
 	global_position = spawn_pos
 	_do_respawn.rpc(spawn_pos)
 
@@ -121,10 +136,12 @@ func respawn(spawn_pos: Vector3) -> void:
 func _do_respawn(spawn_pos: Vector3) -> void:
 	_is_dead = false
 	health = 100.0
+	stamina = MAX_STAMINA
 	global_position = spawn_pos
 	visible = true
-	if _hud: 
+	if _hud:
 		_hud.update_health(100.0)
+		_hud.update_stamina(MAX_STAMINA)
 		_hud.get_node("PauseMenu").visible = false
 
 func _process(delta: float) -> void:
@@ -132,6 +149,7 @@ func _process(delta: float) -> void:
 	if _is_dead: return
 	
 	_update_ghost_block()
+	_update_placing(delta)
 	_update_combat(delta)
 
 func _physics_process(delta: float) -> void:
@@ -154,13 +172,24 @@ func _physics_process(delta: float) -> void:
 		velocity.y = jump_force
 
 	var move_dir := _get_isometric_input()
+	var sprinting := Input.is_key_pressed(KEY_SHIFT) and move_dir != Vector3.ZERO and stamina > 0.0
+	var effective_speed := move_speed * (SPRINT_SPEED_MULT if sprinting else 1.0)
+
+	if sprinting:
+		stamina = maxf(0.0, stamina - SPRINT_STAMINA_DRAIN * delta)
+	else:
+		stamina = minf(MAX_STAMINA, stamina + STAMINA_REGEN_RATE * delta)
+
+	if _hud:
+		_hud.update_stamina(stamina)
+
 	if move_dir != Vector3.ZERO:
-		velocity.x = move_dir.x * move_speed
-		velocity.z = move_dir.z * move_speed
+		velocity.x = move_dir.x * effective_speed
+		velocity.z = move_dir.z * effective_speed
 		_update_walk_animation(move_dir)
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, move_speed)
-		velocity.z = move_toward(velocity.z, 0.0, move_speed)
+		velocity.x = move_toward(velocity.x, 0.0, effective_speed)
+		velocity.z = move_toward(velocity.z, 0.0, effective_speed)
 		_update_idle_animation()
 
 	move_and_slide()
@@ -304,16 +333,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			if not _is_charging and _ghost_block != null and _ghost_block.visible:
-				if global_position.distance_to(_ghost_block.global_position) <= MAX_PLACE_DISTANCE:
-					if stones_carried > 0:
-						# Use ghost block's rotation (may be blueprint-snapped)
-						get_tree().current_scene.request_place_block.rpc_id(
-							1, _ghost_block.global_position, _ghost_block.rotation.y
-						)
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			_lmb_held = mb.pressed
+			if not mb.pressed:
+				_cancel_place()
 		if mb.button_index == MOUSE_BUTTON_RIGHT:
-			if mb.pressed: _start_charging()
+			if mb.pressed and not _is_placing: _start_charging()
 			else: _release_throw()
 
 func _toggle_pause(should_pause: bool) -> void:
@@ -372,6 +397,37 @@ func _release_throw() -> void:
 	get_tree().current_scene.request_throw_stone.rpc_id(1, spawn_pos, final_dir, _throw_power, get_path())
 	_throw_power = 0.0
 	_reload_timer = RELOAD_TIME
+
+func _update_placing(delta: float) -> void:
+	if not _lmb_held or _is_charging or _is_dead:
+		if _is_placing: _cancel_place()
+		return
+
+	var ghost_valid := _ghost_block != null and _ghost_block.visible
+	var in_range := ghost_valid and global_position.distance_to(_ghost_block.global_position) <= MAX_PLACE_DISTANCE
+	var can_place := in_range and stones_carried > 0 and stamina >= PLACE_STAMINA_COST
+
+	if not can_place:
+		if _is_placing: _cancel_place()
+		return
+
+	_is_placing = true
+	_place_timer = minf(_place_timer + delta, PLACE_DURATION)
+	if _hud: _hud.update_place(_place_timer, PLACE_DURATION)
+
+	if _place_timer >= PLACE_DURATION:
+		stamina -= PLACE_STAMINA_COST
+		if _hud: _hud.update_stamina(stamina)
+		get_tree().current_scene.request_place_block.rpc_id(
+			1, _ghost_block.global_position, _ghost_block.rotation.y
+		)
+		_lmb_held = false
+		_cancel_place()
+
+func _cancel_place() -> void:
+	_is_placing = false
+	_place_timer = 0.0
+	if _hud: _hud.update_place(0.0, PLACE_DURATION)
 
 func _update_combat(delta: float) -> void:
 	if _reload_timer > 0.0:
