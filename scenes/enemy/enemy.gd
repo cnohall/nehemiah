@@ -4,10 +4,13 @@ extends CharacterBody3D
 @export var damage: float = 10.0
 @export var health: float = 25.0
 @export var player_aggro_range: float = 8.0
+@export var mesh_color: Color = Color(1, 0, 0)
+@export var body_scale: float = 1.0
 
 @onready var _nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var _attack_area: Area3D = $AttackArea
 @onready var _attack_timer: Timer = $AttackTimer
+@onready var _mesh: MeshInstance3D = $MeshInstance3D
 
 var _target: Node3D = null
 var _health_bar: Sprite3D = null
@@ -18,13 +21,24 @@ const HEALTH_BAR_SHOW_TIME: float = 3.0
 func _ready() -> void:
 	add_to_group("enemies")
 	_init_health_bar()
-	
+	_apply_visuals()
+
 	if not multiplayer.is_server():
 		set_physics_process(false)
 		return
 	
 	_attack_timer.timeout.connect(_on_attack_timer_timeout)
 	_find_new_target()
+
+func _apply_visuals() -> void:
+	if not is_instance_valid(_mesh): return
+	var mat := _mesh.get_surface_override_material(0)
+	if mat:
+		var dup := mat.duplicate() as StandardMaterial3D
+		dup.albedo_color = mesh_color
+		_mesh.set_surface_override_material(0, dup)
+	if body_scale != 1.0:
+		_mesh.scale = Vector3(body_scale, body_scale, body_scale)
 
 func _init_health_bar() -> void:
 	_health_bar = Sprite3D.new()

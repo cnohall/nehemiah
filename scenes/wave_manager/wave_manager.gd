@@ -7,7 +7,9 @@ signal enemy_spawned(enemy: Node3D)
 
 const MAX_DAYS: int = 52
 
-@export var enemy_scene: PackedScene
+@export var enemy_scene: PackedScene   ## Scout (default)
+@export var brute_scene: PackedScene   ## Brute: slow, tanky, targets blocks
+@export var raider_scene: PackedScene  ## Raider: fast, fragile, targets players
 @export var spawn_timer: Timer
 
 var current_wave: int = 0
@@ -39,8 +41,24 @@ func _on_spawn_timer_timeout() -> void:
 	else:
 		spawn_timer.stop()
 
+func _pick_enemy_scene() -> PackedScene:
+	var roll := randf()
+	if current_wave <= 8 or brute_scene == null:
+		return enemy_scene
+	elif current_wave <= 20:
+		return brute_scene if roll < 0.30 else enemy_scene
+	elif current_wave <= 35:
+		if raider_scene and roll < 0.20: return raider_scene
+		if roll < 0.60: return brute_scene
+		return enemy_scene
+	else:
+		if raider_scene and roll < 0.40: return raider_scene
+		if roll < 0.80: return brute_scene
+		return enemy_scene
+
 func _spawn_enemy() -> void:
-	var enemy = enemy_scene.instantiate()
+	var scene := _pick_enemy_scene()
+	var enemy = scene.instantiate()
 	var angle := randf() * PI * 2.0
 	var radius := 55.0
 	enemy.position = Vector3(cos(angle) * radius, 0.5, sin(angle) * radius)
