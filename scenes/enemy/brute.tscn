@@ -9,3 +9,4 @@ health = 80.0
 player_aggro_range = 0.0
 mesh_color = Color(0.35, 0.28, 0.18, 1)
 body_scale = 1.5
+gold_value = 5

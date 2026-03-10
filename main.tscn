@@ -78,6 +78,8 @@ directional_shadow_mode = 1
 
 [node name="Stones" type="Node3D" parent="."]
 
+[node name="Shekels" type="Node3D" parent="."]
+
 [node name="Enemies" type="Node3D" parent="."]
 
 [node name="EnemySpawnTimer" type="Timer" parent="."]

@@ -76,7 +76,8 @@ func _on_body_entered(body: Node) -> void:
 	var speed := linear_velocity.length()
 	if body.has_method("take_damage"):
 		if speed >= MIN_HIT_SPEED:
-			body.take_damage(speed * damage_per_speed)
+			var dmg_mult: float = get_tree().current_scene.get("stone_damage_mult") if get_tree().current_scene else 1.0
+			body.take_damage(speed * damage_per_speed * dmg_mult)
 		_spawn_impact_effect()
 		queue_free()
 	elif body is StaticBody3D or body is CSGBox3D:

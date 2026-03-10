@@ -6,6 +6,7 @@ extends CharacterBody3D
 @export var player_aggro_range: float = 8.0
 @export var mesh_color: Color = Color(1, 0, 0)
 @export var body_scale: float = 1.0
+@export var gold_value: int = 1
 
 @onready var _nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var _attack_area: Area3D = $AttackArea
@@ -137,6 +138,9 @@ func take_damage(amount: float) -> void:
 		_on_death()
 
 func _on_death() -> void:
+	var main := get_tree().current_scene
+	if main.has_method("drop_shekel"):
+		main.drop_shekel(global_position, gold_value)
 	queue_free()
 
 func _on_attack_timer_timeout() -> void:

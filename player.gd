@@ -347,6 +347,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ESCAPE:
 			if _hud: _toggle_pause(not _hud.get_node("PauseMenu").visible)
+		if event.keycode == KEY_TAB:
+			if _hud and _hud.has_method("toggle_upgrades"):
+				var main := get_tree().current_scene
+				var purchased: Dictionary = main.get("upgrades_purchased") if main else {}
+				var gold: int = main.get("team_gold") if main else 0
+				_hud.toggle_upgrades(purchased if purchased != null else {}, gold if gold != null else 0)
 		if event.keycode == KEY_E:
 			var scene = get_tree().current_scene
 			if multiplayer.is_server():

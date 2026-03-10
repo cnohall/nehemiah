@@ -11,6 +11,7 @@ const BLOCKS_FOR_WIN: int = 250
 const MAX_WALL_LAYERS: int = 3
 
 var blocks_placed: int = 0
+var block_hp_bonus: float = 0.0
 var _is_setting_up: bool = false
 
 var _blocks: Node3D = null
@@ -120,6 +121,8 @@ func do_place_block(snapped_world_pos: Vector3, rotation_y: float) -> void:
 	block.rotation.y = rotation_y
 	_blocks.add_child(block)
 	block.global_position = snapped_world_pos
+	if block_hp_bonus > 0.0 and block.get("health") != null:
+		block.health += block_hp_bonus
 
 	var bp_key := Vector3(snappedf(snapped_world_pos.x, 0.1), 0.0, snappedf(snapped_world_pos.z, 0.1))
 	_blueprint_mgr.erase_at(bp_key)

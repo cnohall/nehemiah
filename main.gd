@@ -6,11 +6,13 @@ const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/enemy.tscn")
 const STONE_SCENE: PackedScene = preload("res://scenes/player/stone.tscn")
 const TEMPLE_SCENE: PackedScene = preload("res://scenes/temple/temple.tscn")
 const FLOATING_TEXT_SCENE: PackedScene = preload("res://scenes/ui/floating_text.tscn")
+const SHEKEL_SCENE: PackedScene = preload("res://scenes/economy/shekel.tscn")
 
 @onready var _players: Node3D        = $Players
 @onready var _enemies: Node3D        = $Enemies
 @onready var _blocks: Node3D         = $Blocks
 @onready var _stones: Node3D         = $Stones
+@onready var _shekels: Node3D        = $Shekels
 @onready var _camera: Camera3D       = $Camera3D
 @onready var _nav_region: NavigationRegion3D = $NavigationRegion3D
 @onready var _wave_manager: Node     = $WaveManager
@@ -20,6 +22,12 @@ const FLOATING_TEXT_SCENE: PackedScene = preload("res://scenes/ui/floating_text.
 
 var _local_player: CharacterBody3D = null
 var _temple: Node3D = null
+
+# Shekel (gold drop) system
+var _shekel_uid: int = 0
+const SHEKEL_MAGNET_RANGE: float = 8.0
+const SHEKEL_PICKUP_RANGE: float = 1.2
+const SHEKEL_SPEED: float = 7.0
 
 # Camera Shake & Zoom
 var _target_zoom: float = 14.0
@@ -34,6 +42,16 @@ var _noise_y: float = 0.0
 
 # Game State
 var is_game_over: bool = false
+var team_gold: int = 0
+var upgrades_purchased: Dictionary = {}
+var stone_damage_mult: float = 1.0
+
+const UPGRADES: Dictionary = {
+	"sling":      {"name": "Tempered Slings",    "desc": "Stone damage x1.5",         "cost": 10},
+	"stone_cart": {"name": "Stone Cart",          "desc": "+3 max stones for all",     "cost": 15},
+	"blessing":   {"name": "Nehemiah Blessing",  "desc": "Restore all player health", "cost": 20},
+	"mortar":     {"name": "Thick Mortar",        "desc": "New wall blocks +25 HP",    "cost": 25},
+}
 
 # Day/Night Transition
 var _is_transitioning: bool = false
@@ -80,6 +98,9 @@ func _process(delta: float) -> void:
 
 	if _is_transitioning:
 		_tick_day_night(delta)
+
+	if multiplayer.is_server() and _shekels:
+		_process_shekels(delta)
 
 func _get_noise_shake(delta: float) -> Vector3:
 	_noise_y += delta * 150.0
@@ -301,20 +322,159 @@ func request_collect_stones() -> void:
 	if sender_id == 0: sender_id = 1
 	var player = _players.get_node_or_null(str(sender_id))
 	if player == null or player.get("stones_carried") == null: return
-	if player.global_position.distance_to(_quarry_pos) > QUARRY_INTERACT_RANGE:
-		_spawn_floating_text.rpc_id(
-			sender_id, player.global_position + Vector3(0, 2, 0),
-			"Move closer to the quarry!", Color.YELLOW, 1.5
-		)
-		return
-	if player.stones_carried >= player.max_stones: return
-	player.stones_carried = player.max_stones
+
+	# Pick up any dropped stones nearby first.
+	var picked_up := _pickup_ground_stones(player, sender_id)
+
+	# Then check quarry proximity.
+	var near_quarry: bool = (player as Node3D).global_position.distance_to(_quarry_pos) <= QUARRY_INTERACT_RANGE
+	if near_quarry and player.stones_carried < player.max_stones:
+		player.stones_carried = player.max_stones
+		_spawn_floating_text.rpc_id(sender_id, player.global_position + Vector3(0, 2, 0), "Stones gathered!", Color.WHEAT, 1.5)
+	elif not near_quarry and picked_up == 0:
+		_spawn_floating_text.rpc_id(sender_id, player.global_position + Vector3(0, 2, 0), "Move closer to the quarry!", Color.YELLOW, 1.5)
+
+	if picked_up > 0 or near_quarry:
+		if player.has_method("sync_stones_to_hud"):
+			player.sync_stones_to_hud()
+
+func _pickup_ground_stones(player: Node, sender_id: int) -> int:
+	const PICKUP_RANGE := 2.5
+	var picked_up := 0
+	for stone in _stones.get_children():
+		if stone is RigidBody3D and stone.get_meta("is_loot", false):
+			if player.global_position.distance_to(stone.global_position) < PICKUP_RANGE:
+				if player.stones_carried < player.max_stones:
+					player.stones_carried += 1
+					picked_up += 1
+					stone.queue_free()
+	if picked_up > 0:
+		_spawn_floating_text.rpc_id(sender_id, player.global_position + Vector3(0, 2, 0),
+			"Picked up %d stone%s!" % [picked_up, "s" if picked_up > 1 else ""], Color.WHEAT, 1.5)
+	return picked_up
+
+func _drop_player_stones(player: Node) -> void:
+	var count: int = player.get("stones_carried") if player.get("stones_carried") != null else 0
+	if count <= 0: return
+	for i in count:
+		var stone := STONE_SCENE.instantiate() as RigidBody3D
+		stone.set_meta("is_loot", true)
+		var offset := Vector3(randf_range(-0.6, 0.6), 0.4, randf_range(-0.6, 0.6))
+		_stones.add_child(stone, true)
+		stone.global_position = player.global_position + Vector3(0, 0.5, 0)
+		stone.apply_central_impulse(offset.normalized() * 2.0)
+	player.stones_carried = 0
 	if player.has_method("sync_stones_to_hud"):
 		player.sync_stones_to_hud()
-	_spawn_floating_text.rpc_id(
-		sender_id, player.global_position + Vector3(0, 2, 0),
-		"Stones gathered!", Color.WHEAT, 1.5
-	)
+
+# ── Upgrade System ───────────────────────────────────────────────────────────
+
+@rpc("any_peer", "reliable")
+func request_purchase_upgrade(upgrade_id: String) -> void:
+	if not multiplayer.is_server(): return
+	if upgrades_purchased.get(upgrade_id, false): return
+	var upgrade: Dictionary = UPGRADES.get(upgrade_id, {})
+	if upgrade.is_empty(): return
+	var cost: int = upgrade["cost"]
+	if team_gold < cost: return
+	team_gold -= cost
+	_sync_gold.rpc(team_gold)
+	_apply_upgrade.rpc(upgrade_id)
+
+@rpc("authority", "call_local", "reliable")
+func _apply_upgrade(upgrade_id: String) -> void:
+	upgrades_purchased[upgrade_id] = true
+	match upgrade_id:
+		"sling":
+			stone_damage_mult = 1.5
+		"stone_cart":
+			for player in _players.get_children():
+				if player.get("max_stones") != null:
+					player.max_stones += 3
+					if player.is_multiplayer_authority() and player.get("_hud"):
+						player._hud.update_stones(player.stones_carried, player.max_stones)
+		"mortar":
+			if _building_mgr.get("block_hp_bonus") != null:
+				_building_mgr.block_hp_bonus = 25.0
+		"blessing":
+			for player in _players.get_children():
+				if player.get("health") == null: continue
+				player.health = 100.0
+				if player.get("_is_dead"): player._is_dead = false
+				if player.get("visible") != null: player.visible = true
+				if player.is_multiplayer_authority() and player.get("_hud"):
+					player._hud.update_health(100.0)
+	# Refresh upgrade UI on all peers
+	_sync_upgrades.rpc(upgrades_purchased, team_gold)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_upgrades(state: Dictionary, gold: int) -> void:
+	upgrades_purchased = state
+	team_gold = gold
+	if _local_player and _local_player.get("_hud"):
+		var hud = _local_player._hud
+		if hud.has_method("update_upgrades"):
+			hud.update_upgrades(state, gold)
+
+# ── Shekel Drops ─────────────────────────────────────────────────────────────
+
+func drop_shekel(pos: Vector3, gold_value: int) -> void:
+	if not multiplayer.is_server(): return
+	_shekel_uid += 1
+	_spawn_shekel_node.rpc("sk_%d" % _shekel_uid, pos, gold_value)
+
+@rpc("authority", "call_local", "reliable")
+func _spawn_shekel_node(uid: String, pos: Vector3, gold_value: int) -> void:
+	var shekel := SHEKEL_SCENE.instantiate()
+	shekel.name = uid
+	shekel.set_meta("gold_value", gold_value)
+	_shekels.add_child(shekel)
+	shekel.global_position = pos
+
+func _process_shekels(delta: float) -> void:
+	for shekel: Node3D in _shekels.get_children():
+		var best_player: Node3D = null
+		var best_dist: float = SHEKEL_MAGNET_RANGE
+		for player in _players.get_children():
+			if player.get("_is_dead"): continue
+			var d: float = (player as Node3D).global_position.distance_to(shekel.global_position)
+			if d < best_dist:
+				best_dist = d
+				best_player = player as Node3D
+		if best_player == null: continue
+		if best_dist < SHEKEL_PICKUP_RANGE:
+			var gold_val: int = shekel.get_meta("gold_value", 1)
+			var uid: String = shekel.name
+			award_gold(gold_val)
+			_despawn_shekel.rpc(uid)
+		else:
+			var dir := (best_player.global_position - shekel.global_position).normalized()
+			var t: float = 1.0 - (best_dist / SHEKEL_MAGNET_RANGE)
+			shekel.global_position += dir * lerpf(SHEKEL_SPEED * 0.4, SHEKEL_SPEED * 2.5, t * t) * delta
+			_sync_shekel_pos.rpc(shekel.name, shekel.global_position)
+
+@rpc("authority", "call_local", "reliable")
+func _despawn_shekel(uid: String) -> void:
+	var shekel := _shekels.get_node_or_null(uid)
+	if is_instance_valid(shekel): shekel.queue_free()
+
+@rpc("authority", "unreliable")
+func _sync_shekel_pos(uid: String, pos: Vector3) -> void:
+	var shekel := _shekels.get_node_or_null(uid)
+	if is_instance_valid(shekel): shekel.global_position = pos
+
+# ── Gold Economy ──────────────────────────────────────────────────────────────
+
+func award_gold(amount: int) -> void:
+	if not multiplayer.is_server(): return
+	team_gold += amount
+	_sync_gold.rpc(team_gold)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_gold(total: int) -> void:
+	if _local_player and _local_player.get("_hud"):
+		var hud = _local_player._hud
+		if hud.has_method("update_gold"): hud.update_gold(total)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ROSTER & STATE SYNC
@@ -373,6 +533,8 @@ func _spawn_player(peer_id: int) -> void:
 	player.damaged.connect(func(_amt): add_shake(0.2))
 
 	if multiplayer.is_server():
-		player.died.connect(func(): get_tree().create_timer(3.0).timeout.connect(
-			func(): if player.has_method("respawn"): player.respawn(Vector3(0, 1.5, 0))
-		))
+		player.died.connect(func():
+			_drop_player_stones(player)
+			get_tree().create_timer(3.0).timeout.connect(
+				func(): if player.has_method("respawn"): player.respawn(Vector3(0, 1.5, 0))
+			))
