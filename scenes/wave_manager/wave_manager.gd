@@ -5,7 +5,7 @@ signal wave_started(wave_num: int)
 signal wave_cleared(wave_num: int)
 signal enemy_spawned(enemy: Node3D)
 
-const MAX_DAYS: int = 65
+const MAX_DAYS: int = 52
 
 @export var enemy_scene: PackedScene
 @export var spawn_timer: Timer

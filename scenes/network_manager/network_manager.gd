@@ -55,6 +55,7 @@ signal connection_failed(reason: String)
 # ══════════════════════════════════════════════════════════════════════════════
 
 var _is_host: bool = false
+var selected_role: String = "slinger"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -68,6 +69,9 @@ var _host_button:     Button
 var _join_button:     Button
 var _ip_input:        LineEdit
 var _port_input:      LineEdit
+var _role_buttons:    Dictionary = {}
+var _btn_style_normal:   StyleBoxFlat
+var _btn_style_selected: StyleBoxFlat
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -150,14 +154,46 @@ func _setup_ui() -> void:
 	_status_label.custom_minimum_size = Vector2(0, 52)
 	vbox.add_child(_status_label)
 
-	# Shared style for both action buttons — slightly lighter stone than the panel.
-	var btn_style := StyleBoxFlat.new()
-	btn_style.bg_color = Color(0.28, 0.22, 0.15)
-	btn_style.border_color = Color(0.55, 0.42, 0.22)
-	btn_style.border_width_left   = 2
-	btn_style.border_width_right  = 2
-	btn_style.border_width_top    = 2
-	btn_style.border_width_bottom = 2
+	# Shared style for action buttons — slightly lighter stone than the panel.
+	_btn_style_normal = StyleBoxFlat.new()
+	_btn_style_normal.bg_color = Color(0.28, 0.22, 0.15)
+	_btn_style_normal.border_color = Color(0.55, 0.42, 0.22)
+	_btn_style_normal.border_width_left   = 2
+	_btn_style_normal.border_width_right  = 2
+	_btn_style_normal.border_width_top    = 2
+	_btn_style_normal.border_width_bottom = 2
+
+	# Highlighted style for the selected role button.
+	_btn_style_selected = StyleBoxFlat.new()
+	_btn_style_selected.bg_color = Color(0.45, 0.32, 0.10)
+	_btn_style_selected.border_color = Color(0.85, 0.65, 0.25)
+	_btn_style_selected.border_width_left   = 2
+	_btn_style_selected.border_width_right  = 2
+	_btn_style_selected.border_width_top    = 2
+	_btn_style_selected.border_width_bottom = 2
+
+	# ── Role selection ────────────────────────────────────────────────────────
+	var role_lbl := Label.new()
+	role_lbl.text = "Choose your calling:"
+	role_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	role_lbl.add_theme_color_override("font_color", Color(0.85, 0.75, 0.55))
+	vbox.add_child(role_lbl)
+
+	var role_row := HBoxContainer.new()
+	role_row.add_theme_constant_override("separation", 8)
+	role_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(role_row)
+
+	for r: String in ["Builder", "Slinger", "Porter"]:
+		var btn := Button.new()
+		btn.text = r
+		btn.custom_minimum_size = Vector2(100, 34)
+		btn.add_theme_stylebox_override("normal", _btn_style_normal)
+		btn.pressed.connect(_on_role_selected.bind(r))
+		role_row.add_child(btn)
+		_role_buttons[r] = btn
+
+	_on_role_selected("Slinger")  # default
 
 	# ── Host Game button (full width) ─────────────────────────────────────────
 	_host_button = Button.new()
@@ -165,7 +201,7 @@ func _setup_ui() -> void:
 	_host_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_host_button.custom_minimum_size = Vector2(0, 36)
 	_host_button.pressed.connect(_on_host_button_pressed)
-	_host_button.add_theme_stylebox_override("normal", btn_style)
+	_host_button.add_theme_stylebox_override("normal", _btn_style_normal)
 	vbox.add_child(_host_button)
 
 	# ── Join row: [IP ──────────────────] [Port~~] [Join Game] ────────────────
@@ -191,7 +227,7 @@ func _setup_ui() -> void:
 	_join_button.text = "Answer the Call"
 	_join_button.custom_minimum_size = Vector2(0, 36)
 	_join_button.pressed.connect(_on_join_button_pressed)
-	_join_button.add_theme_stylebox_override("normal", btn_style)
+	_join_button.add_theme_stylebox_override("normal", _btn_style_normal)
 	hbox.add_child(_join_button)
 
 
@@ -219,6 +255,14 @@ func _connect_multiplayer_signals() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 # UI BUTTON HANDLERS
 # ══════════════════════════════════════════════════════════════════════════════
+
+func _on_role_selected(role: String) -> void:
+	selected_role = role.to_lower()
+	for r: String in _role_buttons:
+		var btn: Button = _role_buttons[r]
+		btn.add_theme_stylebox_override("normal",
+			_btn_style_selected if r == role else _btn_style_normal)
+
 
 func _on_host_button_pressed() -> void:
 	_disable_buttons()
@@ -336,6 +380,10 @@ func get_steam_username() -> String:
 
 func get_lobby_id() -> int:
 	return 0
+
+
+func get_selected_role() -> String:
+	return selected_role
 
 
 func is_host() -> bool:

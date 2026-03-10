@@ -3,21 +3,20 @@ extends Node3D
 
 const PLAYER_SCENE: PackedScene = preload("res://player.tscn")
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/enemy.tscn")
-const BLOCK_SCENE: PackedScene = preload("res://scenes/building_block/building_block.tscn")
 const STONE_SCENE: PackedScene = preload("res://scenes/player/stone.tscn")
 const TEMPLE_SCENE: PackedScene = preload("res://scenes/temple/temple.tscn")
 const FLOATING_TEXT_SCENE: PackedScene = preload("res://scenes/ui/floating_text.tscn")
 
-@onready var _players: Node3D  = $Players
-@onready var _enemies: Node3D  = $Enemies
-@onready var _blocks:  Node3D  = $Blocks
-@onready var _stones:  Node3D  = $Stones
-@onready var _camera:  Camera3D = $Camera3D
+@onready var _players: Node3D        = $Players
+@onready var _enemies: Node3D        = $Enemies
+@onready var _blocks: Node3D         = $Blocks
+@onready var _stones: Node3D         = $Stones
+@onready var _camera: Camera3D       = $Camera3D
 @onready var _nav_region: NavigationRegion3D = $NavigationRegion3D
-@onready var _floor: CSGBox3D = $NavigationRegion3D/Floor
-@onready var _wave_manager: Node = $WaveManager
-@onready var _world_env: WorldEnvironment = $WorldEnvironment
-@onready var _sun: DirectionalLight3D = $DirectionalLight3D
+@onready var _wave_manager: Node     = $WaveManager
+@onready var _world_env: WorldEnvironment    = $WorldEnvironment
+@onready var _sun: DirectionalLight3D        = $DirectionalLight3D
+@onready var _building_mgr: Node     = $BuildingManager
 
 var _local_player: CharacterBody3D = null
 var _temple: Node3D = null
@@ -35,8 +34,6 @@ var _noise_y: float = 0.0
 
 # Game State
 var is_game_over: bool = false
-var blocks_placed: int = 0
-const BLOCKS_FOR_WIN: int = 250
 
 # Day/Night Transition
 var _is_transitioning: bool = false
@@ -49,18 +46,13 @@ const SUN_NIGHT: float = 0.05
 const BRIGHT_DAY: float = 1.0
 const BRIGHT_NIGHT: float = 0.12
 
-# Wall blueprint manager — handles registry, visuals, and snapping queries
-var _blueprint_mgr: Node = null
-# Expose positions dict for minimap backward compat
-var _blueprint_positions: Dictionary:
-	get: return _blueprint_mgr._blueprint_positions if _blueprint_mgr else {}
-
 # Stone quarry
 var _quarry_pos: Vector3 = Vector3(-8.0, 0.5, -8.0)
 const QUARRY_INTERACT_RANGE: float = 5.0
 
-# Suppresses per-block nav rebakes during bulk world setup
-var _is_setting_up: bool = false
+# Expose blueprint positions for minimap backward compat
+var _blueprint_positions: Dictionary:
+	get: return _building_mgr._blueprint_positions if _building_mgr else {}
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PROCESS
@@ -75,7 +67,9 @@ func _process(delta: float) -> void:
 				break
 
 	if is_instance_valid(_local_player):
-		var base_cam_pos = _local_player.global_position + Vector3(6, 10, 6)
+		# Raise camera Y with zoom so the bottom of the view never dips below ground.
+		var cam_y := maxf(10.0, (_camera.size * 0.5) * 0.7071 + 1.5)
+		var base_cam_pos = _local_player.global_position + Vector3(6, cam_y, 6)
 		_camera.global_position = base_cam_pos + _get_noise_shake(delta)
 
 	if _camera:
@@ -114,10 +108,9 @@ func _ready() -> void:
 	_shake_noise.seed = randi()
 	_shake_noise.frequency = 0.5
 
-	_blueprint_mgr = load("res://scenes/wall_blueprint/wall_blueprint_manager.gd").new()
-	_blueprint_mgr.name = "WallBlueprintManager"
-	add_child(_blueprint_mgr)
-	_blueprint_mgr.init_registry()
+	_building_mgr.blocks_changed.connect(_on_blocks_changed)
+	_building_mgr.wall_complete.connect(func(): _end_game(true))
+	_building_mgr.navigation_changed.connect(_rebake_navigation)
 
 	NetworkManager.lobby_created_success.connect(_on_lobby_created_success)
 	NetworkManager.lobby_joined_success.connect(_on_lobby_joined_success)
@@ -167,30 +160,17 @@ func _begin_dawn() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _setup_world() -> void:
-	_floor.size = Vector3(160, 1, 160)
-
 	_temple = TEMPLE_SCENE.instantiate()
 	_temple.position = Vector3(0, 0.75, 0)
 	add_child(_temple)
 	var breach_area = _temple.get_node("BreachArea") as Area3D
 	breach_area.body_entered.connect(_on_temple_breached)
 
-	_blueprint_mgr.spawn_visuals(self)
+	_building_mgr.spawn_blueprint_visuals()
 	_setup_quarry()
 
-	_is_setting_up = true
-	_place_starting_ruins()
-	_is_setting_up = false
-
+	_building_mgr.place_starting_ruins()
 	_rebake_navigation()
-
-# ── Blueprint helpers  (all peers) — thin wrappers over WallBlueprintManager ──
-
-func get_nearest_blueprint(world_pos: Vector3, max_dist: float) -> Vector3:
-	return _blueprint_mgr.get_nearest(world_pos, max_dist)
-
-func get_blueprint_angle(key: Vector3) -> float:
-	return _blueprint_mgr.get_angle(key)
 
 # ── Quarry  (server only, interaction checked server-side) ───────────────────
 
@@ -209,7 +189,6 @@ func _setup_quarry() -> void:
 	mesh_inst.material_override = mat
 	quarry.add_child(mesh_inst)
 
-	# Second pile for visual interest
 	var mesh2 := MeshInstance3D.new()
 	var box2 := BoxMesh.new()
 	box2.size = Vector3(1.5, 0.7, 1.5)
@@ -219,36 +198,6 @@ func _setup_quarry() -> void:
 	quarry.add_child(mesh2)
 
 	add_child(quarry)
-
-# ── Starting ruins ────────────────────────────────────────────────────────────
-
-func _place_starting_ruins() -> void:
-	# Pre-placed rubble representing the broken-down wall Nehemiah found.
-	# Scattered in small clusters around the perimeter, leaving most as blueprint.
-	var ruin_spots: Array[Vector3] = [
-		# North wall (Sheep Gate cluster)
-		Vector3( 4.0, 0.9, -36.0), Vector3( 2.0, 0.9, -36.0), Vector3( 0.0, 0.9, -36.0),
-		# NE — Tower of Hananel area
-		Vector3(16.0, 0.9, -30.0), Vector3(18.0, 0.9, -28.0),
-		# East wall — Temple Mount face
-		Vector3(30.0, 0.9, -12.0), Vector3(30.0, 0.9,  -8.0),
-		# East — Water Gate
-		Vector3(30.0, 0.9,   0.0),
-		# SE — Fountain Gate
-		Vector3(20.0, 0.9,  18.0), Vector3(16.0, 0.9,  24.0),
-		# South near Dung Gate
-		Vector3( 4.0, 0.9,  34.0),
-		# SW — Valley Gate
-		Vector3(-14.0, 0.9, 24.0),
-		# West wall
-		Vector3(-28.0, 0.9,  6.0), Vector3(-28.0, 0.9, -2.0),
-		# NW — Old Gate
-		Vector3(-22.0, 0.9, -20.0), Vector3(-14.0, 0.9, -28.0),
-	]
-	for pos in ruin_spots:
-		var key := get_nearest_blueprint(pos, 3.0)
-		var rot := get_blueprint_angle(key) if key != Vector3.INF else 0.0
-		do_place_block.rpc(pos, rot)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TEMPLE & GAME END
@@ -286,15 +235,18 @@ func _spawn_floating_text(pos: Vector3, text: String, color: Color, dur: float =
 	ft.global_position = pos
 
 func _update_global_hud() -> void:
-	var wave = _wave_manager.current_wave if _wave_manager else 0
-	_sync_hud.rpc(wave, blocks_placed)
+	var wave: int = _wave_manager.current_wave if _wave_manager else 0
+	_sync_hud.rpc(wave, _building_mgr.blocks_placed)
+
+func _on_blocks_changed(total: int) -> void:
+	_update_global_hud()
 
 @rpc("authority", "call_local", "reliable")
 func _sync_hud(wave: int, progress: int) -> void:
 	if _local_player and _local_player.get("_hud"):
 		var hud = _local_player._hud
 		if hud.has_method("update_wave"): hud.update_wave(wave)
-		if hud.has_method("update_progress"): hud.update_progress(progress, BLOCKS_FOR_WIN)
+		if hud.has_method("update_progress"): hud.update_progress(progress, _building_mgr.BLOCKS_FOR_WIN)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # WAVE / DAY HANDLERS
@@ -339,65 +291,6 @@ func _on_player_disconnected(peer_id: int) -> void:
 		node.queue_free()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# BUILDING SYSTEM RPCs
-# ══════════════════════════════════════════════════════════════════════════════
-
-@rpc("any_peer", "call_local", "reliable")
-func request_place_block(snapped_world_pos: Vector3, rotation_y: float) -> void:
-	if not multiplayer.is_server() or is_game_over: return
-	var sender_id := multiplayer.get_remote_sender_id()
-	if sender_id == 0: sender_id = 1
-	var player = _players.get_node_or_null(str(sender_id))
-	if player == null: return
-	if player.get("stones_carried") == null or player.stones_carried <= 0:
-		return
-	player.stones_carried -= 1
-	if player.has_method("sync_stones_to_hud"):
-		player.sync_stones_to_hud()
-	do_place_block.rpc(snapped_world_pos, rotation_y)
-
-@rpc("authority", "call_local", "reliable")
-func do_place_block(snapped_world_pos: Vector3, rotation_y: float) -> void:
-	var block_name := "Block_%d_%d_%d" % [
-		int(round(snapped_world_pos.x * 100)),
-		int(round(snapped_world_pos.y * 100)),
-		int(round(snapped_world_pos.z * 100))
-	]
-	if _blocks.has_node(block_name): return
-
-	var block := BLOCK_SCENE.instantiate()
-	block.name = block_name
-	block.global_position = snapped_world_pos
-	block.rotation.y = rotation_y
-	_blocks.add_child(block)
-
-	# Remove the corresponding blueprint segment on all peers
-	var bp_key := Vector3(snappedf(snapped_world_pos.x, 0.1), 0.0, snappedf(snapped_world_pos.z, 0.1))
-	_blueprint_mgr.erase_at(bp_key)
-
-	if multiplayer.is_server():
-		blocks_placed += 1
-		_update_global_hud()
-		if blocks_placed >= BLOCKS_FOR_WIN: _end_game(true)
-		if not _is_setting_up:
-			_rebake_navigation()
-
-func on_block_destroyed(world_pos: Vector3, rotation_y: float) -> void:
-	if not multiplayer.is_server(): return
-	var bp_key := Vector3(snappedf(world_pos.x, 0.1), 0.0, snappedf(world_pos.z, 0.1))
-	_restore_blueprint.rpc(bp_key, rotation_y)
-	blocks_placed = max(0, blocks_placed - 1)
-	_update_global_hud()
-	_rebake_navigation()
-
-@rpc("authority", "call_local", "reliable")
-func _restore_blueprint(bp_key: Vector3, rotation_y: float) -> void:
-	_blueprint_mgr.restore_at(bp_key, rotation_y, self)
-
-func _rebake_navigation() -> void:
-	if _nav_region: _nav_region.bake_navigation_mesh()
-
-# ══════════════════════════════════════════════════════════════════════════════
 # STONE ECONOMY
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -414,8 +307,8 @@ func request_collect_stones() -> void:
 			"Move closer to the quarry!", Color.YELLOW, 1.5
 		)
 		return
-	if player.stones_carried >= player.MAX_STONES: return
-	player.stones_carried = player.MAX_STONES
+	if player.stones_carried >= player.max_stones: return
+	player.stones_carried = player.max_stones
 	if player.has_method("sync_stones_to_hud"):
 		player.sync_stones_to_hud()
 	_spawn_floating_text.rpc_id(
@@ -441,7 +334,7 @@ func _request_roster() -> void:
 @rpc("authority", "reliable")
 func _receive_roster(player_ids: Array, block_data: Array) -> void:
 	for id in player_ids: _spawn_player(int(id))
-	for data in block_data: do_place_block(data.pos, data.rot)
+	for data in block_data: _building_mgr.do_place_block(data.pos, data.rot)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COMBAT SYSTEM RPCs
@@ -454,8 +347,14 @@ func request_throw_stone(origin: Vector3, direction: Vector3, power: float, thro
 	stone.position = origin
 	_stones.add_child(stone, true)
 	if stone.has_method("set_thrower"): stone.set_thrower(thrower_path)
-	var impulse = direction.normalized() * power
-	stone.apply_central_impulse(impulse)
+	stone.apply_central_impulse(direction.normalized() * power)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NAVIGATION
+# ══════════════════════════════════════════════════════════════════════════════
+
+func _rebake_navigation() -> void:
+	if _nav_region: _nav_region.bake_navigation_mesh()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SPAWN HELPER

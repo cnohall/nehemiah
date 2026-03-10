@@ -12,6 +12,7 @@ const HUD_SCENE: PackedScene = preload("res://scenes/ui/game_hud.tscn")
 const BLOCK_SIZE  := Vector3(2.0, 0.8, 1.0)
 const GRID_SNAP_Y := 0.8
 const BLOCK_Y_OFFSET := 0.9
+const MAX_WALL_LAYERS: int = 3
 const STONE_COLOR := Color(0.55, 0.52, 0.48)
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -28,7 +29,7 @@ const BLUEPRINT_SNAP_RANGE: float = 3.5
 
 ## Stone Economy
 var stones_carried: int = 0
-const MAX_STONES: int = 5
+var max_stones: int = 5
 
 ## Stamina System
 var stamina: float = 100.0
@@ -42,15 +43,15 @@ const PLACE_STAMINA_COST: float = 20.0
 var _lmb_held: bool = false
 var _is_placing: bool = false
 var _place_timer: float = 0.0
-const PLACE_DURATION: float = 2.0
+var place_duration: float = 2.0
 
 ## Combat System
 var _is_charging: bool = false
 var _throw_power: float = 0.0
 var _reload_timer: float = 0.0
-const MAX_THROW_POWER: float = 25.0
+var max_throw_power: float = 25.0
 const CHARGE_SPEED: float = 20.0
-const RELOAD_TIME: float = 0.5
+var reload_time: float = 0.5
 
 ## HUD & Targeting
 var _hud: CanvasLayer = null
@@ -59,6 +60,7 @@ var _target_mesh: MeshInstance3D = null
 ## Replicated State
 var current_animation: String = FALLBACK_ANIM
 var health: float = 100.0
+var role: String = "slinger"
 
 signal died
 signal damaged(amount: float)
@@ -68,10 +70,23 @@ var _is_dead: bool = false
 
 func _ready() -> void:
 	add_to_group("players")
+	if is_multiplayer_authority():
+		role = NetworkManager.get_selected_role()
+		_apply_role_stats()
 	_resolve_camera()
 	_init_building_system()
 	_init_hud()
 	_init_targeter()
+
+func _apply_role_stats() -> void:
+	match role:
+		"builder":
+			place_duration = 1.4
+		"slinger":
+			max_throw_power = 32.0
+			reload_time = 0.35
+		"porter":
+			max_stones = 10
 
 func _init_hud() -> void:
 	if not is_multiplayer_authority():
@@ -88,6 +103,10 @@ func _init_hud() -> void:
 	
 	var quit_btn = _hud.get_node("PauseMenu/Panel/VBox/QuitBtn")
 	quit_btn.pressed.connect(func(): get_tree().quit())
+	if _hud.has_method("update_role"):
+		_hud.update_role(role)
+	if _hud.has_method("update_stones"):
+		_hud.update_stones(stones_carried, max_stones)
 
 func _resolve_camera() -> void:
 	_camera = get_node_or_null(camera_path)
@@ -277,18 +296,24 @@ func _update_ghost_block() -> void:
 		return
 	var target_pos: Vector3 = result.position + result.normal * 0.1
 
-	# Blocks may only be placed on wall blueprint positions — find the nearest one
-	var main := get_tree().current_scene
-	if not main.has_method("get_nearest_blueprint"):
+	# Route all building queries through BuildingManager
+	var bm := get_tree().current_scene.get_node_or_null("BuildingManager")
+	if not bm:
 		_ghost_block.visible = false
 		return
-	var bp_key: Vector3 = main.get_nearest_blueprint(target_pos, BLUEPRINT_SNAP_RANGE)
+	var bp_key: Vector3 = bm.get_nearest_placeable(target_pos, BLUEPRINT_SNAP_RANGE)
 	if bp_key == Vector3.INF:
 		_ghost_block.visible = false
 		return
 
-	var snapped_pos := Vector3(bp_key.x, BLOCK_Y_OFFSET, bp_key.z)
-	var place_rotation: float = main.get_blueprint_angle(bp_key)
+	var stack: int = bm.get_stack_at(bp_key)
+	if stack >= MAX_WALL_LAYERS:
+		_ghost_block.visible = false
+		return
+
+	var layer_y := BLOCK_Y_OFFSET + stack * BLOCK_SIZE.y
+	var snapped_pos := Vector3(bp_key.x, layer_y, bp_key.z)
+	var place_rotation: float = bm.get_placeable_angle(bp_key)
 
 	_ghost_block.global_position = snapped_pos
 	_ghost_block.rotation.y = place_rotation
@@ -345,12 +370,12 @@ func _toggle_pause(should_pause: bool) -> void:
 	if _hud: _hud.toggle_pause(should_pause)
 
 func sync_stones_to_hud() -> void:
-	_update_hud_stones.rpc(stones_carried)
+	_update_hud_stones.rpc(stones_carried, max_stones)
 
 @rpc("authority", "call_local", "reliable")
-func _update_hud_stones(val: int) -> void:
+func _update_hud_stones(val: int, max_val: int) -> void:
 	if _hud and _hud.has_method("update_stones"):
-		_hud.update_stones(val)
+		_hud.update_stones(val, max_val)
 
 func _init_targeter() -> void:
 	if not is_multiplayer_authority(): return
@@ -376,12 +401,12 @@ func _start_charging() -> void:
 	if _reload_timer > 0.0 or _is_dead: return
 	_is_charging = true
 	_throw_power = 10.0
-	if _hud: _hud.update_power(_throw_power, MAX_THROW_POWER)
+	if _hud: _hud.update_power(_throw_power, max_throw_power)
 
 func _release_throw() -> void:
 	if not _is_charging: return
 	_is_charging = false
-	if _hud: _hud.update_power(0, MAX_THROW_POWER)
+	if _hud: _hud.update_power(0, max_throw_power)
 	if _target_mesh: _target_mesh.visible = false
 	if _camera == null: return
 
@@ -396,7 +421,7 @@ func _release_throw() -> void:
 	var final_dir = (world_dir_flat + Vector3(0, 0.2, 0)).normalized()
 	get_tree().current_scene.request_throw_stone.rpc_id(1, spawn_pos, final_dir, _throw_power, get_path())
 	_throw_power = 0.0
-	_reload_timer = RELOAD_TIME
+	_reload_timer = reload_time
 
 func _update_placing(delta: float) -> void:
 	if not _lmb_held or _is_charging or _is_dead:
@@ -412,22 +437,22 @@ func _update_placing(delta: float) -> void:
 		return
 
 	_is_placing = true
-	_place_timer = minf(_place_timer + delta, PLACE_DURATION)
-	if _hud: _hud.update_place(_place_timer, PLACE_DURATION)
+	_place_timer = minf(_place_timer + delta, place_duration)
+	if _hud: _hud.update_place(_place_timer, place_duration)
 
-	if _place_timer >= PLACE_DURATION:
+	if _place_timer >= place_duration:
 		stamina -= PLACE_STAMINA_COST
 		if _hud: _hud.update_stamina(stamina)
-		get_tree().current_scene.request_place_block.rpc_id(
-			1, _ghost_block.global_position, _ghost_block.rotation.y
-		)
+		var bm := get_tree().current_scene.get_node_or_null("BuildingManager")
+		if bm:
+			bm.server_place_block.rpc_id(1, _ghost_block.global_position, _ghost_block.rotation.y)
 		_lmb_held = false
 		_cancel_place()
 
 func _cancel_place() -> void:
 	_is_placing = false
 	_place_timer = 0.0
-	if _hud: _hud.update_place(0.0, PLACE_DURATION)
+	if _hud: _hud.update_place(0.0, place_duration)
 
 func _update_combat(delta: float) -> void:
 	if _reload_timer > 0.0:
@@ -435,8 +460,8 @@ func _update_combat(delta: float) -> void:
 		_sprite.modulate = Color(0.7, 0.7, 0.7) if _reload_timer > 0.0 else Color.WHITE
 
 	if _is_charging:
-		_throw_power = min(_throw_power + CHARGE_SPEED * delta, MAX_THROW_POWER)
-		if _hud: _hud.update_power(_throw_power, MAX_THROW_POWER)
+		_throw_power = min(_throw_power + CHARGE_SPEED * delta, max_throw_power)
+		if _hud: _hud.update_power(_throw_power, max_throw_power)
 		var result := _get_ground_hit()
 		if not result.is_empty() and _target_mesh:
 			_target_mesh.global_position = result.position + Vector3(0, 0.1, 0)

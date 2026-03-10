@@ -82,6 +82,7 @@ script/source = "extends CanvasLayer
 
 @onready var health_bar = $TopLeft/HealthBar
 @onready var stamina_bar = $TopLeft/StaminaBar
+@onready var role_label = $TopLeft/RoleLabel
 @onready var wave_label = $TopRight/WaveLabel
 @onready var progress_label = $TopRight/ProgressLabel
 @onready var stones_label = $TopRight/StonesLabel
@@ -161,8 +162,12 @@ func update_power(val: float, max_val: float):
 	if val > 0:
 		power_bar.visible = true
 
-func update_stones(val: int):
-	stones_label.text = \"STONES: %d/5\" % val
+func update_role(role_name: String):
+	if role_label:
+		role_label.text = role_name.to_upper()
+
+func update_stones(val: int, max_val: int = 5):
+	stones_label.text = \"STONES: %d/%d\" % [val, max_val]
 	_punch_label(stones_label)
 
 func update_place(val: float, max_val: float):
@@ -301,6 +306,15 @@ theme_override_styles/background = SubResource("StyleBoxFlat_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_stamina")
 value = 100.0
 show_percentage = false
+
+[node name="RoleLabel" type="Label" parent="TopLeft"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_1")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.75, 0.85, 1.0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+text = "SLINGER"
 
 [node name="TopRight" type="VBoxContainer" parent="."]
 anchors_preset = 1
