@@ -209,7 +209,14 @@ func _process(_delta: float) -> void:
 \tqueue_redraw()
 
 func _world_to_map(wx: float, wz: float) -> Vector2:
-\treturn Vector2((wx + WORLD_HALF) * SCALE_F, (wz + WORLD_HALF) * SCALE_F)
+\t# Rotate 45° to match the isometric camera orientation
+\tvar half := MAP_SIZE * 0.5
+\treturn Vector2(
+\t\thalf + (wx - wz) * SCALE_F * 0.5,
+\t\thalf + (wx + wz) * SCALE_F * 0.5)
+
+func _in_bounds(p: Vector2, margin: float = 4.0) -> bool:
+\treturn p.x >= -margin and p.x <= MAP_SIZE + margin and p.y >= -margin and p.y <= MAP_SIZE + margin
 
 func _draw() -> void:
 \tdraw_rect(Rect2(0, 0, MAP_SIZE, MAP_SIZE), BG_COLOR)
@@ -219,32 +226,37 @@ func _draw() -> void:
 \tif _main.get(\"_blueprint_positions\") != null:
 \t\tfor key in _main._blueprint_positions:
 \t\t\tvar p := _world_to_map(key.x, key.z)
-\t\t\tdraw_rect(Rect2(p.x - 1.5, p.y - 1.5, 3.0, 3.0), BLUEPRINT_COLOR)
+\t\t\tif _in_bounds(p):
+\t\t\t\tdraw_rect(Rect2(p.x - 1.5, p.y - 1.5, 3.0, 3.0), BLUEPRINT_COLOR)
 \t
 \tvar blocks_node = _main.get_node_or_null(\"Blocks\")
 \tif blocks_node:
 \t\tfor block in blocks_node.get_children():
 \t\t\tif block is Node3D:
 \t\t\t\tvar p := _world_to_map(block.global_position.x, block.global_position.z)
-\t\t\t\tdraw_rect(Rect2(p.x - 2.0, p.y - 1.0, 4.0, 2.0), BLOCK_COLOR)
+\t\t\t\tif _in_bounds(p):
+\t\t\t\t\tdraw_rect(Rect2(p.x - 2.0, p.y - 1.0, 4.0, 2.0), BLOCK_COLOR)
 \t
 \tif _main.get(\"_quarry_pos\") != null:
 \t\tvar qp := _world_to_map(_main._quarry_pos.x, _main._quarry_pos.z)
-\t\tdraw_circle(qp, 4.0, QUARRY_COLOR)
+\t\tif _in_bounds(qp):
+\t\t\tdraw_circle(qp, 4.0, QUARRY_COLOR)
 \t
 \tvar enemies_node = _main.get_node_or_null(\"Enemies\")
 \tif enemies_node:
 \t\tfor enemy in enemies_node.get_children():
 \t\t\tif enemy is Node3D:
 \t\t\t\tvar p := _world_to_map(enemy.global_position.x, enemy.global_position.z)
-\t\t\t\tdraw_circle(p, 2.5, ENEMY_COLOR)
+\t\t\t\tif _in_bounds(p, 0.0):
+\t\t\t\t\tdraw_circle(p, 2.5, ENEMY_COLOR)
 \t
 \tvar players_node = _main.get_node_or_null(\"Players\")
 \tif players_node:
 \t\tfor player in players_node.get_children():
 \t\t\tif player is Node3D:
 \t\t\t\tvar p := _world_to_map(player.global_position.x, player.global_position.z)
-\t\t\t\tdraw_circle(p, 3.5, PLAYER_COLOR)
+\t\t\t\tif _in_bounds(p):
+\t\t\t\t\tdraw_circle(p, 3.5, PLAYER_COLOR)
 "
 
 [node name="GameHUD" type="CanvasLayer"]

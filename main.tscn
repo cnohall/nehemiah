@@ -15,8 +15,8 @@ polygons = [PackedInt32Array(3, 2, 0), PackedInt32Array(0, 2, 1)]
 [sub_resource type="ProceduralSkyMaterial" id="4"]
 sky_top_color = Color(0.35, 0.55, 0.85, 1)
 sky_horizon_color = Color(0.8, 0.75, 0.65, 1)
-ground_bottom_color = Color(0.2, 0.15, 0.1, 1)
-ground_horizon_color = Color(0.6, 0.55, 0.45, 1)
+ground_bottom_color = Color(0.75, 0.65, 0.45, 1)
+ground_horizon_color = Color(0.75, 0.65, 0.45, 1)
 sun_angle_max = 30.0
 sun_curve = 0.05
 
@@ -54,7 +54,7 @@ navigation_mesh = SubResource("NavigationMesh_1")
 
 [node name="Floor" type="CSGBox3D" parent="NavigationRegion3D" unique_id=1687261339]
 use_collision = true
-size = Vector3(60, 1, 60)
+size = Vector3(120, 1, 120)
 material = SubResource("3")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=843850505]

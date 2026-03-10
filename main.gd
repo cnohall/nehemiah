@@ -23,9 +23,9 @@ var _local_player: CharacterBody3D = null
 var _temple: Node3D = null
 
 # Camera Shake & Zoom
-var _target_zoom: float = 10.0
+var _target_zoom: float = 14.0
 const MIN_ZOOM: float = 5.0
-const MAX_ZOOM: float = 20.0
+const MAX_ZOOM: float = 35.0
 const ZOOM_SPEED: float = 2.0
 
 var _shake_intensity: float = 0.0
@@ -49,10 +49,11 @@ const SUN_NIGHT: float = 0.05
 const BRIGHT_DAY: float = 1.0
 const BRIGHT_NIGHT: float = 0.12
 
-# Wall blueprints — key: Vector3(x,0,z) snapped to 0.1, value: float (wall angle)
-# Populated on ALL peers so ghost-block snapping works everywhere.
-var _blueprint_positions: Dictionary = {}
-var _blueprint_meshes: Dictionary = {}  # server-only: key → MeshInstance3D
+# Wall blueprint manager — handles registry, visuals, and snapping queries
+var _blueprint_mgr: Node = null
+# Expose positions dict for minimap backward compat
+var _blueprint_positions: Dictionary:
+	get: return _blueprint_mgr._blueprint_positions if _blueprint_mgr else {}
 
 # Stone quarry
 var _quarry_pos: Vector3 = Vector3(-8.0, 0.5, -8.0)
@@ -113,8 +114,10 @@ func _ready() -> void:
 	_shake_noise.seed = randi()
 	_shake_noise.frequency = 0.5
 
-	# All peers build the blueprint registry so ghost-block snapping works
-	_init_blueprint_registry()
+	_blueprint_mgr = load("res://scenes/wall_blueprint/wall_blueprint_manager.gd").new()
+	_blueprint_mgr.name = "WallBlueprintManager"
+	add_child(_blueprint_mgr)
+	_blueprint_mgr.init_registry()
 
 	NetworkManager.lobby_created_success.connect(_on_lobby_created_success)
 	NetworkManager.lobby_joined_success.connect(_on_lobby_joined_success)
@@ -172,7 +175,7 @@ func _setup_world() -> void:
 	var breach_area = _temple.get_node("BreachArea") as Area3D
 	breach_area.body_entered.connect(_on_temple_breached)
 
-	_spawn_wall_visuals()
+	_blueprint_mgr.spawn_visuals(self)
 	_setup_quarry()
 
 	_is_setting_up = true
@@ -181,78 +184,13 @@ func _setup_world() -> void:
 
 	_rebake_navigation()
 
-# ── Blueprint registry ────────────────────────────────────────────────────────
-# Called on ALL peers. Corners follow Nehemiah 3's circuit clockwise from the
-# Sheep Gate (NE, near Temple). Scale: ~1 unit ≈ 15 m.
-
-func _init_blueprint_registry() -> void:
-	_blueprint_positions.clear()
-	var corners: Array[Vector3] = [
-		Vector3(-16,  0, -30),  # NW  — Old Gate
-		Vector3( -6,  0, -36),  # N   — Fish Gate
-		Vector3(  6,  0, -36),  # NE  — Sheep Gate  (circuit start, Neh 3:1)
-		Vector3( 20,  0, -28),  # NE  — Tower of Hananel / Miphkad Gate
-		Vector3( 30,  0, -14),  # E   — East Gate (Temple Mount east face, Neh 3:29)
-		Vector3( 30,  0,   2),  # E   — Horse Gate / Water Gate area (Neh 3:26-28)
-		Vector3( 20,  0,  20),  # ESE — Fountain Gate (Neh 3:15)
-		Vector3(  6,  0,  32),  # S   — toward Dung Gate
-		Vector3( -4,  0,  36),  # S   — Dung Gate — southernmost tip (Neh 3:14)
-		Vector3(-16,  0,  26),  # SW  — Valley Gate (Neh 2:13, night survey start)
-		Vector3(-28,  0,   8),  # W   — Tower of the Ovens / Broad Wall (Neh 3:11)
-		Vector3(-28,  0, -14),  # WN  — back toward Old Gate
-	]
-	for i in range(corners.size()):
-		_register_wall_edge(corners[i], corners[(i + 1) % corners.size()])
-
-func _register_wall_edge(a: Vector3, b: Vector3) -> void:
-	var edge := b - a
-	var length := edge.length()
-	var dir := edge.normalized()
-	# +PI/2 puts the 2.0 long face along the wall (bricks laid sideways)
-	var angle := atan2(dir.x, dir.z) + PI / 2.0
-	# Step = 2.0 matches block long-face width so bricks tile without gaps
-	const STEP: float = 2.0
-	var count := int(ceil(length / STEP)) + 1
-	for i in range(count):
-		var pos := a + dir * (float(i) * STEP)
-		var key := Vector3(snappedf(pos.x, 0.1), 0.0, snappedf(pos.z, 0.1))
-		if not _blueprint_positions.has(key):
-			_blueprint_positions[key] = angle
-
-# ── Blueprint visuals  (server only) ─────────────────────────────────────────
-
-func _spawn_wall_visuals() -> void:
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.2, 0.6, 1.0, 0.18)
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	for key in _blueprint_positions:
-		var angle: float = _blueprint_positions[key]
-		var mesh_inst := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(2.0, 0.05, 1.0)
-		mesh_inst.mesh = box
-		mesh_inst.material_override = mat
-		mesh_inst.position = Vector3(key.x, 0.51, key.z)
-		mesh_inst.rotation.y = angle
-		add_child(mesh_inst)
-		_blueprint_meshes[key] = mesh_inst
-
-# ── Blueprint helpers  (all peers) ───────────────────────────────────────────
+# ── Blueprint helpers  (all peers) — thin wrappers over WallBlueprintManager ──
 
 func get_nearest_blueprint(world_pos: Vector3, max_dist: float) -> Vector3:
-	var best_key := Vector3.INF
-	var best_d2 := max_dist * max_dist
-	var flat := Vector3(world_pos.x, 0.0, world_pos.z)
-	for key in _blueprint_positions:
-		var d2: float = flat.distance_squared_to(key)
-		if d2 < best_d2:
-			best_d2 = d2
-			best_key = key
-	return best_key
+	return _blueprint_mgr.get_nearest(world_pos, max_dist)
 
 func get_blueprint_angle(key: Vector3) -> float:
-	return _blueprint_positions.get(key, 0.0)
+	return _blueprint_mgr.get_angle(key)
 
 # ── Quarry  (server only, interaction checked server-side) ───────────────────
 
@@ -435,11 +373,7 @@ func do_place_block(snapped_world_pos: Vector3, rotation_y: float) -> void:
 
 	# Remove the corresponding blueprint segment on all peers
 	var bp_key := Vector3(snappedf(snapped_world_pos.x, 0.1), 0.0, snappedf(snapped_world_pos.z, 0.1))
-	_blueprint_positions.erase(bp_key)
-	if _blueprint_meshes.has(bp_key):
-		var mesh_node: Node = _blueprint_meshes[bp_key]
-		if is_instance_valid(mesh_node): mesh_node.queue_free()
-		_blueprint_meshes.erase(bp_key)
+	_blueprint_mgr.erase_at(bp_key)
 
 	if multiplayer.is_server():
 		blocks_placed += 1
@@ -450,10 +384,7 @@ func do_place_block(snapped_world_pos: Vector3, rotation_y: float) -> void:
 
 func on_block_destroyed(world_pos: Vector3, rotation_y: float) -> void:
 	if not multiplayer.is_server(): return
-	# Restore blueprint so the slot can be rebuilt
 	var bp_key := Vector3(snappedf(world_pos.x, 0.1), 0.0, snappedf(world_pos.z, 0.1))
-	_blueprint_positions[bp_key] = rotation_y
-	# Restore blueprint visual on all peers
 	_restore_blueprint.rpc(bp_key, rotation_y)
 	blocks_placed = max(0, blocks_placed - 1)
 	_update_global_hud()
@@ -461,22 +392,7 @@ func on_block_destroyed(world_pos: Vector3, rotation_y: float) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _restore_blueprint(bp_key: Vector3, rotation_y: float) -> void:
-	_blueprint_positions[bp_key] = rotation_y
-	# Spawn a new blueprint mesh (server already handles its own via call_local)
-	if multiplayer.is_server():
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.2, 0.6, 1.0, 0.18)
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		var mesh_inst := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(2.0, 0.05, 1.0)
-		mesh_inst.mesh = box
-		mesh_inst.material_override = mat
-		mesh_inst.position = Vector3(bp_key.x, 0.51, bp_key.z)
-		mesh_inst.rotation.y = rotation_y
-		add_child(mesh_inst)
-		_blueprint_meshes[bp_key] = mesh_inst
+	_blueprint_mgr.restore_at(bp_key, rotation_y, self)
 
 func _rebake_navigation() -> void:
 	if _nav_region: _nav_region.bake_navigation_mesh()
