@@ -1,7 +1,8 @@
 extends RigidBody3D
 
-@export var damage: float = 20.0
+@export var damage_per_speed: float = 1.2
 @export var lifetime: float = 4.0
+const MIN_HIT_SPEED: float = 2.0
 
 var _shadow: MeshInstance3D = null
 var _thrower: Node3D = null
@@ -71,14 +72,16 @@ func _exit_tree() -> void:
 func _on_body_entered(body: Node) -> void:
 	if body is CharacterBody3D and body.is_in_group("players"):
 		return
-		
+
+	var speed := linear_velocity.length()
 	if body.has_method("take_damage"):
-		body.take_damage(damage)
+		if speed >= MIN_HIT_SPEED:
+			body.take_damage(speed * damage_per_speed)
 		_spawn_impact_effect()
 		queue_free()
 	elif body is StaticBody3D or body is CSGBox3D:
 		_spawn_impact_effect()
-		if linear_velocity.length() < 1.0:
+		if speed < 1.0:
 			queue_free()
 
 func _spawn_impact_effect() -> void:

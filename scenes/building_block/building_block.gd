@@ -34,6 +34,8 @@ func take_damage(amount: float) -> void:
 	if health <= 0:
 		if main.has_method("add_shake"):
 			main.add_shake(0.1)
+		if main.has_method("on_block_destroyed"):
+			main.on_block_destroyed(global_position, rotation.y)
 		queue_free()
 
 static func generate_name(pos: Vector3) -> String:

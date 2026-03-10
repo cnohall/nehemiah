@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 bg_color = Color(0.15, 0.12, 0.1, 0.8)
@@ -56,6 +56,7 @@ script/source = "extends CanvasLayer
 @onready var health_bar = $TopLeft/HealthBar
 @onready var wave_label = $TopRight/WaveLabel
 @onready var progress_label = $TopRight/ProgressLabel
+@onready var stones_label = $TopRight/StonesLabel
 @onready var pause_menu = $PauseMenu
 @onready var power_bar = $BottomCenter/PowerBar
 
@@ -78,7 +79,7 @@ func update_health(val: float):
 	_target_health = val
 
 func update_wave(wave: int):
-	wave_label.text = \"WAVE: %d\" % wave
+	wave_label.text = \"DAY: %d\" % wave
 	_punch_label(wave_label)
 
 func update_progress(current: int, target: int):
@@ -102,6 +103,73 @@ func update_power(val: float, max_val: float):
 	_target_power = val
 	if val > 0:
 		power_bar.visible = true
+
+func update_stones(val: int):
+	stones_label.text = \"STONES: %d/5\" % val
+	_punch_label(stones_label)
+"
+
+[sub_resource type="GDScript" id="GDScript_minimap"]
+script/source = "extends Control
+
+const MAP_SIZE: float = 160.0
+const WORLD_HALF: float = 45.0
+const SCALE_F: float = MAP_SIZE / (WORLD_HALF * 2.0)
+
+const BG_COLOR       = Color(0.10, 0.08, 0.06, 0.88)
+const BORDER_COLOR   = Color(0.50, 0.42, 0.30, 1.00)
+const BLUEPRINT_COLOR= Color(0.30, 0.50, 0.90, 0.40)
+const BLOCK_COLOR    = Color(0.55, 0.52, 0.48, 1.00)
+const PLAYER_COLOR   = Color(0.20, 1.00, 0.40, 1.00)
+const ENEMY_COLOR    = Color(1.00, 0.20, 0.20, 1.00)
+const QUARRY_COLOR   = Color(1.00, 0.85, 0.20, 1.00)
+
+var _main: Node = null
+
+func _ready() -> void:
+\t_main = get_tree().current_scene
+\tcustom_minimum_size = Vector2(MAP_SIZE, MAP_SIZE)
+
+func _process(_delta: float) -> void:
+\tqueue_redraw()
+
+func _world_to_map(wx: float, wz: float) -> Vector2:
+\treturn Vector2((wx + WORLD_HALF) * SCALE_F, (wz + WORLD_HALF) * SCALE_F)
+
+func _draw() -> void:
+\tdraw_rect(Rect2(0, 0, MAP_SIZE, MAP_SIZE), BG_COLOR)
+\tdraw_rect(Rect2(0, 0, MAP_SIZE, MAP_SIZE), BORDER_COLOR, false, 2.0)
+\tif not is_instance_valid(_main): return
+\t
+\tif _main.get(\"_blueprint_positions\") != null:
+\t\tfor key in _main._blueprint_positions:
+\t\t\tvar p := _world_to_map(key.x, key.z)
+\t\t\tdraw_rect(Rect2(p.x - 1.5, p.y - 1.5, 3.0, 3.0), BLUEPRINT_COLOR)
+\t
+\tvar blocks_node = _main.get_node_or_null(\"Blocks\")
+\tif blocks_node:
+\t\tfor block in blocks_node.get_children():
+\t\t\tif block is Node3D:
+\t\t\t\tvar p := _world_to_map(block.global_position.x, block.global_position.z)
+\t\t\t\tdraw_rect(Rect2(p.x - 2.0, p.y - 1.0, 4.0, 2.0), BLOCK_COLOR)
+\t
+\tif _main.get(\"_quarry_pos\") != null:
+\t\tvar qp := _world_to_map(_main._quarry_pos.x, _main._quarry_pos.z)
+\t\tdraw_circle(qp, 4.0, QUARRY_COLOR)
+\t
+\tvar enemies_node = _main.get_node_or_null(\"Enemies\")
+\tif enemies_node:
+\t\tfor enemy in enemies_node.get_children():
+\t\t\tif enemy is Node3D:
+\t\t\t\tvar p := _world_to_map(enemy.global_position.x, enemy.global_position.z)
+\t\t\t\tdraw_circle(p, 2.5, ENEMY_COLOR)
+\t
+\tvar players_node = _main.get_node_or_null(\"Players\")
+\tif players_node:
+\t\tfor player in players_node.get_children():
+\t\t\tif player is Node3D:
+\t\t\t\tvar p := _world_to_map(player.global_position.x, player.global_position.z)
+\t\t\t\tdraw_circle(p, 3.5, PLAYER_COLOR)
 "
 
 [node name="GameHUD" type="CanvasLayer"]
@@ -141,7 +209,7 @@ grow_horizontal = 0
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-text = "WAVE: 0"
+text = "DAY: 0"
 horizontal_alignment = 2
 pivot_offset = Vector2(200, 13)
 
@@ -149,7 +217,15 @@ pivot_offset = Vector2(200, 13)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-text = "WALLS: 0/50"
+text = "WALLS: 0/250"
+horizontal_alignment = 2
+pivot_offset = Vector2(200, 13)
+
+[node name="StonesLabel" type="Label" parent="TopRight"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+text = "STONES: 0/5"
 horizontal_alignment = 2
 pivot_offset = Vector2(200, 13)
 
@@ -174,13 +250,13 @@ theme_override_constants/margin_bottom = 10
 [node name="Label" type="Label" parent="BottomLeft/Margin"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = " CONTROLS 
- WASD: Move 
- SPACE: Jump 
- R: Rotate Block 
- LMB: Place Block 
- RMB: Charge Throw 
- SCROLL: Zoom 
+text = " CONTROLS
+ WASD: Move
+ SPACE: Jump
+ E: Collect Stones
+ LMB: Place Block
+ RMB: Charge Throw
+ SCROLL: Zoom
  ESC: Menu "
 
 [node name="BottomCenter" type="CenterContainer" parent="."]
@@ -237,3 +313,17 @@ custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "QUIT"
+
+[node name="Minimap" type="Control" parent="."]
+anchors_preset = 4
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -180.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+script = SubResource("GDScript_minimap")

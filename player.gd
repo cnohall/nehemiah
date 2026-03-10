@@ -23,6 +23,13 @@ var _ghost_block: MeshInstance3D = null
 var _blocks_container: Node3D = null
 var _building_rotation: float = 0.0
 
+const MAX_PLACE_DISTANCE: float = 4.0
+const BLUEPRINT_SNAP_RANGE: float = 3.5
+
+## Stone Economy
+var stones_carried: int = 0
+const MAX_STONES: int = 5
+
 ## Combat System
 var _is_charging: bool = false
 var _throw_power: float = 0.0
@@ -240,26 +247,35 @@ func _update_ghost_block() -> void:
 		_ghost_block.visible = false
 		return
 	var target_pos: Vector3 = result.position + result.normal * 0.1
-	
-	# Smarter snapping based on rotation
-	# Default size: 2.0x1.0. Snap values should respect this.
-	var snap_x = 2.0
-	var snap_z = 1.0
-	
-	# If rotated 90 or 270 degrees (check if rotation is closer to perpendicular)
-	var angle_mod = fmod(abs(_building_rotation), PI)
-	if abs(angle_mod - PI/2.0) < 0.1:
-		snap_x = 1.0
-		snap_z = 2.0
-	
-	var snapped_pos := Vector3(
-		snappedf(target_pos.x, snap_x), 
-		snappedf(target_pos.y - BLOCK_Y_OFFSET, GRID_SNAP_Y) + BLOCK_Y_OFFSET, 
-		snappedf(target_pos.z, snap_z)
-	)
+
+	# Blocks may only be placed on wall blueprint positions — find the nearest one
+	var main := get_tree().current_scene
+	if not main.has_method("get_nearest_blueprint"):
+		_ghost_block.visible = false
+		return
+	var bp_key: Vector3 = main.get_nearest_blueprint(target_pos, BLUEPRINT_SNAP_RANGE)
+	if bp_key == Vector3.INF:
+		_ghost_block.visible = false
+		return
+
+	var snapped_pos := Vector3(bp_key.x, BLOCK_Y_OFFSET, bp_key.z)
+	var place_rotation: float = main.get_blueprint_angle(bp_key)
+
 	_ghost_block.global_position = snapped_pos
-	_ghost_block.rotation.y = _building_rotation
+	_ghost_block.rotation.y = place_rotation
 	_ghost_block.visible = true
+
+	var in_range := global_position.distance_to(snapped_pos) <= MAX_PLACE_DISTANCE
+	# Also require stones to show green
+	var can_place := in_range and stones_carried > 0
+	var mat := _ghost_block.material_override as StandardMaterial3D
+	if mat:
+		if can_place:
+			mat.albedo_color = Color(0.4, 1.0, 0.5, 0.45)
+		elif in_range:
+			mat.albedo_color = Color(1.0, 0.85, 0.2, 0.45)  # yellow = in range, no stones
+		else:
+			mat.albedo_color = Color(1.0, 0.3, 0.3, 0.45)   # red = out of range
 
 func _get_ground_hit() -> Dictionary:
 	if _camera == null: return {}
@@ -275,10 +291,14 @@ func _get_ground_hit() -> Dictionary:
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_multiplayer_authority() or _is_dead: return
 	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_R:
-			_building_rotation = fmod(_building_rotation + PI/2.0, PI)
 		if event.keycode == KEY_ESCAPE:
 			if _hud: _toggle_pause(not _hud.get_node("PauseMenu").visible)
+		if event.keycode == KEY_E:
+			var scene = get_tree().current_scene
+			if multiplayer.is_server():
+				scene.request_collect_stones()
+			else:
+				scene.request_collect_stones.rpc_id(1)
 
 	if _hud and _hud.get_node("PauseMenu").visible: return
 
@@ -286,13 +306,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			if not _is_charging and _ghost_block != null and _ghost_block.visible:
-				get_tree().current_scene.request_place_block.rpc_id(1, _ghost_block.global_position, _building_rotation)
+				if global_position.distance_to(_ghost_block.global_position) <= MAX_PLACE_DISTANCE:
+					if stones_carried > 0:
+						# Use ghost block's rotation (may be blueprint-snapped)
+						get_tree().current_scene.request_place_block.rpc_id(
+							1, _ghost_block.global_position, _ghost_block.rotation.y
+						)
 		if mb.button_index == MOUSE_BUTTON_RIGHT:
 			if mb.pressed: _start_charging()
 			else: _release_throw()
 
 func _toggle_pause(should_pause: bool) -> void:
 	if _hud: _hud.toggle_pause(should_pause)
+
+func sync_stones_to_hud() -> void:
+	_update_hud_stones.rpc(stones_carried)
+
+@rpc("authority", "call_local", "reliable")
+func _update_hud_stones(val: int) -> void:
+	if _hud and _hud.has_method("update_stones"):
+		_hud.update_stones(val)
 
 func _init_targeter() -> void:
 	if not is_multiplayer_authority(): return

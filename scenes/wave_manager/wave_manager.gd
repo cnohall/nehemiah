@@ -1,9 +1,11 @@
 extends Node
-## Handles wave progression and enemy spawning
+## Handles day/wave progression and enemy spawning
 
 signal wave_started(wave_num: int)
 signal wave_cleared(wave_num: int)
 signal enemy_spawned(enemy: Node3D)
+
+const MAX_DAYS: int = 65
 
 @export var enemy_scene: PackedScene
 @export var spawn_timer: Timer
@@ -18,19 +20,19 @@ func _ready() -> void:
 		spawn_timer.timeout.connect(_on_spawn_timer_timeout)
 
 func start_next_wave() -> void:
+	if current_wave >= MAX_DAYS:
+		return
 	current_wave += 1
 	enemies_to_spawn = 5 + (current_wave * 3)
 	if spawn_timer:
-		spawn_timer.wait_time = max(1.0, 3.0 - (current_wave * 0.2))
+		spawn_timer.wait_time = max(0.5, 3.0 - (current_wave * 0.1))
 		spawn_timer.start()
-	
 	wave_started.emit(current_wave)
 	is_active = true
 
 func _on_spawn_timer_timeout() -> void:
 	if not multiplayer.is_server() or not is_active:
 		return
-	
 	if enemies_to_spawn > 0:
 		_spawn_enemy()
 		enemies_to_spawn -= 1
@@ -39,12 +41,9 @@ func _on_spawn_timer_timeout() -> void:
 
 func _spawn_enemy() -> void:
 	var enemy = enemy_scene.instantiate()
-	
-	# Spawn at a random position on the edge
 	var angle := randf() * PI * 2.0
-	var radius := 28.0
+	var radius := 55.0
 	enemy.position = Vector3(cos(angle) * radius, 0.5, sin(angle) * radius)
-	
 	enemy.tree_exiting.connect(_on_enemy_death)
 	enemy_spawned.emit(enemy)
 	enemies_alive += 1
