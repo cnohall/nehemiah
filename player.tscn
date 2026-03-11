@@ -1,6 +1,6 @@
 [gd_scene load_steps=7 format=3 uid="uid://boqp7a8va63hp"]
 
-[ext_resource type="Script" path="res://player.gd" id="1"]
+[ext_resource type="Script" path="res://scenes/player/player.gd" id="1"]
 
 [sub_resource type="CapsuleShape3D" id="2"]
 radius = 0.35
@@ -16,6 +16,12 @@ properties/1/replication_mode = 1
 properties/2/path = NodePath(".:role")
 properties/2/spawn = true
 properties/2/replication_mode = 1
+properties/3/path = NodePath(".:health")
+properties/3/spawn = true
+properties/3/replication_mode = 1
+properties/4/path = NodePath(".:stones_carried")
+properties/4/spawn = true
+properties/4/replication_mode = 1
 
 [sub_resource type="CapsuleMesh" id="4"]
 
@@ -23,7 +29,8 @@ properties/2/replication_mode = 1
 albedo_color = Color(0.72, 0.53, 0.35, 1)
 
 [node name="Player" type="CharacterBody3D" unique_id=993794756]
-collision_mask = 3
+collision_layer = 1
+collision_mask = 7
 script = ExtResource("1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1756234614]

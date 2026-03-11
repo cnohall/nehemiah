@@ -5,36 +5,114 @@ extends Node
 var _blueprint_positions: Dictionary = {}
 var _blueprint_meshes: Dictionary = {}   # server-only: key → MeshInstance3D
 
+# ── Wall geometry ──────────────────────────────────────────────────────────────
+
+## 12 gate/corner positions clockwise, scale ~1 unit = 15 m. Pear-shaped city.
+const CORNERS: Array[Vector3] = [
+	Vector3(-16,  0, -30),  # 0  NW  — Old/Jeshanah Gate
+	Vector3( -6,  0, -36),  # 1  N   — Fish Gate
+	Vector3(  6,  0, -36),  # 2  NE  — Sheep Gate  (Neh 3:1 start)
+	Vector3( 20,  0, -28),  # 3  NE  — Tower of Hananel / Miphkad Gate
+	Vector3( 30,  0, -14),  # 4  E   — East Gate
+	Vector3( 30,  0,   2),  # 5  E   — Horse Gate / Water Gate
+	Vector3( 20,  0,  20),  # 6  SE  — Fountain Gate
+	Vector3(  6,  0,  32),  # 7  S   — toward Dung Gate
+	Vector3( -4,  0,  36),  # 8  S   — Dung Gate (southernmost)
+	Vector3(-16,  0,  26),  # 9  SW  — Valley Gate
+	Vector3(-28,  0,   8),  # 10 W   — Tower of Ovens / Broad Wall
+	Vector3(-28,  0, -14),  # 11 WN  — Broad Wall north end
+]
+
+## 12 playable sections in Nehemiah 3 narrative order.
+## "a"/"b" are CORNERS indices for the two endpoints.
+## "day_start"/"day_end" are inclusive. Total = 52 days.
+const SECTIONS: Array[Dictionary] = [
+	{"name": "Sheep Gate",          "neh": "3:1-2",   "a": 2, "b": 3, "day_start":  1, "day_end":  4,
+	 "quote": "Eliashib the high priest arose with his brothers the priests and built the Sheep Gate."},
+	{"name": "Fish Gate",           "neh": "3:3-5",   "a": 1, "b": 2, "day_start":  5, "day_end":  8,
+	 "quote": "The sons of Hassenaah built the Fish Gate with its beams and doors."},
+	{"name": "Jeshanah Gate",       "neh": "3:6-12",  "a": 0, "b": 1, "day_start":  9, "day_end": 12,
+	 "quote": "Joiada and Meshullam repaired the Jeshanah Gate; goldsmiths and perfumers worked alongside."},
+	{"name": "Broad Wall",          "neh": "3:8",     "a": 11,"b": 0, "day_start": 13, "day_end": 17,
+	 "quote": "They restored Jerusalem as far as the Broad Wall."},
+	{"name": "Tower of Ovens",      "neh": "3:11-12", "a": 10,"b": 11,"day_start": 18, "day_end": 23,
+	 "quote": "Malkijah and Hasshub repaired another section and the Tower of Ovens."},
+	{"name": "Valley Gate",         "neh": "3:13",    "a": 9, "b": 10,"day_start": 24, "day_end": 29,
+	 "quote": "Hanun and the inhabitants of Zanoah repaired the Valley Gate — five hundred cubits of wall."},
+	{"name": "Dung Gate",           "neh": "3:13-14", "a": 8, "b": 9, "day_start": 30, "day_end": 33,
+	 "quote": "Malchijah son of Rechab repaired the Dung Gate; he rebuilt it and set its doors."},
+	{"name": "Fountain Gate",       "neh": "3:15",    "a": 7, "b": 8, "day_start": 34, "day_end": 36,
+	 "quote": "Shallun repaired the Fountain Gate; he built it and covered it, and set its doors."},
+	{"name": "Water Gate & Ophel",  "neh": "3:26-27", "a": 6, "b": 7, "day_start": 37, "day_end": 41,
+	 "quote": "The temple servants living on Ophel made repairs as far as the Water Gate."},
+	{"name": "Horse Gate",          "neh": "3:28",    "a": 5, "b": 6, "day_start": 42, "day_end": 47,
+	 "quote": "Above the Horse Gate the priests made repairs, each one opposite his own house."},
+	{"name": "East Gate",           "neh": "3:29",    "a": 4, "b": 5, "day_start": 48, "day_end": 50,
+	 "quote": "Zadok son of Immer made repairs opposite his own house."},
+	{"name": "Miphkad Gate",        "neh": "3:31-32", "a": 3, "b": 4, "day_start": 51, "day_end": 52,
+	 "quote": "Goldsmiths and merchants completed the circuit, from the Miphkad Gate back to the Sheep Gate."},
+]
+
 # ── Registry ──────────────────────────────────────────────────────────────────
 
+## Returns the section dict for a given day number (1-52).
+func get_section_for_day(day: int) -> Dictionary:
+	for sec in SECTIONS:
+		if day >= sec.day_start and day <= sec.day_end:
+			return sec
+	return SECTIONS[-1]
+
+var _interior_direction: Vector3 = Vector3.BACK
+
+func get_interior_direction() -> Vector3:
+	return _interior_direction
+
+## Returns the world midpoint of the current section — (0,0,0) in local map space.
+func get_section_center_for_day(_day: int) -> Vector3:
+	return Vector3.ZERO
+
+## Initialises blueprints for the given day's section only. Called on ALL peers.
+func init_registry_for_day(day: int) -> void:
+	_blueprint_positions.clear()
+	var sec: Dictionary = get_section_for_day(day)
+	
+	var a: Vector3 = CORNERS[sec.a]
+	var b: Vector3 = CORNERS[sec.b]
+	var midpoint: Vector3 = (a + b) * 0.5
+	
+	# Interior is towards the original city center (0,0,0)
+	_interior_direction = -midpoint.normalized()
+	if _interior_direction == Vector3.ZERO: _interior_direction = Vector3.BACK
+	
+	# Scale section to span ~70 units of the 80-unit map
+	var length: float = a.distance_to(b)
+	var scale_factor: float = 70.0 / max(1.0, length)
+	
+	var local_a: Vector3 = (a - midpoint) * scale_factor
+	var local_b: Vector3 = (b - midpoint) * scale_factor
+	
+	_register_wall_edge(local_a, local_b)
+
+## Initialises blueprints for the entire wall circuit (editor / debug use).
 func init_registry() -> void:
 	_blueprint_positions.clear()
-	# 12 historical gate/corner positions, clockwise from NW. Neh 3 circuit.
-	# Scale: ~1 unit ≈ 15 m. City is pear-shaped (wide north, tapering south).
-	var corners: Array[Vector3] = [
-		Vector3(-16,  0, -30),  # NW  — Old Gate
-		Vector3( -6,  0, -36),  # N   — Fish Gate
-		Vector3(  6,  0, -36),  # NE  — Sheep Gate  (circuit start, Neh 3:1)
-		Vector3( 20,  0, -28),  # NE  — Tower of Hananel / Miphkad Gate
-		Vector3( 30,  0, -14),  # E   — East Gate (Neh 3:29)
-		Vector3( 30,  0,   2),  # E   — Horse Gate / Water Gate (Neh 3:26-28)
-		Vector3( 20,  0,  20),  # ESE — Fountain Gate (Neh 3:15)
-		Vector3(  6,  0,  32),  # S   — toward Dung Gate
-		Vector3( -4,  0,  36),  # S   — Dung Gate, southernmost tip (Neh 3:14)
-		Vector3(-16,  0,  26),  # SW  — Valley Gate (Neh 2:13)
-		Vector3(-28,  0,   8),  # W   — Tower of the Ovens / Broad Wall (Neh 3:11)
-		Vector3(-28,  0, -14),  # WN  — back toward Old Gate
-	]
-	for i in range(corners.size()):
-		_register_wall_edge(corners[i], corners[(i + 1) % corners.size()])
+	for i in range(CORNERS.size()):
+		_register_wall_edge(CORNERS[i], CORNERS[(i + 1) % CORNERS.size()])
+
+## Removes all visuals from the scene tree (server only) and clears registries.
+func clear_all() -> void:
+	for key in _blueprint_meshes:
+		var m: Node = _blueprint_meshes[key]
+		if is_instance_valid(m):
+			m.queue_free()
+	_blueprint_meshes.clear()
+	_blueprint_positions.clear()
 
 func _register_wall_edge(a: Vector3, b: Vector3) -> void:
 	var edge := b - a
 	var dir := edge.normalized()
-	# +PI/2 puts the 2.0 long face along the wall (bricks laid sideways)
 	var angle := atan2(dir.x, dir.z) + PI / 2.0
-	# Step = 2.0 matches block long-face width so bricks tile without gaps
-	const STEP: float = 2.0
+	const STEP: float = 1.5
 	var count := int(ceil(edge.length() / STEP)) + 1
 	for i in range(count):
 		var pos := a + dir * (float(i) * STEP)

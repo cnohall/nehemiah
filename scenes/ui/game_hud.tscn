@@ -330,11 +330,12 @@ func show_game_over(win: bool, day: int):
 script/source = "extends Control
 
 const MAP_SIZE: float = 160.0
-const WORLD_HALF: float = 45.0
+const WORLD_HALF: float = 50.0
 const SCALE_F: float = MAP_SIZE / (WORLD_HALF * 2.0)
 
 const BG_COLOR       = Color(0.10, 0.08, 0.06, 0.88)
 const BORDER_COLOR   = Color(0.50, 0.42, 0.30, 1.00)
+const BOUNDARY_COLOR = Color(0.40, 0.35, 0.25, 0.60)
 const BLUEPRINT_COLOR= Color(0.30, 0.50, 0.90, 0.40)
 const BLOCK_COLOR    = Color(0.55, 0.52, 0.48, 1.00)
 const PLAYER_COLOR   = Color(0.20, 1.00, 0.40, 1.00)
@@ -363,6 +364,17 @@ func _in_bounds(p: Vector2, margin: float = 4.0) -> bool:
 func _draw() -> void:
 \tdraw_rect(Rect2(0, 0, MAP_SIZE, MAP_SIZE), BG_COLOR)
 \tdraw_rect(Rect2(0, 0, MAP_SIZE, MAP_SIZE), BORDER_COLOR, false, 2.0)
+\t
+\t# Draw map boundary (80x80 floor)
+\tvar tl := _world_to_map(-40, -40)
+\tvar tr := _world_to_map(40, -40)
+\tvar br := _world_to_map(40, 40)
+\tvar bl := _world_to_map(-40, 40)
+\tdraw_line(tl, tr, BOUNDARY_COLOR, 1.5)
+\tdraw_line(tr, br, BOUNDARY_COLOR, 1.5)
+\tdraw_line(br, bl, BOUNDARY_COLOR, 1.5)
+\tdraw_line(bl, tl, BOUNDARY_COLOR, 1.5)
+\t
 \tif not is_instance_valid(_main): return
 \t
 \tif _main.get(\"_blueprint_positions\") != null:

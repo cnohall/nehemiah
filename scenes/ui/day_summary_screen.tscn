@@ -1,0 +1,178 @@
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.18, 0.14, 0.1, 0.95)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.5, 0.4, 0.25, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_size = 10
+shadow_offset = Vector2(4, 4)
+
+[sub_resource type="FontFile" id="FontFile_cinzel"]
+font_path = "res://assets/fonts/Cinzel-Regular.ttf"
+
+[sub_resource type="GDScript" id="GDScript_summary"]
+script/source = "extends Control
+
+signal ready_pressed
+
+@onready var title_label = $Center/Panel/Margin/VBox/Title
+@onready var stats_container = $Center/Panel/Margin/VBox/StatsContainer
+@onready var wall_progress = $Center/Panel/Margin/VBox/WallProgress
+@onready var wall_bar = $Center/Panel/Margin/VBox/WallBar
+@onready var timer_label = $Center/Panel/Margin/VBox/TimerLabel
+@onready var ready_btn = $Center/Panel/Margin/VBox/ReadyBtn
+
+var _timer: float = 30.0
+var _init_timer: float = 3.0
+var _is_active: bool = false
+
+func _ready():
+	visible = false
+
+func _process(delta):
+	if _is_active:
+		if _init_timer > 0:
+			_init_timer -= delta
+			ready_btn.disabled = true
+			ready_btn.text = \"WAIT...\"
+		else:
+			ready_btn.disabled = false
+			ready_btn.text = \"READY\"
+
+		_timer -= delta
+		timer_label.text = \"Next Day in: %ds\" % ceil(_timer)
+		if _timer <= 0:
+			_on_ready_pressed()
+
+func display_summary(day: int, stats: Dictionary, blocks: int, target: int):
+	_is_active = true
+	_timer = 30.0
+	_init_timer = 3.0
+	title_label.text = \"DAY %d COMPLETE\" % day
+	
+	# Clear old stats
+	for child in stats_container.get_children():
+		child.queue_free()
+	
+	# Add header
+	var header := HBoxContainer.new()
+	var n_lab := Label.new(); n_lab.text = \"PLAYER\"; n_lab.custom_minimum_size.x = 120; header.add_child(n_lab)
+	var k_lab := Label.new(); k_lab.text = \"KILLS\"; k_lab.custom_minimum_size.x = 80; header.add_child(k_lab)
+	var b_lab := Label.new(); b_lab.text = \"BLOCKS\"; b_lab.custom_minimum_size.x = 80; header.add_child(b_lab)
+	stats_container.add_child(header)
+	
+	for pid in stats:
+		var s = stats[pid]
+		var row := HBoxContainer.new()
+		var nl := Label.new(); nl.text = s.name; nl.custom_minimum_size.x = 120; row.add_child(nl)
+		var kl := Label.new(); kl.text = str(s.kills); kl.custom_minimum_size.x = 80; row.add_child(kl)
+		var b_count = s.get(\"blocks\", 0)
+		var bl := Label.new(); bl.text = str(b_count); bl.custom_minimum_size.x = 80; row.add_child(bl)
+		stats_container.add_child(row)
+	
+	wall_progress.text = \"Wall Construction: %d / %d (%d%%)\" % [blocks, target, int((float(blocks)/target)*100)]
+	wall_bar.max_value = target
+	wall_bar.value = blocks
+	
+	visible = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func _on_ready_pressed():
+	if not _is_active: return
+	_is_active = false
+	visible = false
+	ready_pressed.emit()
+"
+
+[node name="DaySummaryScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = SubResource("GDScript_summary")
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.47)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(500, 400)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 30
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("FontFile_cinzel")
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.95, 0.85, 0.45, 1)
+text = "DAY COMPLETE"
+horizontal_alignment = 1
+
+[node name="StatsContainer" type="VBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HSeparator" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="WallProgress" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("FontFile_cinzel")
+theme_override_font_sizes/font_size = 18
+text = "Wall Construction: 45 / 250 (18%)"
+horizontal_alignment = 1
+
+[node name="WallBar" type="ProgressBar" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+value = 18.0
+show_percentage = false
+
+[node name="TimerLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+text = "Next Day in: 30s"
+horizontal_alignment = 1
+
+[node name="ReadyBtn" type="Button" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(150, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_fonts/font = SubResource("FontFile_cinzel")
+theme_override_font_sizes/font_size = 20
+text = "READY"
+
+[connection signal="pressed" from="Center/Panel/Margin/VBox/ReadyBtn" to="." method="_on_ready_pressed"]
