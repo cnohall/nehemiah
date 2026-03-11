@@ -112,7 +112,7 @@ func _register_wall_edge(a: Vector3, b: Vector3) -> void:
 	var edge := b - a
 	var dir := edge.normalized()
 	var angle := atan2(dir.x, dir.z) + PI / 2.0
-	const STEP: float = 1.5
+	const STEP: float = 10.0
 	var count := int(ceil(edge.length() / STEP)) + 1
 	for i in range(count):
 		var pos := a + dir * (float(i) * STEP)
@@ -130,7 +130,7 @@ func spawn_visuals(parent: Node3D) -> void:
 func _spawn_single_visual(key: Vector3, angle: float, mat: StandardMaterial3D, parent: Node3D) -> void:
 	var mesh_inst := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(2.0, 0.05, 1.0)
+	box.size = Vector3(10.0, 0.05, 1.0)
 	mesh_inst.mesh = box
 	mesh_inst.material_override = mat
 	mesh_inst.position = Vector3(key.x, 0.51, key.z)

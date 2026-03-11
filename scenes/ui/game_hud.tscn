@@ -83,6 +83,7 @@ script/source = "extends CanvasLayer
 @onready var health_bar = $TopLeft/HealthBar
 @onready var stamina_bar = $TopLeft/StaminaBar
 @onready var role_label = $TopLeft/RoleLabel
+@onready var carried_label = $TopLeft/CarriedLabel
 @onready var wave_label = $TopRight/WaveLabel
 @onready var progress_label = $TopRight/ProgressLabel
 @onready var stones_label = $TopRight/StonesLabel
@@ -146,7 +147,7 @@ func update_wave(wave: int):
 	_punch_label(wave_label)
 
 func update_progress(current: int, target: int):
-	progress_label.text = \"WALLS: %d/%d\" % [current, target]
+	progress_label.text = \"SECTIONS: %d/%d\" % [current, target]
 	_punch_label(progress_label)
 
 func _punch_label(label: Label):
@@ -304,8 +305,12 @@ func update_role(role_name: String):
 		role_label.text = role_name.to_upper()
 
 func update_stones(val: int, max_val: int = 5):
-	stones_label.text = \"STONES: %d/%d\" % [val, max_val]
+	stones_label.text = \"AMMO: %d/%d\" % [val, max_val]
 	_punch_label(stones_label)
+
+func update_carried(item_name: String):
+	if carried_label:
+		carried_label.text = (\"CARRYING: \" + item_name.to_upper()) if item_name != \"\" else \"CARRYING: —\"
 
 func update_place(val: float, max_val: float):
 	place_bar.max_value = max_val
@@ -465,6 +470,15 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 text = "SLINGER"
 
+[node name="CarriedLabel" type="Label" parent="TopLeft"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_1")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.95, 0.78, 0.40, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+text = "CARRYING: —"
+
 [node name="TopRight" type="VBoxContainer" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
@@ -493,18 +507,19 @@ theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.95, 0.85, 0.60, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-text = "WALLS: 0/250"
+text = "SECTIONS: 0/0"
 horizontal_alignment = 2
 pivot_offset = Vector2(200, 13)
 
 [node name="StonesLabel" type="Label" parent="TopRight"]
+visible = false
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_1")
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.95, 0.85, 0.60, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-text = "STONES: 0/5"
+text = "AMMO: 0/5"
 horizontal_alignment = 2
 pivot_offset = Vector2(200, 13)
 
@@ -524,8 +539,8 @@ anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 20.0
-offset_top = -200.0
-offset_right = 200.0
+offset_top = -260.0
+offset_right = 230.0
 offset_bottom = -20.0
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
@@ -541,13 +556,12 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = " CONTROLS
- WASD: Move
- SHIFT: Sprint
- SPACE: Jump
- E: Collect Stones
- LMB: Place Block
- RMB: Charge Throw
- SCROLL: Zoom
+ WASD: Move       SHIFT: Sprint
+ E: Pick Up Material
+ G: Drop Item
+ LMB Hold: Deliver / Build
+ RMB Hold: Charge Throw
+ SCROLL: Zoom    TAB: Upgrades
  ESC: Menu "
 
 [node name="PlaceBarContainer" type="CenterContainer" parent="."]

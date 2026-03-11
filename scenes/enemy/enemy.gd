@@ -27,9 +27,12 @@ func _ready() -> void:
 	if not multiplayer.is_server():
 		set_physics_process(false)
 		return
-	
+
 	_attack_timer.timeout.connect(_on_attack_timer_timeout)
-	_find_new_target()
+	# Wait one physics frame so NavigationAgent3D syncs with the nav server
+	# before we request the first path — otherwise is_navigation_finished()
+	# returns true immediately and the enemy never moves.
+	call_deferred("_find_new_target")
 
 func _apply_visuals() -> void:
 	if not is_instance_valid(_mesh): return
@@ -154,52 +157,44 @@ func _on_death() -> void:
 		main.drop_shekel(global_position, gold_value)
 	queue_free()
 
+const ATTACK_REACH: float = 2.5
+
 func _on_attack_timer_timeout() -> void:
 	if not multiplayer.is_server(): return
 	var bodies := _attack_area.get_overlapping_bodies()
+
+	# Priority 1: Players (physics overlap)
 	for body in bodies:
-		if (body.is_in_group("players") or body.is_in_group("temple")) and body.has_method("take_damage"):
+		if body.is_in_group("players") and body.has_method("take_damage") and body.visible:
 			body.take_damage(damage)
 			return
-	for body in bodies:
-		var block = _get_block_from_body(body)
-		if block and block.has_method("take_damage"):
-			var top_block = _get_top_block_in_stack(block)
-			if top_block and top_block.has_method("take_damage"):
-				top_block.take_damage(damage)
-				return 
 
-func _get_block_from_body(body: Node) -> Node:
-	if body is StaticBody3D:
-		var parent = body.get_parent()
-		if parent and parent.has_method("take_damage"): return parent
+	# Priority 2: Wall Sections (physics overlap via their StaticBody3D)
+	for body in bodies:
+		var section = _get_section_from_body(body)
+		if section and section.has_method("take_damage"):
+			section.take_damage(damage)
+			return
+
+	# Priority 3: Temple (physics overlap)
+	for body in bodies:
+		if body.is_in_group("temple") and body.has_method("take_damage"):
+			body.take_damage(damage)
+			return
+
+func _get_section_from_body(body: Node) -> Node:
+	var p = body
+	while p:
+		if p is WallSection: return p
+		p = p.get_parent()
 	return null
 
-func _get_top_block_in_stack(block: Node3D) -> Node3D:
-	var blocks_node := get_tree().current_scene.get_node_or_null("Blocks")
-	if not blocks_node: return block
-	var target_pos = block.global_position
-	var top_block = block
-	for other_block in blocks_node.get_children():
-		if not other_block is Node3D or other_block == block: continue
-		var other_pos = other_block.global_position
-		if abs(other_pos.x - target_pos.x) < 0.1 and abs(other_pos.z - target_pos.z) < 0.1:
-			if other_pos.y > top_block.global_position.y: top_block = other_block
-	return top_block
-
 func _find_new_target() -> void:
-	var blocks_node := get_tree().current_scene.get_node_or_null("Blocks")
-	if blocks_node and blocks_node.get_child_count() > 0:
-		var stacks = {} 
-		for block in blocks_node.get_children():
-			if not block is Node3D: continue
-			var pos = block.global_position
-			var key = Vector2(snappedf(pos.x, 0.1), snappedf(pos.z, 0.1))
-			if not stacks.has(key) or pos.y > stacks[key].global_position.y: stacks[key] = block
-		var top_blocks = stacks.values()
-		if top_blocks.size() > 0:
-			_target = top_blocks[randi() % top_blocks.size()] as Node3D
-			return
+	var sections = get_tree().get_nodes_in_group("wall_sections")
+	if sections.size() > 0:
+		# Target a random section for now
+		_target = sections[randi() % sections.size()]
+		return
 	
 	# Priority 3: Temple
 	var temples = get_tree().get_nodes_in_group("temple")

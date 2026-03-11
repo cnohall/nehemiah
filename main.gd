@@ -67,6 +67,11 @@ const SUN_NIGHT: float = 0.05
 const BRIGHT_DAY: float = 1.0
 const BRIGHT_NIGHT: float = 0.12
 
+# Material Piles
+var _stone_pile: Node3D = null
+var _wood_pile: Node3D = null
+var _mortar_pile: Node3D = null
+
 # Stone quarry
 var _quarry_pos: Vector3 = Vector3(-4.0, 0.5, -4.0)
 const QUARRY_INTERACT_RANGE: float = 5.0
@@ -231,17 +236,23 @@ func _begin_dawn() -> void:
 
 	var next_day: int = _wave_manager.current_wave + 1
 	if next_day <= _wave_manager.MAX_DAYS and not is_game_over:
-		# Load wall section for the new day on all peers (this centers/scales it)
+		# Clear any carriables left on the ground or in players' hands
+		_clear_carriables_rpc.rpc()
+		# Load wall section for the new day on all peers
 		_building_mgr.load_section_for_day(next_day)
-		# Update breach detection area and quarry/temple based on new interior dir
+		# Reposition supply piles, temple, and breach area for the new section
 		_update_breach_area(next_day)
 		_setup_quarry()
-		
-		# Place some initial ruins for each section
 		_building_mgr.place_starting_ruins()
-		
-		# Respawn all players at the section center (0,0,0 local)
 		_respawn_players_rpc.rpc(Vector3.ZERO)
+
+@rpc("authority", "call_local", "reliable")
+func _clear_carriables_rpc() -> void:
+	for c in get_tree().get_nodes_in_group("carriables"):
+		c.queue_free()
+	for player in _players.get_children():
+		if "carried_item" in player:
+			player.carried_item = null
 
 	_start_dawn_rpc.rpc()
 	if not is_game_over: _wave_manager.start_next_wave()
@@ -277,9 +288,7 @@ func _setup_world() -> void:
 	_setup_breach_detection()
 	_setup_boundaries()
 	
-	_building_mgr.spawn_blueprint_visuals()
 	_setup_quarry()
-	_building_mgr.place_starting_ruins()
 	_rebake_navigation()
 	
 	_update_breach_area(1)
@@ -307,32 +316,40 @@ func _setup_boundaries() -> void:
 			3: col.position = Vector3(-40, 5, 0); col.rotation.y = PI/2 # West
 
 func _setup_quarry() -> void:
-	# Position quarry 10 units "inside" from the center
+	# Position piles in different locations inside the city
 	var dir := Vector3.BACK
 	if _building_mgr and _building_mgr.has_method("get_interior_direction"):
 		dir = _building_mgr.get_interior_direction()
 	
-	# Fix height: position y=1.0 with a 1m tall mesh puts the bottom at y=0.5 (on floor)
-	var quarry_local_pos = dir * 10.0 + Vector3(0, 1.0, 0)
-	_quarry_pos = quarry_local_pos
+	var right_dir = dir.cross(Vector3.UP)
 	
-	# If quarry exists, move it. Else create it.
-	var quarry = get_node_or_null("StoneQuarry")
-	if not quarry:
-		quarry = Node3D.new()
-		quarry.name = "StoneQuarry"
-		add_child(quarry)
-		var mesh_inst := MeshInstance3D.new()
-		# Make it slightly taller (1.2m) and lift it so it definitely sits on floor
-		var box := BoxMesh.new(); box.size = Vector3(3, 1.2, 3); mesh_inst.mesh = box
-		var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.5, 0.46, 0.4); mat.roughness = 0.95
-		mesh_inst.material_override = mat; quarry.add_child(mesh_inst)
-		var mesh2 := MeshInstance3D.new(); var box2 := BoxMesh.new(); box2.size = Vector3(1.5, 0.8, 1.5); mesh2.mesh = box2
-		mesh2.material_override = mat; mesh2.position = Vector3(1.8, -0.2, 1.2); quarry.add_child(mesh2)
+	# 1. Stone Pile (Center-Back)
+	var stone_pos = dir * 15.0 + Vector3(0, 0.5, 0)
+	_stone_pile = _ensure_supply_pile(_stone_pile, "StonePile", "stone", stone_pos)
 	
-	quarry.position = _quarry_pos
+	# 2. Wood Pile (Back-Right)
+	var wood_pos = dir * 12.0 + right_dir * 12.0 + Vector3(0, 0.5, 0)
+	_wood_pile = _ensure_supply_pile(_wood_pile, "WoodPile", "wood", wood_pos)
+	
+	# 3. Mortar Pile (Back-Left)
+	var mortar_pos = dir * 12.0 - right_dir * 12.0 + Vector3(0, 0.5, 0)
+	_mortar_pile = _ensure_supply_pile(_mortar_pile, "MortarPile", "mortar", mortar_pos)
+	
 	# Update temple position too
 	if _temple: _temple.position = dir * 25.0 + Vector3(0, 0.5, 0)
+
+func _ensure_supply_pile(pile: Node3D, pile_name: String, type: String, pos: Vector3) -> Node3D:
+	if not pile:
+		var script = load("res://scenes/player/supply_pile.gd")
+		pile = Node3D.new()
+		pile.name = pile_name
+		pile.set_script(script)
+		pile.material_type = type
+		pile.add_to_group("supply_piles")
+		add_child(pile)
+	
+	pile.global_position = pos
+	return pile
 
 func _setup_breach_detection() -> void:
 	_breach_area = Area3D.new()
@@ -369,17 +386,19 @@ func _update_breach_area(_day: int) -> void:
 
 func _on_wall_complete() -> void:
 	if not multiplayer.is_server(): return
-	
-	if _wave_manager:
-		_wave_manager.stop_spawning()
-	
-	# Clear all remaining enemies immediately so the day ends
+
+	if _wave_manager: _wave_manager.stop_spawning()
 	for enemy in _enemies.get_children():
 		enemy.queue_free()
-	
-	# If this was the final wall section (Day 52), trigger win
+
 	if _wave_manager and _wave_manager.current_wave >= _wave_manager.MAX_DAYS:
+		# Final section complete — win the game
 		_end_game(true)
+		return
+
+	# Earlier section complete — begin night/summary, then load the next section
+	_spawn_floating_text.rpc(Vector3(0, 3, 0), "Section Complete!", Color.LIME)
+	_begin_night_transition.rpc()
 
 func _on_city_breached(body: Node) -> void:
 	if not multiplayer.is_server() or is_game_over: return
@@ -451,9 +470,11 @@ func _on_enemy_removed(enemy: Node3D) -> void:
 # ==============================================================================
 
 func _on_lobby_created_success(_lobby_id: int) -> void:
+	# Always spawn sections fresh after the multiplayer peer is established.
+	if _building_mgr:
+		_building_mgr.load_section_rpc.rpc(1)
 	_spawn_player(1)
 	_rebake_navigation()
-	# Wait a bit longer to ensure nav is ready
 	get_tree().create_timer(3.0).timeout.connect(func(): _wave_manager.start_next_wave())
 
 func _on_lobby_joined_success(_lobby_id: int) -> void:

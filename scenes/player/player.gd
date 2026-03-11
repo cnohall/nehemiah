@@ -74,8 +74,8 @@ var _last_facing: String = "down"
 var _hud: CanvasLayer = null
 var _is_dead: bool = false
 var _place_timer: float = 0.0
-var _target_blueprint_pos: Vector3 = Vector3.INF
-var _placing_is_new_column: bool = false
+
+var carried_item: Carriable = null
 
 # ══════════════════════════════════════════════════════════════════════════════
 # REPLICATED STATE
@@ -125,11 +125,9 @@ var current_animation: String = FALLBACK_ANIM
 const BLOCK_SIZE := Vector3(2.0, 0.8, 1.0)
 const BLOCK_Y := BLOCK_SIZE.y * 0.5 
 
-## The ghost (preview) node, created once and reused every frame.
-var _ghost: MeshInstance3D = null
 var _aim_dot: MeshInstance3D = null
 
-## True while the RMB is held (stone-throw charge); we skip placement then.
+## True while the RMB is held (stone-throw charge).
 var _charging_throw: bool = false
 var _throw_power: float = 0.0
 var _reload_timer: float = 0.0
@@ -162,6 +160,7 @@ func _ready() -> void:
 		_hud.update_health(health)
 		_hud.update_stones(stones_carried, max_stones)
 		_hud.update_role(role)
+		_notify_carried_changed()
 
 func _apply_role_stats() -> void:
 	var data = ROLES.get(role, ROLES["slinger"])
@@ -212,7 +211,12 @@ func _physics_process(delta: float) -> void:
 
 	var move_dir := _get_isometric_input()
 	var sprinting := Input.is_key_pressed(KEY_SHIFT) and move_dir != Vector3.ZERO and stamina > 0.0
-	var speed := move_speed * (SPRINT_SPEED_MULT if sprinting else 1.0)
+	
+	var current_speed: float = move_speed
+	if carried_item:
+		current_speed *= (1.0 - carried_item.speed_penalty)
+		
+	var speed: float = current_speed * (SPRINT_SPEED_MULT if sprinting else 1.0)
 
 	if sprinting:
 		stamina = maxf(0.0, stamina - SPRINT_DRAIN * delta)
@@ -298,35 +302,26 @@ func _throw_stone() -> void:
 		main.request_throw_stone.rpc_id(1, spawn_origin, dir, _throw_power, get_path())
 
 func _process_building(delta: float) -> void:
-	if _place_timer > 0:
-		# If user releases button or moves too far, cancel placement
-		var dist = global_position.distance_to(_target_blueprint_pos)
-		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or dist > BUILD_RANGE:
-			_cancel_placement()
-			return
-			
-		_place_timer -= delta
-		if _hud: _hud.update_place(_place_timer, _get_base_place_duration())
-		if _place_timer <= 0:
-			_complete_placement()
-
-func _cancel_placement() -> void:
-	_place_timer = 0.0
-	_target_blueprint_pos = Vector3.INF
-	if _hud: _hud.update_place(0, 1.0)
+	if not is_multiplayer_authority(): return
+	
+	var nearest_section = _find_nearest_in_group("wall_sections", 3.0)
+	if nearest_section and nearest_section is WallSection:
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			if carried_item:
+				nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
+			elif nearest_section.is_ready_to_build():
+				var build_rate = 15.0 # 15% per second
+				if role == "builder": build_rate *= 1.5
+				nearest_section.request_build.rpc_id(1, build_rate * delta)
+				if _hud: _hud.update_place(1, 1) # Just a visual indicator?
+		else:
+			if _hud: _hud.update_place(0, 1)
+	else:
+		if _hud: _hud.update_place(0, 1)
 
 func _get_base_place_duration() -> float:
 	var mult = ROLES.get(role, ROLES["slinger"])["place_speed"]
 	return 2.0 / mult
-
-func _complete_placement() -> void:
-	if _target_blueprint_pos == Vector3.INF: return
-	
-	var main = get_tree().current_scene
-	var building_mgr = main.get_node_or_null("BuildingManager")
-	if building_mgr:
-		building_mgr.server_place_block.rpc_id(1, _target_blueprint_pos, _target_rotation)
-	_target_blueprint_pos = Vector3.INF
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ANIMATION & GHOST
@@ -376,19 +371,7 @@ func _apply_remote_animation() -> void:
 
 func _init_building_system() -> void:
 	if not is_multiplayer_authority(): return
-	_ghost = MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = BLOCK_SIZE
-	_ghost.mesh = mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.2, 0.6, 1.0, 0.35)
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_ghost.material_override = mat
-	_ghost.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_ghost.visible = false
-	get_tree().current_scene.add_child(_ghost)
-	
+	# Aim dot: shows where stones will land
 	_aim_dot = MeshInstance3D.new()
 	var dot_mesh := CylinderMesh.new()
 	dot_mesh.top_radius = 0.25
@@ -396,7 +379,7 @@ func _init_building_system() -> void:
 	dot_mesh.height = 0.05
 	_aim_dot.mesh = dot_mesh
 	var dot_mat := StandardMaterial3D.new()
-	dot_mat.albedo_color = Color(1.0, 0.0, 0.0, 0.5) # Semi-transparent red
+	dot_mat.albedo_color = Color(1.0, 0.0, 0.0, 0.5)
 	dot_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	dot_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	dot_mat.no_depth_test = true
@@ -408,7 +391,6 @@ func _init_building_system() -> void:
 
 func _process(_delta: float) -> void:
 	if not is_multiplayer_authority() or _is_dead: return
-	_update_ghost_block()
 	_update_aim_dot()
 
 func _update_aim_dot() -> void:
@@ -423,85 +405,24 @@ func _update_aim_dot() -> void:
 	var hit := ray_origin + ray_dir * t
 	_aim_dot.global_position = hit + Vector3(0, 0.1, 0)
 
-func _update_ghost_block() -> void:
-	if _ghost == null or _camera == null: return
-	var mouse_pos := get_viewport().get_mouse_position()
-	var ray_origin := _camera.project_ray_origin(mouse_pos)
-	var ray_dir    := _camera.project_ray_normal(mouse_pos)
-	if abs(ray_dir.y) < 0.001:
-		_ghost.visible = false
-		return
-	# Floor is at y=0.5
-	var t := (0.5 - ray_origin.y) / ray_dir.y
-	if t < 0.0:
-		_ghost.visible = false
-		return
-	var hit := ray_origin + ray_dir * t
-	
-	var main = get_tree().current_scene
-	var building_mgr = main.get_node_or_null("BuildingManager")
-	if building_mgr and building_mgr.has_method("get_nearest_placeable"):
-		var snap_pos = building_mgr.get_nearest_placeable(hit, 5.0)
-		if snap_pos != Vector3.INF:
-			# Check player distance to build spot
-			if global_position.distance_to(snap_pos) > BUILD_RANGE:
-				_ghost.visible = false
-				return
-				
-			var stack_height = building_mgr.get_stack_at(snap_pos)
-			var y_pos = 0.9 + (stack_height * 0.8)
-			_ghost.global_position = Vector3(snap_pos.x, y_pos, snap_pos.z)
-			_ghost.rotation.y = building_mgr.get_placeable_angle(snap_pos)
-			_ghost.visible = true
-			return
-	_ghost.visible = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_multiplayer_authority() or _is_dead: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E:
-			var scene = get_tree().current_scene
-			if multiplayer.is_server():
-				scene.request_collect_stones()
-			else:
-				scene.request_collect_stones.rpc_id(1)
+			_handle_interaction()
+		if event.keycode == KEY_G:
+			_handle_drop()
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			if _charging_throw or _place_timer > 0: return
-			if _ghost and _ghost.visible:
-				var is_new_section = true
-				var main = get_tree().current_scene
-				var building_mgr = main.get_node_or_null("BuildingManager")
-				if building_mgr and building_mgr.has_method("get_stack_at"):
-					if building_mgr.get_stack_at(Vector3(_ghost.global_position.x, 0, _ghost.global_position.z)) > 0:
-						is_new_section = false
-				
-				if stones_carried > 0 or not is_new_section:
-					_start_placement(_ghost.global_position, _ghost.rotation.y)
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
 			get_tree().current_scene._target_zoom = clamp(get_tree().current_scene._target_zoom - 2.0, 5, 35)
-		if mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			get_tree().current_scene._target_zoom = clamp(get_tree().current_scene._target_zoom + 2.0, 5, 35)
-
-var _target_rotation: float = 0.0
 
 @rpc("authority", "call_local", "reliable")
 func set_stones(val: int) -> void:
 	stones_carried = val
-
-func _start_placement(pos: Vector3, rot: float) -> void:
-	_target_blueprint_pos = pos
-	_target_rotation = rot
-	_place_timer = _get_base_place_duration()
-	
-	var main = get_tree().current_scene
-	var building_mgr = main.get_node_or_null("BuildingManager")
-	_placing_is_new_column = true
-	if building_mgr and building_mgr.has_method("get_stack_at"):
-		# Check if this is the first block in the column (y=0)
-		if building_mgr.get_stack_at(Vector3(pos.x, 0, pos.z)) > 0:
-			_placing_is_new_column = false
 
 func take_damage(amount: float) -> void:
 	if not multiplayer.is_server() or _is_dead: return
@@ -525,6 +446,71 @@ func respawn(pos: Vector3) -> void:
 	visible = true
 	global_position = pos
 
-func sync_stones_to_hud() -> void:
-	if is_multiplayer_authority() and _hud:
-		_hud.update_stones(stones_carried, max_stones)
+func _handle_interaction() -> void:
+	# 1. If carrying an item, try to deliver it to a nearby wall section
+	if carried_item != null:
+		var nearest_section = _find_nearest_in_group("wall_sections", 3.0)
+		if nearest_section and nearest_section is WallSection:
+			nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
+			return
+
+	# 2. Try to pick up existing carriable
+	if carried_item == null:
+		var nearest_c = _find_nearest_in_group("carriables", 2.0)
+		if nearest_c and nearest_c is Carriable:
+			_request_pickup.rpc_id(1, nearest_c.get_path())
+			return
+			
+	# 3. Try to interact with supply pile
+	var nearest_pile = _find_nearest_in_group("supply_piles", 3.0)
+	if nearest_pile:
+		nearest_pile.request_spawn_material.rpc_id(1, multiplayer.get_unique_id())
+		return
+
+func _handle_drop() -> void:
+	if carried_item:
+		_request_drop.rpc_id(1, global_position + Vector3(0, 0, -1).rotated(Vector3.UP, rotation.y))
+
+func _find_nearest_in_group(group: String, max_dist: float) -> Node3D:
+	var nearest: Node3D = null
+	var min_d = max_dist
+	for node in get_tree().get_nodes_in_group(group):
+		var d = global_position.distance_to(node.global_position)
+		if d < min_d:
+			min_d = d
+			nearest = node
+	return nearest
+
+@rpc("any_peer", "call_local", "reliable")
+func _request_pickup(path: NodePath) -> void:
+	if not multiplayer.is_server(): return
+	var item = get_node_or_null(path)
+	if item and item is Carriable and item.carrier == null:
+		_sync_pickup.rpc(path)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_pickup(path: NodePath) -> void:
+	var item = get_node_or_null(path)
+	if item and item is Carriable:
+		item.pick_up(self)
+		carried_item = item as Carriable
+		_notify_carried_changed()
+
+@rpc("any_peer", "call_local", "reliable")
+func _request_drop(pos: Vector3) -> void:
+	if not multiplayer.is_server(): return
+	if carried_item:
+		_sync_drop.rpc(pos)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_drop(pos: Vector3) -> void:
+	if carried_item:
+		carried_item.drop(pos)
+		carried_item = null
+		_notify_carried_changed()
+
+func _notify_carried_changed() -> void:
+	if not is_multiplayer_authority() or not _hud: return
+	if _hud.has_method("update_carried"):
+		var name_str := carried_item.material_name if carried_item else ""
+		_hud.update_carried(name_str)
