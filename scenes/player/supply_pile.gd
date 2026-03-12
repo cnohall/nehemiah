@@ -43,11 +43,11 @@ func request_spawn_material(caller_id: int) -> void:
 	if player and player.get("carried_item") != null and player.carried_item != null:
 		return
 	var uid := "%d_%d" % [Time.get_ticks_msec(), randi() % 99999]
-	_spawn_and_give_rpc.rpc(uid, caller_id)
+	_sync_give_material.rpc(uid, caller_id)
 
 ## Runs on ALL peers — creates the carriable and instantly gives it to the player.
 @rpc("authority", "call_local", "reliable")
-func _spawn_and_give_rpc(uid: String, player_id: int) -> void:
+func _sync_give_material(uid: String, player_id: int) -> void:
 	var material_node: Carriable = null
 	match material_type:
 		"stone":  material_node = _cut_stone_script.new()

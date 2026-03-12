@@ -116,6 +116,21 @@ func get_interior_direction() -> Vector3:
 
 # ── Queries ────────────────────────────────────────────────────────────
 
+## Returns the nearest wall section within max_dist, or null.
+func get_nearest_section(world_pos: Vector3, max_dist: float) -> WallSection:
+	_ensure_references()
+	if _blocks == null: return null
+	
+	var best: WallSection = null
+	var best_dist := max_dist
+	for section in _blocks.get_children():
+		if is_instance_valid(section) and section is WallSection and not section.is_queued_for_deletion():
+			var d := world_pos.distance_to(section.global_position)
+			if d < best_dist:
+				best_dist = d
+				best = section
+	return best
+
 func get_nearest_placeable(world_pos: Vector3, max_dist: float) -> Vector3:
 	_ensure_references()
 	if _blocks == null: return Vector3.INF

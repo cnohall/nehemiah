@@ -91,7 +91,10 @@ func init_registry_for_day(day: int) -> void:
 	var local_a: Vector3 = (a - midpoint) * scale_factor
 	var local_b: Vector3 = (b - midpoint) * scale_factor
 	
-	_register_wall_edge(local_a, local_b)
+	var section_name: String = sec.get("name", "")
+	var is_gate: bool = section_name.to_lower().contains("gate")
+	
+	_register_wall_edge(local_a, local_b, is_gate)
 
 ## Initialises blueprints for the entire wall circuit (editor / debug use).
 func init_registry() -> void:
@@ -108,13 +111,19 @@ func clear_all() -> void:
 	_blueprint_meshes.clear()
 	_blueprint_positions.clear()
 
-func _register_wall_edge(a: Vector3, b: Vector3) -> void:
+func _register_wall_edge(a: Vector3, b: Vector3, is_gate: bool = false) -> void:
 	var edge := b - a
 	var dir := edge.normalized()
 	var angle := atan2(dir.x, dir.z) + PI / 2.0
 	const STEP: float = 10.0
 	var count := int(ceil(edge.length() / STEP)) + 1
+	var middle_index = int(count / 2)
+	
 	for i in range(count):
+		if is_gate and i == middle_index:
+			# Skip the middle index for now to leave a physical gap (the gate)
+			continue
+			
 		var pos := a + dir * (float(i) * STEP)
 		var key := Vector3(snappedf(pos.x, 0.1), 0.0, snappedf(pos.z, 0.1))
 		if not _blueprint_positions.has(key):

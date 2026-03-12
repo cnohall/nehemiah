@@ -95,6 +95,15 @@ func _physics_process(delta: float) -> void:
 	var target_pos := Vector3(0, 0.5, 0)
 	if is_instance_valid(_target):
 		target_pos = _target.global_position
+		# If targeting a wall section, target the closest point on its boundary instead of center
+		if _target is WallSection:
+			var to_target = global_position - _target.global_position
+			# Sections are 10m wide (X) and 1m deep (Z)
+			# Project enemy position onto the local bounds of the section
+			var local_pos = _target.to_local(global_position)
+			local_pos.x = clamp(local_pos.x, -5.0, 5.0)
+			local_pos.z = clamp(local_pos.z, -0.5, 0.5)
+			target_pos = _target.to_global(local_pos)
 	
 	if target_pos.distance_to(_last_target_pos) > 0.5:
 		_nav_agent.target_position = target_pos

@@ -37,27 +37,21 @@ const FALLBACK_ANIM: String = "idle_down"
 const ROLES: Dictionary = {
 	"builder": {
 		"name": "Builder",
-		"stone_cap": 5,
-		"place_speed": 1.4, # 1.4x faster (1.4s vs 2.0s)
 		"combat_bonus": 1.0,
 		"reload_time": 0.5,
-		"desc": "Builds the wall faster."
+		"desc": "Constructs the wall faster."
 	},
 	"slinger": {
 		"name": "Slinger",
-		"stone_cap": 5,
-		"place_speed": 1.0,
 		"combat_bonus": 1.2, # +20% damage
 		"reload_time": 0.35,
 		"desc": "Powerful stone throws."
 	},
 	"porter": {
 		"name": "Porter",
-		"stone_cap": 10,
-		"place_speed": 1.0,
 		"combat_bonus": 1.0,
 		"reload_time": 0.5,
-		"desc": "Carries more stones."
+		"desc": "Moves faster while carrying heavy items."
 	}
 }
 
@@ -73,13 +67,11 @@ var _last_facing: String = "down"
 
 var _hud: CanvasLayer = null
 var _is_dead: bool = false
-var _place_timer: float = 0.0
 
 var carried_item: Carriable = null
 
 # ══════════════════════════════════════════════════════════════════════════════
 # REPLICATED STATE
-## These vars are watched by the MultiplayerSynchronizer child node.
 # ══════════════════════════════════════════════════════════════════════════════
 
 ## The currently-playing animation name — synced across the network.
@@ -98,18 +90,6 @@ var current_animation: String = FALLBACK_ANIM
 		if health <= 0 and not _is_dead:
 			_die()
 
-@export var stones_carried: int = 0:
-	set(v):
-		stones_carried = clampi(v, 0, max_stones)
-		if is_multiplayer_authority() and _hud:
-			_hud.update_stones(stones_carried, max_stones)
-
-@export var max_stones: int = 5:
-	set(v):
-		max_stones = v
-		if is_multiplayer_authority() and _hud:
-			_hud.update_stones(stones_carried, max_stones)
-
 # ══════════════════════════════════════════════════════════════════════════════
 # NODE REFERENCES — resolved at runtime via @onready
 # ══════════════════════════════════════════════════════════════════════════════
@@ -118,12 +98,8 @@ var current_animation: String = FALLBACK_ANIM
 @onready var _sync:   MultiplayerSynchronizer = $MultiplayerSynchronizer
 
 # ══════════════════════════════════════════════════════════════════════════════
-# BUILDING SYSTEM — private state
+# COMBAT SYSTEM — private state
 # ══════════════════════════════════════════════════════════════════════════════
-
-## How wide/long/tall a placed stone brick is, in world-units.
-const BLOCK_SIZE := Vector3(2.0, 0.8, 1.0)
-const BLOCK_Y := BLOCK_SIZE.y * 0.5 
 
 var _aim_dot: MeshInstance3D = null
 
@@ -158,16 +134,13 @@ func _ready() -> void:
 		_hud = hud_scene.instantiate()
 		add_child(_hud)
 		_hud.update_health(health)
-		_hud.update_stones(stones_carried, max_stones)
 		_hud.update_role(role)
 		_notify_carried_changed()
 
 func _apply_role_stats() -> void:
 	var data = ROLES.get(role, ROLES["slinger"])
-	max_stones = data["stone_cap"]
 	if is_multiplayer_authority() and _hud:
 		_hud.update_role(data["name"])
-		_hud.update_stones(stones_carried, max_stones)
 
 func _setup_multiplayer_sync() -> void:
 	_sync.root_path = NodePath("..")
@@ -214,7 +187,12 @@ func _physics_process(delta: float) -> void:
 	
 	var current_speed: float = move_speed
 	if carried_item:
-		current_speed *= (1.0 - carried_item.speed_penalty)
+		var penalty = carried_item.speed_penalty
+		# Apply Strong Backs upgrade if purchased
+		var main = get_tree().current_scene
+		if main and main.get("upgrades_purchased") and main.upgrades_purchased.get("fast_feet", false):
+			penalty *= 0.75 # 25% reduction in penalty
+		current_speed *= (1.0 - penalty)
 		
 	var speed: float = current_speed * (SPRINT_SPEED_MULT if sprinting else 1.0)
 
@@ -421,8 +399,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_tree().current_scene._target_zoom = clamp(get_tree().current_scene._target_zoom + 2.0, 5, 35)
 
 @rpc("authority", "call_local", "reliable")
-func set_stones(val: int) -> void:
-	stones_carried = val
+func sync_stones_to_hud() -> void:
+	# Combat stones are now unlimited
+	pass
 
 func take_damage(amount: float) -> void:
 	if not multiplayer.is_server() or _is_dead: return
@@ -446,35 +425,69 @@ func respawn(pos: Vector3) -> void:
 	visible = true
 	global_position = pos
 
+func _process_building(delta: float) -> void:
+	if not is_multiplayer_authority(): return
+	
+	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
+	if not building_mgr: return
+	
+	var nearest_section = building_mgr.get_nearest_section(global_position, 3.0)
+	if nearest_section:
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			if carried_item:
+				nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
+			elif nearest_section.is_ready_to_build():
+				var build_rate = 15.0 # 15% per second
+				if role == "builder": build_rate *= 1.5
+				nearest_section.request_build.rpc_id(1, build_rate * delta)
+				if _hud: _hud.update_place(1, 1)
+		else:
+			if _hud: _hud.update_place(0, 1)
+	else:
+		if _hud: _hud.update_place(0, 1)
+
 func _handle_interaction() -> void:
+	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
+	
 	# 1. If carrying an item, try to deliver it to a nearby wall section
-	if carried_item != null:
-		var nearest_section = _find_nearest_in_group("wall_sections", 3.0)
-		if nearest_section and nearest_section is WallSection:
+	if carried_item != null and building_mgr:
+		var nearest_section = building_mgr.get_nearest_section(global_position, 3.0)
+		if nearest_section:
 			nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
 			return
 
 	# 2. Try to pick up existing carriable
 	if carried_item == null:
-		var nearest_c = _find_nearest_in_group("carriables", 2.0)
-		if nearest_c and nearest_c is Carriable:
-			_request_pickup.rpc_id(1, nearest_c.get_path())
+		var nearest_c = _find_nearest_carriable(2.0)
+		if nearest_c:
+			request_pickup.rpc_id(1, nearest_c.get_path())
 			return
 			
 	# 3. Try to interact with supply pile
-	var nearest_pile = _find_nearest_in_group("supply_piles", 3.0)
+	var nearest_pile = _find_nearest_supply_pile(3.0)
 	if nearest_pile:
 		nearest_pile.request_spawn_material.rpc_id(1, multiplayer.get_unique_id())
 		return
 
 func _handle_drop() -> void:
 	if carried_item:
-		_request_drop.rpc_id(1, global_position + Vector3(0, 0, -1).rotated(Vector3.UP, rotation.y))
+		request_drop.rpc_id(1, global_position + Vector3(0, 0, -1).rotated(Vector3.UP, rotation.y))
 
-func _find_nearest_in_group(group: String, max_dist: float) -> Node3D:
+func _find_nearest_carriable(max_dist: float) -> Carriable:
+	var nearest: Carriable = null
+	var min_d = max_dist
+	for node in get_tree().get_nodes_in_group("carriables"):
+		if node is Carriable and node.carrier == null:
+			var d = global_position.distance_to(node.global_position)
+			if d < min_d:
+				min_d = d
+				nearest = node
+	return nearest
+
+func _find_nearest_supply_pile(max_dist: float) -> Node3D:
 	var nearest: Node3D = null
 	var min_d = max_dist
-	for node in get_tree().get_nodes_in_group(group):
+	for node in get_tree().get_nodes_in_group("supply_piles"):
 		var d = global_position.distance_to(node.global_position)
 		if d < min_d:
 			min_d = d
@@ -482,14 +495,14 @@ func _find_nearest_in_group(group: String, max_dist: float) -> Node3D:
 	return nearest
 
 @rpc("any_peer", "call_local", "reliable")
-func _request_pickup(path: NodePath) -> void:
+func request_pickup(path: NodePath) -> void:
 	if not multiplayer.is_server(): return
 	var item = get_node_or_null(path)
 	if item and item is Carriable and item.carrier == null:
-		_sync_pickup.rpc(path)
+		sync_pickup.rpc(path)
 
 @rpc("authority", "call_local", "reliable")
-func _sync_pickup(path: NodePath) -> void:
+func sync_pickup(path: NodePath) -> void:
 	var item = get_node_or_null(path)
 	if item and item is Carriable:
 		item.pick_up(self)
@@ -497,13 +510,13 @@ func _sync_pickup(path: NodePath) -> void:
 		_notify_carried_changed()
 
 @rpc("any_peer", "call_local", "reliable")
-func _request_drop(pos: Vector3) -> void:
+func request_drop(pos: Vector3) -> void:
 	if not multiplayer.is_server(): return
 	if carried_item:
-		_sync_drop.rpc(pos)
+		sync_drop.rpc(pos)
 
 @rpc("authority", "call_local", "reliable")
-func _sync_drop(pos: Vector3) -> void:
+func sync_drop(pos: Vector3) -> void:
 	if carried_item:
 		carried_item.drop(pos)
 		carried_item = null

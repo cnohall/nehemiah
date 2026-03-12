@@ -10,10 +10,10 @@ func _ready() -> void:
 
 func take_damage(amount: float) -> void:
 	if not multiplayer.is_server(): return
-	_take_damage_rpc.rpc(amount)
+	sync_damage.rpc(amount)
 
 @rpc("authority", "call_local", "reliable")
-func _take_damage_rpc(amount: float) -> void:
+func sync_damage(amount: float) -> void:
 	health -= amount
 	# Visual feedback: flash red
 	if _mesh:

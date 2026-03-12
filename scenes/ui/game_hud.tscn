@@ -1,5 +1,8 @@
 [gd_scene load_steps=10 format=3]
 
+[ext_resource type="Script" path="res://scenes/ui/game_hud.gd" id="1_script"]
+[ext_resource type="Script" path="res://scenes/ui/minimap.gd" id="2_script"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 bg_color = Color(0.15, 0.12, 0.1, 0.8)
 border_width_left = 2
