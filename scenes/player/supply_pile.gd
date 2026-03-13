@@ -1,12 +1,10 @@
-extends Node3D
 class_name SupplyPile
+extends Node3D
 
 @export var material_type: String = "stone" # "stone", "wood", "mortar"
 @export var interact_range: float = 3.0
 
-var _cut_stone_script   = preload("res://scenes/player/cut_stone.gd")
-var _timber_beam_script = preload("res://scenes/player/timber_beam.gd")
-var _mortar_bucket_script = preload("res://scenes/player/mortar_bucket.gd")
+var _material_script = preload("res://scenes/player/material_item.gd")
 
 func _ready() -> void:
 	add_to_group("supply_piles")
@@ -19,9 +17,12 @@ func _setup_visuals() -> void:
 	mesh_inst.mesh = box
 	var mat := StandardMaterial3D.new()
 	match material_type:
-		"stone":  mat.albedo_color = Color(0.60, 0.60, 0.60)
-		"wood":   mat.albedo_color = Color(0.40, 0.26, 0.13)
-		"mortar": mat.albedo_color = Color(0.30, 0.30, 0.35)
+		"stone":
+			mat.albedo_color = Color(0.60, 0.60, 0.60)
+		"wood":
+			mat.albedo_color = Color(0.40, 0.26, 0.13)
+		"mortar":
+			mat.albedo_color = Color(0.30, 0.30, 0.35)
 	mesh_inst.material_override = mat
 	add_child(mesh_inst)
 
@@ -37,7 +38,8 @@ func _setup_visuals() -> void:
 ## caller_id: the peer ID of the requesting player.
 @rpc("any_peer", "call_local", "reliable")
 func request_spawn_material(caller_id: int) -> void:
-	if not multiplayer.is_server(): return
+	if not multiplayer.is_server():
+		return
 	# Reject if player is already carrying something
 	var player = get_tree().current_scene.get_node_or_null("Players/" + str(caller_id))
 	if player and player.get("carried_item") != null and player.carried_item != null:
@@ -48,12 +50,17 @@ func request_spawn_material(caller_id: int) -> void:
 ## Runs on ALL peers — creates the carriable and instantly gives it to the player.
 @rpc("authority", "call_local", "reliable")
 func _sync_give_material(uid: String, player_id: int) -> void:
-	var material_node: Carriable = null
+	var material_node: MaterialItem = _material_script.new()
 	match material_type:
-		"stone":  material_node = _cut_stone_script.new()
-		"wood":   material_node = _timber_beam_script.new()
-		"mortar": material_node = _mortar_bucket_script.new()
-	if not material_node: return
+		"stone":
+			material_node.material_type = MaterialItem.Type.STONE
+		"wood":
+			material_node.material_type = MaterialItem.Type.WOOD
+		"mortar":
+			material_node.material_type = MaterialItem.Type.MORTAR
+
+	if not material_node:
+		return
 
 	material_node.name = "Carriable_" + uid
 	get_tree().current_scene.add_child(material_node)

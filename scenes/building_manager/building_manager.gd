@@ -17,7 +17,8 @@ var _blueprint_mgr: Node = null
 
 # Exposed for minimap (accessed via main._blueprint_positions getter)
 var _blueprint_positions: Dictionary:
-	get: return _blueprint_mgr._blueprint_positions if _blueprint_mgr else {}
+	get:
+		return _blueprint_mgr._blueprint_positions if _blueprint_mgr else {}
 
 func _ready() -> void:
 	_ensure_references()
@@ -27,7 +28,7 @@ func _ready() -> void:
 	add_child(_blueprint_mgr)
 	_blueprint_mgr.init_registry_for_day(1)
 	blocks_for_win = _blueprint_mgr._blueprint_positions.size()
-	
+
 	# Sections are spawned by main.gd after the multiplayer peer is established.
 
 func _ensure_references() -> void:
@@ -38,7 +39,8 @@ func _ensure_references() -> void:
 
 func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
 	_ensure_references()
-	if _blocks == null: return
+	if _blocks == null:
+		return
 
 	# Clear old blocks
 	for b in _blocks.get_children():
@@ -58,7 +60,8 @@ func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
 
 func _spawn_section_local(pos: Vector3, rot: float) -> void:
 	_ensure_references()
-	if _blocks == null: return
+	if _blocks == null:
+		return
 	var section = WALL_SECTION_SCENE.instantiate()
 	if section:
 		_blocks.add_child(section)
@@ -68,7 +71,8 @@ func _spawn_section_local(pos: Vector3, rot: float) -> void:
 		section.uncompleted.connect(_on_section_sabotaged)
 
 func _on_section_completed() -> void:
-	if not multiplayer.is_server(): return
+	if not multiplayer.is_server():
+		return
 	blocks_placed += 1
 	blocks_changed.emit(blocks_placed)
 	if blocks_for_win > 0 and blocks_placed >= blocks_for_win:
@@ -76,7 +80,8 @@ func _on_section_completed() -> void:
 	navigation_changed.emit()
 
 func _on_section_sabotaged() -> void:
-	if not multiplayer.is_server(): return
+	if not multiplayer.is_server():
+		return
 	blocks_placed = max(0, blocks_placed - 1)
 	blocks_changed.emit(blocks_placed)
 	navigation_changed.emit()
@@ -84,7 +89,8 @@ func _on_section_sabotaged() -> void:
 # ── Section loading ───────────────────────────────────────────────────────────
 
 func load_section_for_day(day: int) -> void:
-	if not multiplayer.is_server(): return
+	if not multiplayer.is_server():
+		return
 	load_section_rpc.rpc(day)
 
 @rpc("authority", "call_local", "reliable")
@@ -94,16 +100,33 @@ func load_section_rpc(day: int) -> void:
 		for b in _blocks.get_children():
 			if is_instance_valid(b):
 				b.queue_free()
-	
+
 	blocks_placed = 0
 	_blueprint_mgr.clear_all()
 	_blueprint_mgr.init_registry_for_day(day)
 	blocks_for_win = _blueprint_mgr._blueprint_positions.size()
-	
+
 	if multiplayer.is_server():
 		_spawn_sections_for_blueprints(true)
 
+	_spawn_towers()
 	blocks_changed.emit(blocks_placed)
+
+func _spawn_towers() -> void:
+	_ensure_references()
+	if _blocks == null:
+		return
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.45, 0.40, 0.35)  # warm sandstone
+	for pos in _blueprint_mgr.get_endpoints():
+		var tower := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(3.0, 5.0, 3.0)
+		tower.mesh = box
+		tower.material_override = mat
+		tower.position = Vector3(pos.x, 2.5, pos.z)
+		tower.add_to_group("towers")
+		_blocks.add_child(tower)
 
 func get_section_center_for_day(day: int) -> Vector3:
 	return _blueprint_mgr.get_section_center_for_day(day)
@@ -119,8 +142,9 @@ func get_interior_direction() -> Vector3:
 ## Returns the nearest wall section within max_dist, or null.
 func get_nearest_section(world_pos: Vector3, max_dist: float) -> WallSection:
 	_ensure_references()
-	if _blocks == null: return null
-	
+	if _blocks == null:
+		return null
+
 	var best: WallSection = null
 	var best_dist := max_dist
 	for section in _blocks.get_children():
@@ -133,8 +157,9 @@ func get_nearest_section(world_pos: Vector3, max_dist: float) -> WallSection:
 
 func get_nearest_placeable(world_pos: Vector3, max_dist: float) -> Vector3:
 	_ensure_references()
-	if _blocks == null: return Vector3.INF
-	
+	if _blocks == null:
+		return Vector3.INF
+
 	var best := Vector3.INF
 	var best_dist := max_dist
 	for section in _blocks.get_children():
@@ -147,8 +172,9 @@ func get_nearest_placeable(world_pos: Vector3, max_dist: float) -> Vector3:
 
 func get_placeable_angle(pos: Vector3) -> float:
 	_ensure_references()
-	if _blocks == null: return 0.0
-	
+	if _blocks == null:
+		return 0.0
+
 	for section in _blocks.get_children():
 		if is_instance_valid(section) and section is Node3D and not section.is_queued_for_deletion():
 			if section.global_position.distance_to(pos) < 0.1:
@@ -167,18 +193,21 @@ func place_starting_ruins() -> void:
 
 func _do_place_starting_ruins() -> void:
 	_ensure_references()
-	if _blocks == null or _blocks.get_child_count() == 0: return
-	
+	if _blocks == null or _blocks.get_child_count() == 0:
+		return
+
 	var children = _blocks.get_children()
 	children.shuffle()
-	
+
 	var ruin_pct = 0.2
 	var main = get_tree().current_scene
 	if main and main.get("_wave_manager"):
 		var wave = main._wave_manager.current_wave
-		if wave <= 1: ruin_pct = 0.6
-		elif wave <= 3: ruin_pct = 0.4
-	
+		if wave <= 1:
+			ruin_pct = 0.6
+		elif wave <= 3:
+			ruin_pct = 0.4
+
 	var count = int(children.size() * ruin_pct)
 	for i in range(count):
 		var section = children[i]

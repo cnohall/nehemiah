@@ -1,12 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://cnutjgfvom4ti"]
+[gd_scene load_steps=3 format=3 uid="uid://cnutjgfvom4ti"]
 
 [ext_resource type="Script" path="res://scenes/building_block/wall_section.gd" id="1_script"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_mesh"]
 size = Vector3(10, 0.8, 1)
-
-[sub_resource type="BoxShape3D" id="BoxShape_col"]
-size = Vector3(10, 2.4, 1)
 
 [node name="WallSection" type="Node3D"]
 script = ExtResource("1_script")
@@ -14,17 +11,3 @@ script = ExtResource("1_script")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
 mesh = SubResource("BoxMesh_mesh")
-
-[node name="Label3D" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
-billboard = 1
-text = "NEEDS: [STONE] [WOOD] [MORTAR]"
-font_size = 48
-outline_size = 12
-
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
-collision_layer = 2
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
-shape = SubResource("BoxShape_col")

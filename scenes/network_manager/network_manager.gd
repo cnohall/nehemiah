@@ -9,27 +9,12 @@ extends Node
 ##   • Wire up ENetMultiplayerPeer to Godot's High-Level Multiplayer API
 ##   • Host a simple main-menu UI (built in code — no .tscn required)
 ##   • Emit clean game-level signals so other scenes never touch the transport directly
-##
-## NOTE: This is a temporary ENet dev build replacing GodotSteam while the
-##       Steam Client Service is broken. Swap back to network_manager_steam.gd
-##       when Steam is repaired.
 ## ─────────────────────────────────────────────────────────────────────────────
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# CONSTANTS
-# ══════════════════════════════════════════════════════════════════════════════
-
-const DEFAULT_PORT: int = 7777
-const MAX_PLAYERS:  int = 4
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SIGNALS
 # ══════════════════════════════════════════════════════════════════════════════
-
-## Fired once the backend is ready.  username is a placeholder in ENet mode.
-signal steam_initialized(username: String)
 
 ## Fired on the host when the server is open and the peer is ready.
 signal lobby_created_success(lobby_id: int)
@@ -51,12 +36,19 @@ signal connection_failed(reason: String)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# CONSTANTS
+# ════════════════════════════════════════════════════════════─
+# ══════════════════════════════════════════════════════════════════════════════
+
+const DEFAULT_PORT: int = 7777
+const MAX_PLAYERS:  int = 4
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PRIVATE STATE
 # ══════════════════════════════════════════════════════════════════════════════
 
 var _is_host: bool = false
-var selected_role: String = "slinger"
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # UI NODE REFERENCES
@@ -69,9 +61,7 @@ var _host_button:     Button
 var _join_button:     Button
 var _ip_input:        LineEdit
 var _port_input:      LineEdit
-var _role_buttons:    Dictionary = {}
 var _btn_style_normal:   StyleBoxFlat
-var _btn_style_selected: StyleBoxFlat
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -80,8 +70,8 @@ var _btn_style_selected: StyleBoxFlat
 
 func _ready() -> void:
 	_setup_ui()
-	_init_backend()
 	_connect_multiplayer_signals()
+	_set_status("Ready. Host a session or answer the call of another builder.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -163,38 +153,6 @@ func _setup_ui() -> void:
 	_btn_style_normal.border_width_top    = 2
 	_btn_style_normal.border_width_bottom = 2
 
-	# Highlighted style for the selected role button.
-	_btn_style_selected = StyleBoxFlat.new()
-	_btn_style_selected.bg_color = Color(0.45, 0.32, 0.10)
-	_btn_style_selected.border_color = Color(0.85, 0.65, 0.25)
-	_btn_style_selected.border_width_left   = 2
-	_btn_style_selected.border_width_right  = 2
-	_btn_style_selected.border_width_top    = 2
-	_btn_style_selected.border_width_bottom = 2
-
-	# ── Role selection ────────────────────────────────────────────────────────
-	var role_lbl := Label.new()
-	role_lbl.text = "Choose your calling:"
-	role_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	role_lbl.add_theme_color_override("font_color", Color(0.85, 0.75, 0.55))
-	vbox.add_child(role_lbl)
-
-	var role_row := HBoxContainer.new()
-	role_row.add_theme_constant_override("separation", 8)
-	role_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_child(role_row)
-
-	for r: String in ["Builder", "Slinger", "Porter"]:
-		var btn := Button.new()
-		btn.text = r
-		btn.custom_minimum_size = Vector2(100, 34)
-		btn.add_theme_stylebox_override("normal", _btn_style_normal)
-		btn.pressed.connect(_on_role_selected.bind(r))
-		role_row.add_child(btn)
-		_role_buttons[r] = btn
-
-	_on_role_selected("Slinger")  # default
-
 	# ── Host Game button (full width) ─────────────────────────────────────────
 	_host_button = Button.new()
 	_host_button.text = "Raise the Wall"
@@ -232,15 +190,6 @@ func _setup_ui() -> void:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# BACKEND INITIALIZATION
-# ══════════════════════════════════════════════════════════════════════════════
-
-func _init_backend() -> void:
-	_set_status("Ready. Host a session or answer the call of another builder.")
-	emit_signal("steam_initialized", "ENet Dev")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # SIGNAL WIRING
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -255,14 +204,6 @@ func _connect_multiplayer_signals() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 # UI BUTTON HANDLERS
 # ══════════════════════════════════════════════════════════════════════════════
-
-func _on_role_selected(role: String) -> void:
-	selected_role = role.to_lower()
-	for r: String in _role_buttons:
-		var btn: Button = _role_buttons[r]
-		btn.add_theme_stylebox_override("normal",
-			_btn_style_selected if r == role else _btn_style_normal)
-
 
 func _on_host_button_pressed() -> void:
 	_disable_buttons()
@@ -368,22 +309,6 @@ func disconnect_from_lobby() -> void:
 	_is_host = false
 	multiplayer.multiplayer_peer = null
 	_enable_buttons()
-
-
-func get_steam_id() -> int:
-	return 0
-
-
-func get_steam_username() -> String:
-	return "LocalPlayer"
-
-
-func get_lobby_id() -> int:
-	return 0
-
-
-func get_selected_role() -> String:
-	return selected_role
 
 
 func is_host() -> bool:

@@ -5,9 +5,6 @@
 [ext_resource type="Script" path="res://scenes/wave_manager/wave_manager.gd" id="3_wave"]
 [ext_resource type="PackedScene" uid="uid://bdnx8vpwyg6v6" path="res://scenes/enemy/enemy.tscn" id="4_enemy"]
 [ext_resource type="Script" path="res://scenes/building_manager/building_manager.gd" id="5_bm"]
-[ext_resource type="PackedScene" path="res://scenes/enemy/brute.tscn" id="6_brute"]
-[ext_resource type="PackedScene" path="res://scenes/enemy/raider.tscn" id="7_raider"]
-[ext_resource type="Script" path="res://scenes/upgrade_manager/upgrade_manager.gd" id="8_um"]
 
 [sub_resource type="StandardMaterial3D" id="3"]
 albedo_color = Color(0.75, 0.65, 0.45, 1)
@@ -88,8 +85,6 @@ directional_shadow_mode = 1
 
 [node name="Stones" type="Node3D" parent="."]
 
-[node name="Shekels" type="Node3D" parent="."]
-
 [node name="Enemies" type="Node3D" parent="."]
 
 [node name="EnemySpawnTimer" type="Timer" parent="."]
@@ -98,15 +93,10 @@ wait_time = 5.0
 [node name="WaveManager" type="Node" parent="." node_paths=PackedStringArray("spawn_timer")]
 script = ExtResource("3_wave")
 enemy_scene = ExtResource("4_enemy")
-brute_scene = ExtResource("6_brute")
-raider_scene = ExtResource("7_raider")
 spawn_timer = NodePath("../EnemySpawnTimer")
 
 [node name="BuildingManager" type="Node" parent="."]
 script = ExtResource("5_bm")
-
-[node name="UpgradeManager" type="Node" parent="."]
-script = ExtResource("8_um")
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=1000000002]
 spawn_path = NodePath("Players")
