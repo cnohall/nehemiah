@@ -3,7 +3,7 @@ extends Node
 
 signal wave_started(wave_num: int)
 signal wave_cleared(wave_num: int)
-signal enemy_spawned(enemy: Node3D)
+signal enemy_spawned(enemy: Node)
 
 const MAX_DAYS: int = 52
 const SPAWN_RADIUS: float = 35.0          ## Distance from section center
@@ -14,7 +14,7 @@ const SPAWN_RADIUS: float = 35.0          ## Distance from section center
 var current_wave: int = 0
 var enemies_alive: int = 0
 var is_active: bool = false
-var spawn_center: Vector3 = Vector3.ZERO  ## Updated by main.gd each section load
+var spawn_center: Vector2 = Vector2.ZERO  ## Updated by main.gd each section load
 
 var _is_spawning: bool = false
 
@@ -56,22 +56,18 @@ func _spawn_enemy() -> void:
 	enemy.health = 25.0 + (current_wave * 2.0)
 	enemy.speed = 3.0 + (current_wave * 0.05)
 
-	var interior_dir := Vector3.BACK
+	var interior_dir := Vector2.DOWN  # positive Y = toward city interior
 	var main = get_tree().current_scene
 	var b_mgr = main.get("_building_mgr") if main else null
 	if b_mgr and b_mgr.has_method("get_interior_direction"):
 		interior_dir = b_mgr.get_interior_direction()
 
-	# Spawn on the outside
+	# Spawn on the exterior side
 	var exterior_dir := -interior_dir
-	var base_angle := atan2(exterior_dir.x, exterior_dir.z)
+	var base_angle := exterior_dir.angle()  # Vector2.angle() = atan2(y, x)
 	var angle := base_angle + (randf() - 0.5) * PI / 2.0
 
-	enemy.position = Vector3(
-		sin(angle) * SPAWN_RADIUS,
-		0.5,
-		cos(angle) * SPAWN_RADIUS
-	)
+	enemy.position = Vector2(cos(angle) * SPAWN_RADIUS, sin(angle) * SPAWN_RADIUS)
 	enemy.tree_exiting.connect(func(): enemies_alive -= 1)
 	enemy_spawned.emit(enemy)
 	enemies_alive += 1

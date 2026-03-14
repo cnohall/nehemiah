@@ -1,28 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[sub_resource type="GDScript" id="GDScript_1"]
-script/source = "extends Label3D
+[ext_resource type="Script" path="res://scenes/ui/floating_text.gd" id="1_script"]
 
-var velocity := Vector3(0, 2, 0)
-var duration := 1.5
-var _timer := 0.0
-
-func _process(delta: float) -> void:
-	_timer += delta
-	global_position += velocity * delta
-	
-	# Fade out
-	modulate.a = lerp(1.0, 0.0, _timer / duration)
-	
-	if _timer >= duration:
-		queue_free()
-"
-
-[node name="FloatingText" type="Label3D"]
-pixel_size = 0.005
-billboard = 1
-no_depth_test = true
-fixed_size = true
-font_size = 32
-outline_size = 8
-script = SubResource("GDScript_1")
+[node name="FloatingText" type="Node2D"]
+script = ExtResource("1_script")

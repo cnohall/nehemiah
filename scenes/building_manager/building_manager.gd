@@ -1,6 +1,6 @@
 extends Node
 ## Manages wall sections, completion tracking, and construction.
-## Server-authoritative.
+## Server-authoritative. 2D version.
 
 signal blocks_changed(total: int)
 signal wall_complete
@@ -11,11 +11,11 @@ const WALL_SECTION_SCENE: PackedScene = preload("res://scenes/building_block/wal
 var blocks_placed: int = 0
 var blocks_for_win: int = 0
 var _is_setting_up: bool = false
-var _blocks: Node3D = null
-var _players: Node3D = null
+var _blocks: Node2D = null
+var _players: Node2D = null
 var _blueprint_mgr: Node = null
 
-# Exposed for minimap (accessed via main._blueprint_positions getter)
+# Exposed for minimap
 var _blueprint_positions: Dictionary:
 	get:
 		var empty: Dictionary = {}
@@ -30,11 +30,9 @@ func _ready() -> void:
 	_blueprint_mgr.init_registry_for_day(1)
 	blocks_for_win = _blueprint_mgr._blueprint_positions.size()
 
-	# Sections are spawned by main.gd after the multiplayer peer is established.
-
 func _ensure_references() -> void:
 	if _blocks == null:
-		_blocks = get_parent().get_node_or_null("NavigationRegion3D/Blocks")
+		_blocks = get_parent().get_node_or_null("NavigationRegion2D/Blocks")
 	if _players == null:
 		_players = get_parent().get_node_or_null("Players")
 
@@ -43,14 +41,11 @@ func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
 	if _blocks == null:
 		return
 
-	# Clear old blocks
 	for b in _blocks.get_children():
 		if is_instance_valid(b):
 			b.queue_free()
 
-	# Spawn directly — no RPC. Sections live server-side only.
-	# Client visual state is replicated by each section's own _sync_* RPCs.
-	for pos: Vector3 in _blueprint_positions:
+	for pos: Vector2 in _blueprint_positions:
 		var rot = _blueprint_positions[pos]
 		_spawn_section_local(pos, rot)
 
@@ -59,15 +54,15 @@ func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
 		_do_place_starting_ruins()
 		_is_setting_up = false
 
-func _spawn_section_local(pos: Vector3, rot: float) -> void:
+func _spawn_section_local(pos: Vector2, rot: float) -> void:
 	_ensure_references()
 	if _blocks == null:
 		return
 	var section = WALL_SECTION_SCENE.instantiate()
 	if section:
 		_blocks.add_child(section)
-		section.global_position = Vector3(pos.x, 0.5, pos.z)
-		section.rotation.y = rot
+		section.global_position = pos
+		section.rotation = rot
 		section.completed.connect(_on_section_completed)
 		section.uncompleted.connect(_on_section_sabotaged)
 
@@ -118,62 +113,40 @@ func _spawn_towers() -> void:
 	if _blocks == null:
 		return
 
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.45, 0.40, 0.35)  # warm sandstone
+	var tower_color := Color(0.45, 0.40, 0.35)
 
-	# We place towers at the exact edges to seal the map
-	for pos: Vector3 in _blueprint_mgr.get_endpoints():
-		var tower_body := StaticBody3D.new()
-		tower_body.position = Vector3(pos.x, 2.5, pos.z)
-		tower_body.add_to_group("towers")
-		_blocks.add_child(tower_body)
+	for pos: Vector2 in _blueprint_mgr.get_endpoints():
+		var tower := StaticBody2D.new()
+		tower.position = pos
+		tower.add_to_group("towers")
+		_blocks.add_child(tower)
 
-		# Visual
-		var mesh_inst := MeshInstance3D.new()
-		var box_mesh := BoxMesh.new()
-		box_mesh.size = Vector3(3.5, 5.0, 3.5)
-		mesh_inst.mesh = box_mesh
-		mesh_inst.material_override = mat
-		tower_body.add_child(mesh_inst)
+		# Visual drawn via _draw() on tower node — use a simple Node2D instead
+		var tower_visual := Node2D.new()
+		tower_visual.set_script(null)
+		tower.add_child(tower_visual)
 
-		# Collision
-		var col_shape := CollisionShape3D.new()
-		var box_col := BoxShape3D.new()
-		box_col.size = Vector3(3.5, 5.0, 3.5)
-		col_shape.shape = box_col
-		tower_body.add_child(col_shape)
+		var col_shape := CollisionShape2D.new()
+		var rect_col := RectangleShape2D.new()
+		rect_col.size = Vector2(4, 4)
+		col_shape.shape = rect_col
+		tower.add_child(col_shape)
 
-		# Optional: Spawn decorative "rubble" wall extending outside map
-		_spawn_decorative_edge_ruin(pos, mat)
-
-func _spawn_decorative_edge_ruin(edge_pos: Vector3, mat: Material) -> void:
-	# Spawns a few unbuilt-looking wall blocks just outside the map bounds
-	var dir = 1.0 if edge_pos.x > 0 else -1.0
-	for i: int in range(1, 4):
-		var ruin := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		# Randomly sized/rotated blocks for a "ruined" look
-		box.size = Vector3(5.0, randf_range(0.2, 0.8), 1.2)
-		ruin.mesh = box
-		ruin.material_override = mat
-		ruin.position = edge_pos + Vector3(dir * i * 6.0, -2.0, randf_range(-0.5, 0.5))
-		ruin.rotation.y = randf_range(-0.1, 0.1)
-		ruin.rotation.z = randf_range(-0.2, 0.2)
-		_blocks.add_child(ruin)
-
-func get_section_center_for_day(day: int) -> Vector3:
+func get_section_center_for_day(day: int) -> Vector2:
 	return _blueprint_mgr.get_section_center_for_day(day)
 
 func get_section_for_day(day: int) -> Dictionary:
 	return _blueprint_mgr.get_section_for_day(day)
 
-func get_interior_direction() -> Vector3:
+func get_interior_direction() -> Vector2:
 	return _blueprint_mgr.get_interior_direction()
+
+func get_endpoints() -> Array[Vector2]:
+	return _blueprint_mgr.get_endpoints()
 
 # ── Queries ────────────────────────────────────────────────────────────
 
-## Returns the nearest wall section within max_dist, or null.
-func get_nearest_section(world_pos: Vector3, max_dist: float) -> WallSection:
+func get_nearest_section(world_pos: Vector2, max_dist: float) -> WallSection:
 	_ensure_references()
 	if _blocks == null:
 		return null
@@ -188,33 +161,33 @@ func get_nearest_section(world_pos: Vector3, max_dist: float) -> WallSection:
 				best = section
 	return best
 
-func get_nearest_placeable(world_pos: Vector3, max_dist: float) -> Vector3:
+func get_nearest_placeable(world_pos: Vector2, max_dist: float) -> Vector2:
 	_ensure_references()
 	if _blocks == null:
-		return Vector3.INF
+		return Vector2.INF
 
-	var best := Vector3.INF
+	var best := Vector2.INF
 	var best_dist := max_dist
 	for section in _blocks.get_children():
-		if is_instance_valid(section) and section is Node3D and not section.is_queued_for_deletion():
+		if is_instance_valid(section) and section is Node2D and not section.is_queued_for_deletion():
 			var d := world_pos.distance_to(section.global_position)
 			if d < best_dist:
 				best_dist = d
 				best = section.global_position
 	return best
 
-func get_placeable_angle(pos: Vector3) -> float:
+func get_placeable_angle(pos: Vector2) -> float:
 	_ensure_references()
 	if _blocks == null:
 		return 0.0
 
 	for section in _blocks.get_children():
-		if is_instance_valid(section) and section is Node3D and not section.is_queued_for_deletion():
+		if is_instance_valid(section) and section is Node2D and not section.is_queued_for_deletion():
 			if section.global_position.distance_to(pos) < 0.1:
-				return section.rotation.y
+				return section.rotation
 	return 0.0
 
-func get_stack_at(_pos: Vector3) -> int:
+func get_stack_at(_pos: Vector2) -> int:
 	return 0
 
 # ── Starting ruins ────────────────────────────────────────────────────────────
@@ -244,7 +217,7 @@ func _do_place_starting_ruins() -> void:
 	var count = int(children.size() * ruin_pct)
 	for i: int in range(count):
 		var section = children[i]
-		if is_instance_valid(section) and section.has_method("_sync_materials"):
+		if is_instance_valid(section) and section.has_method("sync_materials"):
 			section.stone_count  = randi_range(1, WallSection.STONE_NEEDED)
 			section.wood_count   = randi_range(0, WallSection.WOOD_NEEDED)
 			section.mortar_count = randi_range(0, WallSection.MORTAR_NEEDED)
@@ -252,8 +225,5 @@ func _do_place_starting_ruins() -> void:
 			section.sync_materials.rpc(section.stone_count, section.wood_count, section.mortar_count)
 			section.sync_progress.rpc(section.completion_percent)
 
-func spawn_blueprint_visuals() -> void:
-	_blueprint_mgr.spawn_visuals(get_parent())
-
-func on_block_destroyed(_pos: Vector3, _rot: float) -> void:
+func on_block_destroyed(_pos: Vector2, _rot: float) -> void:
 	pass

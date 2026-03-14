@@ -1,5 +1,5 @@
 class_name WallSection
-extends Node3D
+extends Node2D
 
 signal progress_changed(percent: float)
 signal completed
@@ -11,25 +11,26 @@ const STONE_NEEDED: int  = 3
 const WOOD_NEEDED: int   = 3
 const MORTAR_NEEDED: int = 3
 const UNIT: float = 100.0 / 9.0  # ~11.11% — one material unit of build progress
-const MAX_HEIGHT: float = 2.4
-const BLOCK_SIZE := Vector3(10.0, 0.8, 1.0)
+
+# Wall block dimensions in world units (x=width, y=depth/thickness)
+const BLOCK_SIZE := Vector2(10.0, 2.0)
 
 # Build phase thresholds
 const PHASE_WOOD:  float = 100.0 / 3.0   # ~33.3% — wood scaffolding complete
 const PHASE_STONE: float = 200.0 / 3.0   # ~66.7% — stone layer complete
 
-# Wall mesh state colours (per build phase)
+# Wall color per build phase
 const COLOR_EMPTY    := Color(0.28, 0.25, 0.22)  # charcoal rubble
 const COLOR_WOOD     := Color(0.55, 0.40, 0.18)  # warm wood scaffolding
 const COLOR_STONE    := Color(0.62, 0.58, 0.52)  # grey stone blocks
 const COLOR_MORTAR   := Color(0.82, 0.76, 0.60)  # cream mortared finish
 const COLOR_COMPLETE := Color(0.95, 0.92, 0.85)  # limestone white
 
-# Pip colours (filled / empty)
-const PIP_STONE  := Color(0.72, 0.68, 0.60)  # light grey stone
-const PIP_WOOD   := Color(0.58, 0.36, 0.16)  # warm brown
-const PIP_MORTAR := Color(0.50, 0.50, 0.58)  # dusty blue-grey
-const PIP_EMPTY  := Color(0.18, 0.16, 0.14)  # near-black ghost
+# Pip colours
+const PIP_STONE  := Color(0.72, 0.68, 0.60)
+const PIP_WOOD   := Color(0.58, 0.36, 0.16)
+const PIP_MORTAR := Color(0.50, 0.50, 0.58)
+const PIP_EMPTY  := Color(0.18, 0.16, 0.14, 0.5)
 
 # ── Variables ─────────────────────────────────────────────────────────────────
 
@@ -39,7 +40,7 @@ var mortar_count: int = 0
 var completion_percent: float = 0.0:
 	set(v):
 		var max_allowed = get_max_allowed_completion()
-		completion_percent = clamp(v, 0.0, max_allowed)
+		completion_percent = clampf(v, 0.0, max_allowed)
 		_update_visuals()
 		progress_changed.emit(completion_percent)
 		if completion_percent >= 100.0 and not _is_completed:
@@ -48,141 +49,30 @@ var completion_percent: float = 0.0:
 			_on_sabotaged()
 
 var _is_completed: bool = false
-
-## Solid ground-level footprint — always visible even at 0% completion
-var _footprint: MeshInstance3D = null
-
-# Physics blocker — enabled whenever completion > 0
-var _static_body: StaticBody3D = null
-var _collision_shape: CollisionShape3D = null
-
-# ── Material indicators (ghost + fill mesh, one per material type) ───────────
-
-var _indicator_root: Node3D = null
-var _ind_fill_stone:  MeshInstance3D = null
-var _ind_fill_wood:   MeshInstance3D = null
-var _ind_fill_mortar: MeshInstance3D = null
-var _ind_ghost_stone_mat:  StandardMaterial3D = null
-var _ind_ghost_wood_mat:   StandardMaterial3D = null
-var _ind_ghost_mortar_mat: StandardMaterial3D = null
-
-var _wall_mat: StandardMaterial3D = null
-
-@onready var _mesh: MeshInstance3D = $MeshInstance3D
+var _static_body: StaticBody2D = null
+var _collision_shape: CollisionShape2D = null
 
 func _ready() -> void:
 	add_to_group("wall_sections")
-	_build_footprint()
-	_build_wall_material()
-	_build_indicators()
 	_build_static_body()
 	_update_visuals()
-	# Position indicators in world space after parent sets our transform
-	call_deferred("_init_indicator_worldspace")
 
 func _build_static_body() -> void:
-	_static_body = StaticBody3D.new()
+	_static_body = StaticBody2D.new()
 	_static_body.collision_layer = 2  # Wall layer
 	_static_body.collision_mask = 0
 
-	_collision_shape = CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(BLOCK_SIZE.x, MAX_HEIGHT, BLOCK_SIZE.z)
-	_collision_shape.shape = box
-	_collision_shape.position = Vector3(0, MAX_HEIGHT * 0.5, 0)
+	_collision_shape = CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = BLOCK_SIZE
+	_collision_shape.shape = rect
 	_collision_shape.disabled = true  # Off until something is built
 	_static_body.add_child(_collision_shape)
 	add_child(_static_body)
 
-func _build_footprint() -> void:
-	_footprint = MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(BLOCK_SIZE.x, 0.1, BLOCK_SIZE.z)
-	_footprint.mesh = box
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.3, 0.3, 0.3)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_footprint.material_override = mat
-	_footprint.position.y = 0.05
-	add_child(_footprint)
-
-func _build_wall_material() -> void:
-	_wall_mat = StandardMaterial3D.new()
-	_wall_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_wall_mat.albedo_color = COLOR_EMPTY
-	_mesh.material_override = _wall_mat
-
-func _build_indicators() -> void:
-	_indicator_root = Node3D.new()
-	add_child(_indicator_root)
-	# Stone (left) = SphereMesh, Wood (centre) = BoxMesh, Mortar (right) = CylinderMesh
-	_ind_fill_stone  = _create_material_indicator(Vector3(-0.8, 0, 0), "stone")
-	_ind_fill_wood   = _create_material_indicator(Vector3( 0.0, 0, 0), "wood")
-	_ind_fill_mortar = _create_material_indicator(Vector3( 0.8, 0, 0), "mortar")
-
-func _create_material_indicator(offset: Vector3, type: String) -> MeshInstance3D:
-	# Build the mesh shape for this material type
-	var mesh: Mesh
-	match type:
-		"stone":
-			var s := SphereMesh.new()
-			s.radius = 0.22
-			s.height = 0.44
-			mesh = s
-		"wood":
-			var b := BoxMesh.new()
-			b.size = Vector3(0.55, 0.15, 0.15)
-			mesh = b
-		"mortar":
-			var c := CylinderMesh.new()
-			c.top_radius    = 0.18
-			c.bottom_radius = 0.14
-			c.height        = 0.22
-			mesh = c
-
-	# Ghost — full-size, very dim so the player always sees the shape
-	var ghost := MeshInstance3D.new()
-	ghost.mesh = mesh
-	var ghost_mat := StandardMaterial3D.new()
-	ghost_mat.shading_mode  = BaseMaterial3D.SHADING_MODE_UNSHADED
-	ghost_mat.transparency  = BaseMaterial3D.TRANSPARENCY_ALPHA
-	ghost_mat.albedo_color  = Color(1.0, 1.0, 1.0, 0.12)
-	ghost.material_override = ghost_mat
-	ghost.position = offset
-	_indicator_root.add_child(ghost)
-	# Store ghost material ref for highlight updates
-	match type:
-		"stone":  _ind_ghost_stone_mat  = ghost_mat
-		"wood":   _ind_ghost_wood_mat   = ghost_mat
-		"mortar": _ind_ghost_mortar_mat = ghost_mat
-
-	# Fill — starts invisible (scale 0), grows to scale 1 as material is delivered
-	var fill := MeshInstance3D.new()
-	fill.mesh = mesh
-	var fill_mat := StandardMaterial3D.new()
-	fill_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	match type:
-		"stone":  fill_mat.albedo_color = PIP_STONE
-		"wood":   fill_mat.albedo_color = PIP_WOOD
-		"mortar": fill_mat.albedo_color = PIP_MORTAR
-	fill.material_override = fill_mat
-	fill.position = offset
-	fill.scale    = Vector3.ZERO
-	_indicator_root.add_child(fill)
-
-	return fill
-
-func _init_indicator_worldspace() -> void:
-	if _indicator_root:
-		_indicator_root.set_as_top_level(true)
-		_indicator_root.global_position = global_position + Vector3(0, MAX_HEIGHT + 1.0, 0)
-
 # ── Staged Construction Logic ─────────────────────────────────────────────────
 
 func get_max_allowed_completion() -> float:
-	# Building is phase-ordered: wood → stone → mortar.
-	# Each unit of material adds ~11.11% to the buildable ceiling.
-	# Stone/mortar phases are locked until the previous phase is fully stocked.
 	if wood_count < WOOD_NEEDED:
 		return float(wood_count) * UNIT
 	if stone_count < STONE_NEEDED:
@@ -197,49 +87,94 @@ func is_ready_to_build() -> bool:
 func _update_visuals() -> void:
 	if not is_node_ready():
 		return
-
-	# Wall grows as materials are added + built
-	var current_h: float = lerp(0.2, MAX_HEIGHT, completion_percent / 100.0)
-	_mesh.scale.y = current_h / BLOCK_SIZE.y
-	_mesh.position.y = current_h * 0.5
-
-	# Enable physics blocker whenever anything is built
 	if _collision_shape:
 		_collision_shape.disabled = (completion_percent <= 0.0)
+	queue_redraw()
 
-	_update_wall_color()
-	_update_indicators()
+func _draw() -> void:
+	var wall_color := _get_wall_color()
+
+	# Scale wall height visually based on completion
+	var height_ratio := lerpf(0.2, 1.0, completion_percent / 100.0)
+	var draw_size := Vector2(BLOCK_SIZE.x, BLOCK_SIZE.y * height_ratio)
+	var rect := Rect2(-draw_size * 0.5, draw_size)
+
+	# Fill
+	draw_rect(rect, wall_color)
+
+	# Outline
+	var outline_color := Color(0, 0, 0, 0.4)
+	if _is_completed:
+		outline_color = Color(1.0, 0.9, 0.5, 0.6)
+	draw_rect(rect, outline_color, false, 1.0)
+
+	# Footprint marker (always visible)
+	if completion_percent <= 0.0:
+		draw_rect(Rect2(-BLOCK_SIZE * 0.5, BLOCK_SIZE), Color(0.3, 0.3, 0.3, 0.35))
+		draw_rect(Rect2(-BLOCK_SIZE * 0.5, BLOCK_SIZE), Color(0.5, 0.7, 1.0, 0.2), false, 0.8)
+
+	# Material pips (shown when not complete)
+	if not _is_completed:
+		_draw_pips()
+
+	# Glow on completion
+	if _is_completed:
+		draw_rect(rect.grow(0.5), Color(0.9, 0.85, 0.6, 0.15))
+
+func _get_wall_color() -> Color:
+	if _is_completed:
+		return COLOR_COMPLETE
+	elif completion_percent >= PHASE_STONE:
+		return COLOR_MORTAR
+	elif completion_percent >= PHASE_WOOD:
+		return COLOR_STONE
+	elif completion_percent > 0.0:
+		return COLOR_WOOD
+	else:
+		return COLOR_EMPTY
+
+func _draw_pips() -> void:
+	# Draw material pips above the wall block
+	var pip_y := -BLOCK_SIZE.y * 0.5 - 2.5
+	var spacing := 2.2
+	var blocking := get_blocking_material()
+
+	# Stone pips (left third)
+	for i in range(STONE_NEEDED):
+		var x := -3.5 + float(i) * spacing
+		var filled := i < stone_count
+		var alpha := 1.0 if filled else 0.3
+		var col := PIP_STONE if filled else PIP_EMPTY
+		if not filled and blocking == "stone":
+			col = Color(PIP_STONE.r, PIP_STONE.g, PIP_STONE.b, 0.7)
+		draw_circle(Vector2(x, pip_y), 0.7, col)
+
+	# Wood pips (center)
+	for i in range(WOOD_NEEDED):
+		var x := 0.0 + float(i - 1) * spacing
+		var filled := i < wood_count
+		var col := PIP_WOOD if filled else PIP_EMPTY
+		if not filled and blocking == "wood":
+			col = Color(PIP_WOOD.r, PIP_WOOD.g, PIP_WOOD.b, 0.7)
+		draw_rect(Rect2(Vector2(x - 0.6, pip_y - 0.4), Vector2(1.2, 0.8)), col)
+
+	# Mortar pips (right third)
+	for i in range(MORTAR_NEEDED):
+		var x := 3.5 + float(i) * spacing
+		var filled := i < mortar_count
+		var col := PIP_MORTAR if filled else PIP_EMPTY
+		if not filled and blocking == "mortar":
+			col = Color(PIP_MORTAR.r, PIP_MORTAR.g, PIP_MORTAR.b, 0.7)
+		draw_circle(Vector2(x, pip_y), 0.55, col)
 
 func _pop_visual() -> void:
 	var tween := create_tween()
-	tween.tween_property(_mesh, "scale:x", 1.1, 0.1)\
+	tween.tween_property(self, "scale:x", 1.1, 0.1)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_mesh, "scale:z", 1.1, 0.1)\
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_mesh, "scale:x", 1.0, 0.1)\
+	tween.tween_property(self, "scale:x", 1.0, 0.1)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.parallel().tween_property(_mesh, "scale:z", 1.0, 0.1)\
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-
-func _update_wall_color() -> void:
-	if not _wall_mat:
-		return
-	_wall_mat.emission_enabled = false
-	if _is_completed:
-		_wall_mat.albedo_color = COLOR_COMPLETE
-		_wall_mat.emission_enabled = true
-		_wall_mat.emission = Color(0.5, 0.45, 0.30) * 0.4
-	elif completion_percent >= PHASE_STONE:
-		_wall_mat.albedo_color = COLOR_MORTAR   # cream finish rising
-	elif completion_percent >= PHASE_WOOD:
-		_wall_mat.albedo_color = COLOR_STONE    # grey stone blocks
-	elif completion_percent > 0.0:
-		_wall_mat.albedo_color = COLOR_WOOD     # warm wood scaffolding
-	else:
-		_wall_mat.albedo_color = COLOR_EMPTY    # bare charcoal rubble
 
 func get_blocking_material() -> String:
-	# Returns the material type currently preventing further building
 	if wood_count < WOOD_NEEDED:
 		return "wood"
 	if completion_percent >= PHASE_WOOD and stone_count < STONE_NEEDED:
@@ -250,40 +185,6 @@ func get_blocking_material() -> String:
 
 func _get_blocking_material() -> String:
 	return get_blocking_material()
-
-func _set_ghost_highlight(mat: StandardMaterial3D, active: bool) -> void:
-	if not mat:
-		return
-	mat.albedo_color = Color(1.0, 1.0, 1.0, 0.45 if active else 0.12)
-
-func _update_indicators() -> void:
-	if _indicator_root:
-		_indicator_root.visible = not _is_completed
-	var blocking := _get_blocking_material()
-	_set_ghost_highlight(_ind_ghost_wood_mat,   blocking == "wood")
-	_set_ghost_highlight(_ind_ghost_stone_mat,  blocking == "stone")
-	_set_ghost_highlight(_ind_ghost_mortar_mat, blocking == "mortar")
-	_set_fill_indicator(_ind_fill_stone,  stone_count,  STONE_NEEDED,  PIP_STONE)
-	_set_fill_indicator(_ind_fill_wood,   wood_count,   WOOD_NEEDED,   PIP_WOOD)
-	_set_fill_indicator(_ind_fill_mortar, mortar_count, MORTAR_NEEDED, PIP_MORTAR)
-
-func _set_fill_indicator(fill: MeshInstance3D, count: int, needed: int, color: Color) -> void:
-	if not fill:
-		return
-	var ratio: float = clampf(float(count) / float(needed), 0.0, 1.0)
-	fill.scale = Vector3.ONE * ratio
-	var mat := fill.material_override as StandardMaterial3D
-	if not mat:
-		return
-	if count >= needed:
-		# Full — bright albedo + emission glow
-		mat.albedo_color     = color
-		mat.emission_enabled = true
-		mat.emission         = color * 0.5
-	else:
-		# Partial / empty — plain albedo, no glow
-		mat.albedo_color     = color
-		mat.emission_enabled = false
 
 # ── Damage (enemy sabotage) ───────────────────────────────────────────────────
 
@@ -296,19 +197,16 @@ func take_damage(amount: float) -> void:
 	var old_pct := completion_percent
 	var new_pct := maxf(old_pct - amount * 0.12, 0.0)
 
-	# Each 11.11% threshold crossed removes one material (highest phase first).
 	var units_crossed := floori(old_pct / UNIT) - floori(new_pct / UNIT)
 	if units_crossed > 0:
 		for _i in range(units_crossed):
 			_remove_one_material()
 		sync_materials.rpc(stone_count, wood_count, mortar_count)
 
-	# Set completion AFTER material loss so the setter re-clamps to the new ceiling.
 	completion_percent = new_pct
 	sync_progress.rpc(completion_percent)
 
 func _remove_one_material() -> void:
-	# Strips one unit from the highest stocked phase (mortar → stone → wood)
 	if mortar_count > 0:
 		mortar_count -= 1
 	elif stone_count > 0:
@@ -396,13 +294,7 @@ func sync_progress(pct: float) -> void:
 func _on_completed() -> void:
 	_is_completed = true
 	completed.emit()
-	var main = get_tree().current_scene
-	if main.has_method("add_shake"):
-		main.add_shake(0.2)
 
 func _on_sabotaged() -> void:
 	_is_completed = false
 	uncompleted.emit()
-	var main = get_tree().current_scene
-	if main.has_method("add_shake"):
-		main.add_shake(0.1)

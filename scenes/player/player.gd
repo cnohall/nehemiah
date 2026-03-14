@@ -1,6 +1,5 @@
-extends CharacterBody3D
-## PlayerController — Simplified Core Worker
-## ─────────────────────────────────────────────────────────────────────────────
+extends CharacterBody2D
+## PlayerController — 2D top-down version
 
 signal health_changed(new_val: float)
 signal died
@@ -10,18 +9,16 @@ const FALLBACK_ANIM: String = "idle_down"
 
 # Building Constants
 const BUILD_RANGE: float = 4.0
-const BUILD_RATE: float = 25.0 # 25% per second
+const BUILD_RATE: float = 25.0  # 25% per second
 
 # Stamina Constants
 const MAX_STAMINA: float = 100.0
-const STAMINA_REGEN: float = 12.0        # Slow recovery — you're a laborer, not an athlete
-const STAMINA_DRAIN: float = 50.0        # ~2s of full sprint before exhausted
-const SPRINT_MULTIPLIER: float = 1.5     # Labored push, not a dash
-const STAMINA_RECOVER_THRESHOLD: float = 25.0  # Must recover to 25% before sprinting again
+const STAMINA_REGEN: float = 12.0
+const STAMINA_DRAIN: float = 50.0
+const SPRINT_MULTIPLIER: float = 1.5
+const STAMINA_RECOVER_THRESHOLD: float = 25.0
 
-@export var camera_path: NodePath = NodePath("../IsometricCamera")
 @export var move_speed: float = 6.0
-@export var jump_velocity: float = 4.5
 
 @export var health: float = 100.0:
 	set(v):
@@ -42,16 +39,24 @@ var carried_item: MaterialItem = null
 var current_animation: String = FALLBACK_ANIM
 var is_sprinting: bool = false
 
-var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var _camera: Camera3D = null
 var _last_facing: String = "down"
 var _hud: CanvasLayer = null
 var _is_dead: bool = false
 var _exhausted: bool = false
 var _slinger: Slinger = null
 
-@onready var _sprite: AnimatedSprite3D        = $AnimatedSprite3D
+@onready var _sprite: AnimatedSprite2D     = $AnimatedSprite2D
 @onready var _sync:   MultiplayerSynchronizer = $MultiplayerSynchronizer
+
+# ── DRAW ────────────────────────────────────────────────────────────────────
+
+func _draw() -> void:
+	# Placeholder circle body until real sprites are loaded
+	if not _sprite or not _sprite.sprite_frames:
+		draw_circle(Vector2.ZERO, 8.0, Color(0.72, 0.53, 0.35))
+		draw_arc(Vector2.ZERO, 8.0, 0, TAU, 16, Color(0, 0, 0, 0.3), 1.5)
+	if _is_dead:
+		draw_circle(Vector2.ZERO, 8.0, Color(0.4, 0.1, 0.1, 0.4))
 
 # ══════════════════════════════════════════════════════════════════════════════
 # READY & SETUP
@@ -60,7 +65,6 @@ var _slinger: Slinger = null
 func _ready() -> void:
 	add_to_group("players")
 	_setup_multiplayer_sync()
-	_resolve_camera()
 
 	if is_multiplayer_authority():
 		var hud_scene = load("res://scenes/ui/game_hud.tscn")
@@ -72,7 +76,7 @@ func _ready() -> void:
 		_slinger = Slinger.new()
 		_slinger.name = "Slinger"
 		add_child(_slinger)
-		_slinger.init(self, _camera, _hud)
+		_slinger.init(self, _hud)
 
 func _setup_multiplayer_sync() -> void:
 	_sync.root_path = NodePath("..")
@@ -80,11 +84,6 @@ func _setup_multiplayer_sync() -> void:
 	config.add_property(NodePath(".:global_position"))
 	config.add_property(NodePath(".:current_animation"))
 	_sync.replication_config = config
-
-func _resolve_camera() -> void:
-	_camera = get_node_or_null(camera_path)
-	if _camera == null:
-		_camera = get_viewport().get_camera_3d()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PROCESS
@@ -95,15 +94,12 @@ func _physics_process(delta: float) -> void:
 		_apply_remote_animation()
 		return
 
-	if not is_on_floor():
-		velocity.y -= _gravity * delta
-
-	var move_dir := _get_isometric_input()
+	var move_dir := _get_input()
 	var current_speed := move_speed
-	
+
 	# Sprint Logic — can't sprint carrying stone, can't sprint while exhausted
 	var carrying_stone := carried_item != null and carried_item.material_type == MaterialItem.Type.STONE
-	var wants_to_sprint := Input.is_key_pressed(KEY_SHIFT) and move_dir != Vector3.ZERO and not carrying_stone
+	var wants_to_sprint := Input.is_key_pressed(KEY_SHIFT) and move_dir != Vector2.ZERO and not carrying_stone
 	if wants_to_sprint and not _exhausted:
 		is_sprinting = true
 		current_speed *= SPRINT_MULTIPLIER
@@ -119,10 +115,9 @@ func _physics_process(delta: float) -> void:
 	if carried_item:
 		current_speed *= (1.0 - carried_item.speed_penalty)
 
-	velocity.x = move_dir.x * current_speed
-	velocity.z = move_dir.z * current_speed
+	velocity = move_dir * current_speed
 
-	if move_dir != Vector3.ZERO:
+	if move_dir != Vector2.ZERO:
 		_update_walk_animation(move_dir)
 	else:
 		_update_idle_animation()
@@ -133,16 +128,12 @@ func _physics_process(delta: float) -> void:
 		_slinger.process(delta, Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT))
 	_process_building(delta)
 
-func _get_isometric_input() -> Vector3:
+func _get_input() -> Vector2:
 	var raw := Vector2(
 		Input.get_axis("move_left", "move_right"),
 		Input.get_axis("move_up", "move_down")
 	)
-	if raw == Vector2.ZERO or _camera == null:
-		return Vector3.ZERO
-	var basis := _camera.global_transform.basis
-	var world_dir := (basis.x * raw.x) + (Vector3(basis.z.x, 0, basis.z.z).normalized() * raw.y)
-	return world_dir.normalized()
+	return raw.normalized() if raw != Vector2.ZERO else Vector2.ZERO
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ACTIONS
@@ -163,7 +154,6 @@ func _process_building(delta: float) -> void:
 				if _hud:
 					_hud.update_place(nearest_section.completion_percent, 100.0)
 			else:
-				# Blocked - show what's needed
 				if _hud:
 					var m_type = nearest_section.get_blocking_material()
 					var needed = m_type.to_upper()
@@ -174,8 +164,6 @@ func _process_building(delta: float) -> void:
 						"mortar": color = Color(0.50, 0.50, 0.58)
 					_hud.update_place(nearest_section.completion_percent, 100.0, "NEED: " + needed, color)
 		elif _hud:
-			# Not holding LMB, but near - show current progress bar quietly?
-			# Actually, let's keep it clean and only show when active
 			_hud.update_place(0, 1)
 	elif _hud:
 		_hud.update_place(0, 1)
@@ -183,7 +171,7 @@ func _process_building(delta: float) -> void:
 func _handle_interaction() -> void:
 	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
 
-	# 1. Try interacting with Wall Section (if carrying or building)
+	# 1. Try interacting with Wall Section
 	var nearest_section = null
 	if building_mgr:
 		nearest_section = building_mgr.get_nearest_section(global_position, BUILD_RANGE)
@@ -193,7 +181,7 @@ func _handle_interaction() -> void:
 			nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
 			return
 
-	# 2. Try picking up a dropped item (if hands are empty)
+	# 2. Try picking up a dropped item
 	if carried_item == null:
 		var items = get_tree().get_nodes_in_group("carriables")
 		var best_item: MaterialItem = null
@@ -207,10 +195,10 @@ func _handle_interaction() -> void:
 			request_pickup.rpc_id(1, best_item.get_path())
 			return
 
-	# 3. Try getting from a supply pile (if hands are empty)
+	# 3. Try getting from a supply pile
 	if carried_item == null:
 		var piles = get_tree().get_nodes_in_group("supply_piles")
-		var best_pile: Node3D = null
+		var best_pile: Node2D = null
 		var min_pile_dist = 3.0
 		for pile in piles:
 			var d = global_position.distance_to(pile.global_position)
@@ -221,7 +209,7 @@ func _handle_interaction() -> void:
 			return
 
 # ══════════════════════════════════════════════════════════════════════════════
-## NETWORK
+# NETWORK
 # ══════════════════════════════════════════════════════════════════════════════
 
 @rpc("any_peer", "call_local", "reliable")
@@ -241,14 +229,14 @@ func sync_pickup(path: NodePath) -> void:
 		_notify_carried_changed()
 
 @rpc("any_peer", "call_local", "reliable")
-func request_drop(pos: Vector3) -> void:
+func request_drop(pos: Vector2) -> void:
 	if not multiplayer.is_server():
 		return
 	if carried_item:
 		sync_drop.rpc(pos)
 
 @rpc("authority", "call_local", "reliable")
-func sync_drop(pos: Vector3) -> void:
+func sync_drop(pos: Vector2) -> void:
 	if carried_item:
 		carried_item.drop(pos)
 		carried_item = null
@@ -274,22 +262,24 @@ func _take_damage_rpc(amount: float) -> void:
 func _die() -> void:
 	_is_dead = true; visible = false; died.emit()
 
-func respawn(pos: Vector3) -> void:
+func respawn(pos: Vector2) -> void:
 	health = 100.0; _is_dead = false; visible = true; global_position = pos
 
 # ══════════════════════════════════════════════════════════════════════════════
-## ANIMATION
+# ANIMATION
 # ══════════════════════════════════════════════════════════════════════════════
 
-func _update_walk_animation(world_dir: Vector3) -> void:
+func _update_walk_animation(world_dir: Vector2) -> void:
 	_last_facing = _resolve_screen_direction(world_dir)
 	_play_animation("walk_" + _last_facing)
 
 func _update_idle_animation() -> void:
 	_play_animation("idle_" + _last_facing)
 
-func _resolve_screen_direction(world_dir: Vector3) -> String:
-	var angle := rad_to_deg(atan2(world_dir.x, world_dir.z))
+func _resolve_screen_direction(world_dir: Vector2) -> String:
+	# atan2(x, y) maps 2D direction to 8-octant labels.
+	# y+ = toward city interior = "down" on screen = 0°
+	var angle := rad_to_deg(atan2(world_dir.x, world_dir.y))
 	var snap := int(fmod(snapped(angle, 45.0) + 360.0, 360.0))
 	var lookup = {
 		0: "down",
@@ -321,5 +311,5 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):
 		_handle_interaction()
 	if event.is_action_pressed("drop"):
-		var drop_pos = global_position + Vector3(0, 0, -1).rotated(Vector3.UP, rotation.y)
+		var drop_pos = global_position + Vector2(0, -20)
 		request_drop.rpc_id(1, drop_pos)

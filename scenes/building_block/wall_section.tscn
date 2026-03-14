@@ -1,13 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://cnutjgfvom4ti"]
+[gd_scene load_steps=2 format=3 uid="uid://cnutjgfvom4ti"]
 
 [ext_resource type="Script" path="res://scenes/building_block/wall_section.gd" id="1_script"]
 
-[sub_resource type="BoxMesh" id="BoxMesh_mesh"]
-size = Vector3(10, 0.8, 1)
-
-[node name="WallSection" type="Node3D"]
+[node name="WallSection" type="Node2D"]
 script = ExtResource("1_script")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
-mesh = SubResource("BoxMesh_mesh")

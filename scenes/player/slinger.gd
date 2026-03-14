@@ -13,15 +13,13 @@ var _charge: float = 0.0
 var _is_charging: bool = false
 var _reload_timer: float = 0.0
 
-var _player: CharacterBody3D = null
-var _camera: Camera3D = null
+var _player: CharacterBody2D = null
 var _hud: Node = null
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-func init(player: CharacterBody3D, camera: Camera3D, hud: Node) -> void:
+func init(player: CharacterBody2D, hud: Node) -> void:
 	_player = player
-	_camera = camera
 	_hud = hud
 
 ## Call every physics frame, passing current RMB held state.
@@ -52,26 +50,19 @@ func charge_ratio() -> float:
 # ── Internal ──────────────────────────────────────────────────────────────────
 
 func _do_throw() -> void:
-	if not _camera or not _player:
+	if not _player:
 		return
 
 	var power := lerpf(MIN_POWER, MAX_POWER, _charge / MAX_CHARGE)
 
-	var mouse_pos := _player.get_viewport().get_mouse_position()
-	var ray_origin := _camera.project_ray_origin(mouse_pos)
-	var ray_dir    := _camera.project_ray_normal(mouse_pos)
+	# In 2D top-down, aim at mouse world position
+	var mouse_pos := _player.get_global_mouse_position()
+	var origin := _player.global_position
 
-	if absf(ray_dir.y) < 0.001:
+	var dir := (mouse_pos - origin)
+	if dir.length() < 0.01:
 		return
-
-	var t := (0.5 - ray_origin.y) / ray_dir.y
-	var hit := ray_origin + ray_dir * t
-
-	var origin := _player.global_position + Vector3(0, 1.2, 0)
-	# Loft the throw upward proportional to distance — stone arcs back down to target
-	var flat_dist := Vector2(hit.x - origin.x, hit.z - origin.z).length()
-	var aim_y := 1.2 + flat_dist * 0.07
-	var dir := (Vector3(hit.x, aim_y, hit.z) - origin).normalized()
+	dir = dir.normalized()
 
 	var main := _player.get_tree().current_scene
 	if main.has_method("request_throw_stone"):

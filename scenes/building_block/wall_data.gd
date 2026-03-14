@@ -3,19 +3,20 @@ class_name WallData
 
 ## 12 gate/corner positions clockwise. Scale: ~1 unit = 15 m.
 ## These form the historical "pear-shaped" circuit of Nehemiah's Jerusalem.
-const CORNERS: Array[Vector3] = [
-	Vector3(-16,  0, -30),  # 0  NW  — Old/Jeshanah Gate
-	Vector3( -6,  0, -36),  # 1  N   — Fish Gate
-	Vector3(  6,  0, -36),  # 2  NE  — Sheep Gate  (Neh 3:1 start)
-	Vector3( 20,  0, -28),  # 3  NE  — Tower of Hananel / Miphkad Gate
-	Vector3( 30,  0, -14),  # 4  E   — East Gate
-	Vector3( 30,  0,   2),  # 5  E   — Horse Gate / Water Gate
-	Vector3( 20,  0,  20),  # 6  SE  — Fountain Gate
-	Vector3(  6,  0,  32),  # 7  S   — toward Dung Gate
-	Vector3( -4,  0,  36),  # 8  S   — Dung Gate (southernmost)
-	Vector3(-16,  0,  26),  # 9  SW  — Valley Gate
-	Vector3(-28,  0,   8),  # 10 W   — Tower of Ovens / Broad Wall
-	Vector3(-28,  0, -14),  # 11 WN  — Broad Wall north end
+## Coordinate system: X = east/west, Y = north(-)/south(+) mapped from 3D Z.
+const CORNERS: Array[Vector2] = [
+	Vector2(-16, -30),  # 0  NW  — Old/Jeshanah Gate
+	Vector2( -6, -36),  # 1  N   — Fish Gate
+	Vector2(  6, -36),  # 2  NE  — Sheep Gate  (Neh 3:1 start)
+	Vector2( 20, -28),  # 3  NE  — Tower of Hananel / Miphkad Gate
+	Vector2( 30, -14),  # 4  E   — East Gate
+	Vector2( 30,   2),  # 5  E   — Horse Gate / Water Gate
+	Vector2( 20,  20),  # 6  SE  — Fountain Gate
+	Vector2(  6,  32),  # 7  S   — toward Dung Gate
+	Vector2( -4,  36),  # 8  S   — Dung Gate (southernmost)
+	Vector2(-16,  26),  # 9  SW  — Valley Gate
+	Vector2(-28,   8),  # 10 W   — Tower of Ovens / Broad Wall
+	Vector2(-28, -14),  # 11 WN  — Broad Wall north end
 ]
 
 ## 12 playable sections in Nehemiah 3 narrative order.

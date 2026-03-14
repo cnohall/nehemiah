@@ -1,38 +1,30 @@
 class_name SupplyPile
-extends Node3D
+extends Node2D
 
 @export var material_type: String = "stone" # "stone", "wood", "mortar"
 @export var interact_range: float = 3.0
 
-var _material_script = preload("res://scenes/player/material_item.gd")
+var _material_script: GDScript = preload("res://scenes/player/material_item.gd")
+
+# Visual colors per type
+const COLORS := {
+	"stone":  Color(0.60, 0.60, 0.60),
+	"wood":   Color(0.40, 0.26, 0.13),
+	"mortar": Color(0.30, 0.30, 0.35),
+}
 
 func _ready() -> void:
 	add_to_group("supply_piles")
-	_setup_visuals()
+	queue_redraw()
 
-func _setup_visuals() -> void:
-	var mesh_inst := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(2, 1, 2)
-	mesh_inst.mesh = box
-	var mat := StandardMaterial3D.new()
-	match material_type:
-		"stone":
-			mat.albedo_color = Color(0.60, 0.60, 0.60)
-		"wood":
-			mat.albedo_color = Color(0.40, 0.26, 0.13)
-		"mortar":
-			mat.albedo_color = Color(0.30, 0.30, 0.35)
-	mesh_inst.material_override = mat
-	add_child(mesh_inst)
-
-	var label := Label3D.new()
-	label.text = material_type.to_upper()
-	label.position = Vector3(0, 1.4, 0)
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 32
-	label.outline_size = 8
-	add_child(label)
+func _draw() -> void:
+	var c: Color = COLORS.get(material_type, Color.WHITE)
+	# Draw pile as stacked circles
+	draw_circle(Vector2(-4, 3), 5.0, c * 0.85)
+	draw_circle(Vector2(4, 3), 5.0, c * 0.85)
+	draw_circle(Vector2(0, -2), 6.0, c)
+	draw_circle(Vector2(0, -2), 6.0, Color(0, 0, 0, 0.25), false, 1.0)
+	# Label drawn in world space (small text)
 
 ## Called by player pressing E near this pile.
 ## caller_id: the peer ID of the requesting player.
@@ -64,13 +56,12 @@ func _sync_give_material(uid: String, player_id: int) -> void:
 
 	material_node.name = "Carriable_" + uid
 	get_tree().current_scene.add_child(material_node)
-	material_node.global_position = global_position + Vector3(0, 1, 0)
+	material_node.global_position = global_position
 
 	# Immediately give to the requesting player
 	var player = get_tree().current_scene.get_node_or_null("Players/" + str(player_id))
 	if player and player.get("carried_item") == null:
 		material_node.pick_up(player)
 		player.carried_item = material_node
-		# Update the HUD carried label
 		if player.has_method("_notify_carried_changed"):
 			player._notify_carried_changed()
