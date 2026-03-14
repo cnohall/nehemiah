@@ -18,7 +18,8 @@ var _blueprint_mgr: Node = null
 # Exposed for minimap (accessed via main._blueprint_positions getter)
 var _blueprint_positions: Dictionary:
 	get:
-		return _blueprint_mgr._blueprint_positions if _blueprint_mgr else {}
+		var empty: Dictionary = {}
+		return _blueprint_mgr._blueprint_positions if _blueprint_mgr else empty
 
 func _ready() -> void:
 	_ensure_references()
@@ -33,7 +34,7 @@ func _ready() -> void:
 
 func _ensure_references() -> void:
 	if _blocks == null:
-		_blocks = get_parent().get_node_or_null("Blocks")
+		_blocks = get_parent().get_node_or_null("NavigationRegion3D/Blocks")
 	if _players == null:
 		_players = get_parent().get_node_or_null("Players")
 
@@ -49,7 +50,7 @@ func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
 
 	# Spawn directly — no RPC. Sections live server-side only.
 	# Client visual state is replicated by each section's own _sync_* RPCs.
-	for pos in _blueprint_positions:
+	for pos: Vector3 in _blueprint_positions:
 		var rot = _blueprint_positions[pos]
 		_spawn_section_local(pos, rot)
 
@@ -116,17 +117,49 @@ func _spawn_towers() -> void:
 	_ensure_references()
 	if _blocks == null:
 		return
+
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.45, 0.40, 0.35)  # warm sandstone
-	for pos in _blueprint_mgr.get_endpoints():
-		var tower := MeshInstance3D.new()
+
+	# We place towers at the exact edges to seal the map
+	for pos: Vector3 in _blueprint_mgr.get_endpoints():
+		var tower_body := StaticBody3D.new()
+		tower_body.position = Vector3(pos.x, 2.5, pos.z)
+		tower_body.add_to_group("towers")
+		_blocks.add_child(tower_body)
+
+		# Visual
+		var mesh_inst := MeshInstance3D.new()
+		var box_mesh := BoxMesh.new()
+		box_mesh.size = Vector3(3.5, 5.0, 3.5)
+		mesh_inst.mesh = box_mesh
+		mesh_inst.material_override = mat
+		tower_body.add_child(mesh_inst)
+
+		# Collision
+		var col_shape := CollisionShape3D.new()
+		var box_col := BoxShape3D.new()
+		box_col.size = Vector3(3.5, 5.0, 3.5)
+		col_shape.shape = box_col
+		tower_body.add_child(col_shape)
+
+		# Optional: Spawn decorative "rubble" wall extending outside map
+		_spawn_decorative_edge_ruin(pos, mat)
+
+func _spawn_decorative_edge_ruin(edge_pos: Vector3, mat: Material) -> void:
+	# Spawns a few unbuilt-looking wall blocks just outside the map bounds
+	var dir = 1.0 if edge_pos.x > 0 else -1.0
+	for i: int in range(1, 4):
+		var ruin := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = Vector3(3.0, 5.0, 3.0)
-		tower.mesh = box
-		tower.material_override = mat
-		tower.position = Vector3(pos.x, 2.5, pos.z)
-		tower.add_to_group("towers")
-		_blocks.add_child(tower)
+		# Randomly sized/rotated blocks for a "ruined" look
+		box.size = Vector3(5.0, randf_range(0.2, 0.8), 1.2)
+		ruin.mesh = box
+		ruin.material_override = mat
+		ruin.position = edge_pos + Vector3(dir * i * 6.0, -2.0, randf_range(-0.5, 0.5))
+		ruin.rotation.y = randf_range(-0.1, 0.1)
+		ruin.rotation.z = randf_range(-0.2, 0.2)
+		_blocks.add_child(ruin)
 
 func get_section_center_for_day(day: int) -> Vector3:
 	return _blueprint_mgr.get_section_center_for_day(day)
@@ -209,15 +242,15 @@ func _do_place_starting_ruins() -> void:
 			ruin_pct = 0.4
 
 	var count = int(children.size() * ruin_pct)
-	for i in range(count):
+	for i: int in range(count):
 		var section = children[i]
 		if is_instance_valid(section) and section.has_method("_sync_materials"):
 			section.stone_count  = randi_range(1, WallSection.STONE_NEEDED)
 			section.wood_count   = randi_range(0, WallSection.WOOD_NEEDED)
 			section.mortar_count = randi_range(0, WallSection.MORTAR_NEEDED)
 			section.completion_percent = randf_range(5.0, 30.0)
-			section._sync_materials.rpc(section.stone_count, section.wood_count, section.mortar_count)
-			section._sync_progress.rpc(section.completion_percent)
+			section.sync_materials.rpc(section.stone_count, section.wood_count, section.mortar_count)
+			section.sync_progress.rpc(section.completion_percent)
 
 func spawn_blueprint_visuals() -> void:
 	_blueprint_mgr.spawn_visuals(get_parent())

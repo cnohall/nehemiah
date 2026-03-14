@@ -1,9 +1,14 @@
-class_name MaterialItem
 extends Node3D
+class_name MaterialItem
 
 enum Type { STONE, WOOD, MORTAR }
 
 @export var material_type: Type = Type.STONE
+
+var material_name: String = ""
+var speed_penalty: float = 0.0
+var color: Color = Color.WHITE
+var carrier: Node3D = null
 
 # Configuration per material type
 var _config = {
@@ -30,16 +35,11 @@ var _config = {
 	}
 }
 
-var material_name: String = ""
-var speed_penalty: float = 0.0
-var color: Color = Color.WHITE
-var carrier: Node3D = null
-
 func _ready() -> void:
 	add_to_group("carriables")
 	if multiplayer.is_server():
 		set_multiplayer_authority(1)
-	
+
 	_apply_config()
 	_setup_visuals()
 
@@ -52,7 +52,7 @@ func _apply_config() -> void:
 func _setup_visuals() -> void:
 	var cfg = _config[material_type]
 	var mesh_inst = MeshInstance3D.new()
-	
+
 	match cfg["mesh"]:
 		"box":
 			var box = BoxMesh.new()

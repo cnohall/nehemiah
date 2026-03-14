@@ -1,17 +1,18 @@
 extends CharacterBody3D
 
+enum Behavior { ATTACK_WALL, SNEAK }
+
 const HEALTH_BAR_SHOW_TIME: float = 3.0
 const ATTACK_REACH: float = 2.5
-
-enum Behavior { ATTACK_WALL, SNEAK }
+const CITY_TARGET := Vector3(0, 0.5, CityManager.ZONE_Z_START + 5.0)
 
 @export var speed: float = 3.0
 @export var damage: float = 10.0
 @export var health: float = 25.0
-@export var player_aggro_range: float = 8.0
+@export var player_aggro_range: float = 12.0
 @export var mesh_color: Color = Color(1, 0, 0)
 @export var body_scale: float = 1.0
-@export var sneak_chance: float = 0.3
+@export var sneak_chance: float = 0.25
 
 var _behavior: Behavior = Behavior.ATTACK_WALL
 var _target: Node3D = null
@@ -42,10 +43,6 @@ func _ready() -> void:
 	_attack_area.collision_mask |= 2
 
 	_behavior = Behavior.SNEAK if randf() < sneak_chance else Behavior.ATTACK_WALL
-
-	# Wait one physics frame so NavigationAgent3D syncs with the nav server
-	# before requesting the first path — call_deferred is one main frame,
-	# but nav syncs at end of physics frame, so await is more reliable.
 	_init_target()
 
 func _apply_visuals() -> void:
@@ -122,8 +119,21 @@ func _physics_process(delta: float) -> void:
 		_last_target_pos = target_pos
 
 	if _nav_agent.is_navigation_finished():
-		velocity.x = move_toward(velocity.x, 0.0, speed)
-		velocity.z = move_toward(velocity.z, 0.0, speed)
+		# For player targets: keep pushing directly once nav considers itself done —
+		# nav stops ~1m short which is often just outside melee reach.
+		if is_instance_valid(_target) and _target.is_in_group("players"):
+			var to_player := _target.global_position - global_position
+			to_player.y = 0.0
+			if to_player.length() > 0.8:
+				var d := to_player.normalized()
+				velocity.x = d.x * speed
+				velocity.z = d.z * speed
+			else:
+				velocity.x = 0.0
+				velocity.z = 0.0
+		else:
+			velocity.x = move_toward(velocity.x, 0.0, speed)
+			velocity.z = move_toward(velocity.z, 0.0, speed)
 	else:
 		var next_path_pos := _nav_agent.get_next_path_position()
 		var direction := global_position.direction_to(next_path_pos)
@@ -133,21 +143,18 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _update_target_priority() -> void:
-	# Any enemy will break off to fight a nearby player
-	var players_node := get_tree().current_scene.get_node_or_null("Players")
-	if players_node:
-		var nearest_player: Node3D = null
-		var min_dist := player_aggro_range
-		for player in players_node.get_children():
-			if not player is Node3D or player.visible == false:
-				continue
-			var dist = global_position.distance_to(player.global_position)
-			if dist < min_dist:
-				min_dist = dist
-				nearest_player = player
-		if nearest_player:
-			_target = nearest_player
-			return
+	# Break off to fight a player within aggro range
+	var nearest_player := _find_nearest_player(player_aggro_range)
+	if nearest_player:
+		_target = nearest_player
+		return
+
+	# Sneakers: drop any stale player target and resume the city run
+	if _behavior == Behavior.SNEAK:
+		if is_instance_valid(_target) and _target.is_in_group("players"):
+			_target = null
+			_nav_agent.target_position = CITY_TARGET
+		return
 
 	# Drop stale player target when they leave aggro range
 	if is_instance_valid(_target) and _target.is_in_group("players"):
@@ -218,15 +225,15 @@ func _init_target() -> void:
 	_find_new_target()
 
 func _find_new_target() -> void:
-	# Sneakers always head for the city center — they rely on physics to
-	# deflect them through the gate gap rather than actively seeking a path.
 	if _behavior == Behavior.SNEAK:
+		# Sneakers run straight for the city through the gate gap.
+		# If they can't path there (wall fully blocks), break a wall instead.
 		_target = null
-		_nav_agent.target_position = Vector3(0, 0.5, 0)
+		_nav_agent.target_position = CITY_TARGET
 		return
 
-	# Attackers seek the nearest wall section that is built but not yet immune.
-	var nearest: WallSection = null
+	# Attackers: nearest attackable wall section (built but not complete)
+	var nearest_wall: WallSection = null
 	var min_dist := INF
 	for s in get_tree().get_nodes_in_group("wall_sections"):
 		if not s is WallSection:
@@ -236,28 +243,32 @@ func _find_new_target() -> void:
 		var d := global_position.distance_to(s.global_position)
 		if d < min_dist:
 			min_dist = d
-			nearest = s
+			nearest_wall = s
 
-	if nearest:
-		_target = nearest
+	if nearest_wall:
+		_target = nearest_wall
 		return
 
-	# No attackable wall — chase the nearest player instead
-	var players_node := get_tree().current_scene.get_node_or_null("Players")
-	if players_node:
-		var nearest_player: Node3D = null
-		var min_player_dist := INF
-		for player in players_node.get_children():
-			if not player is Node3D or not player.visible:
-				continue
-			var d := global_position.distance_to(player.global_position)
-			if d < min_player_dist:
-				min_player_dist = d
-				nearest_player = player
-		if nearest_player:
-			_target = nearest_player
-			return
+	# No attackable wall — chase the nearest player (no range limit)
+	var nearest_player := _find_nearest_player(INF)
+	if nearest_player:
+		_target = nearest_player
+		return
 
-	# No players either — flood toward city center
+	# Nothing to do — stay put
 	_target = null
-	_nav_agent.target_position = Vector3(0, 0.5, 0)
+
+func _find_nearest_player(max_dist: float) -> Node3D:
+	var players_node := get_tree().current_scene.get_node_or_null("Players")
+	if not players_node:
+		return null
+	var best: Node3D = null
+	var best_dist := max_dist
+	for player in players_node.get_children():
+		if not player is Node3D or not player.visible:
+			continue
+		var d := global_position.distance_to(player.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = player
+	return best

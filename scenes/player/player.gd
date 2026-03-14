@@ -8,13 +8,16 @@ signal damaged(amount: float)
 
 const FALLBACK_ANIM: String = "idle_down"
 
-# Combat Constants
-const RELOAD_TIME: float = 0.4
-const THROW_POWER: float = 20.0
-
 # Building Constants
 const BUILD_RANGE: float = 4.0
 const BUILD_RATE: float = 25.0 # 25% per second
+
+# Stamina Constants
+const MAX_STAMINA: float = 100.0
+const STAMINA_REGEN: float = 12.0        # Slow recovery — you're a laborer, not an athlete
+const STAMINA_DRAIN: float = 50.0        # ~2s of full sprint before exhausted
+const SPRINT_MULTIPLIER: float = 1.5     # Labored push, not a dash
+const STAMINA_RECOVER_THRESHOLD: float = 25.0  # Must recover to 25% before sprinting again
 
 @export var camera_path: NodePath = NodePath("../IsometricCamera")
 @export var move_speed: float = 6.0
@@ -28,16 +31,24 @@ const BUILD_RATE: float = 25.0 # 25% per second
 		if health <= 0 and not _is_dead:
 			_die()
 
+var stamina: float = 100.0:
+	set(v):
+		stamina = clampf(v, 0.0, MAX_STAMINA)
+		if is_multiplayer_authority() and _hud:
+			_hud.update_stamina(stamina, MAX_STAMINA)
+
 # Private State
 var carried_item: MaterialItem = null
 var current_animation: String = FALLBACK_ANIM
+var is_sprinting: bool = false
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _camera: Camera3D = null
 var _last_facing: String = "down"
 var _hud: CanvasLayer = null
 var _is_dead: bool = false
-var _reload_timer: float = 0.0
+var _exhausted: bool = false
+var _slinger: Slinger = null
 
 @onready var _sprite: AnimatedSprite3D        = $AnimatedSprite3D
 @onready var _sync:   MultiplayerSynchronizer = $MultiplayerSynchronizer
@@ -57,6 +68,11 @@ func _ready() -> void:
 		add_child(_hud)
 		_hud.update_health(health)
 		_notify_carried_changed()
+
+		_slinger = Slinger.new()
+		_slinger.name = "Slinger"
+		add_child(_slinger)
+		_slinger.init(self, _camera, _hud)
 
 func _setup_multiplayer_sync() -> void:
 	_sync.root_path = NodePath("..")
@@ -84,6 +100,22 @@ func _physics_process(delta: float) -> void:
 
 	var move_dir := _get_isometric_input()
 	var current_speed := move_speed
+	
+	# Sprint Logic — can't sprint carrying stone, can't sprint while exhausted
+	var carrying_stone := carried_item != null and carried_item.material_type == MaterialItem.Type.STONE
+	var wants_to_sprint := Input.is_key_pressed(KEY_SHIFT) and move_dir != Vector3.ZERO and not carrying_stone
+	if wants_to_sprint and not _exhausted:
+		is_sprinting = true
+		current_speed *= SPRINT_MULTIPLIER
+		stamina -= STAMINA_DRAIN * delta
+		if stamina <= 0.0:
+			_exhausted = true
+	else:
+		is_sprinting = false
+		stamina += STAMINA_REGEN * delta
+		if _exhausted and stamina >= STAMINA_RECOVER_THRESHOLD:
+			_exhausted = false
+
 	if carried_item:
 		current_speed *= (1.0 - carried_item.speed_penalty)
 
@@ -97,23 +129,9 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	_process_combat(delta)
+	if _slinger:
+		_slinger.process(delta, Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT))
 	_process_building(delta)
-	_process_auto_deposit()
-
-func _process_auto_deposit() -> void:
-	if not carried_item:
-		return
-	
-	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
-	if not building_mgr:
-		return
-	
-	# Very tight range for "walking into it"
-	var nearest_section = building_mgr.get_nearest_section(global_position, 1.8)
-	if nearest_section:
-		# request_add_material is already set up to check if the section needs it
-		nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
 
 func _get_isometric_input() -> Vector3:
 	var raw := Vector2(
@@ -129,29 +147,6 @@ func _get_isometric_input() -> Vector3:
 # ══════════════════════════════════════════════════════════════════════════════
 # ACTIONS
 # ══════════════════════════════════════════════════════════════════════════════
-
-func _process_combat(delta: float) -> void:
-	if _reload_timer > 0:
-		_reload_timer -= delta
-		return
-
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-		_throw_stone()
-		_reload_timer = RELOAD_TIME
-
-func _throw_stone() -> void:
-	var mouse_pos = get_viewport().get_mouse_position()
-	var ray_origin = _camera.project_ray_origin(mouse_pos)
-	var ray_dir = _camera.project_ray_normal(mouse_pos)
-	var t = (0.5 - ray_origin.y) / ray_dir.y
-	var hit = ray_origin + ray_dir * t
-
-	var spawn_origin = global_position + Vector3(0, 1.2, 0)
-	var dir = (Vector3(hit.x, 1.0, hit.z) - spawn_origin).normalized()
-
-	var main = get_tree().current_scene
-	if main.has_method("request_throw_stone"):
-		main.request_throw_stone.rpc_id(1, spawn_origin, dir, THROW_POWER, get_path())
 
 func _process_building(delta: float) -> void:
 	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
@@ -179,7 +174,7 @@ func _process_building(delta: float) -> void:
 						"mortar": color = Color(0.50, 0.50, 0.58)
 					_hud.update_place(nearest_section.completion_percent, 100.0, "NEED: " + needed, color)
 		elif _hud:
-			# Not holding LMB, but near - show current progress bar quietly? 
+			# Not holding LMB, but near - show current progress bar quietly?
 			# Actually, let's keep it clean and only show when active
 			_hud.update_place(0, 1)
 	elif _hud:
@@ -187,12 +182,12 @@ func _process_building(delta: float) -> void:
 
 func _handle_interaction() -> void:
 	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
-	
+
 	# 1. Try interacting with Wall Section (if carrying or building)
 	var nearest_section = null
 	if building_mgr:
 		nearest_section = building_mgr.get_nearest_section(global_position, BUILD_RANGE)
-	
+
 	if nearest_section:
 		if carried_item:
 			nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())

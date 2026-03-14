@@ -10,9 +10,9 @@ Cooperative 2–4 player HD-2D isometric action-strategy set in 445 BC Jerusalem
 **Core loop per day:**
 1. Day begins — enemies spawn in waves
 2. Players fight, carry materials, and build walls simultaneously
-3. Day ends when all sections are complete
+3. Day ends when all wall sections for that day are complete (sprint model)
 
-**Win condition:** Make all sections of the wall before day 52 ends
+**Win condition:** Complete the wall section on day 52
 **Loss condition:** The enemies break through the wall and reach the inner city
 
 ---

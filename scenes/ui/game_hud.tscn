@@ -1,38 +1,36 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/game_hud.gd" id="1_script"]
+[ext_resource type="Script" path="res://scenes/ui/minimap.gd" id="2_minimap"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
-bg_color = Color(0.15, 0.12, 0.1, 0.8)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.4, 0.35, 0.3, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
+bg_color = Color(0.07, 0.05, 0.04, 1.0)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health"]
-bg_color = Color(0.7, 0.15, 0.15, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.9, 0.3, 0.3, 1)
+bg_color = Color(0.80, 0.14, 0.14, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stamina"]
+bg_color = Color(0.22, 0.56, 0.26, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_place"]
-bg_color = Color(0.2, 0.55, 0.85, 1)
+bg_color = Color(0.65, 0.50, 0.16, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.4, 0.75, 1.0, 1)
+border_color = Color(0.88, 0.74, 0.36, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
@@ -42,101 +40,213 @@ corner_radius_bottom_left = 2
 font_path = "res://assets/fonts/Cinzel-Regular.ttf"
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.2, 0.18, 0.15, 0.9)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.5, 0.45, 0.4, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-shadow_size = 4
-shadow_offset = Vector2(2, 2)
+bg_color = Color(0.10, 0.08, 0.06, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.45, 0.38, 0.26, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [node name="GameHUD" type="CanvasLayer"]
 script = ExtResource("1_script")
 
-[node name="TopLeft" type="VBoxContainer" parent="."]
-offset_left = 20.0
-offset_top = 20.0
-offset_right = 220.0
-offset_bottom = 110.0
+[node name="TopLeft" type="PanelContainer" parent="."]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 244.0
+offset_bottom = 155.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Label" type="Label" parent="TopLeft"]
+[node name="Margin" type="MarginContainer" parent="TopLeft"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Content" type="VBoxContainer" parent="TopLeft/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="HealthLabel" type="Label" parent="TopLeft/Margin/Content"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.85, 0.75, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.60, 0.54, 0.40, 1)
 text = "HEALTH"
 
-[node name="HealthBar" type="ProgressBar" parent="TopLeft"]
-custom_minimum_size = Vector2(200, 20)
+[node name="HealthBar" type="ProgressBar" parent="TopLeft/Margin/Content"]
+custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+size_flags_horizontal = 3
+theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_health")
 value = 100.0
 show_percentage = false
 
-[node name="CarriedLabel" type="Label" parent="TopLeft"]
+[node name="StaminaLabel" type="Label" parent="TopLeft/Margin/Content"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.95, 0.78, 0.40, 1)
-text = "CARRYING: —"
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.60, 0.54, 0.40, 1)
+text = "STAMINA"
 
-[node name="TopRight" type="VBoxContainer" parent="."]
+[node name="StaminaBar" type="ProgressBar" parent="TopLeft/Margin/Content"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_stamina")
+value = 100.0
+show_percentage = false
+
+[node name="Spacer" type="Control" parent="TopLeft/Margin/Content"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+
+[node name="CarriedLabel" type="Label" parent="TopLeft/Margin/Content"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_1")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.95, 0.82, 0.48, 1)
+text = "—"
+
+[node name="TopRight" type="PanelContainer" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -220.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = 96.0
+offset_left = -244.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = 90.0
 grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="WaveLabel" type="Label" parent="TopRight"]
+[node name="Margin" type="MarginContainer" parent="TopRight"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Content" type="VBoxContainer" parent="TopRight/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="WaveLabel" type="Label" parent="TopRight/Margin/Content"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 18
-text = "DAY: 0"
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.95, 0.88, 0.68, 1)
+text = "DAY  1"
 horizontal_alignment = 2
 
-[node name="ProgressLabel" type="Label" parent="TopRight"]
+[node name="ProgressLabel" type="Label" parent="TopRight/Margin/Content"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 18
-text = "SECTIONS: 0/0"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.62, 0.56, 0.42, 1)
+text = "0 / 0  SECTIONS"
 horizontal_alignment = 2
 
 [node name="BottomLeft" type="PanelContainer" parent="."]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 20.0
-offset_top = -180.0
-offset_right = 230.0
-offset_bottom = -20.0
+offset_left = 12.0
+offset_top = -158.0
+offset_right = 210.0
+offset_bottom = -12.0
 grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Margin" type="MarginContainer" parent="BottomLeft"]
 layout_mode = 2
 theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_bottom = 8
 
 [node name="Label" type="Label" parent="BottomLeft/Margin"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = " CONTROLS
- WASD: Move
- E: Pick Up / Interact
- Q: Drop
- LMB Hold: Build
- RMB Click: Sling Stone"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.58, 0.52, 0.38, 1)
+text = "WASD · Move
+SHIFT · Sprint
+E · Pick Up / Interact
+Q · Drop
+LMB Hold · Build
+RMB · Sling Stone"
+
+[node name="HistoryPanel" type="PanelContainer" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -260.0
+offset_top = -135.0
+offset_right = 260.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="HistoryPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="HistoryPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SectionLabel" type="Label" parent="HistoryPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_1")
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.95, 0.85, 0.58, 1)
+text = "SHEEP GATE"
+horizontal_alignment = 1
+
+[node name="NehLabel" type="Label" parent="HistoryPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.60, 0.55, 0.42, 1)
+text = "Nehemiah 3:1-2"
+horizontal_alignment = 1
+
+[node name="QuoteLabel" type="Label" parent="HistoryPanel/Margin/VBox"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.80, 0.74, 0.60, 1)
+text = "\"Eliashib the high priest arose with his brothers the priests and built the Sheep Gate.\""
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BottomRight" type="MarginContainer" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -170.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Minimap" type="Control" parent="BottomRight"]
+layout_mode = 2
+script = ExtResource("2_minimap")
 
 [node name="PlaceBarContainer" type="CenterContainer" parent="."]
 anchors_preset = 7
@@ -144,10 +254,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -100.0
-offset_top = -120.0
-offset_right = 100.0
-offset_bottom = -40.0
+offset_left = -120.0
+offset_top = -215.0
+offset_right = 120.0
+offset_bottom = -160.0
 grow_horizontal = 2
 grow_vertical = 0
 
@@ -156,20 +266,47 @@ layout_mode = 2
 theme_override_constants/separation = 5
 
 [node name="PlaceBar" type="ProgressBar" parent="PlaceBarContainer/VBox"]
-custom_minimum_size = Vector2(200, 15)
+custom_minimum_size = Vector2(220, 14)
 layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_bg")
+theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_place")
 show_percentage = false
 
 [node name="NeedLabel" type="Label" parent="PlaceBarContainer/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.8, 0.4, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
 theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 14
-text = "NEED: STONE"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.95, 0.82, 0.38, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+text = ""
+horizontal_alignment = 1
+
+[node name="SlingContainer" type="VBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 12.0
+offset_right = 100.0
+offset_bottom = 55.0
+theme_override_constants/separation = 4
+visible = false
+
+[node name="SlingBar" type="ProgressBar" parent="SlingContainer"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
+show_percentage = false
+
+[node name="SlingLabel" type="Label" parent="SlingContainer"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_1")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.92, 0.82, 0.48, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+text = ""
 horizontal_alignment = 1
 
 [node name="GameOverScreen" type="Control" parent="."]
@@ -188,7 +325,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.78)
+color = Color(0, 0, 0, 0.82)
 
 [node name="Center" type="CenterContainer" parent="GameOverScreen"]
 layout_mode = 1
@@ -199,37 +336,38 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="GameOverScreen/Center"]
-custom_minimum_size = Vector2(400, 200)
+custom_minimum_size = Vector2(380, 180)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Margin" type="MarginContainer" parent="GameOverScreen/Center/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
 
 [node name="VBox" type="VBoxContainer" parent="GameOverScreen/Center/Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 16
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="GameOverScreen/Center/Panel/Margin/VBox"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 38
+theme_override_colors/font_color = Color(0.95, 0.88, 0.68, 1)
 text = "VICTORY"
 horizontal_alignment = 1
 
 [node name="RestartBtn" type="Button" parent="GameOverScreen/Center/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(150, 40)
+custom_minimum_size = Vector2(140, 38)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "RESTART"
 
 [node name="QuitBtn" type="Button" parent="GameOverScreen/Center/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(150, 40)
+custom_minimum_size = Vector2(140, 38)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "QUIT"

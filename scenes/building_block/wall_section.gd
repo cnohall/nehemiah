@@ -212,10 +212,14 @@ func _update_visuals() -> void:
 
 func _pop_visual() -> void:
 	var tween := create_tween()
-	tween.tween_property(_mesh, "scale:x", 1.1, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_mesh, "scale:z", 1.1, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_mesh, "scale:x", 1.0, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.parallel().tween_property(_mesh, "scale:z", 1.0, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(_mesh, "scale:x", 1.1, 0.1)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_mesh, "scale:z", 1.1, 0.1)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_mesh, "scale:x", 1.0, 0.1)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(_mesh, "scale:z", 1.0, 0.1)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 func _update_wall_color() -> void:
 	if not _wall_mat:
@@ -290,7 +294,7 @@ func take_damage(amount: float) -> void:
 		return
 
 	var old_pct := completion_percent
-	var new_pct := maxf(old_pct - amount * 0.5, 0.0)
+	var new_pct := maxf(old_pct - amount * 0.12, 0.0)
 
 	# Each 11.11% threshold crossed removes one material (highest phase first).
 	var units_crossed := floori(old_pct / UNIT) - floori(new_pct / UNIT)
@@ -332,7 +336,7 @@ func request_add_material(sender_id: int) -> void:
 func try_add_material(carriable: Node) -> bool:
 	if not carriable is MaterialItem:
 		return false
-		
+
 	var success = false
 	match carriable.material_type:
 		MaterialItem.Type.STONE:
@@ -347,7 +351,7 @@ func try_add_material(carriable: Node) -> bool:
 			if mortar_count < MORTAR_NEEDED:
 				mortar_count += 1
 				success = true
-	
+
 	if success:
 		_pop_visual()
 		_update_visuals()
