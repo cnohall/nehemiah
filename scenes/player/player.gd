@@ -292,14 +292,14 @@ func _resolve_screen_direction(world_dir: Vector3) -> String:
 	var angle := rad_to_deg(atan2(world_dir.x, world_dir.z))
 	var snap := int(fmod(snapped(angle, 45.0) + 360.0, 360.0))
 	var lookup = {
-		0: "down",
-		45: "down_right",
-		90: "right",
-		135: "up_right",
-		180: "up",
-		225: "up_left",
-		270: "left",
-		315: "down_left"
+		0:   "up_right",  # S+D → southeast
+		45:  "up",       # D   → east
+		90:  "up_left",    # W+D → northeast
+		135: "left",          # W   → north
+		180: "down_left",     # W+A → northwest
+		225: "down",        # A   → west
+		270: "down_right",   # S+A → southwest
+		315: "right"         # S   → south
 	}
 	return lookup.get(snap, "down")
 

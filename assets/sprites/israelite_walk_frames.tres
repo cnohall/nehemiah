@@ -1,0 +1,117 @@
+[gd_resource type="SpriteFrames" load_steps=33 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/south_frame00.png" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/south_frame01.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/south_frame02.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/south_frame03.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/north_frame00.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/north_frame01.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/north_frame02.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/north_frame03.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/east_frame00.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/east_frame01.png" id="10"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/east_frame02.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/east_frame03.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/west_frame00.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/west_frame01.png" id="14"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/west_frame02.png" id="15"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/west_frame03.png" id="16"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southeast_frame00.png" id="17"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southeast_frame01.png" id="18"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southeast_frame02.png" id="19"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southeast_frame03.png" id="20"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southwest_frame00.png" id="21"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southwest_frame01.png" id="22"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southwest_frame02.png" id="23"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/southwest_frame03.png" id="24"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northeast_frame00.png" id="25"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northeast_frame01.png" id="26"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northeast_frame02.png" id="27"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northeast_frame03.png" id="28"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northwest_frame00.png" id="29"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northwest_frame01.png" id="30"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northwest_frame02.png" id="31"]
+[ext_resource type="Texture2D" path="res://assets/sprites/israelite_walking/northwest_frame03.png" id="32"]
+
+[resource]
+animations = [{
+"frames": [{"duration": 1.0, "texture": ExtResource("1")}, {"duration": 1.0, "texture": ExtResource("2")}, {"duration": 1.0, "texture": ExtResource("3")}, {"duration": 1.0, "texture": ExtResource("4")}],
+"loop": true,
+"name": &"walk_down",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("5")}, {"duration": 1.0, "texture": ExtResource("6")}, {"duration": 1.0, "texture": ExtResource("7")}, {"duration": 1.0, "texture": ExtResource("8")}],
+"loop": true,
+"name": &"walk_up",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("9")}, {"duration": 1.0, "texture": ExtResource("10")}, {"duration": 1.0, "texture": ExtResource("11")}, {"duration": 1.0, "texture": ExtResource("12")}],
+"loop": true,
+"name": &"walk_right",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("13")}, {"duration": 1.0, "texture": ExtResource("14")}, {"duration": 1.0, "texture": ExtResource("15")}, {"duration": 1.0, "texture": ExtResource("16")}],
+"loop": true,
+"name": &"walk_left",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("17")}, {"duration": 1.0, "texture": ExtResource("18")}, {"duration": 1.0, "texture": ExtResource("19")}, {"duration": 1.0, "texture": ExtResource("20")}],
+"loop": true,
+"name": &"walk_down_right",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("21")}, {"duration": 1.0, "texture": ExtResource("22")}, {"duration": 1.0, "texture": ExtResource("23")}, {"duration": 1.0, "texture": ExtResource("24")}],
+"loop": true,
+"name": &"walk_down_left",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("25")}, {"duration": 1.0, "texture": ExtResource("26")}, {"duration": 1.0, "texture": ExtResource("27")}, {"duration": 1.0, "texture": ExtResource("28")}],
+"loop": true,
+"name": &"walk_up_right",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("29")}, {"duration": 1.0, "texture": ExtResource("30")}, {"duration": 1.0, "texture": ExtResource("31")}, {"duration": 1.0, "texture": ExtResource("32")}],
+"loop": true,
+"name": &"walk_up_left",
+"speed": 8.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("1")}],
+"loop": true,
+"name": &"idle_down",
+"speed": 1.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("5")}],
+"loop": true,
+"name": &"idle_up",
+"speed": 1.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("9")}],
+"loop": true,
+"name": &"idle_right",
+"speed": 1.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("13")}],
+"loop": true,
+"name": &"idle_left",
+"speed": 1.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("17")}],
+"loop": true,
+"name": &"idle_down_right",
+"speed": 1.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("21")}],
+"loop": true,
+"name": &"idle_down_left",
+"speed": 1.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("25")}],
+"loop": true,
+"name": &"idle_up_right",
+"speed": 1.0
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("29")}],
+"loop": true,
+"name": &"idle_up_left",
+"speed": 1.0
+}]
