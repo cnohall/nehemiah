@@ -127,7 +127,8 @@ func _setup_ui() -> void:
 	_host_info_label = Label.new()
 	_host_info_label.text = ""
 	_host_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_host_info_label.visible = false
+	if is_instance_valid(_host_info_label):
+		_host_info_label.visible = false
 	_host_info_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.50))
 	vbox.add_child(_host_info_label)
 
@@ -222,8 +223,9 @@ func _on_host_button_pressed() -> void:
 	_is_host = true
 
 	_set_status("Hosting on port %d.\nShare your local IP with your friend." % DEFAULT_PORT)
-	_host_info_label.text = "Port: %d" % DEFAULT_PORT
-	_host_info_label.visible = true
+	if is_instance_valid(_host_info_label):
+		_host_info_label.text = "Port: %d" % DEFAULT_PORT
+		_host_info_label.visible = true
 
 	emit_signal("lobby_created_success", 0)
 	hide_menu()
@@ -298,11 +300,13 @@ func _on_server_disconnected_internal() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func hide_menu() -> void:
-	_canvas_layer.visible = false
+	if is_instance_valid(_canvas_layer):
+		_canvas_layer.visible = false
 
 
 func show_menu() -> void:
-	_canvas_layer.visible = true
+	if is_instance_valid(_canvas_layer):
+		_canvas_layer.visible = true
 
 
 func disconnect_from_lobby() -> void:

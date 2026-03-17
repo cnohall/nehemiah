@@ -14,10 +14,10 @@ const BUILD_RATE: float = 25.0 # 25% per second
 
 # Stamina Constants
 const MAX_STAMINA: float = 100.0
-const STAMINA_REGEN: float = 12.0        # Slow recovery — you're a laborer, not an athlete
-const STAMINA_DRAIN: float = 50.0        # ~2s of full sprint before exhausted
-const SPRINT_MULTIPLIER: float = 1.5     # Labored push, not a dash
-const STAMINA_RECOVER_THRESHOLD: float = 25.0  # Must recover to 25% before sprinting again
+const STAMINA_REGEN: float = 12.0
+const STAMINA_DRAIN: float = 50.0
+const SPRINT_MULTIPLIER: float = 1.5
+const STAMINA_RECOVER_THRESHOLD: float = 25.0
 
 @export var camera_path: NodePath = NodePath("../IsometricCamera")
 @export var move_speed: float = 6.0
@@ -26,16 +26,12 @@ const STAMINA_RECOVER_THRESHOLD: float = 25.0  # Must recover to 25% before spri
 @export var health: float = 100.0:
 	set(v):
 		health = clampf(v, 0.0, 100.0)
-		if is_multiplayer_authority() and _hud:
-			_hud.update_health(health)
 		if health <= 0 and not _is_dead:
 			_die()
 
 var stamina: float = 100.0:
 	set(v):
 		stamina = clampf(v, 0.0, MAX_STAMINA)
-		if is_multiplayer_authority() and _hud:
-			_hud.update_stamina(stamina, MAX_STAMINA)
 
 # Private State
 var carried_item: MaterialItem = null
@@ -45,10 +41,11 @@ var is_sprinting: bool = false
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _camera: Camera3D = null
 var _last_facing: String = "down"
-var _hud: CanvasLayer = null
 var _is_dead: bool = false
 var _exhausted: bool = false
 var _slinger: Slinger = null
+var _footstep_player: AudioStreamPlayer3D = null
+var _footstep_timer: float = 0.0
 
 @onready var _sprite: AnimatedSprite3D        = $AnimatedSprite3D
 @onready var _sync:   MultiplayerSynchronizer = $MultiplayerSynchronizer
@@ -61,18 +58,13 @@ func _ready() -> void:
 	add_to_group("players")
 	_setup_multiplayer_sync()
 	_resolve_camera()
+	_setup_footsteps()
 
 	if is_multiplayer_authority():
-		var hud_scene = load("res://scenes/ui/game_hud.tscn")
-		_hud = hud_scene.instantiate()
-		add_child(_hud)
-		_hud.update_health(health)
-		_notify_carried_changed()
-
 		_slinger = Slinger.new()
 		_slinger.name = "Slinger"
 		add_child(_slinger)
-		_slinger.init(self, _camera, _hud)
+		_slinger.init(self, _camera, null)
 
 func _setup_multiplayer_sync() -> void:
 	_sync.root_path = NodePath("..")
@@ -86,9 +78,15 @@ func _resolve_camera() -> void:
 	if _camera == null:
 		_camera = get_viewport().get_camera_3d()
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PROCESS
-# ══════════════════════════════════════════════════════════════════════════════
+func _setup_footsteps() -> void:
+	_footstep_player = AudioStreamPlayer3D.new()
+	_footstep_player.max_distance = 10.0
+	_footstep_player.volume_db = -20.0
+	add_child(_footstep_player)
+
+	var path = "res://assets/sounds/place_stone.wav"
+	if FileAccess.file_exists(path):
+		_footstep_player.stream = load(path)
 
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority() or _is_dead:
@@ -100,8 +98,7 @@ func _physics_process(delta: float) -> void:
 
 	var move_dir := _get_isometric_input()
 	var current_speed := move_speed
-	
-	# Sprint Logic — can't sprint carrying stone, can't sprint while exhausted
+
 	var carrying_stone := carried_item != null and carried_item.material_type == MaterialItem.Type.STONE
 	var wants_to_sprint := Input.is_key_pressed(KEY_SHIFT) and move_dir != Vector3.ZERO and not carrying_stone
 	if wants_to_sprint and not _exhausted:
@@ -124,14 +121,25 @@ func _physics_process(delta: float) -> void:
 
 	if move_dir != Vector3.ZERO:
 		_update_walk_animation(move_dir)
+		_footstep_timer -= delta * (current_speed / move_speed)
+		if _footstep_timer <= 0:
+			_play_footstep.rpc()
+			_footstep_timer = 0.35
 	else:
 		_update_idle_animation()
+		_footstep_timer = 0.0
 
 	move_and_slide()
 
 	if _slinger:
 		_slinger.process(delta, Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT))
 	_process_building(delta)
+
+@rpc("any_peer", "call_local", "unreliable")
+func _play_footstep() -> void:
+	if _footstep_player and _footstep_player.stream:
+		_footstep_player.pitch_scale = randf_range(0.9, 1.1)
+		_footstep_player.play()
 
 func _get_isometric_input() -> Vector3:
 	var raw := Vector2(
@@ -149,7 +157,8 @@ func _get_isometric_input() -> Vector3:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _process_building(delta: float) -> void:
-	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
+	var scene = get_tree().current_scene if get_tree() else null
+	var building_mgr = scene.get_node_or_null("BuildingManager") if scene else null
 	if not building_mgr:
 		return
 
@@ -160,30 +169,10 @@ func _process_building(delta: float) -> void:
 				nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
 			elif nearest_section.is_ready_to_build():
 				nearest_section.request_build.rpc_id(1, BUILD_RATE * delta)
-				if _hud:
-					_hud.update_place(nearest_section.completion_percent, 100.0)
-			else:
-				# Blocked - show what's needed
-				if _hud:
-					var m_type = nearest_section.get_blocking_material()
-					var needed = m_type.to_upper()
-					var color = Color.WHITE
-					match m_type:
-						"wood": color = Color(0.58, 0.36, 0.16)
-						"stone": color = Color(0.72, 0.68, 0.60)
-						"mortar": color = Color(0.50, 0.50, 0.58)
-					_hud.update_place(nearest_section.completion_percent, 100.0, "NEED: " + needed, color)
-		elif _hud:
-			# Not holding LMB, but near - show current progress bar quietly?
-			# Actually, let's keep it clean and only show when active
-			_hud.update_place(0, 1)
-	elif _hud:
-		_hud.update_place(0, 1)
 
 func _handle_interaction() -> void:
 	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
 
-	# 1. Try interacting with Wall Section (if carrying or building)
 	var nearest_section = null
 	if building_mgr:
 		nearest_section = building_mgr.get_nearest_section(global_position, BUILD_RANGE)
@@ -193,7 +182,6 @@ func _handle_interaction() -> void:
 			nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
 			return
 
-	# 2. Try picking up a dropped item (if hands are empty)
 	if carried_item == null:
 		var items = get_tree().get_nodes_in_group("carriables")
 		var best_item: MaterialItem = null
@@ -207,7 +195,6 @@ func _handle_interaction() -> void:
 			request_pickup.rpc_id(1, best_item.get_path())
 			return
 
-	# 3. Try getting from a supply pile (if hands are empty)
 	if carried_item == null:
 		var piles = get_tree().get_nodes_in_group("supply_piles")
 		var best_pile: Node3D = null
@@ -255,9 +242,7 @@ func sync_drop(pos: Vector3) -> void:
 		_notify_carried_changed()
 
 func _notify_carried_changed() -> void:
-	if is_multiplayer_authority() and _hud:
-		var m_name = carried_item.material_name if carried_item else ""
-		_hud.update_carried(m_name)
+	pass
 
 func take_damage(amount: float) -> void:
 	if not multiplayer.is_server() or _is_dead:
@@ -292,14 +277,14 @@ func _resolve_screen_direction(world_dir: Vector3) -> String:
 	var angle := rad_to_deg(atan2(world_dir.x, world_dir.z))
 	var snap := int(fmod(snapped(angle, 45.0) + 360.0, 360.0))
 	var lookup = {
-		0:   "up_right",  # S+D → southeast
-		45:  "up",       # D   → east
-		90:  "up_left",    # W+D → northeast
-		135: "left",          # W   → north
-		180: "down_left",     # W+A → northwest
-		225: "down",        # A   → west
-		270: "down_right",   # S+A → southwest
-		315: "right"         # S   → south
+		0:   "up_right",
+		45:  "up",
+		90:  "up_left",
+		135: "left",
+		180: "down_left",
+		225: "down",
+		270: "down_right",
+		315: "right"
 	}
 	return lookup.get(snap, "down")
 

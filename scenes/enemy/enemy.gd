@@ -12,7 +12,7 @@ const CITY_TARGET := Vector3(0, 0.5, CityManager.ZONE_Z_START + 5.0)
 @export var player_aggro_range: float = 12.0
 @export var mesh_color: Color = Color(1, 0, 0)
 @export var body_scale: float = 1.0
-@export var sneak_chance: float = 0.25
+@export var sneak_chance: float = 0.0
 
 var _behavior: Behavior = Behavior.ATTACK_WALL
 var _target: Node3D = null
@@ -89,7 +89,8 @@ func _process(delta: float) -> void:
 	if _health_bar_timer > 0.0:
 		_health_bar_timer -= delta
 		if _health_bar_timer <= 0.0:
-			_health_bar.visible = false
+			if is_instance_valid(_health_bar):
+				_health_bar.visible = false
 
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():

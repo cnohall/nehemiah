@@ -9,7 +9,7 @@ var _thrower: Node3D = null
 var _thrower_id: int = 0
 
 func _ready() -> void:
-	gravity_scale = 0.3
+	gravity_scale = 0.6
 	var mat := PhysicsMaterial.new()
 	mat.bounce = 0.1
 	mat.friction = 0.1

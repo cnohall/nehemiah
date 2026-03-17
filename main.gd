@@ -33,6 +33,9 @@ var _mortar_pile: Node3D = null
 @onready var _wave_manager: Node = $WaveManager
 @onready var _building_mgr: Node = $BuildingManager
 
+var _ambience_player: AudioStreamPlayer = null
+var _music_player: AudioStreamPlayer = null
+
 # ══════════════════════════════════════════════════════════════════════════════
 # PROCESS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -46,7 +49,6 @@ func _update_local_player_ref() -> void:
 		for child in _players.get_children():
 			if child is CharacterBody3D and child.is_multiplayer_authority():
 				_local_player = child
-				_sync_hud_local()
 				break
 
 func _update_camera(delta: float) -> void:
@@ -59,6 +61,18 @@ func _update_camera(delta: float) -> void:
 		_camera.size = lerp(_camera.size, _target_zoom, 10.0 * delta)
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Zoom Input Handling
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_target_zoom = maxf(MIN_ZOOM, _target_zoom - ZOOM_SPEED)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_target_zoom = minf(MAX_ZOOM, _target_zoom + ZOOM_SPEED)
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_EQUAL: # Often '+' key
+			_target_zoom = maxf(MIN_ZOOM, _target_zoom - ZOOM_SPEED)
+		elif event.keycode == KEY_MINUS:
+			_target_zoom = minf(MAX_ZOOM, _target_zoom + ZOOM_SPEED)
+
 	if not multiplayer.is_server():
 		return
 
@@ -73,10 +87,8 @@ func _debug_change_day(offset: int) -> void:
 	var next_day = clampi(_wave_manager.current_wave + offset, 1, _wave_manager.MAX_DAYS)
 	if next_day != _wave_manager.current_wave:
 		_wave_manager.stop_spawning()
-		# Clear enemies
 		for enemy in _enemies.get_children():
 			enemy.queue_free()
-		
 		_wave_manager.current_wave = next_day - 1 # _begin_dawn increments it
 		_begin_dawn()
 
@@ -86,12 +98,37 @@ func _debug_change_day(offset: int) -> void:
 
 func _ready() -> void:
 	_connect_signals()
+	_setup_audio()
 
 	if multiplayer.is_server():
 		_setup_world()
 
+func _setup_audio() -> void:
+	_ambience_player = AudioStreamPlayer.new()
+	add_child(_ambience_player)
+
+	var wind_path = "res://assets/sounds/desert_wind.wav"
+	if FileAccess.file_exists(wind_path):
+		var stream = load(wind_path) as AudioStreamWAV
+		if stream:
+			stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			_ambience_player.stream = stream
+			_ambience_player.volume_db = -18.0
+			_ambience_player.play()
+
+	_music_player = AudioStreamPlayer.new()
+	add_child(_music_player)
+
+	var music_path = "res://assets/music/bgm_main.ogg"
+	if FileAccess.file_exists(music_path):
+		var stream = load(music_path)
+		if stream:
+			_music_player.stream = stream
+			_music_player.volume_db = -20.0
+			_music_player.play()
+
 func _connect_signals() -> void:
-	_building_mgr.blocks_changed.connect(_on_blocks_changed)
+	_building_mgr.blocks_changed.connect(func(_total): pass)
 	_building_mgr.wall_complete.connect(_on_wall_complete)
 	_building_mgr.navigation_changed.connect(_rebake_navigation)
 
@@ -112,12 +149,9 @@ func _on_wave_cleared(wave_num: int) -> void:
 	_spawn_floating_text.rpc(Vector3(0, 3, 0), "Day %d Complete!" % wave_num, Color.LIME)
 	if multiplayer.is_server() and not is_game_over:
 		_wave_manager.stop_spawning()
-		# Clear all remaining enemies
 		for enemy in _enemies.get_children():
 			enemy.queue_free()
-
 		_sync_time_of_day.rpc(true) # To Night
-		# Simple automatic next day after delay
 		get_tree().create_timer(4.0).timeout.connect(_begin_dawn)
 
 @rpc("authority", "call_local", "reliable")
@@ -130,12 +164,11 @@ func _begin_dawn() -> void:
 		return
 	var next_day: int = _wave_manager.current_wave + 1
 	if next_day <= _wave_manager.MAX_DAYS and not is_game_over:
-		_sync_time_of_day.rpc(false) # To Day
+		_sync_time_of_day.rpc(false)
 		_building_mgr.load_section_for_day(next_day)
 		_setup_piles()
 		_building_mgr.place_starting_ruins()
 
-		# Respawn all players for the new day
 		for player in _players.get_children():
 			if player.has_method("respawn"):
 				player.respawn(Vector3(0, 1.0, 0))
@@ -157,16 +190,14 @@ func _setup_world() -> void:
 		_wave_manager.spawn_center = _building_mgr.get_section_center_for_day(1)
 
 func _setup_city() -> void:
-	# Instantiate the city manager which handles visuals + breach logic
 	_city_manager = CityManager.new()
 	add_child(_city_manager)
 	_city_manager.city_breached.connect(func(_e): _end_game(false))
 
 func _setup_piles() -> void:
-	var dir: Vector3 = _building_mgr.get_interior_direction() # Vector3.BACK
+	var dir: Vector3 = _building_mgr.get_interior_direction()
 	var right_dir = dir.cross(Vector3.UP)
 
-	# Position piles in the "Safe Zone" (Z=10), between Wall (Z=0) and City (Z=20)
 	var s_pos = dir * 10.0 + Vector3(0, 0.5, 0)
 	_stone_pile = _ensure_pile(_stone_pile, "StonePile", "stone", s_pos)
 
@@ -209,8 +240,13 @@ func request_throw_stone(
 	s.apply_central_impulse(direction.normalized() * power)
 
 func _rebake_navigation() -> void:
-	if _nav_region:
-		_nav_region.bake_navigation_mesh()
+	if not _nav_region:
+		return
+	var mesh := _nav_region.navigation_mesh
+	if mesh:
+		mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_BOTH
+		mesh.geometry_collision_mask = 0b11  # layers 1 (floor) + 2 (walls)
+	_nav_region.bake_navigation_mesh()
 
 func _bake_nav_and_wait() -> void:
 	if not _nav_region:
@@ -219,18 +255,8 @@ func _bake_nav_and_wait() -> void:
 	await _nav_region.bake_finished
 
 # ══════════════════════════════════════════════════════════════════════════════
-# HUD & EVENTS
+# GAME EVENTS
 # ══════════════════════════════════════════════════════════════════════════════
-
-func _on_blocks_changed(_total: int) -> void:
-	_sync_hud_local()
-
-func _sync_hud_local() -> void:
-	if _local_player and _local_player.get("_hud"):
-		var hud = _local_player._hud
-		hud.update_wave(_wave_manager.current_wave)
-		hud.update_progress(_building_mgr.blocks_placed, _building_mgr.blocks_for_win)
-		hud.update_section_info(_wave_manager.current_wave)
 
 @rpc("authority", "call_local", "reliable")
 func _spawn_floating_text(pos: Vector3, text: String, color: Color, dur: float = 1.5) -> void:
@@ -243,15 +269,13 @@ func _spawn_floating_text(pos: Vector3, text: String, color: Color, dur: float =
 
 func _end_game(win: bool) -> void:
 	is_game_over = true
-	_show_game_over_rpc.rpc(win, _wave_manager.current_wave)
-
-@rpc("authority", "call_local", "reliable")
-func _show_game_over_rpc(win: bool, day: int) -> void:
-	if _local_player and _local_player.get("_hud"):
-		_local_player._hud.show_game_over(win, day)
+	var msg = "VICTORY!" if win else "DEFEAT"
+	var color = Color.LIME if win else Color.RED
+	_spawn_floating_text.rpc(Vector3(0, 5, 0), msg, color, 9999.0)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _on_wall_complete() -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or _wave_manager.current_wave <= 0:
 		return
 	if _wave_manager.current_wave >= _wave_manager.MAX_DAYS:
 		_end_game(true)
@@ -264,6 +288,7 @@ func _on_wall_complete() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _on_lobby_created_success(_id: int) -> void:
+	_sync_time_of_day.rpc(false)
 	_building_mgr.load_section_rpc.rpc(1)
 	_spawn_player(1)
 	await _bake_nav_and_wait()
@@ -273,6 +298,8 @@ func _on_player_connected(id: int) -> void:
 	_spawn_player(id)
 
 func _on_player_disconnected(id: int) -> void:
+	if not is_instance_valid(_players):
+		return
 	var n = _players.get_node_or_null(str(id))
 	if n:
 		n.queue_free()
@@ -299,7 +326,9 @@ func _on_enemy_spawned(enemy: Node3D) -> void:
 
 func _on_wave_started(wave_num: int) -> void:
 	_spawn_floating_text.rpc(Vector3(0, 3, 0), "Day %d Begins!" % wave_num, Color.ORANGE)
-	_sync_hud_local()
+	# Breach detection activates 45 s into the wave — gives players time to build
+	if is_instance_valid(_city_manager):
+		get_tree().create_timer(45.0).timeout.connect(_city_manager.activate_breach)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BOILERPLATE

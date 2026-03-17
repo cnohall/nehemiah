@@ -80,7 +80,9 @@ func pick_up(new_carrier: Node3D) -> void:
 	carrier = new_carrier
 	if is_inside_tree():
 		reparent(carrier)
-	position = Vector3(0, 1.2, -0.6)
+	
+	# Position in front of the player, slightly elevated
+	position = Vector3(0, 1.1, -0.45)
 	rotation = Vector3.ZERO
 
 func drop(global_pos: Vector3) -> void:
@@ -89,3 +91,24 @@ func drop(global_pos: Vector3) -> void:
 	reparent(main)
 	global_position = global_pos
 	rotation = Vector3.ZERO
+
+func _process(delta: float) -> void:
+	if carrier:
+		_update_bobbing(delta)
+
+func _update_bobbing(delta: float) -> void:
+	# Simple bobbing animation when moving
+	var speed = 0.0
+	if carrier is CharacterBody3D:
+		speed = carrier.velocity.length()
+	
+	if speed > 0.1:
+		var t = Time.get_ticks_msec() * 0.008
+		var bob = sin(t) * 0.05
+		position.y = 1.1 + bob
+		# Slight sway
+		rotation.z = sin(t * 0.5) * 0.05
+	else:
+		# Smoothly return to idle position
+		position.y = lerpf(position.y, 1.1, 10.0 * delta)
+		rotation.z = lerpf(rotation.z, 0.0, 10.0 * delta)

@@ -72,7 +72,7 @@ func _spawn_section_local(pos: Vector3, rot: float) -> void:
 		section.uncompleted.connect(_on_section_sabotaged)
 
 func _on_section_completed() -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or _is_setting_up:
 		return
 	blocks_placed += 1
 	blocks_changed.emit(blocks_placed)
@@ -244,7 +244,7 @@ func _do_place_starting_ruins() -> void:
 	var count = int(children.size() * ruin_pct)
 	for i: int in range(count):
 		var section = children[i]
-		if is_instance_valid(section) and section.has_method("_sync_materials"):
+		if is_instance_valid(section) and section is WallSection:
 			section.stone_count  = randi_range(1, WallSection.STONE_NEEDED)
 			section.wood_count   = randi_range(0, WallSection.WOOD_NEEDED)
 			section.mortar_count = randi_range(0, WallSection.MORTAR_NEEDED)

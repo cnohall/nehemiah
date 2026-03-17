@@ -111,3 +111,4 @@ _spawnable_scenes/0 = "res://scenes/player/stone.tscn"
 [node name="EnemySpawner" type="MultiplayerSpawner" parent="."]
 spawn_path = NodePath("Enemies")
 _spawnable_scenes/0 = "res://scenes/enemy/enemy.tscn"
+

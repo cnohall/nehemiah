@@ -18,10 +18,14 @@ const MAP_WIDTH    := 80.0
 # ── Variables ─────────────────────────────────────────────────────────────────
 
 var _breach_area: Area3D = null
+var _breach_active: bool = false
 
 func _ready() -> void:
 	_setup_visuals()
 	_setup_breach_detection()
+
+func activate_breach() -> void:
+	_breach_active = true
 
 func _setup_visuals() -> void:
 	# 1. The Ground Plane (The "District" floor)
@@ -94,5 +98,5 @@ func _setup_breach_detection() -> void:
 	_breach_area.body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body: Node) -> void:
-	if body.is_in_group("enemies"):
+	if _breach_active and body.is_in_group("enemies"):
 		city_breached.emit(body)

@@ -56,6 +56,9 @@ var _footprint: MeshInstance3D = null
 var _static_body: StaticBody3D = null
 var _collision_shape: CollisionShape3D = null
 
+# Audio
+var _audio_player: AudioStreamPlayer3D = null
+
 # ── Material indicators (ghost + fill mesh, one per material type) ───────────
 
 var _indicator_root: Node3D = null
@@ -74,11 +77,47 @@ func _ready() -> void:
 	add_to_group("wall_sections")
 	_build_footprint()
 	_build_wall_material()
+	_build_audio()
 	_build_indicators()
 	_build_static_body()
 	_update_visuals()
 	# Position indicators in world space after parent sets our transform
 	call_deferred("_init_indicator_worldspace")
+
+func _build_audio() -> void:
+	_audio_player = AudioStreamPlayer3D.new()
+	_audio_player.max_distance = 15.0
+	_audio_player.unit_size = 2.0
+	_audio_player.bus = &"Master"
+	add_child(_audio_player)
+
+func _play_sound(sound_name: String) -> void:
+	if not _audio_player:
+		return
+	
+	# Mapping internal names to file names
+	var file_map = {
+		"place_stone": "res://assets/sounds/place_stone.wav",
+		"place_wood": "res://assets/sounds/place_wood.wav",
+		"place_mortar": "res://assets/sounds/place_mortar.wav",
+		"build_loop": "res://assets/sounds/place_wood.wav" # Fallback since build_loop failed to download
+	}
+	
+	if not file_map.has(sound_name):
+		return
+		
+	var path = file_map[sound_name]
+	if FileAccess.file_exists(path):
+		var stream = load(path)
+		if stream:
+			# If it's already playing the same thing, don't restart (unless it's an impact)
+			if _audio_player.playing and _audio_player.stream == stream and sound_name == "build_loop":
+				return
+			
+			_audio_player.stream = stream
+			# Vary pitch slightly for variety
+			_audio_player.pitch_scale = randf_range(0.9, 1.1)
+			_audio_player.play()
 
 func _build_static_body() -> void:
 	_static_body = StaticBody3D.new()
@@ -200,11 +239,12 @@ func _update_visuals() -> void:
 
 	# Wall grows as materials are added + built
 	var current_h: float = lerp(0.2, MAX_HEIGHT, completion_percent / 100.0)
-	_mesh.scale.y = current_h / BLOCK_SIZE.y
-	_mesh.position.y = current_h * 0.5
+	if is_instance_valid(_mesh):
+		_mesh.scale.y = current_h / BLOCK_SIZE.y
+		_mesh.position.y = current_h * 0.5
 
 	# Enable physics blocker whenever anything is built
-	if _collision_shape:
+	if is_instance_valid(_collision_shape):
 		_collision_shape.disabled = (completion_percent <= 0.0)
 
 	_update_wall_color()
@@ -257,7 +297,7 @@ func _set_ghost_highlight(mat: StandardMaterial3D, active: bool) -> void:
 	mat.albedo_color = Color(1.0, 1.0, 1.0, 0.45 if active else 0.12)
 
 func _update_indicators() -> void:
-	if _indicator_root:
+	if is_instance_valid(_indicator_root):
 		_indicator_root.visible = not _is_completed
 	var blocking := _get_blocking_material()
 	_set_ghost_highlight(_ind_ghost_wood_mat,   blocking == "wood")
@@ -322,13 +362,24 @@ func _remove_one_material() -> void:
 func request_add_material(sender_id: int) -> void:
 	if not multiplayer.is_server():
 		return
-	var player = get_tree().current_scene.get_node_or_null("Players/" + str(sender_id))
+	var scene = get_tree().current_scene if get_tree() else null
+	var players_node = scene.get_node_or_null("Players") if scene else null
+	var player = players_node.get_node_or_null(str(sender_id)) if players_node else null
+	
 	if player == null or player.get("carried_item") == null:
 		return
 	var item = player.carried_item
 	if item == null:
 		return
+	
+	var m_type = item.material_type
 	if try_add_material(item):
+		var sound_name := "place_stone"
+		match m_type:
+			MaterialItem.Type.WOOD: sound_name = "place_wood"
+			MaterialItem.Type.MORTAR: sound_name = "place_mortar"
+		
+		_play_sound_rpc.rpc(sound_name)
 		sync_materials.rpc(stone_count, wood_count, mortar_count)
 		sync_progress.rpc(completion_percent)
 		_consume_item_rpc.rpc(player.get_path(), item.get_path())
@@ -384,12 +435,21 @@ func request_build(amount: float) -> void:
 	if not multiplayer.is_server():
 		return
 	if is_ready_to_build():
+		# Play build sound occasionally during progress
+		if int(completion_percent * 2.0) != int((completion_percent + amount) * 2.0):
+			_play_sound_rpc.rpc("build_loop")
+		
 		completion_percent += amount
 		sync_progress.rpc(completion_percent)
 
 @rpc("authority", "call_local", "unreliable")
 func sync_progress(pct: float) -> void:
 	completion_percent = pct
+	_update_visuals()
+
+@rpc("authority", "call_local", "reliable")
+func _play_sound_rpc(sound_name: String) -> void:
+	_play_sound(sound_name)
 
 # ── Completion callbacks ──────────────────────────────────────────────────────
 

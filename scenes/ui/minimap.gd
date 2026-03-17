@@ -42,18 +42,14 @@ func _draw() -> void:
 	var city_rect_size = Vector2(map_size.x, map_size.y * 0.25)
 	draw_rect(Rect2(city_rect_pos, city_rect_size), COLOR_CITY)
 
-	# 3. Draw the Wall (using endpoints from BuildingManager)
-	if b_mgr and b_mgr.has_method("_blueprint_mgr"):
-		var endpoints = b_mgr._blueprint_mgr.get_endpoints()
-		if endpoints.size() >= 2:
-			var wall_start = _world_to_map(endpoints[0])
-			var wall_end   = _world_to_map(endpoints[1])
-			draw_line(wall_start, wall_end, COLOR_WALL, 2.5)
-	else:
-		# Fallback to horizontal center line
-		var wall_start = _world_to_map(Vector3(-30, 0, 0))
-		var wall_end   = _world_to_map(Vector3( 30, 0, 0))
-		draw_line(wall_start, wall_end, COLOR_WALL, 2.0)
+	# 3. Draw Wall Sections (colored by completion)
+	for section in get_tree().get_nodes_in_group("wall_sections"):
+		if not is_instance_valid(section):
+			continue
+		var pct: float = section.get("completion_percent") if section.get("completion_percent") != null else 0.0
+		var col := COLOR_WALL.lerp(Color(0.95, 0.92, 0.85), pct / 100.0)
+		var spos := _world_to_map(section.global_position)
+		draw_rect(Rect2(spos - Vector2(5, 2), Vector2(10, 4)), col)
 
 	# 4. Draw Supply Piles
 	for pile: Node3D in get_tree().get_nodes_in_group("supply_piles"):
@@ -97,7 +93,7 @@ func _draw_player_indicator(player: CharacterBody3D) -> void:
 
 	# Draw a "Directional Heading" line
 	var dir_vec = player.velocity.normalized()
-	if dir_vec.length() < 0.1:
+	if player.velocity.length() < 0.1:
 		dir_vec = Vector3.BACK
 
 	var map_dir = Vector2(dir_vec.x, dir_vec.z).normalized()

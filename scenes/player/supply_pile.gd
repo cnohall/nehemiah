@@ -41,7 +41,8 @@ func request_spawn_material(caller_id: int) -> void:
 	if not multiplayer.is_server():
 		return
 	# Reject if player is already carrying something
-	var player = get_tree().current_scene.get_node_or_null("Players/" + str(caller_id))
+	var scene = get_tree().current_scene if get_tree() else null
+	var player = scene.get_node_or_null("Players/" + str(caller_id)) if scene else null
 	if player and player.get("carried_item") != null and player.carried_item != null:
 		return
 	var uid := "%d_%d" % [Time.get_ticks_msec(), randi() % 99999]

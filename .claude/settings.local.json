@@ -22,7 +22,11 @@
       "Bash(ls \"C:\\\\Users\\\\chris\\\\.claude\\\\projects\\\\c--Programming-nehemiah\\\\memory\"\" 2>/dev/null || echo \"Memory dir not found \")",
       "Read(//c/Users/chris/.claude/projects/c--Programming-nehemiah/**)",
       "Bash(python3 -c \":*)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "WebSearch",
+      "WebFetch(domain:gameuidatabase.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:interfaceingame.com)"
     ],
     "additionalDirectories": [
       "C:\\Users\\chris\\.claude\\projects\\c--Programming-nehemiah"
