@@ -1,7 +1,19 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/game_hud.gd" id="1_script"]
-[ext_resource type="Script" path="res://scenes/ui/minimap.gd" id="2_minimap"]
+[ext_resource type="FontFile" path="res://assets/fonts/Cinzel-Regular.ttf" id="2_font"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.08, 0.065, 0.042, 0.90)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.50, 0.40, 0.22, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
 bg_color = Color(0.10, 0.08, 0.05, 1.0)
@@ -18,111 +30,49 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stamina"]
-bg_color = Color(0.24, 0.50, 0.18, 1)
+bg_color = Color(0.72, 0.50, 0.14, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_place"]
-bg_color = Color(0.60, 0.46, 0.10, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.88, 0.72, 0.32, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-
-[sub_resource type="FontFile" id="SystemFont_1"]
-font_path = "res://assets/fonts/Cinzel-Regular.ttf"
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.08, 0.065, 0.042, 0.93)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.60, 0.50, 0.28, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
-bg_color = Color(0.12, 0.09, 0.06, 1.0)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.48, 0.40, 0.24, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
-bg_color = Color(0.22, 0.17, 0.10, 1.0)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.80, 0.65, 0.34, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
-bg_color = Color(0.09, 0.07, 0.04, 1.0)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.55, 0.44, 0.24, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[node name="GameHUD" type="CanvasLayer"]
-script = ExtResource("1_script")
-
-# ── Root: full-screen Control so child anchors compute against viewport ────────
-
-[node name="HUDRoot" type="Control" parent="."]
-layout_mode = 3
+[node name="GameHUD" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+process_mode = 0
+script = ExtResource("1_script")
 
-# ── Top-Left: Player Status ───────────────────────────────────────────────────
-
-[node name="TopLeft" type="PanelContainer" parent="HUDRoot"]
+[node name="Panel" type="PanelContainer" parent="."]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 244.0
-offset_bottom = 122.0
+offset_right = 180.0
+offset_bottom = 104.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Margin" type="MarginContainer" parent="HUDRoot/TopLeft"]
+[node name="Margin" type="MarginContainer" parent="Panel"]
 layout_mode = 2
 theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
+theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_bottom = 10
 
-[node name="Content" type="VBoxContainer" parent="HUDRoot/TopLeft/Margin"]
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 5
 
-[node name="HealthBar" type="ProgressBar" parent="HUDRoot/TopLeft/Margin/Content"]
-custom_minimum_size = Vector2(0, 20)
+[node name="StrengthLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.82, 0.72, 0.48, 1.0)
+text = "STRENGTH"
+
+[node name="HealthBar" type="ProgressBar" parent="Panel/Margin/VBox"]
+custom_minimum_size = Vector2(140, 14)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
@@ -130,8 +80,15 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_health")
 value = 100.0
 show_percentage = false
 
-[node name="StaminaBar" type="ProgressBar" parent="HUDRoot/TopLeft/Margin/Content"]
-custom_minimum_size = Vector2(0, 20)
+[node name="EnduranceLabel" type="Label" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.82, 0.72, 0.48, 1.0)
+text = "ENDURANCE"
+
+[node name="StaminaBar" type="ProgressBar" parent="Panel/Margin/VBox"]
+custom_minimum_size = Vector2(140, 14)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
@@ -139,303 +96,169 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_stamina")
 value = 100.0
 show_percentage = false
 
-[node name="Divider" type="Control" parent="HUDRoot/TopLeft/Margin/Content"]
-custom_minimum_size = Vector2(0, 4)
+[node name="PauseOverlay" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+visible = false
+
+[node name="DimBg" type="ColorRect" parent="PauseOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.72)
+
+[node name="Center" type="CenterContainer" parent="PauseOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="PauseOverlay/Center"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="PauseOverlay/Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="PauseOverlay/Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="PauseOverlay/Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.92, 0.84, 0.58, 1.0)
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="Sep1" type="HSeparator" parent="PauseOverlay/Center/Panel/Margin/VBox"]
 layout_mode = 2
 
-[node name="CarriedLabel" type="Label" parent="HUDRoot/TopLeft/Margin/Content"]
+[node name="ControlsRow" type="HBoxContainer" parent="PauseOverlay/Center/Panel/Margin/VBox"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
+theme_override_constants/separation = 12
+
+[node name="Keys" type="Label" parent="PauseOverlay/Center/Panel/Margin/VBox/ControlsRow"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.55, 0.50, 0.36, 1)
-text = "—"
-horizontal_alignment = 1
-
-# ── Top-Right: Day & Progress ─────────────────────────────────────────────────
-
-[node name="TopRight" type="PanelContainer" parent="HUDRoot"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -216.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 96.0
-grow_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
-
-[node name="Margin" type="MarginContainer" parent="HUDRoot/TopRight"]
-layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 10
-
-[node name="Content" type="VBoxContainer" parent="HUDRoot/TopRight/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="WaveLabel" type="Label" parent="HUDRoot/TopRight/Margin/Content"]
-layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 30
-theme_override_colors/font_color = Color(0.96, 0.90, 0.70, 1)
-text = "DAY 1"
+theme_override_colors/font_color = Color(0.92, 0.84, 0.58, 1.0)
+text = "WASD
+SHIFT
+E
+G
+LMB
+RMB
+ESC"
 horizontal_alignment = 2
 
-[node name="ProgressLabel" type="Label" parent="HUDRoot/TopRight/Margin/Content"]
+[node name="Actions" type="Label" parent="PauseOverlay/Center/Panel/Margin/VBox/ControlsRow"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.50, 0.44, 0.30, 1)
-text = "0 / 0 WALLS"
-horizontal_alignment = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.72, 0.64, 0.44, 1.0)
+text = "Move
+Sprint
+Pick Up
+Drop
+Build / Deliver
+Charge Sling
+Resume"
+horizontal_alignment = 0
 
-# ── Bottom-Left: Controls (fades after 8s) ────────────────────────────────────
-
-[node name="BottomLeft" type="PanelContainer" parent="HUDRoot"]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 16.0
-offset_top = -152.0
-offset_right = 200.0
-offset_bottom = -16.0
-grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
-
-[node name="Margin" type="MarginContainer" parent="HUDRoot/BottomLeft"]
+[node name="Sep2" type="HSeparator" parent="PauseOverlay/Center/Panel/Margin/VBox"]
 layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 10
 
-[node name="Label" type="Label" parent="HUDRoot/BottomLeft/Margin"]
+[node name="QuitBtn" type="Button" parent="PauseOverlay/Center/Panel/Margin/VBox"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.50, 0.44, 0.32, 1)
-text = "WASD  ·  Move
-SHIFT  ·  Sprint
-E  ·  Pick Up
-Q  ·  Drop
-LMB  ·  Build
-RMB  ·  Sling"
+focus_mode = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.82, 0.72, 0.48, 1.0)
+text = "QUIT"
 
-# ── Bottom-Center: Scripture ──────────────────────────────────────────────────
-
-[node name="HistoryPanel" type="PanelContainer" parent="HUDRoot"]
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -230.0
-offset_top = -120.0
-offset_right = 230.0
-offset_bottom = -16.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
-
-[node name="Margin" type="MarginContainer" parent="HUDRoot/HistoryPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 10
-
-[node name="VBox" type="VBoxContainer" parent="HUDRoot/HistoryPanel/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 5
-
-[node name="SectionLabel" type="Label" parent="HUDRoot/HistoryPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.96, 0.88, 0.60, 1)
-text = "SHEEP GATE"
-horizontal_alignment = 1
-
-[node name="Separator" type="HSeparator" parent="HUDRoot/HistoryPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/separator_color = Color(0.48, 0.40, 0.22, 0.5)
-
-[node name="NehLabel" type="Label" parent="HUDRoot/HistoryPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.52, 0.47, 0.34, 1)
-text = "Nehemiah 3:1, 2"
-horizontal_alignment = 1
-
-[node name="QuoteLabel" type="Label" parent="HUDRoot/HistoryPanel/Margin/VBox"]
-custom_minimum_size = Vector2(360, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.78, 0.72, 0.58, 1)
-text = "\"Eliashib the high priest rose up with his fellow priests and built the Sheep Gate.\""
-horizontal_alignment = 1
-autowrap_mode = 2
-
-# ── Bottom-Right: Minimap ─────────────────────────────────────────────────────
-
-[node name="BottomRight" type="MarginContainer" parent="HUDRoot"]
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -170.0
-offset_top = -170.0
-offset_right = -16.0
-offset_bottom = -16.0
-grow_horizontal = 0
-grow_vertical = 0
-
-[node name="Minimap" type="Control" parent="HUDRoot/BottomRight"]
-layout_mode = 2
-script = ExtResource("2_minimap")
-
-# ── Center-Bottom: Build Progress ────────────────────────────────────────────
-
-[node name="PlaceBarContainer" type="CenterContainer" parent="HUDRoot"]
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -130.0
-offset_top = -212.0
-offset_right = 130.0
-offset_bottom = -162.0
-grow_horizontal = 2
-grow_vertical = 0
-
-[node name="VBox" type="VBoxContainer" parent="HUDRoot/PlaceBarContainer"]
-layout_mode = 2
-theme_override_constants/separation = 5
-
-[node name="PlaceBar" type="ProgressBar" parent="HUDRoot/PlaceBarContainer/VBox"]
-custom_minimum_size = Vector2(240, 18)
-layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_place")
-show_percentage = false
-
-[node name="NeedLabel" type="Label" parent="HUDRoot/PlaceBarContainer/VBox"]
-layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.95, 0.82, 0.38, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 3
-text = ""
-horizontal_alignment = 1
-
-# ── Top-Center: Sling Charge ──────────────────────────────────────────────────
-
-[node name="SlingContainer" type="VBoxContainer" parent="HUDRoot"]
+[node name="SlingContainer" type="VBoxContainer" parent="."]
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -110.0
+offset_left = -90.0
 offset_top = 16.0
-offset_right = 110.0
-offset_bottom = 56.0
+offset_right = 90.0
+offset_bottom = 58.0
 theme_override_constants/separation = 4
 visible = false
 
-[node name="SlingBar" type="ProgressBar" parent="HUDRoot/SlingContainer"]
-custom_minimum_size = Vector2(0, 16)
+[node name="SlingBar" type="ProgressBar" parent="SlingContainer"]
+custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
 show_percentage = false
 
-[node name="SlingLabel" type="Label" parent="HUDRoot/SlingContainer"]
+[node name="SlingLabel" type="Label" parent="SlingContainer"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.92, 0.82, 0.48, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-text = ""
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.92, 0.82, 0.48, 1.0)
+text = "CHARGING"
 horizontal_alignment = 1
 
-# ── Game Over Screen ──────────────────────────────────────────────────────────
-
-[node name="GameOverScreen" type="Control" parent="HUDRoot"]
+[node name="WallNeeds" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -62.0
+offset_right = 160.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
 visible = false
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="DarkOverlay" type="ColorRect" parent="HUDRoot/GameOverScreen"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0.82)
-
-[node name="Center" type="CenterContainer" parent="HUDRoot/GameOverScreen"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Panel" type="PanelContainer" parent="HUDRoot/GameOverScreen/Center"]
-custom_minimum_size = Vector2(340, 190)
-layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Margin" type="MarginContainer" parent="HUDRoot/GameOverScreen/Center/Panel"]
+[node name="Margin" type="MarginContainer" parent="WallNeeds"]
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 10
 
-[node name="VBox" type="VBoxContainer" parent="HUDRoot/GameOverScreen/Center/Panel/Margin"]
+[node name="HBox" type="HBoxContainer" parent="WallNeeds/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 20
-alignment = 1
+theme_override_constants/separation = 22
 
-[node name="TitleLabel" type="Label" parent="HUDRoot/GameOverScreen/Center/Panel/Margin/VBox"]
+[node name="StoneLabel" type="Label" parent="WallNeeds/Margin/HBox"]
 layout_mode = 2
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 40
-theme_override_colors/font_color = Color(0.96, 0.90, 0.70, 1)
-text = "VICTORY"
-horizontal_alignment = 1
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.72, 0.68, 0.60, 1.0)
+text = "STONE \u00d73"
 
-[node name="RestartBtn" type="Button" parent="HUDRoot/GameOverScreen/Center/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(150, 40)
+[node name="WoodLabel" type="Label" parent="WallNeeds/Margin/HBox"]
 layout_mode = 2
-size_flags_horizontal = 4
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.95, 0.88, 0.68, 1)
-text = "RESTART"
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.60, 0.38, 0.16, 1.0)
+text = "TIMBER \u00d73"
 
-[node name="QuitBtn" type="Button" parent="HUDRoot/GameOverScreen/Center/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(150, 40)
+[node name="MortarLabel" type="Label" parent="WallNeeds/Margin/HBox"]
 layout_mode = 2
-size_flags_horizontal = 4
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_fonts/font = SubResource("SystemFont_1")
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.95, 0.88, 0.68, 1)
-text = "QUIT"
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.50, 0.50, 0.60, 1.0)
+text = "MORTAR \u00d73"

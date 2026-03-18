@@ -71,7 +71,7 @@ var _btn_style_normal:   StyleBoxFlat
 func _ready() -> void:
 	_setup_ui()
 	_connect_multiplayer_signals()
-	_set_status("Ready. Host a session or answer the call of another builder.")
+	_set_status("")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -83,111 +83,209 @@ func _setup_ui() -> void:
 	_canvas_layer.layer = 10
 	add_child(_canvas_layer)
 
-	# CenterContainer fills the whole viewport and positions its single child
-	# at the center automatically — no pixel math, SubViewport-safe.
+	# Full-screen root so child anchors resolve correctly
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_canvas_layer.add_child(root)
+
+	# Solid parchment background — hides the 3D scene behind the menu
+	var bg := ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.88, 0.80, 0.62)
+	root.add_child(bg)
+
+	# Subtle vignette overlay
+	var vignette := ColorRect.new()
+	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vignette.color = Color(0.0, 0.0, 0.0, 0.25)
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(vignette)
+
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_canvas_layer.add_child(center)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(center)
 
-	# PanelContainer sizes itself to its content; custom_minimum_size sets the
-	# floor so the join row never feels cramped on short strings.
+	# Panel
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(520, 0)
+	panel.custom_minimum_size = Vector2(560, 0)
 	center.add_child(panel)
 
-	# Ancient stone / parchment panel background.
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.18, 0.14, 0.10)
-	panel_style.border_color = Color(0.55, 0.42, 0.22)
+	panel_style.bg_color = Color(0.13, 0.10, 0.07, 0.97)
+	panel_style.border_color = Color(0.62, 0.48, 0.24)
 	panel_style.border_width_left   = 2
 	panel_style.border_width_right  = 2
 	panel_style.border_width_top    = 2
 	panel_style.border_width_bottom = 2
+	panel_style.corner_radius_top_left     = 6
+	panel_style.corner_radius_top_right    = 6
+	panel_style.corner_radius_bottom_left  = 6
+	panel_style.corner_radius_bottom_right = 6
 	panel.add_theme_stylebox_override("panel", panel_style)
 
 	var margin := MarginContainer.new()
 	for side in ["margin_top", "margin_bottom", "margin_left", "margin_right"]:
-		margin.add_theme_constant_override(side, 28)
+		margin.add_theme_constant_override(side, 40)
 	panel.add_child(margin)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 14)
+	vbox.add_theme_constant_override("separation", 18)
 	margin.add_child(vbox)
 
 	# ── Title ─────────────────────────────────────────────────────────────────
 	var title := Label.new()
-	title.text = "Nehemiah: The Wall"
+	title.text = "NEHEMIAH"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Make the title visually distinct without needing a theme font override.
-	title.add_theme_font_size_override("font_size", 26)
-	title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.50))
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", Color(0.96, 0.88, 0.60))
 	vbox.add_child(title)
 
-	# ── Host info (shown after hosting) ───────────────────────────────────────
-	_host_info_label = Label.new()
-	_host_info_label.text = ""
-	_host_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if is_instance_valid(_host_info_label):
-		_host_info_label.visible = false
-	_host_info_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.50))
-	vbox.add_child(_host_info_label)
+	var subtitle := Label.new()
+	subtitle.text = "The Wall"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 18)
+	subtitle.add_theme_color_override("font_color", Color(0.85, 0.74, 0.52))
+	vbox.add_child(subtitle)
 
-	# Thin divider between title block and status
-	var div := HSeparator.new()
-	vbox.add_child(div)
+	# ── Scripture quote ────────────────────────────────────────────────────────
+	var quote := Label.new()
+	quote.text = "\"Let us rebuild the wall of Jerusalem, so that we may no longer\nbe an object of reproach.\"\n— Nehemiah 2:17"
+	quote.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	quote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	quote.add_theme_font_size_override("font_size", 12)
+	quote.add_theme_color_override("font_color", Color(0.74, 0.66, 0.50))
+	vbox.add_child(quote)
 
-	# ── Status label ──────────────────────────────────────────────────────────
-	_status_label = Label.new()
-	_status_label.text = "Initializing..."
-	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Reserve two lines of height so the panel doesn't jump when text wraps.
-	_status_label.custom_minimum_size = Vector2(0, 52)
-	vbox.add_child(_status_label)
+	var div1 := HSeparator.new()
+	var sep_style := StyleBoxFlat.new()
+	sep_style.bg_color = Color(0.50, 0.40, 0.20, 0.5)
+	sep_style.content_margin_top = 2
+	div1.add_theme_stylebox_override("separator", sep_style)
+	vbox.add_child(div1)
 
-	# Shared style for action buttons — slightly lighter stone than the panel.
+	# Shared button style
 	_btn_style_normal = StyleBoxFlat.new()
-	_btn_style_normal.bg_color = Color(0.28, 0.22, 0.15)
-	_btn_style_normal.border_color = Color(0.55, 0.42, 0.22)
-	_btn_style_normal.border_width_left   = 2
-	_btn_style_normal.border_width_right  = 2
-	_btn_style_normal.border_width_top    = 2
-	_btn_style_normal.border_width_bottom = 2
+	_btn_style_normal.bg_color = Color(0.28, 0.20, 0.12)
+	_btn_style_normal.border_color = Color(0.62, 0.48, 0.24)
+	_btn_style_normal.border_width_left   = 1
+	_btn_style_normal.border_width_right  = 1
+	_btn_style_normal.border_width_top    = 1
+	_btn_style_normal.border_width_bottom = 1
+	_btn_style_normal.corner_radius_top_left     = 4
+	_btn_style_normal.corner_radius_top_right    = 4
+	_btn_style_normal.corner_radius_bottom_left  = 4
+	_btn_style_normal.corner_radius_bottom_right = 4
 
-	# ── Host Game button (full width) ─────────────────────────────────────────
+	var btn_hover := StyleBoxFlat.new()
+	btn_hover.bg_color = Color(0.40, 0.30, 0.18)
+	btn_hover.border_color = Color(0.85, 0.68, 0.36)
+	btn_hover.border_width_left   = 1
+	btn_hover.border_width_right  = 1
+	btn_hover.border_width_top    = 1
+	btn_hover.border_width_bottom = 1
+	btn_hover.corner_radius_top_left     = 4
+	btn_hover.corner_radius_top_right    = 4
+	btn_hover.corner_radius_bottom_left  = 4
+	btn_hover.corner_radius_bottom_right = 4
+
+	# ── Host section ──────────────────────────────────────────────────────────
+	var host_label := Label.new()
+	host_label.text = "HOST"
+	host_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	host_label.add_theme_font_size_override("font_size", 11)
+	host_label.add_theme_color_override("font_color", Color(0.72, 0.62, 0.42))
+	vbox.add_child(host_label)
+
 	_host_button = Button.new()
 	_host_button.text = "Raise the Wall"
 	_host_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_host_button.custom_minimum_size = Vector2(0, 36)
+	_host_button.custom_minimum_size = Vector2(0, 48)
+	_host_button.add_theme_font_size_override("font_size", 18)
+	_host_button.add_theme_color_override("font_color", Color(0.96, 0.88, 0.60))
 	_host_button.pressed.connect(_on_host_button_pressed)
 	_host_button.add_theme_stylebox_override("normal", _btn_style_normal)
+	_host_button.add_theme_stylebox_override("hover", btn_hover)
+	_host_button.add_theme_stylebox_override("pressed", _btn_style_normal)
 	vbox.add_child(_host_button)
 
-	# ── Join row: [IP ──────────────────] [Port~~] [Join Game] ────────────────
+	var div2 := HSeparator.new()
+	div2.add_theme_stylebox_override("separator", sep_style)
+	vbox.add_child(div2)
+
+	# ── Join section ──────────────────────────────────────────────────────────
+	var join_label := Label.new()
+	join_label.text = "JOIN"
+	join_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	join_label.add_theme_font_size_override("font_size", 11)
+	join_label.add_theme_color_override("font_color", Color(0.72, 0.62, 0.42))
+	vbox.add_child(join_label)
+
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
 	vbox.add_child(hbox)
 
 	_ip_input = LineEdit.new()
-	_ip_input.placeholder_text = "Builder's IP address"
+	_ip_input.placeholder_text = "Host IP address"
 	_ip_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_ip_input.custom_minimum_size = Vector2(0, 36)
+	_ip_input.custom_minimum_size = Vector2(0, 40)
+	_ip_input.add_theme_font_size_override("font_size", 14)
 	hbox.add_child(_ip_input)
 
 	_port_input = LineEdit.new()
 	_port_input.placeholder_text = "Port"
 	_port_input.text = str(DEFAULT_PORT)
-	_port_input.custom_minimum_size = Vector2(80, 36)
-	# Prevent the port field from expanding and stealing space from the IP field.
+	_port_input.custom_minimum_size = Vector2(72, 40)
 	_port_input.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_port_input.add_theme_font_size_override("font_size", 14)
 	hbox.add_child(_port_input)
 
 	_join_button = Button.new()
 	_join_button.text = "Answer the Call"
-	_join_button.custom_minimum_size = Vector2(0, 36)
+	_join_button.custom_minimum_size = Vector2(0, 40)
+	_join_button.add_theme_font_size_override("font_size", 14)
+	_join_button.add_theme_color_override("font_color", Color(0.96, 0.88, 0.60))
 	_join_button.pressed.connect(_on_join_button_pressed)
 	_join_button.add_theme_stylebox_override("normal", _btn_style_normal)
+	_join_button.add_theme_stylebox_override("hover", btn_hover)
+	_join_button.add_theme_stylebox_override("pressed", _btn_style_normal)
 	hbox.add_child(_join_button)
+
+	# ── Status label ──────────────────────────────────────────────────────────
+	_status_label = Label.new()
+	_status_label.text = ""
+	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_status_label.custom_minimum_size = Vector2(0, 36)
+	_status_label.add_theme_font_size_override("font_size", 13)
+	_status_label.add_theme_color_override("font_color", Color(0.75, 0.65, 0.44))
+	vbox.add_child(_status_label)
+
+	# ── Host info (shown after hosting) ───────────────────────────────────────
+	_host_info_label = Label.new()
+	_host_info_label.text = ""
+	_host_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_host_info_label.visible = false
+	_host_info_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.50))
+	vbox.add_child(_host_info_label)
+
+	# ── Quit button ───────────────────────────────────────────────────────────
+	var div3 := HSeparator.new()
+	div3.add_theme_stylebox_override("separator", sep_style)
+	vbox.add_child(div3)
+
+	var quit_btn := Button.new()
+	quit_btn.text = "Quit"
+	quit_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	quit_btn.custom_minimum_size = Vector2(120, 36)
+	quit_btn.add_theme_font_size_override("font_size", 13)
+	quit_btn.add_theme_color_override("font_color", Color(0.80, 0.70, 0.52))
+	quit_btn.pressed.connect(func(): get_tree().quit())
+	quit_btn.add_theme_stylebox_override("normal", _btn_style_normal)
+	quit_btn.add_theme_stylebox_override("hover", btn_hover)
+	quit_btn.add_theme_stylebox_override("pressed", _btn_style_normal)
+	vbox.add_child(quit_btn)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

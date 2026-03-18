@@ -3,6 +3,9 @@ extends CharacterBody3D
 ## ─────────────────────────────────────────────────────────────────────────────
 
 signal health_changed(new_val: float)
+signal stamina_changed(new_val: float, max_val: float)
+signal sling_updated(charge: float, reloading: bool, reload_pct: float)
+signal wall_proximity_changed(stone: int, wood: int, mortar: int)
 signal died
 signal damaged(amount: float)
 
@@ -26,14 +29,18 @@ const STAMINA_RECOVER_THRESHOLD: float = 25.0
 @export var health: float = 100.0:
 	set(v):
 		health = clampf(v, 0.0, 100.0)
+		health_changed.emit(health)
 		if health <= 0 and not _is_dead:
 			_die()
 
 var stamina: float = 100.0:
 	set(v):
 		stamina = clampf(v, 0.0, MAX_STAMINA)
+		stamina_changed.emit(stamina, MAX_STAMINA)
 
 # Private State
+var ui_blocked: bool = false
+var _last_wall_needs := Vector3i(-2, -2, -2)
 var carried_item: MaterialItem = null
 var current_animation: String = FALLBACK_ANIM
 var is_sprinting: bool = false
@@ -64,7 +71,7 @@ func _ready() -> void:
 		_slinger = Slinger.new()
 		_slinger.name = "Slinger"
 		add_child(_slinger)
-		_slinger.init(self, _camera, null)
+		_slinger.init(self, _camera)
 
 func _setup_multiplayer_sync() -> void:
 	_sync.root_path = NodePath("..")
@@ -89,7 +96,7 @@ func _setup_footsteps() -> void:
 		_footstep_player.stream = load(path)
 
 func _physics_process(delta: float) -> void:
-	if not is_multiplayer_authority() or _is_dead:
+	if not is_multiplayer_authority() or _is_dead or ui_blocked:
 		_apply_remote_animation()
 		return
 
@@ -160,15 +167,28 @@ func _process_building(delta: float) -> void:
 	var scene = get_tree().current_scene if get_tree() else null
 	var building_mgr = scene.get_node_or_null("BuildingManager") if scene else null
 	if not building_mgr:
+		_emit_wall_needs(-1, -1, -1)
 		return
 
 	var nearest_section = building_mgr.get_nearest_section(global_position, BUILD_RANGE)
-	if nearest_section:
+	if nearest_section and nearest_section.completion_percent < 100.0:
 		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			if carried_item:
 				nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
 			elif nearest_section.is_ready_to_build():
 				nearest_section.request_build.rpc_id(1, BUILD_RATE * delta)
+		var sn: int = WallSection.STONE_NEEDED  - nearest_section.stone_count
+		var wn: int = WallSection.WOOD_NEEDED   - nearest_section.wood_count
+		var mn: int = WallSection.MORTAR_NEEDED - nearest_section.mortar_count
+		_emit_wall_needs(sn, wn, mn)
+	else:
+		_emit_wall_needs(-1, -1, -1)
+
+func _emit_wall_needs(s: int, w: int, m: int) -> void:
+	var v := Vector3i(s, w, m)
+	if v != _last_wall_needs:
+		_last_wall_needs = v
+		wall_proximity_changed.emit(s, w, m)
 
 func _handle_interaction() -> void:
 	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
@@ -301,7 +321,7 @@ func _apply_remote_animation() -> void:
 			_sprite.play(current_animation)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_multiplayer_authority() or _is_dead:
+	if not is_multiplayer_authority() or _is_dead or ui_blocked:
 		return
 	if event.is_action_pressed("interact"):
 		_handle_interaction()
