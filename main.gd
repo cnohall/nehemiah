@@ -112,6 +112,7 @@ func _debug_change_day(offset: int) -> void:
 func _ready() -> void:
 	_connect_signals()
 	_setup_audio()
+	_setup_ground_texture()
 
 	if multiplayer.is_server():
 		_setup_world()
@@ -241,9 +242,63 @@ func _ensure_pile(pile: Node3D, p_name: String, type: String, pos: Vector3) -> N
 # GROUND DETAILS  (purely visual — no gameplay impact)
 # ══════════════════════════════════════════════════════════════════════════════
 
+# ── Asset paths ───────────────────────────────────────────────────────────────
+# Drop downloaded files here; code falls back to procedural if missing.
+#   Ground : res://assets/textures/ground_sand.png   (ambientCG – any Sand pack, _Color.png)
+#   Palm   : res://assets/models/nature/palm.glb     (Quaternius nature pack)
+#   Rocks  : res://assets/models/nature/rock_a.glb   (Quaternius – rename to rock_a/b/c)
+#            res://assets/models/nature/rock_b.glb
+#            res://assets/models/nature/rock_c.glb
+const _SAND_TEX_PATH   := "res://assets/textures/ground_sand.jpg"
+const _PALM_SCENE_PATH := "res://assets/models/nature/palm.glb"
+const _ROCK_PATHS: Array[String] = [
+	"res://assets/models/nature/rock_a.glb",
+	"res://assets/models/nature/rock_b.glb",
+	"res://assets/models/nature/rock_c.glb",
+]
+# Adjust these after importing if the assets come in at the wrong scale
+const _PALM_SCALE := 1.0
+const _ROCK_SCALE := 1.0
+
+# ── Ground texture ────────────────────────────────────────────────────────────
+
+func _setup_ground_texture() -> void:
+	var mat := _make_ground_material()
+	var floor_node := _nav_region.get_node_or_null("Floor") as CSGBox3D
+	if floor_node:
+		floor_node.material = mat
+	var desert := get_node_or_null("DesertFloor") as CSGBox3D
+	if desert:
+		desert.material = mat
+
+func _make_ground_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	if FileAccess.file_exists(_SAND_TEX_PATH):
+		mat.albedo_texture = load(_SAND_TEX_PATH)
+		mat.uv1_scale      = Vector3(8.0, 8.0, 1.0)
+	else:
+		# Procedural fallback — simplex noise blending two sand tones
+		var noise := FastNoiseLite.new()
+		noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		noise.frequency  = 0.018
+		noise.seed       = 7
+		const SIZE := 256
+		var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGB8)
+		var sand_light := Color(0.78, 0.68, 0.47)
+		var sand_dark  := Color(0.65, 0.55, 0.36)
+		for py in range(SIZE):
+			for px in range(SIZE):
+				var t := (noise.get_noise_2d(px, py) + 1.0) * 0.5
+				img.set_pixel(px, py, sand_light.lerp(sand_dark, t))
+		mat.albedo_texture = ImageTexture.create_from_image(img)
+		mat.uv1_scale      = Vector3(6.0, 6.0, 1.0)
+	return mat
+
+# ── Detail spawning ───────────────────────────────────────────────────────────
+
 func _setup_ground_details() -> void:
 	_spawn_road()
-	# Palm positions: flanking the interior road, away from gameplay centre
+	_spawn_rocks()
 	var palm_positions: Array[Vector3] = [
 		Vector3(-15, 0, -13), Vector3(-20, 0, -22), Vector3(-13, 0, -30),
 		Vector3( 15, 0, -14), Vector3( 19, 0, -23), Vector3( 12, 0, -31),
@@ -254,28 +309,76 @@ func _setup_ground_details() -> void:
 
 func _spawn_road() -> void:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.60, 0.55, 0.46)
+	mat.albedo_color = Color(0.50, 0.44, 0.34)
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var mesh_inst := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(3.5, 0.06, 32.0)  # runs z = +4 to z = -28
+	box.size = Vector3(3.5, 0.06, 32.0)
 	mesh_inst.mesh = box
 	mesh_inst.material_override = mat
-	mesh_inst.position = Vector3(0, 0.03, -12.0)
+	mesh_inst.position = Vector3(0, 0.52, -12.0)
 	add_child(mesh_inst)
 
-func _spawn_palm(base_pos: Vector3) -> void:
+func _spawn_rocks() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42
+	var rock_positions: Array[Vector3] = [
+		Vector3(-28, 0,  -8), Vector3( 24, 0, -11), Vector3(-19, 0, -28),
+		Vector3( 32, 0, -19), Vector3(-10, 0, -38), Vector3( 16, 0, -33),
+		Vector3(-35, 0,  12), Vector3( 30, 0,  16), Vector3(-22, 0,  22),
+		Vector3( 26, 0,   8), Vector3(-14, 0, -42), Vector3( 10, 0, -42),
+	]
+	# Load whichever rock scenes are available
+	var rock_scenes: Array[PackedScene] = []
+	for path in _ROCK_PATHS:
+		if FileAccess.file_exists(path):
+			rock_scenes.append(load(path) as PackedScene)
+
+	for pos: Vector3 in rock_positions:
+		if rock_scenes.is_empty():
+			_spawn_rock_procedural(pos, rng)
+		else:
+			var scene := rock_scenes[rng.randi() % rock_scenes.size()]
+			var inst  := scene.instantiate()
+			inst.position = Vector3(pos.x, 0.5, pos.z)
+			inst.rotation.y = rng.randf_range(0.0, PI)
+			inst.scale = Vector3.ONE * _ROCK_SCALE * rng.randf_range(0.7, 1.3)
+			add_child(inst)
+
+func _spawn_rock_procedural(pos: Vector3, rng: RandomNumberGenerator) -> void:
+	# Flattened sphere — more natural than a box
+	var mesh_inst := MeshInstance3D.new()
+	var sph := SphereMesh.new()
+	sph.radius = rng.randf_range(0.25, 0.65)
+	sph.height = sph.radius * rng.randf_range(0.35, 0.65)  # squash vertically
+	mesh_inst.mesh = sph
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var grey := rng.randf_range(0.44, 0.58)
+	mat.albedo_color = Color(grey, grey * 0.93, grey * 0.85)
+	mesh_inst.material_override = mat
+	mesh_inst.position = Vector3(pos.x, 0.5 + sph.height * 0.3, pos.z)
+	mesh_inst.rotation.y = rng.randf_range(0.0, PI)
+	add_child(mesh_inst)
+
+func _spawn_palm(pos: Vector3) -> void:
+	if FileAccess.file_exists(_PALM_SCENE_PATH):
+		var inst := (load(_PALM_SCENE_PATH) as PackedScene).instantiate()
+		inst.position = Vector3(pos.x, 0.5, pos.z)
+		inst.rotation.y = randf_range(0.0, TAU)
+		inst.scale = Vector3.ONE * _PALM_SCALE * randf_range(0.85, 1.15)
+		add_child(inst)
+	else:
+		_spawn_palm_procedural(pos)
+
+func _spawn_palm_procedural(base_pos: Vector3) -> void:
 	var root := Node3D.new()
-	root.position = base_pos
+	root.position = Vector3(base_pos.x, 0.5, base_pos.z)
 	add_child(root)
-
 	var height := randf_range(5.5, 8.0)
-	var lean_z  := randf_range(-0.08, 0.08)
-
 	var trunk_mat := StandardMaterial3D.new()
 	trunk_mat.albedo_color = Color(0.42, 0.30, 0.14)
 	trunk_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-
 	var trunk := MeshInstance3D.new()
 	var trunk_cyl := CylinderMesh.new()
 	trunk_cyl.top_radius    = 0.16
@@ -283,18 +386,16 @@ func _spawn_palm(base_pos: Vector3) -> void:
 	trunk_cyl.height        = height
 	trunk.mesh = trunk_cyl
 	trunk.material_override = trunk_mat
-	trunk.position.y  = height * 0.5
-	trunk.rotation.z  = lean_z
+	trunk.position.y = height * 0.5
+	trunk.rotation.z = randf_range(-0.08, 0.08)
 	root.add_child(trunk)
-
 	var canopy_mat := StandardMaterial3D.new()
 	canopy_mat.albedo_color = Color(0.20, 0.35, 0.10)
 	canopy_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-
 	var canopy := MeshInstance3D.new()
 	var canopy_sph := SphereMesh.new()
 	canopy_sph.radius = randf_range(1.6, 2.2)
-	canopy_sph.height = canopy_sph.radius * 0.75  # slightly flattened
+	canopy_sph.height = canopy_sph.radius * 0.75
 	canopy.mesh = canopy_sph
 	canopy.material_override = canopy_mat
 	canopy.position.y = height + canopy_sph.radius * 0.25
