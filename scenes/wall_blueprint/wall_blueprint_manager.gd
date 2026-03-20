@@ -168,6 +168,12 @@ func _make_blueprint_material() -> StandardMaterial3D:
 
 # ── Queries ───────────────────────────────────────────────────────
 
+func get_blueprint_count() -> int:
+	return _blueprint_positions.size()
+
+func get_blueprint_positions() -> Dictionary:
+	return _blueprint_positions
+
 func get_nearest(world_pos: Vector3, max_dist: float) -> Vector3:
 	var best_key := Vector3.INF
 	var best_d2 := max_dist * max_dist

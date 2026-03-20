@@ -2,38 +2,69 @@ class_name CityManager
 extends Node3D
 
 ## Manages the Inner City area, visuals, and breach detection.
-## Emits a signal when an enemy enters the protected zone.
+## Tracks enemies inside the city and drains city HP over time.
 
-signal city_breached(enemy: Node)
+signal city_breached        ## Emitted once when the first enemy enters
+signal city_hp_changed(current: float, max_hp: float)
+signal city_depleted        ## Emitted when city HP reaches zero
 
 # ── Visual Constants ─────────────────────────────────────────────────────────
 
-const CITY_COLOR   := Color(0.18, 0.22, 0.18) # Dark earthy green
-const KERB_COLOR   := Color(0.45, 0.40, 0.35) # Sandstone
-const HOUSE_COLOR  := Color(0.55, 0.50, 0.45) # Lighter stone
+const CITY_COLOR   := Color(0.18, 0.22, 0.18)
+const KERB_COLOR   := Color(0.45, 0.40, 0.35)
+const HOUSE_COLOR  := Color(0.55, 0.50, 0.45)
 const ZONE_Z_START := 20.0
 const ZONE_Z_END   := 40.0
 const MAP_WIDTH    := 80.0
 
-# ── Variables ─────────────────────────────────────────────────────────────────
+# ── Balance ───────────────────────────────────────────────────────────────────
 
+const MAX_HP: float = 100.0
+const DRAIN_PER_ENEMY: float = 6.0  # HP/sec per enemy inside
+
+# ── State ─────────────────────────────────────────────────────────────────────
+
+var city_hp: float = MAX_HP
+var _enemies_inside: Array = []
+var _has_alerted: bool = false
 var _breach_area: Area3D = null
-var _breach_active: bool = false
+var _depleted: bool = false
 
 func _ready() -> void:
 	_setup_visuals()
 	_setup_breach_detection()
 
-func activate_breach() -> void:
-	_breach_active = true
+func reset() -> void:
+	city_hp = MAX_HP
+	_enemies_inside.clear()
+	_has_alerted = false
+	_depleted = false
+	set_physics_process(true)
+	city_hp_changed.emit(city_hp, MAX_HP)
+
+func _physics_process(delta: float) -> void:
+	if not multiplayer.is_server():
+		return
+	if _enemies_inside.is_empty():
+		return
+	# Clean up freed enemies (killed by stones etc.)
+	_enemies_inside = _enemies_inside.filter(func(e: Node) -> bool: return is_instance_valid(e))
+	if _enemies_inside.is_empty():
+		return
+	city_hp -= DRAIN_PER_ENEMY * _enemies_inside.size() * delta
+	city_hp = maxf(city_hp, 0.0)
+	city_hp_changed.emit(city_hp, MAX_HP)
+	if city_hp <= 0.0 and not _depleted:
+		_depleted = true
+		set_physics_process(false)
+		city_depleted.emit()
 
 func _setup_visuals() -> void:
-	# 1. The Ground Plane (The "District" floor)
+	# 1. Ground Plane
 	var floor_mesh := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(MAP_WIDTH, ZONE_Z_END - ZONE_Z_START)
 	floor_mesh.mesh = plane
-
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = CITY_COLOR
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -41,7 +72,7 @@ func _setup_visuals() -> void:
 	floor_mesh.position = Vector3(0, 0.01, (ZONE_Z_START + ZONE_Z_END) * 0.5)
 	add_child(floor_mesh)
 
-	# 2. The Threshold Kerb (The physical line)
+	# 2. Threshold Kerb
 	var kerb := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(MAP_WIDTH, 0.15, 0.3)
@@ -52,14 +83,13 @@ func _setup_visuals() -> void:
 	kerb.position = Vector3(0, 0.075, ZONE_Z_START)
 	add_child(kerb)
 
-	# 3. Simple Building Placeholders (The "Homes")
-	# We place a few simple boxes to give it a "City" feel
+	# 3. Building Placeholders
 	_spawn_house(Vector3(-25, 0, 32), Vector3(6, 4, 6))
 	_spawn_house(Vector3(-10, 0, 35), Vector3(8, 3, 5))
 	_spawn_house(Vector3( 15, 0, 33), Vector3(5, 5, 5))
 	_spawn_house(Vector3( 30, 0, 36), Vector3(7, 4, 8))
 
-	# 4. Identification Label
+	# 4. Label
 	var label := Label3D.new()
 	label.text = "JERUSALEM — INNER CITY"
 	label.font_size = 48
@@ -83,20 +113,27 @@ func _spawn_house(pos: Vector3, size: Vector3) -> void:
 func _setup_breach_detection() -> void:
 	_breach_area = Area3D.new()
 	_breach_area.name = "BreachDetectionArea"
-	_breach_area.collision_mask = 4 # Enemy layer
+	_breach_area.collision_mask = 4  # Enemy layer
 
 	var col := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	# Covers full width and the city depth
-	box.size = Vector3(MAP_WIDTH, 10, ZONE_Z_END - ZONE_Z_START)
-	col.shape = box
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(MAP_WIDTH, 10, ZONE_Z_END - ZONE_Z_START)
+	col.shape = shape
 
 	_breach_area.add_child(col)
 	_breach_area.position = Vector3(0, 5, (ZONE_Z_START + ZONE_Z_END) * 0.5)
 	add_child(_breach_area)
 
 	_breach_area.body_entered.connect(_on_body_entered)
+	_breach_area.body_exited.connect(_on_body_exited)
 
 func _on_body_entered(body: Node) -> void:
-	if _breach_active and body.is_in_group("enemies"):
-		city_breached.emit(body)
+	if not body.is_in_group("enemies"):
+		return
+	_enemies_inside.append(body)
+	if not _has_alerted:
+		_has_alerted = true
+		city_breached.emit()
+
+func _on_body_exited(body: Node) -> void:
+	_enemies_inside.erase(body)

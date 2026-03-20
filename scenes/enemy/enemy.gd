@@ -21,6 +21,8 @@ var _health_pb: ProgressBar = null
 var _health_bar_timer: float = 0.0
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _last_target_pos: Vector3 = Vector3.INF
+var _knockback_velocity: Vector3 = Vector3.ZERO
+var _knockback_timer: float = 0.0
 
 @onready var _nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var _attack_area: Area3D = $AttackArea
@@ -88,9 +90,18 @@ func _init_health_bar() -> void:
 func _process(delta: float) -> void:
 	if _health_bar_timer > 0.0:
 		_health_bar_timer -= delta
-		if _health_bar_timer <= 0.0:
-			if is_instance_valid(_health_bar):
-				_health_bar.visible = false
+		if _health_bar_timer <= 0.0 and is_instance_valid(_health_bar):
+			_fade_out_health_bar()
+
+func _fade_out_health_bar() -> void:
+	var tween := create_tween()
+	tween.tween_property(_health_bar, "modulate:a", 0.0, 0.35)\
+		.set_trans(Tween.TRANS_SINE)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(_health_bar):
+			_health_bar.visible = false
+			_health_bar.modulate.a = 1.0
+	)
 
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
@@ -119,6 +130,14 @@ func _physics_process(delta: float) -> void:
 		_nav_agent.target_position = target_pos
 		_last_target_pos = target_pos
 
+	# Apply knockback override
+	if _knockback_timer > 0.0:
+		_knockback_timer -= delta
+		velocity.x = _knockback_velocity.x
+		velocity.z = _knockback_velocity.z
+		move_and_slide()
+		return
+
 	if _nav_agent.is_navigation_finished():
 		# For player targets: keep pushing directly once nav considers itself done —
 		# nav stops ~1m short which is often just outside melee reach.
@@ -144,6 +163,13 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _update_target_priority() -> void:
+	# Once inside the city, commit fully — no more wall targeting or player aggro
+	if global_position.z >= CityManager.ZONE_Z_START:
+		if _nav_agent.is_navigation_finished():
+			var rx := randf_range(-25.0, 25.0)
+			var rz := randf_range(CityManager.ZONE_Z_START + 2.0, CityManager.ZONE_Z_END - 2.0)
+			_nav_agent.target_position = Vector3(rx, 0.5, rz)
+		return
 	# Break off to fight a player within aggro range
 	var nearest_player := _find_nearest_player(player_aggro_range)
 	if nearest_player:
@@ -175,11 +201,12 @@ func take_damage(amount: float) -> void:
 func take_damage_with_killer(amount: float, killer_id: int) -> void:
 	health -= amount
 	var main = get_tree().current_scene
-	if main.has_method("_spawn_floating_text"):
-		main._spawn_floating_text.rpc(global_position + Vector3(0, 1.5, 0), str(int(amount)), Color.RED)
+	if main.has_method("spawn_floating_text"):
+		main.spawn_floating_text.rpc(global_position + Vector3(0, 1.5, 0), str(int(amount)), Color.RED)
 	if is_instance_valid(_health_pb):
 		_health_pb.value = health
 	if is_instance_valid(_health_bar):
+		_health_bar.modulate.a = 1.0
 		_health_bar.visible = true
 		_health_bar_timer = HEALTH_BAR_SHOW_TIME
 		var hb_pct = health / _health_pb.max_value
@@ -213,13 +240,8 @@ func _on_attack_timer_timeout() -> void:
 			section.take_damage(damage)
 			return
 
-func _get_section_from_body(body: Node) -> Node:
-	var p = body
-	while p:
-		if p is WallSection:
-			return p
-		p = p.get_parent()
-	return null
+func _get_section_from_body(body: Node) -> WallSection:
+	return body.get_parent() as WallSection
 
 func _init_target() -> void:
 	await get_tree().physics_frame
@@ -258,6 +280,10 @@ func _find_new_target() -> void:
 
 	# Nothing to do — stay put
 	_target = null
+
+func apply_knockback(direction: Vector3, force: float) -> void:
+	_knockback_velocity = direction.normalized() * force
+	_knockback_timer = 0.28
 
 func _find_nearest_player(max_dist: float) -> Node3D:
 	var players_node := get_tree().current_scene.get_node_or_null("Players")

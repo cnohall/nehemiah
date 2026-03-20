@@ -16,10 +16,12 @@ var is_active: bool = false
 var spawn_center: Vector3 = Vector3.ZERO
 
 var _is_spawning: bool = false
+var _building_mgr: Node = null
 
 func _ready() -> void:
 	if spawn_timer:
 		spawn_timer.timeout.connect(_on_spawn_timer_timeout)
+	_building_mgr = get_parent().get("_building_mgr")
 
 func start_next_wave() -> void:
 	if current_wave >= MAX_DAYS:
@@ -48,14 +50,12 @@ func _spawn_enemy() -> void:
 		return
 
 	var enemy := enemy_scene.instantiate()
-	enemy.health = 25.0 + current_wave * 2.0
-	enemy.speed  = 3.0  + current_wave * 0.05
+	enemy.health = minf(25.0 + current_wave * 2.0, 200.0)
+	enemy.speed  = minf(3.0  + current_wave * 0.05,   9.0)
 
 	var interior_dir := Vector3.BACK
-	var main := get_tree().current_scene
-	var b_mgr = main.get("_building_mgr") if main else null
-	if b_mgr and b_mgr.has_method("get_interior_direction"):
-		interior_dir = b_mgr.get_interior_direction()
+	if _building_mgr and _building_mgr.has_method("get_interior_direction"):
+		interior_dir = _building_mgr.get_interior_direction()
 
 	var exterior_dir := -interior_dir
 	var base_angle   := atan2(exterior_dir.x, exterior_dir.z)

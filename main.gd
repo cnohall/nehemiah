@@ -6,6 +6,8 @@ const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy/enemy.tscn")
 const STONE_SCENE: PackedScene = preload("res://scenes/player/stone.tscn")
 const FLOATING_TEXT_SCENE: PackedScene = preload("res://scenes/ui/floating_text.tscn")
 const GAME_HUD_SCENE: PackedScene = preload("res://scenes/ui/game_hud.tscn")
+const SUPPLY_PILE_SCRIPT = preload("res://scenes/player/supply_pile.gd")
+const MINIMAP_SCRIPT = preload("res://scenes/ui/minimap.gd")
 
 const MIN_ZOOM: float = 5.0
 const MAX_ZOOM: float = 35.0
@@ -18,6 +20,8 @@ var _local_player: CharacterBody3D = null
 var _city_manager: CityManager = null
 var _ready_peers: Array = []
 var _target_zoom: float = 14.0
+var _shake_intensity: float = 0.0
+var _shake_timer: float = 0.0
 
 # Material Piles
 var _stone_pile: Node3D = null
@@ -38,30 +42,36 @@ var _ambience_player: AudioStreamPlayer = null
 var _music_player: AudioStreamPlayer = null
 var _hud_layer: CanvasLayer = null
 var _hud: Node = null
+var _last_synced_city_hp: float = 100.0
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PROCESS
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _process(delta: float) -> void:
-	_update_local_player_ref()
 	_update_camera(delta)
-
-func _update_local_player_ref() -> void:
-	if not is_instance_valid(_local_player):
-		for child in _players.get_children():
-			if child is CharacterBody3D and child.is_multiplayer_authority():
-				_local_player = child
-				break
 
 func _update_camera(delta: float) -> void:
 	if is_instance_valid(_local_player):
 		var cam_y := maxf(10.0, (_camera.size * 0.5) * 0.7071 + 1.5)
-		var base_cam_pos = _local_player.global_position + Vector3(6, cam_y, 6)
-		_camera.global_position = base_cam_pos
+		_camera.global_position = _local_player.global_position + Vector3(6, cam_y, 6)
 
 	if _camera:
 		_camera.size = lerp(_camera.size, _target_zoom, 10.0 * delta)
+
+	# Screen shake
+	if _shake_timer > 0.0:
+		_shake_timer -= delta
+		var frac := _shake_timer / 0.15
+		_camera.global_position += Vector3(
+			randf_range(-1.0, 1.0),
+			0.0,
+			randf_range(-1.0, 1.0)
+		) * _shake_intensity * frac
+
+func shake_camera(intensity: float, duration: float) -> void:
+	_shake_intensity = intensity
+	_shake_timer = duration
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Zoom Input Handling
@@ -131,7 +141,6 @@ func _setup_audio() -> void:
 			_music_player.play()
 
 func _connect_signals() -> void:
-	_building_mgr.blocks_changed.connect(func(_total): pass)
 	_building_mgr.wall_complete.connect(_on_wall_complete)
 	_building_mgr.navigation_changed.connect(_rebake_navigation)
 
@@ -152,14 +161,17 @@ func _begin_night_transition() -> void:
 	_wave_manager.stop_spawning()
 	for enemy in _enemies.get_children():
 		enemy.queue_free()
-	_spawn_floating_text.rpc(Vector3(0, 3, 0), "Section Complete!", Color.LIME)
+	spawn_floating_text.rpc(Vector3(0, 3, 0), "Section Complete!", Color.LIME)
 	_sync_time_of_day.rpc(true)
 	get_tree().create_timer(4.0).timeout.connect(_begin_dawn)
 
 @rpc("authority", "call_local", "reliable")
 func _sync_time_of_day(is_night: bool) -> void:
-	if _sun:
-		_sun.light_energy = 0.05 if is_night else 1.5
+	if not _sun:
+		return
+	var tween := create_tween()
+	tween.tween_property(_sun, "light_energy", 0.05 if is_night else 1.5, 2.0)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _begin_dawn() -> void:
 	if not multiplayer.is_server():
@@ -167,6 +179,8 @@ func _begin_dawn() -> void:
 	var next_day: int = _wave_manager.current_wave + 1
 	if next_day <= _wave_manager.MAX_DAYS and not is_game_over:
 		_sync_time_of_day.rpc(false)
+		if is_instance_valid(_city_manager):
+			_city_manager.reset()
 		_building_mgr.load_section_for_day(next_day)
 		_setup_piles()
 		_building_mgr.place_starting_ruins()
@@ -186,6 +200,7 @@ func _setup_world() -> void:
 	_setup_boundaries()
 	_setup_city()
 	_setup_piles()
+	_setup_ground_details()
 	_rebake_navigation()
 
 	if _wave_manager:
@@ -194,7 +209,9 @@ func _setup_world() -> void:
 func _setup_city() -> void:
 	_city_manager = CityManager.new()
 	add_child(_city_manager)
-	_city_manager.city_breached.connect(func(_e): _end_game(false))
+	_city_manager.city_breached.connect(_on_city_breached)
+	_city_manager.city_depleted.connect(func(): _end_game(false))
+	_city_manager.city_hp_changed.connect(_on_city_hp_changed)
 
 func _setup_piles() -> void:
 	var dir: Vector3 = _building_mgr.get_interior_direction()
@@ -211,15 +228,77 @@ func _setup_piles() -> void:
 
 func _ensure_pile(pile: Node3D, p_name: String, type: String, pos: Vector3) -> Node3D:
 	if not pile:
-		var script = load("res://scenes/player/supply_pile.gd")
 		pile = Node3D.new()
 		pile.name = p_name
-		pile.set_script(script)
+		pile.set_script(SUPPLY_PILE_SCRIPT)
 		pile.material_type = type
 		pile.add_to_group("supply_piles")
 		add_child(pile)
 	pile.global_position = pos
 	return pile
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GROUND DETAILS  (purely visual — no gameplay impact)
+# ══════════════════════════════════════════════════════════════════════════════
+
+func _setup_ground_details() -> void:
+	_spawn_road()
+	# Palm positions: flanking the interior road, away from gameplay centre
+	var palm_positions: Array[Vector3] = [
+		Vector3(-15, 0, -13), Vector3(-20, 0, -22), Vector3(-13, 0, -30),
+		Vector3( 15, 0, -14), Vector3( 19, 0, -23), Vector3( 12, 0, -31),
+		Vector3( -8, 0, -35), Vector3(  8, 0, -36),
+	]
+	for pos: Vector3 in palm_positions:
+		_spawn_palm(pos)
+
+func _spawn_road() -> void:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.60, 0.55, 0.46)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var mesh_inst := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(3.5, 0.06, 32.0)  # runs z = +4 to z = -28
+	mesh_inst.mesh = box
+	mesh_inst.material_override = mat
+	mesh_inst.position = Vector3(0, 0.03, -12.0)
+	add_child(mesh_inst)
+
+func _spawn_palm(base_pos: Vector3) -> void:
+	var root := Node3D.new()
+	root.position = base_pos
+	add_child(root)
+
+	var height := randf_range(5.5, 8.0)
+	var lean_z  := randf_range(-0.08, 0.08)
+
+	var trunk_mat := StandardMaterial3D.new()
+	trunk_mat.albedo_color = Color(0.42, 0.30, 0.14)
+	trunk_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+
+	var trunk := MeshInstance3D.new()
+	var trunk_cyl := CylinderMesh.new()
+	trunk_cyl.top_radius    = 0.16
+	trunk_cyl.bottom_radius = 0.24
+	trunk_cyl.height        = height
+	trunk.mesh = trunk_cyl
+	trunk.material_override = trunk_mat
+	trunk.position.y  = height * 0.5
+	trunk.rotation.z  = lean_z
+	root.add_child(trunk)
+
+	var canopy_mat := StandardMaterial3D.new()
+	canopy_mat.albedo_color = Color(0.20, 0.35, 0.10)
+	canopy_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+
+	var canopy := MeshInstance3D.new()
+	var canopy_sph := SphereMesh.new()
+	canopy_sph.radius = randf_range(1.6, 2.2)
+	canopy_sph.height = canopy_sph.radius * 0.75  # slightly flattened
+	canopy.mesh = canopy_sph
+	canopy.material_override = canopy_mat
+	canopy.position.y = height + canopy_sph.radius * 0.25
+	root.add_child(canopy)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # COMBAT & NAVIGATION
@@ -234,8 +313,16 @@ func request_throw_stone(
 ) -> void:
 	if not multiplayer.is_server():
 		return
+	_spawn_stone.rpc(origin, direction, power, thrower_path)
+
+@rpc("authority", "call_local", "reliable")
+func _spawn_stone(origin: Vector3, direction: Vector3, power: float, thrower_path: NodePath) -> void:
 	var s := STONE_SCENE.instantiate() as RigidBody3D
 	s.position = origin
+	# On clients: disable collision so only visuals play, no double-damage
+	if not multiplayer.is_server():
+		s.collision_layer = 0
+		s.collision_mask = 0
 	_stones.add_child(s, true)
 	if s.has_method("set_thrower"):
 		s.set_thrower(thrower_path)
@@ -261,7 +348,7 @@ func _bake_nav_and_wait() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 
 @rpc("authority", "call_local", "reliable")
-func _spawn_floating_text(pos: Vector3, text: String, color: Color, dur: float = 1.5) -> void:
+func spawn_floating_text(pos: Vector3, text: String, color: Color, dur: float = 1.5) -> void:
 	var ft = FLOATING_TEXT_SCENE.instantiate()
 	ft.text = text
 	ft.modulate = color
@@ -270,10 +357,16 @@ func _spawn_floating_text(pos: Vector3, text: String, color: Color, dur: float =
 	ft.global_position = pos
 
 func _end_game(win: bool) -> void:
-	is_game_over = true
+	if not multiplayer.is_server():
+		return
 	var msg = "VICTORY!" if win else "DEFEAT"
 	var color = Color.LIME if win else Color.RED
-	_spawn_floating_text.rpc(Vector3(0, 5, 0), msg, color, 9999.0)
+	spawn_floating_text.rpc(Vector3(0, 5, 0), msg, color, 9999.0)
+	_sync_game_over.rpc()
+
+@rpc("authority", "call_local", "reliable")
+func _sync_game_over() -> void:
+	is_game_over = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _on_wall_complete() -> void:
@@ -283,6 +376,20 @@ func _on_wall_complete() -> void:
 		_end_game(true)
 	else:
 		_begin_night_transition()
+
+func _on_city_breached() -> void:
+	spawn_floating_text.rpc(Vector3(0, 4, CityManager.ZONE_Z_START), "Enemy in Jerusalem!", Color(1.0, 0.35, 0.1), 3.0)
+
+func _on_city_hp_changed(current: float, max_hp: float) -> void:
+	# Throttle: only broadcast when HP drops by at least 1 point (or hits zero)
+	if absf(current - _last_synced_city_hp) >= 1.0 or current <= 0.0:
+		_last_synced_city_hp = current
+		_sync_city_hp.rpc(current, max_hp)
+
+@rpc("authority", "call_local", "unreliable_ordered")
+func _sync_city_hp(current: float, max_hp: float) -> void:
+	if is_instance_valid(_hud):
+		_hud.update_city_hp(current, max_hp)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MULTIPLAYER
@@ -308,9 +415,8 @@ func _setup_hud() -> void:
 	)
 
 	# Minimap — bottom-right
-	var minimap_script = load("res://scenes/ui/minimap.gd")
 	var minimap := Control.new()
-	minimap.set_script(minimap_script)
+	minimap.set_script(MINIMAP_SCRIPT)
 	minimap.anchor_left   = 1.0
 	minimap.anchor_top    = 1.0
 	minimap.anchor_right  = 1.0
@@ -349,12 +455,18 @@ func _spawn_player(id: int) -> void:
 	p.set_multiplayer_authority(id)
 	_players.add_child(p, true)
 	p.global_position = Vector3(0, 1.0, 0)
-	p.damaged.connect(func(_a): pass)
+	if id == multiplayer.get_unique_id():
+		_local_player = p
 	if id == multiplayer.get_unique_id() and is_instance_valid(_hud):
 		p.health_changed.connect(_hud.update_health)
 		p.stamina_changed.connect(_hud.update_stamina)
 		p.sling_updated.connect(_hud.update_sling)
 		p.wall_proximity_changed.connect(_hud.update_wall_needs)
+		p.damaged.connect(func(amount: float) -> void:
+			shake_camera(clampf(amount * 0.002, 0.04, 0.18), 0.15)
+			if is_instance_valid(_hud):
+				_hud.flash_damage(amount)
+		)
 	if multiplayer.is_server():
 		p.died.connect(func():
 			get_tree().create_timer(3.0).timeout.connect(func():
@@ -367,10 +479,14 @@ func _on_enemy_spawned(enemy: Node3D) -> void:
 	_enemies.add_child(enemy, true)
 
 func _on_wave_started(wave_num: int) -> void:
-	_spawn_floating_text.rpc(Vector3(0, 3, 0), "Day %d Begins!" % wave_num, Color.ORANGE)
-	# Breach detection activates 45 s into the wave — gives players time to build
-	if is_instance_valid(_city_manager):
-		get_tree().create_timer(45.0).timeout.connect(_city_manager.activate_breach)
+	spawn_floating_text.rpc(Vector3(0, 3, 0), "Day %d Begins!" % wave_num, Color.ORANGE)
+	_sync_day_ui.rpc(wave_num)
+
+@rpc("authority", "call_local", "reliable")
+func _sync_day_ui(day: int) -> void:
+	if is_instance_valid(_hud) and _hud.has_method("update_day"):
+		var max_days: int = _wave_manager.get("MAX_DAYS") if _wave_manager else 52
+		_hud.update_day(day, max_days)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BOILERPLATE

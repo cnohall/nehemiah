@@ -51,6 +51,8 @@ var _last_facing: String = "down"
 var _is_dead: bool = false
 var _exhausted: bool = false
 var _slinger: Slinger = null
+var _building_mgr: Node = null
+var _stone_sound: AudioStream = null
 var _footstep_player: AudioStreamPlayer3D = null
 var _footstep_timer: float = 0.0
 
@@ -66,12 +68,23 @@ func _ready() -> void:
 	_setup_multiplayer_sync()
 	_resolve_camera()
 	_setup_footsteps()
+	_building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
 
 	if is_multiplayer_authority():
 		_slinger = Slinger.new()
 		_slinger.name = "Slinger"
 		add_child(_slinger)
 		_slinger.init(self, _camera)
+
+		var aim_pred := AimPredictor.new()
+		aim_pred.name = "AimPredictor"
+		add_child(aim_pred)
+		aim_pred.init(self, _camera, _slinger)
+
+		var sling_audio := SlingAudio.new()
+		sling_audio.name = "SlingAudio"
+		add_child(sling_audio)
+		sling_audio.init(self, _slinger)
 
 func _setup_multiplayer_sync() -> void:
 	_sync.root_path = NodePath("..")
@@ -93,7 +106,8 @@ func _setup_footsteps() -> void:
 
 	var path = "res://assets/sounds/place_stone.wav"
 	if FileAccess.file_exists(path):
-		_footstep_player.stream = load(path)
+		_stone_sound = load(path)
+		_footstep_player.stream = _stone_sound
 
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority() or _is_dead or ui_blocked:
@@ -108,10 +122,12 @@ func _physics_process(delta: float) -> void:
 
 	var carrying_stone := carried_item != null and carried_item.material_type == MaterialItem.Type.STONE
 	var wants_to_sprint := Input.is_key_pressed(KEY_SHIFT) and move_dir != Vector3.ZERO and not carrying_stone
+	# Carrying wood/mortar allows sprinting but drains stamina twice as fast
+	var sprint_drain_mult := 2.0 if (carried_item != null and not carrying_stone) else 1.0
 	if wants_to_sprint and not _exhausted:
 		is_sprinting = true
 		current_speed *= SPRINT_MULTIPLIER
-		stamina -= STAMINA_DRAIN * delta
+		stamina -= STAMINA_DRAIN * delta * sprint_drain_mult
 		if stamina <= 0.0:
 			_exhausted = true
 	else:
@@ -139,7 +155,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 	if _slinger:
-		_slinger.process(delta, Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT))
+		_slinger.process(delta, Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT), carried_item != null)
 	_process_building(delta)
 
 @rpc("any_peer", "call_local", "unreliable")
@@ -164,13 +180,11 @@ func _get_isometric_input() -> Vector3:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _process_building(delta: float) -> void:
-	var scene = get_tree().current_scene if get_tree() else null
-	var building_mgr = scene.get_node_or_null("BuildingManager") if scene else null
-	if not building_mgr:
+	if not _building_mgr:
 		_emit_wall_needs(-1, -1, -1)
 		return
 
-	var nearest_section = building_mgr.get_nearest_section(global_position, BUILD_RANGE)
+	var nearest_section = _building_mgr.get_nearest_section(global_position, BUILD_RANGE)
 	if nearest_section and nearest_section.completion_percent < 100.0:
 		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			if carried_item:
@@ -191,11 +205,9 @@ func _emit_wall_needs(s: int, w: int, m: int) -> void:
 		wall_proximity_changed.emit(s, w, m)
 
 func _handle_interaction() -> void:
-	var building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
-
 	var nearest_section = null
-	if building_mgr:
-		nearest_section = building_mgr.get_nearest_section(global_position, BUILD_RANGE)
+	if _building_mgr:
+		nearest_section = _building_mgr.get_nearest_section(global_position, BUILD_RANGE)
 
 	if nearest_section:
 		if carried_item:
@@ -226,6 +238,13 @@ func _handle_interaction() -> void:
 		if best_pile:
 			best_pile.request_spawn_material.rpc_id(1, multiplayer.get_unique_id())
 			return
+	elif carried_item != null and nearest_section == null:
+		# Carrying something but no wall section in range — near a pile?
+		var piles = get_tree().get_nodes_in_group("supply_piles")
+		for pile in piles:
+			if global_position.distance_to(pile.global_position) < 4.0:
+				_play_blocked_hint()
+				return
 
 # ══════════════════════════════════════════════════════════════════════════════
 ## NETWORK
@@ -245,7 +264,6 @@ func sync_pickup(path: NodePath) -> void:
 	if item and item is MaterialItem:
 		item.pick_up(self)
 		carried_item = item
-		_notify_carried_changed()
 
 @rpc("any_peer", "call_local", "reliable")
 func request_drop(pos: Vector3) -> void:
@@ -259,10 +277,17 @@ func sync_drop(pos: Vector3) -> void:
 	if carried_item:
 		carried_item.drop(pos)
 		carried_item = null
-		_notify_carried_changed()
 
-func _notify_carried_changed() -> void:
-	pass
+func _play_blocked_hint() -> void:
+	if not _stone_sound:
+		return
+	var p := AudioStreamPlayer3D.new()
+	p.stream = _stone_sound
+	p.pitch_scale = 2.8
+	p.volume_db = -14.0
+	add_child(p)
+	p.play()
+	p.finished.connect(p.queue_free)
 
 func take_damage(amount: float) -> void:
 	if not multiplayer.is_server() or _is_dead:

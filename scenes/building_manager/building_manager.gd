@@ -7,6 +7,7 @@ signal wall_complete
 signal navigation_changed
 
 const WALL_SECTION_SCENE: PackedScene = preload("res://scenes/building_block/wall_section.tscn")
+const BLUEPRINT_MGR_SCRIPT             = preload("res://scenes/wall_blueprint/wall_blueprint_manager.gd")
 
 var blocks_placed: int = 0
 var blocks_for_win: int = 0
@@ -19,27 +20,21 @@ var _blueprint_mgr: Node = null
 var _blueprint_positions: Dictionary:
 	get:
 		var empty: Dictionary = {}
-		return _blueprint_mgr._blueprint_positions if _blueprint_mgr else empty
+		return _blueprint_mgr.get_blueprint_positions() if _blueprint_mgr else empty
 
 func _ready() -> void:
-	_ensure_references()
+	_blocks  = get_parent().get_node_or_null("NavigationRegion3D/Blocks")
+	_players = get_parent().get_node_or_null("Players")
 
-	_blueprint_mgr = load("res://scenes/wall_blueprint/wall_blueprint_manager.gd").new()
+	_blueprint_mgr = BLUEPRINT_MGR_SCRIPT.new()
 	_blueprint_mgr.name = "WallBlueprintManager"
 	add_child(_blueprint_mgr)
 	_blueprint_mgr.init_registry_for_day(1)
-	blocks_for_win = _blueprint_mgr._blueprint_positions.size()
+	blocks_for_win = _blueprint_mgr.get_blueprint_count()
 
 	# Sections are spawned by main.gd after the multiplayer peer is established.
 
-func _ensure_references() -> void:
-	if _blocks == null:
-		_blocks = get_parent().get_node_or_null("NavigationRegion3D/Blocks")
-	if _players == null:
-		_players = get_parent().get_node_or_null("Players")
-
 func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
-	_ensure_references()
 	if _blocks == null:
 		return
 
@@ -60,7 +55,6 @@ func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
 		_is_setting_up = false
 
 func _spawn_section_local(pos: Vector3, rot: float) -> void:
-	_ensure_references()
 	if _blocks == null:
 		return
 	var section = WALL_SECTION_SCENE.instantiate()
@@ -96,7 +90,6 @@ func load_section_for_day(day: int) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func load_section_rpc(day: int) -> void:
-	_ensure_references()
 	if _blocks:
 		for b in _blocks.get_children():
 			if is_instance_valid(b):
@@ -105,7 +98,7 @@ func load_section_rpc(day: int) -> void:
 	blocks_placed = 0
 	_blueprint_mgr.clear_all()
 	_blueprint_mgr.init_registry_for_day(day)
-	blocks_for_win = _blueprint_mgr._blueprint_positions.size()
+	blocks_for_win = _blueprint_mgr.get_blueprint_count()
 
 	if multiplayer.is_server():
 		_spawn_sections_for_blueprints(true)
@@ -114,7 +107,6 @@ func load_section_rpc(day: int) -> void:
 	blocks_changed.emit(blocks_placed)
 
 func _spawn_towers() -> void:
-	_ensure_references()
 	if _blocks == null:
 		return
 
@@ -174,7 +166,6 @@ func get_interior_direction() -> Vector3:
 
 ## Returns the nearest wall section within max_dist, or null.
 func get_nearest_section(world_pos: Vector3, max_dist: float) -> WallSection:
-	_ensure_references()
 	if _blocks == null:
 		return null
 
@@ -189,7 +180,6 @@ func get_nearest_section(world_pos: Vector3, max_dist: float) -> WallSection:
 	return best
 
 func get_nearest_placeable(world_pos: Vector3, max_dist: float) -> Vector3:
-	_ensure_references()
 	if _blocks == null:
 		return Vector3.INF
 
@@ -204,7 +194,6 @@ func get_nearest_placeable(world_pos: Vector3, max_dist: float) -> Vector3:
 	return best
 
 func get_placeable_angle(pos: Vector3) -> float:
-	_ensure_references()
 	if _blocks == null:
 		return 0.0
 
@@ -214,9 +203,6 @@ func get_placeable_angle(pos: Vector3) -> float:
 				return section.rotation.y
 	return 0.0
 
-func get_stack_at(_pos: Vector3) -> int:
-	return 0
-
 # ── Starting ruins ────────────────────────────────────────────────────────────
 
 func place_starting_ruins() -> void:
@@ -225,7 +211,6 @@ func place_starting_ruins() -> void:
 	_is_setting_up = false
 
 func _do_place_starting_ruins() -> void:
-	_ensure_references()
 	if _blocks == null or _blocks.get_child_count() == 0:
 		return
 
@@ -254,6 +239,3 @@ func _do_place_starting_ruins() -> void:
 
 func spawn_blueprint_visuals() -> void:
 	_blueprint_mgr.spawn_visuals(get_parent())
-
-func on_block_destroyed(_pos: Vector3, _rot: float) -> void:
-	pass

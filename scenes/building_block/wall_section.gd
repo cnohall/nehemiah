@@ -25,11 +25,6 @@ const COLOR_STONE    := Color(0.62, 0.58, 0.52)  # grey stone blocks
 const COLOR_MORTAR   := Color(0.82, 0.76, 0.60)  # cream mortared finish
 const COLOR_COMPLETE := Color(0.95, 0.92, 0.85)  # limestone white
 
-# Pip colours (filled / empty)
-const PIP_STONE  := Color(0.72, 0.68, 0.60)  # light grey stone
-const PIP_WOOD   := Color(0.58, 0.36, 0.16)  # warm brown
-const PIP_MORTAR := Color(0.50, 0.50, 0.58)  # dusty blue-grey
-const PIP_EMPTY  := Color(0.18, 0.16, 0.14)  # near-black ghost
 
 # ── Variables ─────────────────────────────────────────────────────────────────
 
@@ -58,16 +53,11 @@ var _collision_shape: CollisionShape3D = null
 
 # Audio
 var _audio_player: AudioStreamPlayer3D = null
+var _snd_stone:  AudioStream = null
+var _snd_wood:   AudioStream = null
+var _snd_mortar: AudioStream = null
 
-# ── Material indicators (ghost + fill mesh, one per material type) ───────────
-
-var _indicator_root: Node3D = null
-var _ind_fill_stone:  MeshInstance3D = null
-var _ind_fill_wood:   MeshInstance3D = null
-var _ind_fill_mortar: MeshInstance3D = null
-var _ind_ghost_stone_mat:  StandardMaterial3D = null
-var _ind_ghost_wood_mat:   StandardMaterial3D = null
-var _ind_ghost_mortar_mat: StandardMaterial3D = null
+var _indicators: WallSectionIndicators = null
 
 var _wall_mat: StandardMaterial3D = null
 
@@ -78,10 +68,12 @@ func _ready() -> void:
 	_build_footprint()
 	_build_wall_material()
 	_build_audio()
-	_build_indicators()
 	_build_static_body()
+	_indicators = WallSectionIndicators.new()
+	_indicators.name = "Indicators"
+	add_child(_indicators)
+	_indicators.build()
 	_update_visuals()
-	# Position indicators in world space after parent sets our transform
 	call_deferred("_init_indicator_worldspace")
 
 func _build_audio() -> void:
@@ -90,34 +82,33 @@ func _build_audio() -> void:
 	_audio_player.unit_size = 2.0
 	_audio_player.bus = &"Master"
 	add_child(_audio_player)
+	_snd_stone  = _try_load_stream("res://assets/sounds/place_stone.wav")
+	_snd_wood   = _try_load_stream("res://assets/sounds/place_wood.wav")
+	_snd_mortar = _try_load_stream("res://assets/sounds/place_mortar.wav")
+
+func _try_load_stream(path: String) -> AudioStream:
+	return load(path) if FileAccess.file_exists(path) else null
 
 func _play_sound(sound_name: String) -> void:
 	if not _audio_player:
 		return
-	
-	# Mapping internal names to file names
-	var file_map = {
-		"place_stone": "res://assets/sounds/place_stone.wav",
-		"place_wood": "res://assets/sounds/place_wood.wav",
-		"place_mortar": "res://assets/sounds/place_mortar.wav",
-		"build_loop": "res://assets/sounds/place_wood.wav" # Fallback since build_loop failed to download
-	}
-	
-	if not file_map.has(sound_name):
+	var stream: AudioStream
+	var pitch_range := Vector2(0.9, 1.1)
+	match sound_name:
+		"place_stone":  stream = _snd_stone
+		"place_wood":   stream = _snd_wood
+		"place_mortar": stream = _snd_mortar
+		"build_loop":   stream = _snd_wood  # fallback
+		"sabotage":
+			stream = _snd_stone
+			pitch_range = Vector2(0.45, 0.65)  # low crumble thud
+	if not stream:
 		return
-		
-	var path = file_map[sound_name]
-	if FileAccess.file_exists(path):
-		var stream = load(path)
-		if stream:
-			# If it's already playing the same thing, don't restart (unless it's an impact)
-			if _audio_player.playing and _audio_player.stream == stream and sound_name == "build_loop":
-				return
-			
-			_audio_player.stream = stream
-			# Vary pitch slightly for variety
-			_audio_player.pitch_scale = randf_range(0.9, 1.1)
-			_audio_player.play()
+	if _audio_player.playing and _audio_player.stream == stream and sound_name == "build_loop":
+		return
+	_audio_player.stream = stream
+	_audio_player.pitch_scale = randf_range(pitch_range.x, pitch_range.y)
+	_audio_player.play()
 
 func _build_static_body() -> void:
 	_static_body = StaticBody3D.new()
@@ -151,70 +142,9 @@ func _build_wall_material() -> void:
 	_wall_mat.albedo_color = COLOR_EMPTY
 	_mesh.material_override = _wall_mat
 
-func _build_indicators() -> void:
-	_indicator_root = Node3D.new()
-	add_child(_indicator_root)
-	# Stone (left) = SphereMesh, Wood (centre) = BoxMesh, Mortar (right) = CylinderMesh
-	_ind_fill_stone  = _create_material_indicator(Vector3(-0.8, 0, 0), "stone")
-	_ind_fill_wood   = _create_material_indicator(Vector3( 0.0, 0, 0), "wood")
-	_ind_fill_mortar = _create_material_indicator(Vector3( 0.8, 0, 0), "mortar")
-
-func _create_material_indicator(offset: Vector3, type: String) -> MeshInstance3D:
-	# Build the mesh shape for this material type
-	var mesh: Mesh
-	match type:
-		"stone":
-			var s := SphereMesh.new()
-			s.radius = 0.22
-			s.height = 0.44
-			mesh = s
-		"wood":
-			var b := BoxMesh.new()
-			b.size = Vector3(0.55, 0.15, 0.15)
-			mesh = b
-		"mortar":
-			var c := CylinderMesh.new()
-			c.top_radius    = 0.18
-			c.bottom_radius = 0.14
-			c.height        = 0.22
-			mesh = c
-
-	# Ghost — full-size, very dim so the player always sees the shape
-	var ghost := MeshInstance3D.new()
-	ghost.mesh = mesh
-	var ghost_mat := StandardMaterial3D.new()
-	ghost_mat.shading_mode  = BaseMaterial3D.SHADING_MODE_UNSHADED
-	ghost_mat.transparency  = BaseMaterial3D.TRANSPARENCY_ALPHA
-	ghost_mat.albedo_color  = Color(1.0, 1.0, 1.0, 0.12)
-	ghost.material_override = ghost_mat
-	ghost.position = offset
-	_indicator_root.add_child(ghost)
-	# Store ghost material ref for highlight updates
-	match type:
-		"stone":  _ind_ghost_stone_mat  = ghost_mat
-		"wood":   _ind_ghost_wood_mat   = ghost_mat
-		"mortar": _ind_ghost_mortar_mat = ghost_mat
-
-	# Fill — starts invisible (scale 0), grows to scale 1 as material is delivered
-	var fill := MeshInstance3D.new()
-	fill.mesh = mesh
-	var fill_mat := StandardMaterial3D.new()
-	fill_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	match type:
-		"stone":  fill_mat.albedo_color = PIP_STONE
-		"wood":   fill_mat.albedo_color = PIP_WOOD
-		"mortar": fill_mat.albedo_color = PIP_MORTAR
-	fill.material_override = fill_mat
-	fill.position = offset
-	fill.scale    = Vector3.ZERO
-	_indicator_root.add_child(fill)
-
-	return fill
-
 func _init_indicator_worldspace() -> void:
-	if _indicator_root:
-		_indicator_root.set_as_top_level(true)
-		_indicator_root.global_position = global_position + Vector3(0, MAX_HEIGHT + 1.0, 0)
+	if is_instance_valid(_indicators):
+		_indicators.init_worldspace(global_position, MAX_HEIGHT)
 
 # ── Staged Construction Logic ─────────────────────────────────────────────────
 
@@ -248,7 +178,8 @@ func _update_visuals() -> void:
 		_collision_shape.disabled = (completion_percent <= 0.0)
 
 	_update_wall_color()
-	_update_indicators()
+	if is_instance_valid(_indicators):
+		_indicators.refresh(stone_count, wood_count, mortar_count, get_blocking_material(), _is_completed)
 
 func _pop_visual() -> void:
 	var tween := create_tween()
@@ -288,44 +219,10 @@ func get_blocking_material() -> String:
 		return "mortar"
 	return ""
 
-func _get_blocking_material() -> String:
-	return get_blocking_material()
-
-func _set_ghost_highlight(mat: StandardMaterial3D, active: bool) -> void:
-	if not mat:
-		return
-	mat.albedo_color = Color(1.0, 1.0, 1.0, 0.45 if active else 0.12)
-
-func _update_indicators() -> void:
-	if is_instance_valid(_indicator_root):
-		_indicator_root.visible = not _is_completed
-	var blocking := _get_blocking_material()
-	_set_ghost_highlight(_ind_ghost_wood_mat,   blocking == "wood")
-	_set_ghost_highlight(_ind_ghost_stone_mat,  blocking == "stone")
-	_set_ghost_highlight(_ind_ghost_mortar_mat, blocking == "mortar")
-	_set_fill_indicator(_ind_fill_stone,  stone_count,  STONE_NEEDED,  PIP_STONE)
-	_set_fill_indicator(_ind_fill_wood,   wood_count,   WOOD_NEEDED,   PIP_WOOD)
-	_set_fill_indicator(_ind_fill_mortar, mortar_count, MORTAR_NEEDED, PIP_MORTAR)
-
-func _set_fill_indicator(fill: MeshInstance3D, count: int, needed: int, color: Color) -> void:
-	if not fill:
-		return
-	var ratio: float = clampf(float(count) / float(needed), 0.0, 1.0)
-	fill.scale = Vector3.ONE * ratio
-	var mat := fill.material_override as StandardMaterial3D
-	if not mat:
-		return
-	if count >= needed:
-		# Full — bright albedo + emission glow
-		mat.albedo_color     = color
-		mat.emission_enabled = true
-		mat.emission         = color * 0.5
-	else:
-		# Partial / empty — plain albedo, no glow
-		mat.albedo_color     = color
-		mat.emission_enabled = false
 
 # ── Damage (enemy sabotage) ───────────────────────────────────────────────────
+
+const DAMAGE_SCALE: float = 0.12
 
 func take_damage(amount: float) -> void:
 	if not multiplayer.is_server():
@@ -334,7 +231,7 @@ func take_damage(amount: float) -> void:
 		return
 
 	var old_pct := completion_percent
-	var new_pct := maxf(old_pct - amount * 0.12, 0.0)
+	var new_pct := maxf(old_pct - amount * DAMAGE_SCALE, 0.0)
 
 	# Each 11.11% threshold crossed removes one material (highest phase first).
 	var units_crossed := floori(old_pct / UNIT) - floori(new_pct / UNIT)
@@ -346,6 +243,7 @@ func take_damage(amount: float) -> void:
 	# Set completion AFTER material loss so the setter re-clamps to the new ceiling.
 	completion_percent = new_pct
 	sync_progress.rpc(completion_percent)
+	_play_sound_rpc.rpc("sabotage")
 
 func _remove_one_material() -> void:
 	# Strips one unit from the highest stocked phase (mortar → stone → wood)
@@ -415,8 +313,6 @@ func _consume_item_rpc(player_path: NodePath, item_path: NodePath) -> void:
 	var player = get_node_or_null(player_path)
 	if player:
 		player.carried_item = null
-		if player.has_method("_notify_carried_changed"):
-			player._notify_carried_changed()
 	var item = get_node_or_null(item_path)
 	if item:
 		item.queue_free()
@@ -457,12 +353,26 @@ func _on_completed() -> void:
 	_is_completed = true
 	completed.emit()
 	var main = get_tree().current_scene
-	if main.has_method("add_shake"):
-		main.add_shake(0.2)
+	if main.has_method("shake_camera"):
+		main.shake_camera(0.15, 0.12)
+	_play_completion_flash()
+
+func _play_completion_flash() -> void:
+	if not is_instance_valid(_mesh) or not _wall_mat:
+		return
+	var tween := create_tween()
+	tween.tween_method(func(v: float) -> void:
+		_wall_mat.emission_enabled = true
+		_wall_mat.emission = Color(1.0, 0.95, 0.85) * v
+	, 2.0, 0.4, 0.6).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(_mesh, "scale", Vector3(1.08, 1.0, 1.08), 0.12)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_mesh, "scale", Vector3.ONE, 0.2)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 func _on_sabotaged() -> void:
 	_is_completed = false
 	uncompleted.emit()
 	var main = get_tree().current_scene
-	if main.has_method("add_shake"):
-		main.add_shake(0.1)
+	if main.has_method("shake_camera"):
+		main.shake_camera(0.08, 0.10)

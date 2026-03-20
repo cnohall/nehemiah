@@ -10,8 +10,8 @@ var speed_penalty: float = 0.0
 var color: Color = Color.WHITE
 var carrier: Node3D = null
 
-# Configuration per material type
-var _config = {
+# Configuration per material type — const: identical across all instances, never mutates
+const _CONFIG: Dictionary = {
 	Type.STONE: {
 		"name": "Cut Stone",
 		"speed_penalty": 0.4,
@@ -44,13 +44,13 @@ func _ready() -> void:
 	_setup_visuals()
 
 func _apply_config() -> void:
-	var cfg = _config[material_type]
+	var cfg = _CONFIG[material_type]
 	material_name = cfg["name"]
 	speed_penalty = cfg["speed_penalty"]
 	color = cfg["color"]
 
 func _setup_visuals() -> void:
-	var cfg = _config[material_type]
+	var cfg = _CONFIG[material_type]
 	var mesh_inst = MeshInstance3D.new()
 
 	match cfg["mesh"]:

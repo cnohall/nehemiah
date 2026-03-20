@@ -111,19 +111,8 @@ func _setup_ui() -> void:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(560, 0)
 	center.add_child(panel)
-
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.13, 0.10, 0.07, 0.97)
-	panel_style.border_color = Color(0.62, 0.48, 0.24)
-	panel_style.border_width_left   = 2
-	panel_style.border_width_right  = 2
-	panel_style.border_width_top    = 2
-	panel_style.border_width_bottom = 2
-	panel_style.corner_radius_top_left     = 6
-	panel_style.corner_radius_top_right    = 6
-	panel_style.corner_radius_bottom_left  = 6
-	panel_style.corner_radius_bottom_right = 6
-	panel.add_theme_stylebox_override("panel", panel_style)
+	panel.add_theme_stylebox_override("panel",
+		_make_style(Color(0.13, 0.10, 0.07, 0.97), Color(0.62, 0.48, 0.24), 2, 6))
 
 	var margin := MarginContainer.new()
 	for side in ["margin_top", "margin_bottom", "margin_left", "margin_right"]:
@@ -165,30 +154,9 @@ func _setup_ui() -> void:
 	div1.add_theme_stylebox_override("separator", sep_style)
 	vbox.add_child(div1)
 
-	# Shared button style
-	_btn_style_normal = StyleBoxFlat.new()
-	_btn_style_normal.bg_color = Color(0.28, 0.20, 0.12)
-	_btn_style_normal.border_color = Color(0.62, 0.48, 0.24)
-	_btn_style_normal.border_width_left   = 1
-	_btn_style_normal.border_width_right  = 1
-	_btn_style_normal.border_width_top    = 1
-	_btn_style_normal.border_width_bottom = 1
-	_btn_style_normal.corner_radius_top_left     = 4
-	_btn_style_normal.corner_radius_top_right    = 4
-	_btn_style_normal.corner_radius_bottom_left  = 4
-	_btn_style_normal.corner_radius_bottom_right = 4
-
-	var btn_hover := StyleBoxFlat.new()
-	btn_hover.bg_color = Color(0.40, 0.30, 0.18)
-	btn_hover.border_color = Color(0.85, 0.68, 0.36)
-	btn_hover.border_width_left   = 1
-	btn_hover.border_width_right  = 1
-	btn_hover.border_width_top    = 1
-	btn_hover.border_width_bottom = 1
-	btn_hover.corner_radius_top_left     = 4
-	btn_hover.corner_radius_top_right    = 4
-	btn_hover.corner_radius_bottom_left  = 4
-	btn_hover.corner_radius_bottom_right = 4
+	# Shared button styles
+	_btn_style_normal = _make_style(Color(0.28, 0.20, 0.12), Color(0.62, 0.48, 0.24))
+	var btn_hover := _make_style(Color(0.40, 0.30, 0.18), Color(0.85, 0.68, 0.36))
 
 	# ── Host section ──────────────────────────────────────────────────────────
 	var host_label := Label.new()
@@ -314,7 +282,7 @@ func _on_host_button_pressed() -> void:
 	if err != OK:
 		_set_status("Failed to start server on port %d.\nIs the port already in use?" % DEFAULT_PORT)
 		_enable_buttons()
-		emit_signal("connection_failed", "ENetMultiplayerPeer.create_server failed.")
+		connection_failed.emit("ENetMultiplayerPeer.create_server failed.")
 		return
 
 	multiplayer.multiplayer_peer = peer
@@ -325,7 +293,7 @@ func _on_host_button_pressed() -> void:
 		_host_info_label.text = "Port: %d" % DEFAULT_PORT
 		_host_info_label.visible = true
 
-	emit_signal("lobby_created_success", 0)
+	lobby_created_success.emit(0)
 	hide_menu()
 
 
@@ -351,7 +319,7 @@ func _on_join_button_pressed() -> void:
 		_set_status("Failed to create client (error %d)." % err)
 		_enable_buttons()
 		multiplayer.multiplayer_peer = null
-		emit_signal("connection_failed", "ENetMultiplayerPeer.create_client failed.")
+		connection_failed.emit("ENetMultiplayerPeer.create_client failed.")
 		return
 
 	multiplayer.multiplayer_peer = peer
@@ -362,26 +330,28 @@ func _on_join_button_pressed() -> void:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _on_peer_connected(peer_id: int) -> void:
-	print("NetworkManager: Peer %d connected." % peer_id)
-	emit_signal("player_connected", peer_id)
+	if OS.is_debug_build():
+		print("NetworkManager: Peer %d connected." % peer_id)
+	player_connected.emit(peer_id)
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
-	print("NetworkManager: Peer %d disconnected." % peer_id)
-	emit_signal("player_disconnected", peer_id)
+	if OS.is_debug_build():
+		print("NetworkManager: Peer %d disconnected." % peer_id)
+	player_disconnected.emit(peer_id)
 
 
 func _on_connected_to_server() -> void:
 	_set_status("Connected!  Get ready...")
 	hide_menu()
-	emit_signal("lobby_joined_success", 0)
+	lobby_joined_success.emit(0)
 
 
 func _on_connection_failed_internal() -> void:
 	_set_status("Connection failed.  Check the IP and port, and try again.")
 	_enable_buttons()
 	multiplayer.multiplayer_peer = null
-	emit_signal("connection_failed", "ENet connection failed.")
+	connection_failed.emit("ENet connection failed.")
 
 
 func _on_server_disconnected_internal() -> void:
@@ -390,7 +360,7 @@ func _on_server_disconnected_internal() -> void:
 	multiplayer.multiplayer_peer = null
 	_enable_buttons()
 	show_menu()
-	emit_signal("server_disconnected")
+	server_disconnected.emit()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -435,3 +405,18 @@ func _disable_buttons() -> void:
 func _enable_buttons() -> void:
 	if is_instance_valid(_host_button): _host_button.disabled = false
 	if is_instance_valid(_join_button): _join_button.disabled = false
+
+
+func _make_style(bg: Color, border: Color, border_w: int = 1, corner_r: int = 4) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.border_color = border
+	s.border_width_left   = border_w
+	s.border_width_right  = border_w
+	s.border_width_top    = border_w
+	s.border_width_bottom = border_w
+	s.corner_radius_top_left     = corner_r
+	s.corner_radius_top_right    = corner_r
+	s.corner_radius_bottom_left  = corner_r
+	s.corner_radius_bottom_right = corner_r
+	return s

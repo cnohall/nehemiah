@@ -10,9 +10,15 @@ const MIN_POWER:   float = 8.0
 const MAX_POWER:   float = 24.0
 const RELOAD_TIME: float = 0.80
 
-var _charge:       float = 0.0
-var _is_charging:  bool  = false
-var _reload_timer: float = 0.0
+signal charge_started
+signal charge_cancelled
+signal throw_released(origin: Vector3, direction: Vector3, power: float)
+signal reload_blocked   ## Fired once per new RMB press while reloading.
+
+var charge:         float = 0.0
+var is_charging:    bool  = false
+var _reload_timer:  float = 0.0
+var _was_rmb_held:  bool  = false
 
 var _player: CharacterBody3D = null
 var _camera: Camera3D = null
@@ -21,20 +27,37 @@ func init(player: CharacterBody3D, camera: Camera3D) -> void:
 	_player = player
 	_camera = camera
 
-func process(delta: float, rmb_held: bool) -> void:
+func process(delta: float, rmb_held: bool, is_carrying: bool) -> void:
 	if _reload_timer > 0.0:
 		_reload_timer -= delta
+		if rmb_held and not _was_rmb_held:
+			reload_blocked.emit()
+		_was_rmb_held = rmb_held
 		_push_state()
 		return
 
+	# Cannot sling while carrying any material
+	if is_carrying:
+		if is_charging:
+			is_charging = false
+			charge = 0.0
+			charge_cancelled.emit()
+			_push_state()
+		return
+
+	_was_rmb_held = rmb_held
+
 	if rmb_held:
-		_charge = minf(_charge + delta, MAX_CHARGE)
-		_is_charging = true
-	elif _is_charging:
-		if _charge >= MIN_CHARGE:
+		charge = minf(charge + delta, MAX_CHARGE)
+		if not is_charging:
+			charge_started.emit()
+		is_charging = true
+	elif is_charging:
+		if charge >= MIN_CHARGE:
 			_do_throw()
-		_is_charging = false
-		_charge = 0.0
+		is_charging = false
+		charge = 0.0
+		charge_cancelled.emit()
 
 	_push_state()
 
@@ -42,13 +65,13 @@ func is_reloading() -> bool:
 	return _reload_timer > 0.0
 
 func charge_ratio() -> float:
-	return _charge / MAX_CHARGE if _is_charging else 0.0
+	return charge / MAX_CHARGE if is_charging else 0.0
 
 func _do_throw() -> void:
 	if not _camera or not _player:
 		return
 
-	var power := lerpf(MIN_POWER, MAX_POWER, _charge / MAX_CHARGE)
+	var power := lerpf(MIN_POWER, MAX_POWER, charge / MAX_CHARGE)
 
 	var mouse_pos := _player.get_viewport().get_mouse_position()
 	var ray_origin := _camera.project_ray_origin(mouse_pos)
@@ -69,6 +92,7 @@ func _do_throw() -> void:
 	if main.has_method("request_throw_stone"):
 		main.request_throw_stone.rpc_id(1, origin, dir, power, _player.get_path())
 
+	throw_released.emit(origin, dir, power)
 	_reload_timer = RELOAD_TIME
 
 func _push_state() -> void:
@@ -76,7 +100,7 @@ func _push_state() -> void:
 		return
 	if _reload_timer > 0.0:
 		_player.sling_updated.emit(0.0, true, 1.0 - _reload_timer / RELOAD_TIME)
-	elif _is_charging:
-		_player.sling_updated.emit(_charge / MAX_CHARGE, false, 0.0)
+	elif is_charging:
+		_player.sling_updated.emit(charge / MAX_CHARGE, false, 0.0)
 	else:
 		_player.sling_updated.emit(-1.0, false, 0.0)

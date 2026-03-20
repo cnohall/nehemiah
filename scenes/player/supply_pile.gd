@@ -36,13 +36,18 @@ func _setup_visuals() -> void:
 
 ## Called by player pressing E near this pile.
 ## caller_id: the peer ID of the requesting player.
+func _find_player(player_id: int) -> Node3D:
+	for p in get_tree().get_nodes_in_group("players"):
+		if p.name == str(player_id):
+			return p
+	return null
+
 @rpc("any_peer", "call_local", "reliable")
 func request_spawn_material(caller_id: int) -> void:
 	if not multiplayer.is_server():
 		return
 	# Reject if player is already carrying something
-	var scene = get_tree().current_scene if get_tree() else null
-	var player = scene.get_node_or_null("Players/" + str(caller_id)) if scene else null
+	var player = _find_player(caller_id)
 	if player and player.get("carried_item") != null and player.carried_item != null:
 		return
 	var uid := "%d_%d" % [Time.get_ticks_msec(), randi() % 99999]
@@ -68,10 +73,7 @@ func _sync_give_material(uid: String, player_id: int) -> void:
 	material_node.global_position = global_position + Vector3(0, 1, 0)
 
 	# Immediately give to the requesting player
-	var player = get_tree().current_scene.get_node_or_null("Players/" + str(player_id))
+	var player = _find_player(player_id)
 	if player and player.get("carried_item") == null:
 		material_node.pick_up(player)
 		player.carried_item = material_node
-		# Update the HUD carried label
-		if player.has_method("_notify_carried_changed"):
-			player._notify_carried_changed()
