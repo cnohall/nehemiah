@@ -10,9 +10,12 @@ const CITY_TARGET := Vector3(0, 0.5, CityManager.ZONE_Z_START + 5.0)
 @export var damage: float = 10.0
 @export var health: float = 25.0
 @export var player_aggro_range: float = 12.0
-@export var mesh_color: Color = Color(1, 0, 0)
+@export var mesh_color: Color = Color(0.30, 0.18, 0.10)
 @export var body_scale: float = 1.0
 @export var sneak_chance: float = 0.0
+
+var current_animation: String = "idle_down"
+var _last_facing: String = "down"
 
 var _behavior: Behavior = Behavior.ATTACK_WALL
 var _target: Node3D = null
@@ -28,11 +31,13 @@ var _knockback_timer: float = 0.0
 @onready var _attack_area: Area3D = $AttackArea
 @onready var _attack_timer: Timer = $AttackTimer
 @onready var _mesh: MeshInstance3D = $MeshInstance3D
+@onready var _sprite: AnimatedSprite3D = $AnimatedSprite3D
 
 func _ready() -> void:
 	add_to_group("enemies")
 	_init_health_bar()
 	_apply_visuals()
+	_setup_animation_sync()
 
 	if not multiplayer.is_server():
 		set_physics_process(false)
@@ -46,6 +51,17 @@ func _ready() -> void:
 
 	_behavior = Behavior.SNEAK if randf() < sneak_chance else Behavior.ATTACK_WALL
 	_init_target()
+
+func _setup_animation_sync() -> void:
+	var sync := $MultiplayerSynchronizer
+	if not sync or not sync.replication_config:
+		return
+	var anim_path := NodePath(".:current_animation")
+	var config: SceneReplicationConfig = sync.replication_config
+	if not config.has_property(anim_path):
+		config.add_property(anim_path)
+		config.property_set_spawn(anim_path, true)
+		config.property_set_replication_mode(anim_path, 1)
 
 func _apply_visuals() -> void:
 	if not is_instance_valid(_mesh):
@@ -92,6 +108,9 @@ func _process(delta: float) -> void:
 		_health_bar_timer -= delta
 		if _health_bar_timer <= 0.0 and is_instance_valid(_health_bar):
 			_fade_out_health_bar()
+	if is_instance_valid(_sprite) and _sprite.animation != current_animation:
+		if _sprite.sprite_frames and _sprite.sprite_frames.has_animation(current_animation):
+			_sprite.play(current_animation)
 
 func _fade_out_health_bar() -> void:
 	var tween := create_tween()
@@ -160,7 +179,24 @@ func _physics_process(delta: float) -> void:
 		velocity.x = direction.x * speed
 		velocity.z = direction.z * speed
 
+	_update_animation()
 	move_and_slide()
+
+func _update_animation() -> void:
+	var facing: String
+	if velocity.length() > 0.5:
+		var angle := rad_to_deg(atan2(velocity.x, velocity.z))
+		var snap := int(fmod(snapped(angle, 45.0) + 360.0, 360.0))
+		var lookup := {
+			0: "up_right", 45: "up", 90: "up_left", 135: "left",
+			180: "down_left", 225: "down", 270: "down_right", 315: "right"
+		}
+		_last_facing = lookup.get(snap, "down")
+		facing = "walk_" + _last_facing
+	else:
+		facing = "idle_" + _last_facing
+	if facing != current_animation:
+		current_animation = facing
 
 func _update_target_priority() -> void:
 	# Once inside the city, commit fully — no more wall targeting or player aggro

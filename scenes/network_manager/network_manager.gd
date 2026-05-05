@@ -83,22 +83,21 @@ func _setup_ui() -> void:
 	_canvas_layer.layer = 10
 	add_child(_canvas_layer)
 
-	# Full-screen root so child anchors resolve correctly
+	var font = load("res://assets/fonts/Cinzel-Regular.ttf")
+
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_canvas_layer.add_child(root)
 
-	# Solid parchment background — hides the 3D scene behind the menu
 	var bg := ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.color = Color(0.88, 0.80, 0.62)
 	root.add_child(bg)
 
-	# Subtle vignette overlay
 	var vignette := ColorRect.new()
 	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vignette.color = Color(0.0, 0.0, 0.0, 0.25)
+	vignette.color = Color(0.0, 0.0, 0.0, 0.30)
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(vignette)
 
@@ -107,12 +106,11 @@ func _setup_ui() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(center)
 
-	# Panel
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(560, 0)
 	center.add_child(panel)
 	panel.add_theme_stylebox_override("panel",
-		_make_style(Color(0.13, 0.10, 0.07, 0.97), Color(0.62, 0.48, 0.24), 2, 6))
+		_make_style(Color(0.10, 0.08, 0.05, 0.97), Color(0.62, 0.48, 0.24), 2, 6))
 
 	var margin := MarginContainer.new()
 	for side in ["margin_top", "margin_bottom", "margin_left", "margin_right"]:
@@ -120,62 +118,89 @@ func _setup_ui() -> void:
 	panel.add_child(margin)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 18)
+	vbox.add_theme_constant_override("separation", 16)
 	margin.add_child(vbox)
+
+	# Shared sep style
+	var sep_style := StyleBoxFlat.new()
+	sep_style.bg_color = Color(0.50, 0.40, 0.20, 0.4)
+	sep_style.content_margin_top = 1
+
+	# Shared button styles
+	_btn_style_normal = _make_style(Color(0.22, 0.16, 0.09), Color(0.55, 0.42, 0.20), 2)
+	_btn_style_normal.content_margin_left   = 16
+	_btn_style_normal.content_margin_right  = 16
+	_btn_style_normal.content_margin_top    = 10
+	_btn_style_normal.content_margin_bottom = 10
+	var btn_hover := _make_style(Color(0.35, 0.26, 0.14), Color(0.85, 0.68, 0.36), 2)
+	btn_hover.content_margin_left   = 16
+	btn_hover.content_margin_right  = 16
+	btn_hover.content_margin_top    = 10
+	btn_hover.content_margin_bottom = 10
+
+	# Input field style
+	var input_normal := _make_style(Color(0.06, 0.048, 0.030, 0.95), Color(0.45, 0.35, 0.18), 1, 3)
+	input_normal.content_margin_left   = 10
+	input_normal.content_margin_right  = 10
+	input_normal.content_margin_top    = 7
+	input_normal.content_margin_bottom = 7
+	var input_focus := _make_style(Color(0.10, 0.08, 0.05, 0.98), Color(0.78, 0.62, 0.30), 2, 3)
+	input_focus.content_margin_left   = 10
+	input_focus.content_margin_right  = 10
+	input_focus.content_margin_top    = 7
+	input_focus.content_margin_bottom = 7
 
 	# ── Title ─────────────────────────────────────────────────────────────────
 	var title := Label.new()
 	title.text = "NEHEMIAH"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_font_size_override("font_size", 52)
 	title.add_theme_color_override("font_color", Color(0.96, 0.88, 0.60))
+	if font: title.add_theme_font_override("font", font)
 	vbox.add_child(title)
 
 	var subtitle := Label.new()
 	subtitle.text = "The Wall"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 18)
-	subtitle.add_theme_color_override("font_color", Color(0.85, 0.74, 0.52))
+	subtitle.add_theme_font_size_override("font_size", 17)
+	subtitle.add_theme_color_override("font_color", Color(0.82, 0.70, 0.48))
+	if font: subtitle.add_theme_font_override("font", font)
 	vbox.add_child(subtitle)
 
-	# ── Scripture quote ────────────────────────────────────────────────────────
 	var quote := Label.new()
 	quote.text = "\"Let us rebuild the wall of Jerusalem, so that we may no longer\nbe an object of reproach.\"\n— Nehemiah 2:17"
 	quote.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	quote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	quote.add_theme_font_size_override("font_size", 12)
-	quote.add_theme_color_override("font_color", Color(0.74, 0.66, 0.50))
+	quote.add_theme_color_override("font_color", Color(0.68, 0.60, 0.44))
+	if font: quote.add_theme_font_override("font", font)
 	vbox.add_child(quote)
 
 	var div1 := HSeparator.new()
-	var sep_style := StyleBoxFlat.new()
-	sep_style.bg_color = Color(0.50, 0.40, 0.20, 0.5)
-	sep_style.content_margin_top = 2
 	div1.add_theme_stylebox_override("separator", sep_style)
 	vbox.add_child(div1)
 
-	# Shared button styles
-	_btn_style_normal = _make_style(Color(0.28, 0.20, 0.12), Color(0.62, 0.48, 0.24))
-	var btn_hover := _make_style(Color(0.40, 0.30, 0.18), Color(0.85, 0.68, 0.36))
-
 	# ── Host section ──────────────────────────────────────────────────────────
 	var host_label := Label.new()
-	host_label.text = "HOST"
+	host_label.text = "HOST A GAME"
 	host_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	host_label.add_theme_font_size_override("font_size", 11)
-	host_label.add_theme_color_override("font_color", Color(0.72, 0.62, 0.42))
+	host_label.add_theme_font_size_override("font_size", 10)
+	host_label.add_theme_color_override("font_color", Color(0.60, 0.52, 0.36))
+	if font: host_label.add_theme_font_override("font", font)
 	vbox.add_child(host_label)
 
 	_host_button = Button.new()
 	_host_button.text = "Raise the Wall"
 	_host_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_host_button.custom_minimum_size = Vector2(0, 48)
+	_host_button.focus_mode = Control.FOCUS_NONE
 	_host_button.add_theme_font_size_override("font_size", 18)
 	_host_button.add_theme_color_override("font_color", Color(0.96, 0.88, 0.60))
+	if font: _host_button.add_theme_font_override("font", font)
 	_host_button.pressed.connect(_on_host_button_pressed)
-	_host_button.add_theme_stylebox_override("normal", _btn_style_normal)
-	_host_button.add_theme_stylebox_override("hover", btn_hover)
+	_host_button.add_theme_stylebox_override("normal",  _btn_style_normal)
+	_host_button.add_theme_stylebox_override("hover",   btn_hover)
 	_host_button.add_theme_stylebox_override("pressed", _btn_style_normal)
+	_host_button.add_theme_stylebox_override("focus",   StyleBoxEmpty.new())
 	vbox.add_child(_host_button)
 
 	var div2 := HSeparator.new()
@@ -184,10 +209,11 @@ func _setup_ui() -> void:
 
 	# ── Join section ──────────────────────────────────────────────────────────
 	var join_label := Label.new()
-	join_label.text = "JOIN"
+	join_label.text = "JOIN A GAME"
 	join_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	join_label.add_theme_font_size_override("font_size", 11)
-	join_label.add_theme_color_override("font_color", Color(0.72, 0.62, 0.42))
+	join_label.add_theme_font_size_override("font_size", 10)
+	join_label.add_theme_color_override("font_color", Color(0.60, 0.52, 0.36))
+	if font: join_label.add_theme_font_override("font", font)
 	vbox.add_child(join_label)
 
 	var hbox := HBoxContainer.new()
@@ -197,27 +223,41 @@ func _setup_ui() -> void:
 	_ip_input = LineEdit.new()
 	_ip_input.placeholder_text = "Host IP address"
 	_ip_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_ip_input.custom_minimum_size = Vector2(0, 40)
+	_ip_input.custom_minimum_size = Vector2(0, 42)
 	_ip_input.add_theme_font_size_override("font_size", 14)
+	_ip_input.add_theme_color_override("font_color", Color(0.92, 0.84, 0.60))
+	_ip_input.add_theme_color_override("font_placeholder_color", Color(0.50, 0.44, 0.32))
+	_ip_input.add_theme_color_override("caret_color", Color(0.85, 0.70, 0.35))
+	if font: _ip_input.add_theme_font_override("font", font)
+	_ip_input.add_theme_stylebox_override("normal", input_normal)
+	_ip_input.add_theme_stylebox_override("focus",  input_focus)
 	hbox.add_child(_ip_input)
 
 	_port_input = LineEdit.new()
 	_port_input.placeholder_text = "Port"
 	_port_input.text = str(DEFAULT_PORT)
-	_port_input.custom_minimum_size = Vector2(72, 40)
+	_port_input.custom_minimum_size = Vector2(80, 42)
 	_port_input.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_port_input.add_theme_font_size_override("font_size", 14)
+	_port_input.add_theme_color_override("font_color", Color(0.92, 0.84, 0.60))
+	_port_input.add_theme_color_override("font_placeholder_color", Color(0.50, 0.44, 0.32))
+	_port_input.add_theme_color_override("caret_color", Color(0.85, 0.70, 0.35))
+	if font: _port_input.add_theme_font_override("font", font)
+	_port_input.add_theme_stylebox_override("normal", input_normal)
+	_port_input.add_theme_stylebox_override("focus",  input_focus)
 	hbox.add_child(_port_input)
 
 	_join_button = Button.new()
 	_join_button.text = "Answer the Call"
-	_join_button.custom_minimum_size = Vector2(0, 40)
+	_join_button.focus_mode = Control.FOCUS_NONE
 	_join_button.add_theme_font_size_override("font_size", 14)
 	_join_button.add_theme_color_override("font_color", Color(0.96, 0.88, 0.60))
+	if font: _join_button.add_theme_font_override("font", font)
 	_join_button.pressed.connect(_on_join_button_pressed)
-	_join_button.add_theme_stylebox_override("normal", _btn_style_normal)
-	_join_button.add_theme_stylebox_override("hover", btn_hover)
+	_join_button.add_theme_stylebox_override("normal",  _btn_style_normal)
+	_join_button.add_theme_stylebox_override("hover",   btn_hover)
 	_join_button.add_theme_stylebox_override("pressed", _btn_style_normal)
+	_join_button.add_theme_stylebox_override("focus",   StyleBoxEmpty.new())
 	hbox.add_child(_join_button)
 
 	# ── Status label ──────────────────────────────────────────────────────────
@@ -228,6 +268,7 @@ func _setup_ui() -> void:
 	_status_label.custom_minimum_size = Vector2(0, 36)
 	_status_label.add_theme_font_size_override("font_size", 13)
 	_status_label.add_theme_color_override("font_color", Color(0.75, 0.65, 0.44))
+	if font: _status_label.add_theme_font_override("font", font)
 	vbox.add_child(_status_label)
 
 	# ── Host info (shown after hosting) ───────────────────────────────────────
@@ -235,7 +276,9 @@ func _setup_ui() -> void:
 	_host_info_label.text = ""
 	_host_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_host_info_label.visible = false
+	_host_info_label.add_theme_font_size_override("font_size", 13)
 	_host_info_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.50))
+	if font: _host_info_label.add_theme_font_override("font", font)
 	vbox.add_child(_host_info_label)
 
 	# ── Quit button ───────────────────────────────────────────────────────────
@@ -247,12 +290,15 @@ func _setup_ui() -> void:
 	quit_btn.text = "Quit"
 	quit_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	quit_btn.custom_minimum_size = Vector2(120, 36)
+	quit_btn.focus_mode = Control.FOCUS_NONE
 	quit_btn.add_theme_font_size_override("font_size", 13)
-	quit_btn.add_theme_color_override("font_color", Color(0.80, 0.70, 0.52))
+	quit_btn.add_theme_color_override("font_color", Color(0.72, 0.62, 0.44))
+	if font: quit_btn.add_theme_font_override("font", font)
 	quit_btn.pressed.connect(func(): get_tree().quit())
-	quit_btn.add_theme_stylebox_override("normal", _btn_style_normal)
-	quit_btn.add_theme_stylebox_override("hover", btn_hover)
+	quit_btn.add_theme_stylebox_override("normal",  _btn_style_normal)
+	quit_btn.add_theme_stylebox_override("hover",   btn_hover)
 	quit_btn.add_theme_stylebox_override("pressed", _btn_style_normal)
+	quit_btn.add_theme_stylebox_override("focus",   StyleBoxEmpty.new())
 	vbox.add_child(quit_btn)
 
 

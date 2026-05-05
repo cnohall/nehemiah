@@ -53,8 +53,7 @@ func _process(delta: float) -> void:
 
 func _update_camera(delta: float) -> void:
 	if is_instance_valid(_local_player):
-		var cam_y := maxf(10.0, (_camera.size * 0.5) * 0.7071 + 1.5)
-		_camera.global_position = _local_player.global_position + Vector3(6, cam_y, 6)
+		_camera.global_position = _local_player.global_position + Vector3(6, 10, 6) * (_camera.size / 10.0)
 
 	if _camera:
 		_camera.size = lerp(_camera.size, _target_zoom, 10.0 * delta)
@@ -309,11 +308,12 @@ func _setup_ground_details() -> void:
 
 func _spawn_road() -> void:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.50, 0.44, 0.34)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.40, 0.34, 0.24)  # darker worn-earth track
+	mat.roughness = 0.95
+	mat.metallic = 0.0
 	var mesh_inst := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(3.5, 0.06, 32.0)
+	box.size = Vector3(4.0, 0.06, 32.0)  # slightly wider path
 	mesh_inst.mesh = box
 	mesh_inst.material_override = mat
 	mesh_inst.position = Vector3(0, 0.52, -12.0)
@@ -349,11 +349,11 @@ func _spawn_rock_procedural(pos: Vector3, rng: RandomNumberGenerator) -> void:
 	# Flattened sphere — more natural than a box
 	var mesh_inst := MeshInstance3D.new()
 	var sph := SphereMesh.new()
-	sph.radius = rng.randf_range(0.25, 0.65)
+	sph.radius = rng.randf_range(0.35, 0.85)
 	sph.height = sph.radius * rng.randf_range(0.35, 0.65)  # squash vertically
 	mesh_inst.mesh = sph
 	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.roughness = 0.85
 	var grey := rng.randf_range(0.44, 0.58)
 	mat.albedo_color = Color(grey, grey * 0.93, grey * 0.85)
 	mesh_inst.material_override = mat
@@ -378,7 +378,7 @@ func _spawn_palm_procedural(base_pos: Vector3) -> void:
 	var height := randf_range(5.5, 8.0)
 	var trunk_mat := StandardMaterial3D.new()
 	trunk_mat.albedo_color = Color(0.42, 0.30, 0.14)
-	trunk_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	trunk_mat.roughness = 0.85
 	var trunk := MeshInstance3D.new()
 	var trunk_cyl := CylinderMesh.new()
 	trunk_cyl.top_radius    = 0.16
@@ -391,7 +391,7 @@ func _spawn_palm_procedural(base_pos: Vector3) -> void:
 	root.add_child(trunk)
 	var canopy_mat := StandardMaterial3D.new()
 	canopy_mat.albedo_color = Color(0.20, 0.35, 0.10)
-	canopy_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	canopy_mat.roughness = 0.9
 	var canopy := MeshInstance3D.new()
 	var canopy_sph := SphereMesh.new()
 	canopy_sph.radius = randf_range(1.6, 2.2)

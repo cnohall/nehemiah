@@ -13,8 +13,8 @@ var _paused:         bool  = false
 @onready var _pause_overlay: Control     = $PauseOverlay
 @onready var _quit_btn:      Button      = $PauseOverlay/Center/Panel/Margin/VBox/QuitBtn
 @onready var _sling_container: Control     = $SlingContainer
-@onready var _sling_bar:       ProgressBar = $SlingContainer/SlingBar
-@onready var _sling_label:     Label       = $SlingContainer/SlingLabel
+@onready var _sling_bar:       ProgressBar = $SlingContainer/Margin/VBox/SlingBar
+@onready var _sling_label:     Label       = $SlingContainer/Margin/VBox/SlingLabel
 @onready var _wall_needs:      Control     = $WallNeeds
 @onready var _stone_label:     Label       = $WallNeeds/Margin/HBox/StoneLabel
 @onready var _wood_label:      Label       = $WallNeeds/Margin/HBox/WoodLabel
@@ -209,20 +209,25 @@ func _create_day_label() -> void:
 	_day_label.anchor_top    = 0.0
 	_day_label.anchor_bottom = 0.0
 	_day_label.offset_left   = 16.0
-	_day_label.offset_right  = 180.0
-	_day_label.offset_top    = 110.0
-	_day_label.offset_bottom = 134.0
+	_day_label.offset_right  = 200.0
+	_day_label.offset_top    = 120.0
+	_day_label.offset_bottom = 148.0
 	_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_day_label.add_theme_font_size_override("font_size", 13)
-	_day_label.add_theme_color_override("font_color", Color(0.92, 0.82, 0.56))
+	_day_label.add_theme_font_size_override("font_size", 15)
+	_day_label.add_theme_color_override("font_color", Color(0.96, 0.88, 0.60))
 	_day_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var font = load("res://assets/fonts/Cinzel-Regular.ttf")
+	if font:
+		_day_label.add_theme_font_override("font", font)
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.065, 0.042, 0.88)
-	bg.set_corner_radius_all(3)
-	bg.content_margin_left   = 8.0
-	bg.content_margin_right  = 8.0
-	bg.content_margin_top    = 4.0
-	bg.content_margin_bottom = 4.0
+	bg.bg_color = Color(0.08, 0.065, 0.042, 0.90)
+	bg.border_color = Color(0.50, 0.40, 0.22, 0.8)
+	bg.set_border_width_all(2)
+	bg.set_corner_radius_all(4)
+	bg.content_margin_left   = 10.0
+	bg.content_margin_right  = 10.0
+	bg.content_margin_top    = 5.0
+	bg.content_margin_bottom = 5.0
 	_day_label.add_theme_stylebox_override("normal", bg)
 	_day_label.visible = false
 	add_child(_day_label)

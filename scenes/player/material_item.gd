@@ -15,23 +15,23 @@ const _CONFIG: Dictionary = {
 	Type.STONE: {
 		"name": "Cut Stone",
 		"speed_penalty": 0.4,
-		"color": Color(0.6, 0.6, 0.6),
+		"color": Color(0.72, 0.68, 0.60),  # warm limestone, not neutral gray
 		"mesh": "box",
-		"size": Vector3(0.4, 0.4, 0.4)
+		"size": Vector3(0.55, 0.28, 0.44)  # hewn slab shape, not a perfect cube
 	},
 	Type.WOOD: {
 		"name": "Timber Beam",
 		"speed_penalty": 0.15,
-		"color": Color(0.4, 0.26, 0.13),
+		"color": Color(0.50, 0.33, 0.16),  # richer cedar tone
 		"mesh": "beam",
-		"size": Vector3(0.15, 0.15, 1.2)
+		"size": Vector3(0.20, 0.20, 1.05)  # slightly thicker so it reads as a beam
 	},
 	Type.MORTAR: {
 		"name": "Mortar Bucket",
 		"speed_penalty": 0.1,
-		"color": Color(0.3, 0.3, 0.35),
+		"color": Color(0.70, 0.68, 0.62),  # cream/ash — mortar is light, not dark blue
 		"mesh": "bucket",
-		"size": Vector3(0.2, 0.3, 0.0) # Used for radius/height
+		"size": Vector3(0.22, 0.38, 0.0)   # taller bucket
 	}
 }
 
@@ -64,13 +64,18 @@ func _setup_visuals() -> void:
 			mesh_inst.mesh = box
 		"bucket":
 			var cyl = CylinderMesh.new()
-			cyl.top_radius = cfg["size"].x
-			cyl.bottom_radius = cfg["size"].x * 0.75
-			cyl.height = cfg["size"].y
+			cyl.top_radius    = cfg["size"].x
+			cyl.bottom_radius = cfg["size"].x * 0.68  # tapered bucket shape
+			cyl.height        = cfg["size"].y
 			mesh_inst.mesh = cyl
 
 	var mat = StandardMaterial3D.new()
 	mat.albedo_color = color
+	mat.metallic = 0.0
+	match material_type:
+		Type.STONE:  mat.roughness = 0.92
+		Type.WOOD:   mat.roughness = 0.88
+		Type.MORTAR: mat.roughness = 0.96
 	mesh_inst.material_override = mat
 	add_child(mesh_inst)
 

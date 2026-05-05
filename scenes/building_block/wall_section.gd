@@ -1,6 +1,8 @@
 class_name WallSection
 extends Node3D
 
+static var _shared_stone_tex: ImageTexture = null
+
 signal progress_changed(percent: float)
 signal completed
 signal uncompleted
@@ -130,17 +132,35 @@ func _build_footprint() -> void:
 	box.size = Vector3(BLOCK_SIZE.x, 0.1, BLOCK_SIZE.z)
 	_footprint.mesh = box
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.3, 0.3, 0.3)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.22, 0.20, 0.18)
+	mat.roughness = 0.95
 	_footprint.material_override = mat
 	_footprint.position.y = 0.05
 	add_child(_footprint)
 
 func _build_wall_material() -> void:
 	_wall_mat = StandardMaterial3D.new()
-	_wall_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_wall_mat.roughness = 0.85
 	_wall_mat.albedo_color = COLOR_EMPTY
+	if _shared_stone_tex == null:
+		_shared_stone_tex = _generate_stone_texture()
+	_wall_mat.albedo_texture = _shared_stone_tex
+	_wall_mat.uv1_scale = Vector3(1.5, 1.0, 1.0)
 	_mesh.material_override = _wall_mat
+
+func _generate_stone_texture() -> ImageTexture:
+	var noise := FastNoiseLite.new()
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.frequency = 0.06
+	noise.seed = 7
+	const SIZE := 128
+	var img := Image.create(SIZE, SIZE, false, Image.FORMAT_RGB8)
+	for y in range(SIZE):
+		for x in range(SIZE):
+			var n := (noise.get_noise_2d(x, y) + 1.0) * 0.5
+			var v := lerpf(0.82, 1.0, n)
+			img.set_pixel(x, y, Color(v, v * 0.98, v * 0.95))
+	return ImageTexture.create_from_image(img)
 
 func _init_indicator_worldspace() -> void:
 	if is_instance_valid(_indicators):
@@ -183,31 +203,37 @@ func _update_visuals() -> void:
 
 func _pop_visual() -> void:
 	var tween := create_tween()
-	tween.tween_property(_mesh, "scale:x", 1.1, 0.1)\
+	tween.tween_property(_mesh, "scale:x", 1.18, 0.08)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_mesh, "scale:z", 1.1, 0.1)\
+	tween.parallel().tween_property(_mesh, "scale:z", 1.18, 0.08)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_mesh, "scale:x", 1.0, 0.1)\
+	tween.tween_property(_mesh, "scale:x", 1.0, 0.08)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.parallel().tween_property(_mesh, "scale:z", 1.0, 0.1)\
+	tween.parallel().tween_property(_mesh, "scale:z", 1.0, 0.08)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 func _update_wall_color() -> void:
 	if not _wall_mat:
 		return
-	_wall_mat.emission_enabled = false
 	if _is_completed:
 		_wall_mat.albedo_color = COLOR_COMPLETE
 		_wall_mat.emission_enabled = true
 		_wall_mat.emission = Color(0.5, 0.45, 0.30) * 0.4
 	elif completion_percent >= PHASE_STONE:
-		_wall_mat.albedo_color = COLOR_MORTAR   # cream finish rising
+		_wall_mat.albedo_color = COLOR_MORTAR
+		_wall_mat.emission_enabled = true
+		_wall_mat.emission = COLOR_MORTAR * 0.08
 	elif completion_percent >= PHASE_WOOD:
-		_wall_mat.albedo_color = COLOR_STONE    # grey stone blocks
+		_wall_mat.albedo_color = COLOR_STONE
+		_wall_mat.emission_enabled = true
+		_wall_mat.emission = COLOR_STONE * 0.06
 	elif completion_percent > 0.0:
-		_wall_mat.albedo_color = COLOR_WOOD     # warm wood scaffolding
+		_wall_mat.albedo_color = COLOR_WOOD
+		_wall_mat.emission_enabled = true
+		_wall_mat.emission = COLOR_WOOD * 0.06
 	else:
-		_wall_mat.albedo_color = COLOR_EMPTY    # bare charcoal rubble
+		_wall_mat.albedo_color = COLOR_EMPTY
+		_wall_mat.emission_enabled = false
 
 func get_blocking_material() -> String:
 	# Returns the material type currently preventing further building

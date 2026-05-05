@@ -12,26 +12,47 @@ func _ready() -> void:
 
 func _setup_visuals() -> void:
 	var mesh_inst := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(2, 1, 2)
-	mesh_inst.mesh = box
 	var mat := StandardMaterial3D.new()
+	mat.metallic = 0.0
+
 	match material_type:
 		"stone":
-			mat.albedo_color = Color(0.60, 0.60, 0.60)
+			# Flat, wide pile of hewn blocks
+			var box := BoxMesh.new()
+			box.size = Vector3(2.2, 0.7, 1.8)
+			mesh_inst.mesh = box
+			mat.albedo_color = Color(0.66, 0.62, 0.56)
+			mat.roughness = 0.92
 		"wood":
-			mat.albedo_color = Color(0.40, 0.26, 0.13)
+			# Stacked-log shape: wide and low
+			var box := BoxMesh.new()
+			box.size = Vector3(2.4, 0.55, 1.3)
+			mesh_inst.mesh = box
+			mat.albedo_color = Color(0.50, 0.33, 0.16)
+			mat.roughness = 0.88
 		"mortar":
-			mat.albedo_color = Color(0.30, 0.30, 0.35)
+			# Round bin / trough
+			var cyl := CylinderMesh.new()
+			cyl.top_radius    = 0.85
+			cyl.bottom_radius = 0.75
+			cyl.height        = 0.80
+			mesh_inst.mesh = cyl
+			mat.albedo_color = Color(0.68, 0.66, 0.60)
+			mat.roughness = 0.96
+
 	mesh_inst.material_override = mat
 	add_child(mesh_inst)
 
 	var label := Label3D.new()
-	label.text = material_type.to_upper()
-	label.position = Vector3(0, 1.4, 0)
+	match material_type:
+		"stone":  label.text = "Cut Stone"
+		"wood":   label.text = "Timber"
+		"mortar": label.text = "Mortar"
+	label.position = Vector3(0, 1.2, 0)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 32
-	label.outline_size = 8
+	label.font_size = 28
+	label.outline_size = 6
+	label.modulate = Color(0.96, 0.88, 0.60)
 	add_child(label)
 
 ## Called by player pressing E near this pile.

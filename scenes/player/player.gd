@@ -13,7 +13,7 @@ const FALLBACK_ANIM: String = "idle_down"
 
 # Building Constants
 const BUILD_RANGE: float = 4.0
-const BUILD_RATE: float = 25.0 # 25% per second
+const BUILD_RATE: float = 35.0 # 35% per second
 
 # Stamina Constants
 const MAX_STAMINA: float = 100.0

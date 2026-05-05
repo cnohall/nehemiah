@@ -1,14 +1,26 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/game_hud.gd" id="1_script"]
 [ext_resource type="FontFile" path="res://assets/fonts/Cinzel-Regular.ttf" id="2_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.08, 0.065, 0.042, 0.90)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.50, 0.40, 0.22, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sling"]
+bg_color = Color(0.08, 0.065, 0.042, 0.90)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
 border_color = Color(0.50, 0.40, 0.22, 0.8)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
@@ -49,8 +61,8 @@ script = ExtResource("1_script")
 [node name="Panel" type="PanelContainer" parent="."]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 180.0
-offset_bottom = 104.0
+offset_right = 190.0
+offset_bottom = 114.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Margin" type="MarginContainer" parent="Panel"]
@@ -72,7 +84,7 @@ theme_override_colors/font_color = Color(0.82, 0.72, 0.48, 1.0)
 text = "STRENGTH"
 
 [node name="HealthBar" type="ProgressBar" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(140, 14)
+custom_minimum_size = Vector2(152, 18)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
@@ -88,7 +100,7 @@ theme_override_colors/font_color = Color(0.82, 0.72, 0.48, 1.0)
 text = "ENDURANCE"
 
 [node name="StaminaBar" type="ProgressBar" parent="Panel/Margin/VBox"]
-custom_minimum_size = Vector2(140, 14)
+custom_minimum_size = Vector2(152, 18)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
@@ -192,24 +204,35 @@ theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.82, 0.72, 0.48, 1.0)
 text = "QUIT"
 
-[node name="SlingContainer" type="VBoxContainer" parent="."]
+[node name="SlingContainer" type="PanelContainer" parent="."]
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -90.0
-offset_top = 16.0
-offset_right = 90.0
-offset_bottom = 58.0
-theme_override_constants/separation = 4
+offset_left = -104.0
+offset_top = 14.0
+offset_right = 104.0
+offset_bottom = 72.0
 visible = false
+theme_override_styles/panel = SubResource("StyleBoxFlat_sling")
 
-[node name="SlingBar" type="ProgressBar" parent="SlingContainer"]
-custom_minimum_size = Vector2(0, 12)
+[node name="Margin" type="MarginContainer" parent="SlingContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="SlingContainer/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SlingBar" type="ProgressBar" parent="SlingContainer/Margin/VBox"]
+custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
 show_percentage = false
 
-[node name="SlingLabel" type="Label" parent="SlingContainer"]
+[node name="SlingLabel" type="Label" parent="SlingContainer/Margin/VBox"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 11

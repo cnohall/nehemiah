@@ -85,8 +85,10 @@ func _do_throw() -> void:
 
 	var origin    := _player.global_position + Vector3(0, 1.2, 0)
 	var flat_dist := Vector2(hit.x - origin.x, hit.z - origin.z).length()
-	var aim_y     := 1.2 + flat_dist * 0.07
-	var dir       := (Vector3(hit.x, aim_y, hit.z) - origin).normalized()
+	var charge_ratio := charge / MAX_CHARGE
+	var arc_factor   := lerpf(0.12, 0.05, charge_ratio)
+	var aim_y        := 1.2 + flat_dist * arc_factor
+	var dir          := (Vector3(hit.x, aim_y, hit.z) - origin).normalized()
 
 	var main := _player.get_tree().current_scene
 	if main.has_method("request_throw_stone"):
