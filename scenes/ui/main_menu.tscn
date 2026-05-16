@@ -1,0 +1,356 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/main_menu.gd" id="1_script"]
+
+[sub_resource type="FontFile" id="FontFile_cinzel_eb"]
+font_path = "res://assets/fonts/Cinzel/static/Cinzel-ExtraBold.ttf"
+
+[sub_resource type="FontFile" id="FontFile_cinzel_bold"]
+font_path = "res://assets/fonts/Cinzel/static/Cinzel-Bold.ttf"
+
+[sub_resource type="FontFile" id="FontFile_cinzel_reg"]
+font_path = "res://assets/fonts/Cinzel/static/Cinzel-Regular.ttf"
+
+[sub_resource type="FontFile" id="FontFile_spectral_italic"]
+font_path = "res://assets/fonts/Spectral/Spectral-Italic.ttf"
+
+[sub_resource type="FontFile" id="FontFile_spectral_reg"]
+font_path = "res://assets/fonts/Spectral/Spectral-Regular.ttf"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_BtnNormal"]
+bg_color = Color(0.62, 0.32, 0.13, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_left = 32.0
+content_margin_top = 14.0
+content_margin_right = 32.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_BtnHover"]
+bg_color = Color(0.72, 0.40, 0.19, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_left = 32.0
+content_margin_top = 14.0
+content_margin_right = 32.0
+content_margin_bottom = 14.0
+shadow_color = Color(0.62, 0.32, 0.13, 0.35)
+shadow_size = 10
+shadow_offset = Vector2(0.0, 2.0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_BtnPressed"]
+bg_color = Color(0.50, 0.24, 0.09, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_left = 32.0
+content_margin_top = 14.0
+content_margin_right = 32.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_GhostNormal"]
+bg_color = Color(0.0, 0.0, 0.0, 0.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 0.32, 0.13, 0.6)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_left = 32.0
+content_margin_top = 12.0
+content_margin_right = 32.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_GhostHover"]
+bg_color = Color(0.62, 0.32, 0.13, 0.1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.62, 0.32, 0.13, 1.0)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_left = 32.0
+content_margin_top = 12.0
+content_margin_right = 32.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_InputNormal"]
+bg_color = Color(0.962, 0.946, 0.918, 1)
+border_width_bottom = 1
+border_color = Color(0.58, 0.48, 0.35, 0.7)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_InputFocus"]
+bg_color = Color(0.962, 0.946, 0.918, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 0.32, 0.13, 0.85)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_PanelBg"]
+bg_color = Color(0.936, 0.912, 0.872, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.70, 0.58, 0.42, 0.4)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_left = 4
+corner_radius_bottom_right = 4
+content_margin_left = 36.0
+content_margin_top = 32.0
+content_margin_right = 36.0
+content_margin_bottom = 32.0
+shadow_color = Color(0.10, 0.08, 0.05, 0.28)
+shadow_size = 24
+shadow_offset = Vector2(0.0, 6.0)
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_script")
+
+[node name="BG" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.957, 0.933, 0.893, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+alignment = 1
+theme_override_constants/separation = 0
+
+[node name="TitleArea" type="VBoxContainer" parent="Layout"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="Layout/TitleArea"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "NEHEMIAH"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_eb")
+theme_override_font_sizes/font_size = 96
+theme_override_colors/font_color = Color(0.13, 0.10, 0.07, 1)
+
+[node name="SubtitleLabel" type="Label" parent="Layout/TitleArea"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "THE  WALL"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_bold")
+theme_override_font_sizes/font_size = 34
+theme_override_colors/font_color = Color(0.62, 0.32, 0.13, 1)
+
+[node name="OrnamentLabel" type="Label" parent="Layout/TitleArea"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "—  445 BC  ·  Jerusalem  —"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_spectral_italic")
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="ScriptureSpacer" type="Control" parent="Layout/TitleArea"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 14)
+
+[node name="ScriptureLabel" type="Label" parent="Layout/TitleArea"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "“The work is great and vast, and we are spread\nout on the wall, far apart from each other.”\n— Nehemiah 4:19 NWT"
+horizontal_alignment = 1
+autowrap_mode = 3
+custom_minimum_size = Vector2(480, 0)
+theme_override_fonts/font = SubResource("FontFile_spectral_italic")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.50, 0.40, 0.29, 1)
+
+[node name="ButtonGap" type="Control" parent="Layout"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+size_flags_horizontal = 3
+
+[node name="Buttons" type="VBoxContainer" parent="Layout"]
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(300, 0)
+theme_override_constants/separation = 10
+
+[node name="HostButton" type="Button" parent="Layout/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 52)
+text = "Host Game"
+theme_override_styles/normal = SubResource("StyleBoxFlat_BtnNormal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_BtnHover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_BtnPressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_BtnHover")
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_hover_color = Color(1.0, 0.97, 0.94, 1)
+theme_override_colors/font_pressed_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_focus_color = Color(1.0, 0.97, 0.94, 1)
+
+[node name="JoinButton" type="Button" parent="Layout/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 52)
+text = "Join Game"
+theme_override_styles/normal = SubResource("StyleBoxFlat_BtnNormal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_BtnHover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_BtnPressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_BtnHover")
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_hover_color = Color(1.0, 0.97, 0.94, 1)
+theme_override_colors/font_pressed_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_focus_color = Color(1.0, 0.97, 0.94, 1)
+
+[node name="SettingsButton" type="Button" parent="Layout/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 52)
+text = "Settings"
+theme_override_styles/normal = SubResource("StyleBoxFlat_BtnNormal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_BtnHover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_BtnPressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_BtnHover")
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_hover_color = Color(1.0, 0.97, 0.94, 1)
+theme_override_colors/font_pressed_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_focus_color = Color(1.0, 0.97, 0.94, 1)
+
+[node name="QuitButton" type="Button" parent="Layout/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 52)
+text = "Quit"
+theme_override_styles/normal = SubResource("StyleBoxFlat_BtnNormal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_BtnHover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_BtnPressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_BtnHover")
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_hover_color = Color(1.0, 0.97, 0.94, 1)
+theme_override_colors/font_pressed_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_focus_color = Color(1.0, 0.97, 0.94, 1)
+
+[node name="JoinPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -185.0
+offset_right = 200.0
+offset_bottom = 185.0
+grow_horizontal = 3
+grow_vertical = 3
+visible = false
+theme_override_styles/panel = SubResource("StyleBoxFlat_PanelBg")
+
+[node name="Content" type="VBoxContainer" parent="JoinPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="JoinTitle" type="Label" parent="JoinPanel/Content"]
+layout_mode = 2
+text = "Join Game"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_bold")
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.13, 0.10, 0.07, 1)
+
+[node name="TitleDivider" type="Control" parent="JoinPanel/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 6)
+
+[node name="AddressInput" type="LineEdit" parent="JoinPanel/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(340, 0)
+placeholder_text = "Host IP address…"
+theme_override_styles/normal = SubResource("StyleBoxFlat_InputNormal")
+theme_override_styles/focus = SubResource("StyleBoxFlat_InputFocus")
+theme_override_fonts/font = SubResource("FontFile_spectral_reg")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.13, 0.10, 0.07, 1)
+theme_override_colors/font_placeholder_color = Color(0.55, 0.45, 0.33, 0.7)
+theme_override_colors/caret_color = Color(0.62, 0.32, 0.13, 1)
+
+[node name="ConnectButton" type="Button" parent="JoinPanel/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+text = "Connect"
+theme_override_styles/normal = SubResource("StyleBoxFlat_BtnNormal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_BtnHover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_BtnPressed")
+theme_override_styles/focus = SubResource("StyleBoxFlat_BtnHover")
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_hover_color = Color(1.0, 0.97, 0.94, 1)
+theme_override_colors/font_pressed_color = Color(0.957, 0.933, 0.893, 1)
+theme_override_colors/font_focus_color = Color(1.0, 0.97, 0.94, 1)
+
+[node name="BackButton" type="Button" parent="JoinPanel/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+text = "Back"
+theme_override_styles/normal = SubResource("StyleBoxFlat_GhostNormal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_GhostHover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_GhostHover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_GhostHover")
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.62, 0.32, 0.13, 1)
+theme_override_colors/font_hover_color = Color(0.62, 0.32, 0.13, 1)
+theme_override_colors/font_pressed_color = Color(0.50, 0.24, 0.09, 1)
+theme_override_colors/font_focus_color = Color(0.62, 0.32, 0.13, 1)
+
+[node name="StatusLabel" type="Label" parent="JoinPanel/Content"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_spectral_reg")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.62, 0.32, 0.13, 1)

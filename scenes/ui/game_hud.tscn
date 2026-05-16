@@ -1,0 +1,289 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/game_hud.gd" id="1_script"]
+
+[sub_resource type="FontFile" id="FontFile_cinzel_bold"]
+font_path = "res://assets/fonts/Cinzel/static/Cinzel-Bold.ttf"
+
+[sub_resource type="FontFile" id="FontFile_cinzel_reg"]
+font_path = "res://assets/fonts/Cinzel/static/Cinzel-Regular.ttf"
+
+[sub_resource type="FontFile" id="FontFile_spectral_italic"]
+font_path = "res://assets/fonts/Spectral/Spectral-Italic.ttf"
+
+[sub_resource type="FontFile" id="FontFile_spectral_reg"]
+font_path = "res://assets/fonts/Spectral/Spectral-Regular.ttf"
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_PanelBg"]
+bg_color = Color(0.936, 0.912, 0.872, 0.91)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.70, 0.58, 0.42, 0.28)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_left = 3
+corner_radius_bottom_right = 3
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+shadow_color = Color(0.10, 0.08, 0.05, 0.22)
+shadow_size = 12
+shadow_offset = Vector2(0.0, 3.0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_PlayerCardBg"]
+bg_color = Color(0.936, 0.912, 0.872, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.70, 0.58, 0.42, 0.25)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_left = 3
+corner_radius_bottom_right = 3
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+shadow_color = Color(0.10, 0.08, 0.05, 0.16)
+shadow_size = 8
+shadow_offset = Vector2(0.0, 2.0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_HealthFill"]
+bg_color = Color(0.46, 0.59, 0.26, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_HealthBg"]
+bg_color = Color(0.22, 0.17, 0.11, 0.38)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_left = 2
+corner_radius_bottom_right = 2
+
+[node name="GameHUD" type="CanvasLayer"]
+script = ExtResource("1_script")
+
+[node name="TopCenter" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.0
+anchor_right = 0.5
+anchor_bottom = 0.0
+offset_left = -145.0
+offset_top = 8.0
+offset_right = 145.0
+offset_bottom = 100.0
+grow_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="DayPanel" type="PanelContainer" parent="TopCenter"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_PanelBg")
+
+[node name="VBox" type="VBoxContainer" parent="TopCenter/DayPanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="DayNumber" type="Label" parent="TopCenter/DayPanel/VBox"]
+layout_mode = 2
+text = "Day 1 of 52"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_bold")
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.13, 0.10, 0.07, 1)
+
+[node name="DaySection" type="Label" parent="TopCenter/DayPanel/VBox"]
+layout_mode = 2
+text = "Sheep Gate · Neh. 3:1"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_spectral_italic")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="WavePanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -156.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 80.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_PanelBg")
+
+[node name="VBox" type="VBoxContainer" parent="WavePanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="WaveHeader" type="Label" parent="WavePanel/VBox"]
+layout_mode = 2
+text = "Enemies"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="EnemyCount" type="Label" parent="WavePanel/VBox"]
+layout_mode = 2
+text = "0"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_bold")
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.13, 0.10, 0.07, 1)
+
+[node name="PlayersPanel" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 0.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -104.0
+offset_right = 452.0
+offset_bottom = -8.0
+grow_vertical = 0
+theme_override_constants/separation = 6
+
+[node name="Player1" type="PanelContainer" parent="PlayersPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(104, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
+
+[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player1"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PlayerName" type="Label" parent="PlayersPanel/Player1/VBox"]
+layout_mode = 2
+text = "P1"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player1/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 6)
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
+
+[node name="CarryLabel" type="Label" parent="PlayersPanel/Player1/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_spectral_italic")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="Player2" type="PanelContainer" parent="PlayersPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(104, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
+
+[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player2"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PlayerName" type="Label" parent="PlayersPanel/Player2/VBox"]
+layout_mode = 2
+text = "P2"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player2/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 6)
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
+
+[node name="CarryLabel" type="Label" parent="PlayersPanel/Player2/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_spectral_italic")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="Player3" type="PanelContainer" parent="PlayersPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(104, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
+
+[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player3"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PlayerName" type="Label" parent="PlayersPanel/Player3/VBox"]
+layout_mode = 2
+text = "P3"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player3/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 6)
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
+
+[node name="CarryLabel" type="Label" parent="PlayersPanel/Player3/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_spectral_italic")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="Player4" type="PanelContainer" parent="PlayersPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(104, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
+
+[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player4"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PlayerName" type="Label" parent="PlayersPanel/Player4/VBox"]
+layout_mode = 2
+text = "P4"
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+
+[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player4/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 6)
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
+
+[node name="CarryLabel" type="Label" parent="PlayersPanel/Player4/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+theme_override_fonts/font = SubResource("FontFile_spectral_italic")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)

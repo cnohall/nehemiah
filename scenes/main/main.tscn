@@ -1,0 +1,89 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scenes/main/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scenes/wave_manager/wave_manager.gd" id="2_wave"]
+[ext_resource type="PackedScene" path="res://scenes/supply_pile/supply_pile.tscn" id="3_pile"]
+[ext_resource type="PackedScene" path="res://scenes/wall_section/wall_section.tscn" id="4_wall"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_1"]
+geometry/parsed_geometry_type = 2
+geometry/collision_mask = 9
+agent/height = 1.8
+agent/radius = 0.4
+agent/max_slope = 45.0
+agent/max_climb = 0.25
+cell/size = 0.25
+cell/height = 0.25
+region_min_size = 2.0
+edge/max_length = 12.0
+edge/max_error = 3.0
+detail/sample_distance = 6.0
+detail/sample_max_error = 1.0
+filter/baking_aabb = AABB(-100, -1, -100, 200, 10, 200)
+
+[sub_resource type="StandardMaterial3D" id="FloorMat"]
+albedo_color = Color(0.72, 0.65, 0.50, 1)
+roughness = 1.0
+metallic_specular = 0.0
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.65, 0.74, 0.88, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.68, 0.60, 0.48, 1)
+ambient_light_energy = 0.6
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.707107, -0.408248, 0.57735, 0, 0.816497, 0.57735, -0.707107, -0.408248, 0.57735, 20, 20, 20)
+current = true
+projection = 1
+size = 20.0
+near = 0.1
+far = 200.0
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 10, 0)
+light_color = Color(1, 0.957, 0.878, 1)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Floor" type="CSGBox3D" parent="."]
+size = Vector3(200, 0.2, 200)
+use_collision = true
+material = SubResource("FloorMat")
+
+[node name="NavRegion" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_1")
+
+[node name="Players" type="Node3D" parent="."]
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Blocks" type="Node3D" parent="."]
+
+[node name="WallSection" parent="Blocks" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+
+[node name="StockStone" parent="." instance=ExtResource("3_pile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -5)
+kind = "stone"
+count = 999
+
+[node name="StockWood" parent="." instance=ExtResource("3_pile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
+kind = "wood"
+count = 999
+
+[node name="StockMortar" parent="." instance=ExtResource("3_pile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -5)
+kind = "mortar"
+count = 999
+
+[node name="WaveManager" type="Node" parent="."]
+script = ExtResource("2_wave")

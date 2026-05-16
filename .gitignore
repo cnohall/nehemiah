@@ -1,0 +1,15 @@
+# Godot engine files
+.godot/
+*.translation
+
+# Export presets (contain absolute paths, platform-specific)
+export_presets.cfg
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Editor temp files
+*.tmp

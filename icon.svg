@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" fill="#7a5c38"/>
+  <!-- Wall stones -->
+  <rect x="12" y="72" width="104" height="20" fill="#c4956a"/>
+  <rect x="12" y="50" width="44" height="20" fill="#b8885e"/>
+  <rect x="60" y="50" width="56" height="20" fill="#b8885e"/>
+  <rect x="12" y="94" width="30" height="20" fill="#c4956a"/>
+  <rect x="46" y="94" width="44" height="20" fill="#c4956a"/>
+  <rect x="94" y="94" width="22" height="20" fill="#c4956a"/>
+  <!-- Merlons (battlements) -->
+  <rect x="16" y="30" width="18" height="22" fill="#b8885e"/>
+  <rect x="42" y="30" width="18" height="22" fill="#b8885e"/>
+  <rect x="68" y="30" width="18" height="22" fill="#b8885e"/>
+  <rect x="94" y="30" width="18" height="22" fill="#b8885e"/>
+</svg>
