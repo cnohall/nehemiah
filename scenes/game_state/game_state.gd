@@ -31,10 +31,7 @@ var players: Dictionary = {}
 # ── Queries ────────────────────────────────────────────────
 
 func get_section_for_day(day: int) -> Dictionary:
-	for section in SECTIONS:
-		if day in section["days"]:
-			return section
-	return SECTIONS[0]
+	return SECTIONS[_section_index_for_day(day)]
 
 func get_current_section() -> Dictionary:
 	return get_section_for_day(current_day)

@@ -17,13 +17,13 @@ func host(port: int = DEFAULT_PORT) -> void:
 	multiplayer.multiplayer_peer = peer
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	emit_signal("lobby_created")
+	lobby_created.emit()
 
 func join(address: String, port: int = DEFAULT_PORT) -> void:
 	var peer := ENetMultiplayerPeer.new()
 	var err  := peer.create_client(address, port)
 	if err != OK:
-		emit_signal("lobby_joined", false)
+		lobby_joined.emit(false)
 		return
 	multiplayer.multiplayer_peer = peer
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -35,13 +35,13 @@ func disconnect_session() -> void:
 	multiplayer.multiplayer_peer = null
 
 func _on_peer_connected(id: int) -> void:
-	emit_signal("peer_connected", id)
+	peer_connected.emit(id)
 
 func _on_peer_disconnected(id: int) -> void:
-	emit_signal("peer_disconnected", id)
+	peer_disconnected.emit(id)
 
 func _on_connected_to_server() -> void:
-	emit_signal("lobby_joined", true)
+	lobby_joined.emit(true)
 
 func _on_connection_failed() -> void:
-	emit_signal("lobby_joined", false)
+	lobby_joined.emit(false)

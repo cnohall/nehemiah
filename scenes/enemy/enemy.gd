@@ -30,7 +30,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_navigate()
 	attack_timer = maxf(0.0, attack_timer - delta)
-	if attack_timer == 0.0:
+	if attack_timer <= 0.0:
 		_try_attack()
 
 # ── Navigation ─────────────────────────────────────────────

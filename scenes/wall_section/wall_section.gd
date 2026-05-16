@@ -10,7 +10,8 @@ const MATERIAL_COST := {
 	Stage.STACKED:  { "stone":  6 },
 	Stage.MORTARED: { "mortar": 2 },
 }
-const MAX_HEALTH := 150.0
+const MAX_HEALTH          := 150.0
+const DEGRADE_HEALTH_RATIO := 0.5
 
 const STAGE_COLORS := [
 	Color(0.62, 0.54, 0.38, 1),  # EMPTY   — bare earth
@@ -86,8 +87,8 @@ func _degrade() -> void:
 		destroyed.emit()
 		return
 	stage = (stage - 1) as Stage
-	health = MAX_HEALTH * 0.5
-	pending.clear()
+	health = MAX_HEALTH * DEGRADE_HEALTH_RATIO
+	pending = { "stone": 0, "wood": 0, "mortar": 0 }
 	_update_visuals()
 	stage_changed.emit(stage)
 

@@ -1,7 +1,18 @@
 extends Node
 
-const ENEMY_SCENE  := preload("res://scenes/enemy/enemy.tscn")
-const SPAWN_RADIUS := 44.0
+const ENEMY_SCENE := preload("res://scenes/enemy/enemy.tscn")
+
+const SPAWN_RADIUS        := 44.0
+const INITIAL_SPAWN_DELAY := 1.5
+const SPAWN_INTERVAL_MIN  := 1.2
+const SPAWN_INTERVAL_MAX  := 3.5
+const BASE_ENEMY_COUNT    := 4
+const BRUTE_UNLOCK_DAY    := 8
+const RAIDER_UNLOCK_DAY   := 20
+const MID_BRUTE_CHANCE    := 0.25   # P(brute) days 9–20; rest scout
+# Late-game spawn weights: 45% scout, 25% brute, 30% raider
+const LATE_SCOUT_CAP      := 0.45
+const LATE_BRUTE_CAP      := 0.70
 
 signal wave_started(total: int)
 signal enemy_died
@@ -34,7 +45,7 @@ func _physics_process(delta: float) -> void:
 func start_wave(day: int) -> void:
 	_queue = _build_queue(day)
 	_alive = 0
-	_spawn_timer = 1.5  # Initial delay before first spawn
+	_spawn_timer = INITIAL_SPAWN_DELAY
 	wave_started.emit(_queue.size())
 
 func get_alive_count() -> int:
@@ -44,17 +55,17 @@ func get_alive_count() -> int:
 
 func _build_queue(day: int) -> Array[Dictionary]:
 	var q: Array[Dictionary] = []
-	var count := 4 + (day / 4)
+	var count := BASE_ENEMY_COUNT + (day / 4)
 	for i in count:
 		var t: int
-		if day <= 8:
+		if day <= BRUTE_UNLOCK_DAY:
 			t = 0  # SCOUT only
-		elif day <= 20:
-			t = 0 if randf() > 0.25 else 1  # SCOUT + BRUTE
+		elif day <= RAIDER_UNLOCK_DAY:
+			t = 1 if randf() < MID_BRUTE_CHANCE else 0
 		else:
 			var roll := randf()
-			t = 0 if roll < 0.45 else (1 if roll < 0.70 else 2)
-		q.append({ "type": t, "interval": randf_range(1.2, 3.5) })
+			t = 0 if roll < LATE_SCOUT_CAP else (1 if roll < LATE_BRUTE_CAP else 2)
+		q.append({ "type": t, "interval": randf_range(SPAWN_INTERVAL_MIN, SPAWN_INTERVAL_MAX) })
 	return q
 
 func _do_spawn(type: int) -> void:
