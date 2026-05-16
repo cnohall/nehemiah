@@ -34,25 +34,12 @@ func _ready() -> void:
 
 	# Sections are spawned by main.gd after the multiplayer peer is established.
 
-func _spawn_sections_for_blueprints(place_ruins: bool = false) -> void:
+func _spawn_sections_for_blueprints() -> void:
 	if _blocks == null:
 		return
-
-	# Clear old blocks
-	for b in _blocks.get_children():
-		if is_instance_valid(b):
-			b.queue_free()
-
-	# Spawn directly — no RPC. Sections live server-side only.
-	# Client visual state is replicated by each section's own _sync_* RPCs.
 	for pos: Vector3 in _blueprint_positions:
 		var rot = _blueprint_positions[pos]
 		_spawn_section_local(pos, rot)
-
-	if place_ruins:
-		_is_setting_up = true
-		_do_place_starting_ruins()
-		_is_setting_up = false
 
 func _spawn_section_local(pos: Vector3, rot: float) -> void:
 	if _blocks == null:
@@ -100,11 +87,14 @@ func load_section_rpc(day: int) -> void:
 	_blueprint_mgr.init_registry_for_day(day)
 	blocks_for_win = _blueprint_mgr.get_blueprint_count()
 
-	if multiplayer.is_server():
-		_spawn_sections_for_blueprints(true)
-
+	_spawn_sections_for_blueprints()
 	_spawn_towers()
 	blocks_changed.emit(blocks_placed)
+
+	if multiplayer.is_server():
+		_is_setting_up = true
+		_do_place_starting_ruins()
+		_is_setting_up = false
 
 func _spawn_towers() -> void:
 	if _blocks == null:

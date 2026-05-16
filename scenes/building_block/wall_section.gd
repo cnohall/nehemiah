@@ -45,6 +45,7 @@ var completion_percent: float = 0.0:
 			_on_sabotaged()
 
 var _is_completed: bool = false
+var _is_highlighted: bool = false
 
 ## Solid ground-level footprint — always visible even at 0% completion
 var _footprint: MeshInstance3D = null
@@ -215,6 +216,7 @@ func _pop_visual() -> void:
 func _update_wall_color() -> void:
 	if not _wall_mat:
 		return
+	var hi := _is_highlighted and not _is_completed
 	if _is_completed:
 		_wall_mat.albedo_color = COLOR_COMPLETE
 		_wall_mat.emission_enabled = true
@@ -222,18 +224,25 @@ func _update_wall_color() -> void:
 	elif completion_percent >= PHASE_STONE:
 		_wall_mat.albedo_color = COLOR_MORTAR
 		_wall_mat.emission_enabled = true
-		_wall_mat.emission = COLOR_MORTAR * 0.08
+		_wall_mat.emission = COLOR_MORTAR * (0.28 if hi else 0.08)
 	elif completion_percent >= PHASE_WOOD:
 		_wall_mat.albedo_color = COLOR_STONE
 		_wall_mat.emission_enabled = true
-		_wall_mat.emission = COLOR_STONE * 0.06
+		_wall_mat.emission = COLOR_STONE * (0.24 if hi else 0.06)
 	elif completion_percent > 0.0:
 		_wall_mat.albedo_color = COLOR_WOOD
 		_wall_mat.emission_enabled = true
-		_wall_mat.emission = COLOR_WOOD * 0.06
+		_wall_mat.emission = COLOR_WOOD * (0.24 if hi else 0.06)
 	else:
 		_wall_mat.albedo_color = COLOR_EMPTY
-		_wall_mat.emission_enabled = false
+		_wall_mat.emission_enabled = hi
+		_wall_mat.emission = Color(0.55, 0.45, 0.15) * 0.3
+
+func set_highlighted(on: bool) -> void:
+	if _is_highlighted == on:
+		return
+	_is_highlighted = on
+	_update_wall_color()
 
 func get_blocking_material() -> String:
 	# Returns the material type currently preventing further building

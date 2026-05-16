@@ -50,6 +50,10 @@ var _camera: Camera3D = null
 var _last_facing: String = "down"
 var _is_dead: bool = false
 var _exhausted: bool = false
+var _lmb_was_pressed: bool = false
+var _carry_label: Label3D = null
+var _last_carried: MaterialItem = null
+var _highlighted_section: WallSection = null
 var _slinger: Slinger = null
 var _building_mgr: Node = null
 var _stone_sound: AudioStream = null
@@ -69,6 +73,7 @@ func _ready() -> void:
 	_resolve_camera()
 	_setup_footsteps()
 	_building_mgr = get_tree().current_scene.get_node_or_null("BuildingManager")
+	_setup_carry_label()
 
 	if is_multiplayer_authority():
 		_slinger = Slinger.new()
@@ -98,6 +103,18 @@ func _resolve_camera() -> void:
 	if _camera == null:
 		_camera = get_viewport().get_camera_3d()
 
+func _setup_carry_label() -> void:
+	_carry_label = Label3D.new()
+	_carry_label.name = "CarryLabel"
+	_carry_label.position = Vector3(0, 2.0, 0)
+	_carry_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_carry_label.font_size = 26
+	_carry_label.outline_size = 5
+	_carry_label.modulate = Color(0.96, 0.88, 0.60)
+	_carry_label.no_depth_test = true
+	_carry_label.visible = false
+	add_child(_carry_label)
+
 func _setup_footsteps() -> void:
 	_footstep_player = AudioStreamPlayer3D.new()
 	_footstep_player.max_distance = 10.0
@@ -110,6 +127,12 @@ func _setup_footsteps() -> void:
 		_footstep_player.stream = _stone_sound
 
 func _physics_process(delta: float) -> void:
+	if carried_item != _last_carried:
+		_last_carried = carried_item
+		if _carry_label:
+			_carry_label.text = carried_item.material_name if carried_item else ""
+			_carry_label.visible = carried_item != null
+
 	if not is_multiplayer_authority() or _is_dead or ui_blocked:
 		_apply_remote_animation()
 		return
@@ -180,15 +203,27 @@ func _get_isometric_input() -> Vector3:
 # ══════════════════════════════════════════════════════════════════════════════
 
 func _process_building(delta: float) -> void:
+	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var lmb_just := lmb and not _lmb_was_pressed
+	_lmb_was_pressed = lmb
+
 	if not _building_mgr:
 		_emit_wall_needs(-1, -1, -1)
 		return
 
 	var nearest_section = _building_mgr.get_nearest_section(global_position, BUILD_RANGE)
+	var highlight_target: WallSection = nearest_section if (nearest_section and nearest_section.completion_percent < 100.0) else null
+	if highlight_target != _highlighted_section:
+		if is_instance_valid(_highlighted_section):
+			_highlighted_section.set_highlighted(false)
+		_highlighted_section = highlight_target
+		if is_instance_valid(_highlighted_section):
+			_highlighted_section.set_highlighted(true)
 	if nearest_section and nearest_section.completion_percent < 100.0:
-		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		if lmb:
 			if carried_item:
-				nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
+				if lmb_just:
+					nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
 			elif nearest_section.is_ready_to_build():
 				nearest_section.request_build.rpc_id(1, BUILD_RATE * delta)
 		var sn: int = WallSection.STONE_NEEDED  - nearest_section.stone_count
@@ -205,15 +240,6 @@ func _emit_wall_needs(s: int, w: int, m: int) -> void:
 		wall_proximity_changed.emit(s, w, m)
 
 func _handle_interaction() -> void:
-	var nearest_section = null
-	if _building_mgr:
-		nearest_section = _building_mgr.get_nearest_section(global_position, BUILD_RANGE)
-
-	if nearest_section:
-		if carried_item:
-			nearest_section.request_add_material.rpc_id(1, multiplayer.get_unique_id())
-			return
-
 	if carried_item == null:
 		var items = get_tree().get_nodes_in_group("carriables")
 		var best_item: MaterialItem = null
@@ -227,7 +253,6 @@ func _handle_interaction() -> void:
 			request_pickup.rpc_id(1, best_item.get_path())
 			return
 
-	if carried_item == null:
 		var piles = get_tree().get_nodes_in_group("supply_piles")
 		var best_pile: Node3D = null
 		var min_pile_dist = 3.0
@@ -237,9 +262,7 @@ func _handle_interaction() -> void:
 				min_pile_dist = d; best_pile = pile
 		if best_pile:
 			best_pile.request_spawn_material.rpc_id(1, multiplayer.get_unique_id())
-			return
-	elif carried_item != null and nearest_section == null:
-		# Carrying something but no wall section in range — near a pile?
+	else:
 		var piles = get_tree().get_nodes_in_group("supply_piles")
 		for pile in piles:
 			if global_position.distance_to(pile.global_position) < 4.0:

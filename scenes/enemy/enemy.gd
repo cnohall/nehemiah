@@ -64,6 +64,11 @@ func _setup_animation_sync() -> void:
 		config.property_set_replication_mode(anim_path, 1)
 
 func _apply_visuals() -> void:
+	if is_instance_valid(_sprite):
+		_sprite.sprite_frames = EnemySpriteGen.get_frames(mesh_color)
+		_sprite.modulate = Color.WHITE
+		_sprite.play("idle_down")
+
 	if not is_instance_valid(_mesh):
 		return
 	var mat := _mesh.get_surface_override_material(0)

@@ -5,6 +5,8 @@ extends Node3D
 @export var interact_range: float = 3.0
 
 var _material_script = preload("res://scenes/player/material_item.gd")
+var _mat: StandardMaterial3D = null
+var _needed_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("supply_piles")
@@ -41,6 +43,7 @@ func _setup_visuals() -> void:
 			mat.roughness = 0.96
 
 	mesh_inst.material_override = mat
+	_mat = mat
 	add_child(mesh_inst)
 
 	var label := Label3D.new()
@@ -54,6 +57,20 @@ func _setup_visuals() -> void:
 	label.outline_size = 6
 	label.modulate = Color(0.96, 0.88, 0.60)
 	add_child(label)
+
+func set_needed(needed: bool) -> void:
+	if not _mat:
+		return
+	if _needed_tween:
+		_needed_tween.kill()
+		_needed_tween = null
+	if needed:
+		_mat.emission_enabled = true
+		_needed_tween = create_tween().set_loops()
+		_needed_tween.tween_method(func(v: float): _mat.emission = _mat.albedo_color * v, 0.08, 0.40, 0.65)
+		_needed_tween.tween_method(func(v: float): _mat.emission = _mat.albedo_color * v, 0.40, 0.08, 0.65)
+	else:
+		_mat.emission_enabled = false
 
 ## Called by player pressing E near this pile.
 ## caller_id: the peer ID of the requesting player.

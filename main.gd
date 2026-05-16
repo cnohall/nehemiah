@@ -145,7 +145,10 @@ func _connect_signals() -> void:
 	_building_mgr.navigation_changed.connect(_rebake_navigation)
 
 	NetworkManager.lobby_created_success.connect(_on_lobby_created_success)
-	NetworkManager.lobby_joined_success.connect(func(_id: int): _setup_hud())
+	NetworkManager.lobby_joined_success.connect(func(id: int):
+		_setup_hud()
+		_spawn_player(id)
+	)
 	NetworkManager.player_connected.connect(_on_player_connected)
 	NetworkManager.player_disconnected.connect(_on_player_disconnected)
 
@@ -183,7 +186,6 @@ func _begin_dawn() -> void:
 			_city_manager.reset()
 		_building_mgr.load_section_for_day(next_day)
 		_setup_piles()
-		_building_mgr.place_starting_ruins()
 
 		for player in _players.get_children():
 			if player.has_method("respawn"):
@@ -540,6 +542,9 @@ func _on_lobby_created_success(_id: int) -> void:
 
 func _on_player_connected(id: int) -> void:
 	_spawn_player(id)
+	if multiplayer.is_server():
+		var day := maxi(1, _wave_manager.current_wave)
+		_building_mgr.load_section_rpc.rpc_id(id, day)
 
 func _on_player_disconnected(id: int) -> void:
 	if not is_instance_valid(_players):
@@ -563,6 +568,7 @@ func _spawn_player(id: int) -> void:
 		p.stamina_changed.connect(_hud.update_stamina)
 		p.sling_updated.connect(_hud.update_sling)
 		p.wall_proximity_changed.connect(_hud.update_wall_needs)
+		p.wall_proximity_changed.connect(_on_wall_needs_changed)
 		p.damaged.connect(func(amount: float) -> void:
 			shake_camera(clampf(amount * 0.002, 0.04, 0.18), 0.15)
 			if is_instance_valid(_hud):
@@ -575,6 +581,11 @@ func _spawn_player(id: int) -> void:
 					p.respawn(Vector3(0, 1.0, 0))
 			)
 		)
+
+func _on_wall_needs_changed(stone: int, wood: int, mortar: int) -> void:
+	if is_instance_valid(_stone_pile):  _stone_pile.call("set_needed", stone > 0)
+	if is_instance_valid(_wood_pile):   _wood_pile.call("set_needed", wood > 0)
+	if is_instance_valid(_mortar_pile): _mortar_pile.call("set_needed", mortar > 0)
 
 func _on_enemy_spawned(enemy: Node3D) -> void:
 	_enemies.add_child(enemy, true)

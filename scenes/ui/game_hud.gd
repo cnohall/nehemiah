@@ -37,6 +37,7 @@ func _ready() -> void:
 	_create_city_hp_bar()
 	_create_damage_flash()
 	_create_day_label()
+	_create_controls_hint()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_ESCAPE and event.pressed and not event.echo:
@@ -237,6 +238,45 @@ func update_day(wave: int, max_days: int) -> void:
 		return
 	_day_label.text = "Day %d / %d" % [wave, max_days]
 	_day_label.visible = true
+
+func _create_controls_hint() -> void:
+	var panel := PanelContainer.new()
+	panel.anchor_left   = 0.0
+	panel.anchor_right  = 0.0
+	panel.anchor_top    = 1.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left   = 16.0
+	panel.offset_top    = -72.0
+	panel.offset_right  = 220.0
+	panel.offset_bottom = -16.0
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.modulate      = Color(1.0, 1.0, 1.0, 0.70)
+	panel.mouse_filter  = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.06, 0.05, 0.03, 0.88)
+	style.set_border_width_all(1)
+	style.border_color = Color(0.45, 0.36, 0.18, 0.60)
+	style.set_corner_radius_all(4)
+	panel.add_theme_stylebox_override("panel", style)
+	add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 7)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 7)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(margin)
+
+	var label := Label.new()
+	label.text = "[E] Pick up    [G] Drop\n[LMB] Build    [RMB] Aim"
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", Color(0.80, 0.72, 0.50))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var font = load("res://assets/fonts/Cinzel-Regular.ttf")
+	if font:
+		label.add_theme_font_override("font", font)
+	margin.add_child(label)
 
 func _style_quit_button() -> void:
 	var normal := StyleBoxFlat.new()
