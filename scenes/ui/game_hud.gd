@@ -49,6 +49,9 @@ var _last_breaches := 0
 var _last_enemies := 0
 var _controls: Control
 var _controls_tween: Tween
+var _touch: TouchControls
+var _pause_btn: Button
+var _room_chip: Control
 
 func _ready() -> void:
 	_build_player_cards()
@@ -64,6 +67,8 @@ func _ready() -> void:
 		_build_invite_panel()
 	if not NetworkManager.room_code().is_empty():
 		_build_room_code()
+	if Mobile.enabled():
+		_apply_mobile_layout(alerts)
 	breach_pips.count = GameState.MAX_BREACHES
 	day_of.text = "of %d" % GameState.TOTAL_DAYS
 	_last_breaches = GameState.breaches
@@ -92,13 +97,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("pause") or end_screen.visible or GameState.phase == GameState.Phase.STORY:
 		return
 	get_viewport().set_input_as_handled()
+	_toggle_pause()
+
+func _toggle_pause() -> void:
 	if pause_menu.visible:
 		_close_pause()
 	else:
 		pause_menu.show()
 		UiFx.fade_in(pause_menu, 0.16)
 		_refresh_controls()
-		$Root/PauseMenu/Center/Modal/VBox/Resume.grab_focus()
+		if not Mobile.enabled():   # no focus ring on touch
+			$Root/PauseMenu/Center/Modal/VBox/Resume.grab_focus()
 
 func _close_pause() -> void:
 	pause_menu.hide()
@@ -114,7 +123,8 @@ func _leave() -> void:
 func refresh_day(day: int) -> void:
 	var section := GameState.get_section_for_day(day)
 	day_number.text  = str(day)
-	day_section.text = "%s  ·  %s" % [section["name"], section["ref"]]
+	# Phones share one line with the day number: name only
+	day_section.text = ("·  %s" % section["name"]) if Mobile.enabled() 		else "%s  ·  %s" % [section["name"], section["ref"]]
 	circuit.day = day
 
 func _on_progress_changed(_done: int, _total: int) -> void:
@@ -278,12 +288,11 @@ func set_player_color(slot: int, color: Color) -> void:
 # Phones: on-screen stick + buttons instead of the key legend. Player cards move
 # to the top-left (next to the pause button) so the stick's corner stays clear.
 func _build_touch_controls() -> void:
-	var touch := TouchControls.new()
-	touch.blockers = [pause_menu, settings, end_screen]
-	$Root.add_child(touch)
-	$Root.move_child(touch, banner.get_index())
-	players_row.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	players_row.position = Vector2(120, 18)
+	_touch = TouchControls.new()
+	_touch.blockers = [pause_menu, settings, end_screen]
+	_touch.passthrough = [gather]
+	$Root.add_child(_touch)
+	$Root.move_child(_touch, banner.get_index())
 
 func _build_controls_hint() -> void:
 	var panel := PanelContainer.new()
@@ -343,7 +352,7 @@ func _build_player_cards() -> void:
 	for slot in MAX_SLOTS:
 		var root := PanelContainer.new()
 		root.theme_type_variation = &"Card"
-		root.custom_minimum_size = Vector2(190, 0)
+		root.custom_minimum_size = Vector2(120 if Mobile.enabled() else 190, 0)
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		root.visible = false
 		var vb := VBoxContainer.new()
@@ -358,12 +367,12 @@ func _build_player_cards() -> void:
 		top.add_child(swatch)
 		var name_lbl := Label.new()
 		name_lbl.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 2))
-		name_lbl.add_theme_font_size_override("font_size", 15)
+		name_lbl.add_theme_font_size_override("font_size", 12 if Mobile.enabled() else 15)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(name_lbl)
 		var carry := Label.new()
 		carry.theme_type_variation = &"Caption"
-		carry.add_theme_font_size_override("font_size", 14)
+		carry.add_theme_font_size_override("font_size", 12 if Mobile.enabled() else 14)
 		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
 		carry.text = "Downed"
 		carry.visible = false
@@ -384,19 +393,18 @@ func _build_player_cards() -> void:
 
 # ── EOS room code ──────────────────────────────────────────
 
-# The code friends type to join. Bottom-right on PC; top-left under the player
-# cards on touch, where the button cluster owns the corner.
+# The code friends type to join. Bottom-right on PC; a tappable chip on phones.
 func _build_room_code() -> void:
+	if Mobile.enabled():
+		_build_room_chip()
+		return
 	var panel := PanelContainer.new()
 	panel.theme_type_variation = &"Card"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	$Root.add_child(panel)
-	if TouchControls.enabled():
-		panel.position = Vector2(120, 96)
-	else:
-		panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
-		panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-		panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	panel.add_child(hb)
@@ -411,6 +419,161 @@ func _build_room_code() -> void:
 	code.add_theme_font_size_override("font_size", 28)
 	code.add_theme_color_override("font_color", UiStyle.INK)
 	hb.add_child(code)
+
+# Phones: a tappable chip beside the pause button — tap copies the code to paste
+# into a chat app; a check mark confirms.
+func _build_room_chip() -> void:
+	var chip := Button.new()
+	chip.focus_mode = Control.FOCUS_NONE
+	chip.icon = UiIcons.get_icon("copy", 18)
+	chip.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	chip.add_theme_constant_override("h_separation", 10)
+	chip.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 3))
+	chip.add_theme_font_size_override("font_size", 16)
+	for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		chip.add_theme_color_override(c, UiStyle.INK)
+	for c: String in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color", "icon_hover_pressed_color"]:
+		chip.add_theme_color_override(c, UiStyle.INK_SOFT)
+	var pad := Vector2(16, 10)
+	var normal := UiStyle.shadowed(UiStyle.bordered(
+		UiStyle.box(Color(UiStyle.PARCHMENT, 0.92), pad, 24), Color(UiStyle.RULE, 0.6), 1), 6, 0.18, 2.0)
+	chip.add_theme_stylebox_override("normal", normal)
+	chip.add_theme_stylebox_override("hover", normal)
+	chip.add_theme_stylebox_override("focus", UiStyle.empty())
+	var down := UiStyle.bordered(UiStyle.box(UiStyle.PARCHMENT_DEEP, pad, 24), UiStyle.TERRACOTTA, 1)
+	chip.add_theme_stylebox_override("pressed", down)
+	chip.add_theme_stylebox_override("hover_pressed", down)
+	chip.text = NetworkManager.room_code()
+	chip.tooltip_text = "Room code — tap to copy"
+	chip.custom_minimum_size.y = 48
+	chip.pressed.connect(func():
+		DisplayServer.clipboard_set(NetworkManager.room_code())
+		Mobile.haptic()
+		chip.icon = UiIcons.get_icon("check", 18)
+		get_tree().create_timer(1.6).timeout.connect(func():
+			if is_instance_valid(chip):
+				chip.icon = UiIcons.get_icon("copy", 18)))
+	$Root.add_child(chip)
+	_room_chip = chip
+
+# ── Phone layout ───────────────────────────────────────────
+
+# The scene is laid out for a 1080p monitor; on phones the UI is in dp (≈ 923×411
+# landscape), so the plaques trim to essentials and hug the safe-area edges:
+#   [II][ROOM ⧉]        [ Day plaque ]        [Threat]
+#   crew cards                                  (world)
+#   (stick zone)       [ Gather/Begin ]     (action cluster)
+func _apply_mobile_layout(alerts: OffscreenAlerts) -> void:
+	$Root.theme = Mobile.theme
+	var s := Mobile.safe_insets()
+	var left := s.x + 12.0
+	var right := s.z + 12.0
+	var top := s.y + 10.0
+
+	_pause_btn = UiIcons.button("pause", "Menu")
+	_pause_btn.pressed.connect(func():
+		Mobile.haptic()
+		_toggle_pause())
+	$Root.add_child(_pause_btn)
+	$Root.move_child(_pause_btn, banner.get_index())
+	_pause_btn.position = Vector2(left, top)
+	var pass_list: Array[Control] = [gather, _pause_btn]
+	if _room_chip:
+		$Root.move_child(_room_chip, banner.get_index())
+		_room_chip.position = Vector2(left + 58.0, top)
+		pass_list.append(_room_chip)
+	if _touch:
+		_touch.passthrough = pass_list
+
+	# Day — a slim top-centre bar: "DAY 1/52 · Sheep Gate" over today's progress.
+	# The world (wall stages, their labels) lives right under it, so it stays low.
+	var day := $Root/DayPlaque as Control
+	day.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(14, 7), 0.9))
+	day.custom_minimum_size.x = 300
+	day.offset_left = -150
+	day.offset_right = 150
+	day.offset_top = top
+	day.offset_bottom = top
+	$Root/DayPlaque/VBox.add_theme_constant_override("separation", 3)
+	var day_row := $Root/DayPlaque/VBox/DayRow as HBoxContainer
+	day_row.add_theme_constant_override("separation", 6)
+	$Root/DayPlaque/VBox/DayRow/DayWord.add_theme_font_size_override("font_size", 11)
+	day_number.add_theme_font_size_override("font_size", 20)
+	day_of.add_theme_font_size_override("font_size", 11)
+	day_section.reparent(day_row)
+	day_section.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	day_section.add_theme_font_size_override("font_size", 13)
+	circuit.hide()    # the 52-day strip is desktop detail; the day number says it
+	$Root/DayPlaque/VBox/WorkRow/WorkLabel.hide()
+	work_count.add_theme_font_size_override("font_size", 12)
+	work_bar.custom_minimum_size.y = 5
+	phase_label.add_theme_font_size_override("font_size", 11)
+	$Root/DayPlaque/VBox/WorkRow.add_theme_constant_override("separation", 8)
+
+	# Threat — top right, same height as the day bar: enemies, then breach pips
+	threat.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(12, 7), 0.9))
+	threat.custom_minimum_size.x = 150
+	threat.offset_left = -(150 + right)
+	threat.offset_right = -right
+	threat.offset_top = top
+	threat.offset_bottom = top
+	$Root/ThreatPlaque/VBox.add_theme_constant_override("separation", 3)
+	enemy_count.add_theme_font_size_override("font_size", 20)
+	$Root/ThreatPlaque/VBox/Rule.hide()
+	$Root/ThreatPlaque/VBox/BreachRow.hide()   # the pips carry the count
+	breach_pips.custom_minimum_size.y = 12
+	breach_pips.tooltip_text = "City breaches"
+
+	# Crew — a column under the pause button, above the thumb stick
+	var crew := VBoxContainer.new()
+	crew.add_theme_constant_override("separation", 6)
+	crew.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$Root.add_child(crew)
+	$Root.move_child(crew, players_row.get_index())
+	for card in players_row.get_children():
+		card.reparent(crew)
+	crew.position = Vector2(left, top + 60.0)
+
+	# Gather — bottom centre, between the stick and the action cluster
+	gather.custom_minimum_size.x = 300
+	gather.offset_left = -150
+	gather.offset_right = 150
+	gather.offset_bottom = -(s.w + 14.0)
+	gather.offset_top = gather.offset_bottom
+	$Root/GatherPanel/VBox.add_theme_constant_override("separation", 4)
+	$Root/GatherPanel/VBox/Eyebrow.hide()   # the day bar already says it
+
+	# Day banner — below the plaques, smaller type
+	banner.anchor_top = 0.3
+	banner.anchor_bottom = 0.3
+	banner.offset_bottom = 96
+	banner_title.add_theme_font_size_override("font_size", 32)
+	banner_sub.add_theme_font_size_override("font_size", 15)
+	for n: Control in [$Root/Banner/VBox/TitleRow/RuleL, $Root/Banner/VBox/TitleRow/RuleR]:
+		n.custom_minimum_size.x = 56
+	$Root/Banner/VBox/TitleRow.add_theme_constant_override("separation", 16)
+
+	# End screen
+	var vb := $Root/EndScreen/Center/VBox as VBoxContainer
+	vb.custom_minimum_size.x = 560
+	vb.add_theme_constant_override("separation", 8)
+	vb.get_node("Eyebrow").add_theme_font_size_override("font_size", 12)
+	vb.get_node("Title").add_theme_font_size_override("font_size", 40)
+	vb.get_node("Message").add_theme_font_size_override("font_size", 16)
+	vb.get_node("Stats").add_theme_constant_override("separation", 40)
+	vb.get_node("StatsGap").custom_minimum_size.y = 6
+	vb.get_node("ButtonGap").custom_minimum_size.y = 8
+	vb.get_node("Rule").custom_minimum_size.x = 260
+
+	# Game menu — narrower
+	$Root/PauseMenu/Center/Modal.custom_minimum_size.x = 340
+	$Root/PauseMenu/Center/Modal/VBox/Hint.custom_minimum_size.x = 280
+	$Root/PauseMenu/Center/Modal/VBox.add_theme_constant_override("separation", 10)
+
+	# Edge pointers stay clear of the plaques and the action cluster
+	alerts.margin_side = 40.0 + maxf(s.x, s.z)
+	alerts.margin_top = top + 90.0
+	alerts.margin_bottom = 60.0 + s.w
 
 # ── Steam invite ───────────────────────────────────────────
 

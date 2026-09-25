@@ -5,6 +5,8 @@ extends RefCounted
 # tools/build_theme.gd saves the Theme to assets/ui/theme.tres, which project.godot
 # uses as the global GUI theme — edit tokens here, then re-run the tool.
 #   Godot --headless --path . --script res://tools/build_theme.gd
+# Phones build a second variant at runtime (build_theme(true), set on the root window
+# by Mobile): sizes in dp/sp with 48dp touch targets. Same palette, same identity.
 
 # ── Palette ────────────────────────────────────────────────
 
@@ -80,15 +82,15 @@ static func empty(pad := Vector2.ZERO) -> StyleBoxEmpty:
 
 # ── Theme ──────────────────────────────────────────────────
 
-static func build_theme() -> Theme:
+static func build_theme(mobile := false) -> Theme:
 	var t := Theme.new()
 	t.default_font = SPECTRAL
-	t.default_font_size = 18
+	t.default_font_size = 16 if mobile else 18
 
-	_labels(t)
-	_buttons(t)
-	_panels(t)
-	_inputs(t)
+	_labels(t, mobile)
+	_buttons(t, mobile)
+	_panels(t, mobile)
+	_inputs(t, mobile)
 	return t
 
 static func _label(t: Theme, type: String, font: Font, size: int, color: Color) -> void:
@@ -97,15 +99,16 @@ static func _label(t: Theme, type: String, font: Font, size: int, color: Color) 
 	t.set_font_size("font_size", type, size)
 	t.set_color("font_color", type, color)
 
-static func _labels(t: Theme) -> void:
+static func _labels(t: Theme, m: bool) -> void:
 	t.set_color("font_color", "Label", INK)
-	_label(t, "Display",  tracked(CINZEL_XBOLD, 10), 124, INK)
-	_label(t, "Heading",  tracked(CINZEL_BOLD, 3),   30,  INK)
-	_label(t, "Numeral",  CINZEL_BOLD,               34,  INK)
-	_label(t, "Eyebrow",  tracked(CINZEL_SEMI, 4),   13,  INK_MUTED)
-	_label(t, "Caption",  SPECTRAL_ITALIC,           16,  INK_SOFT)
-	_label(t, "Body",     SPECTRAL,                  17,  INK_SOFT)
-	_label(t, "Verse",    SPECTRAL_ITALIC,           17,  INK_SOFT)
+	# Phone sizes follow Material's type scale (body 14–16sp, labels ≥ 12sp)
+	_label(t, "Display",  tracked(CINZEL_XBOLD, 6 if m else 10), 76 if m else 124, INK)
+	_label(t, "Heading",  tracked(CINZEL_BOLD, 3),   24 if m else 30,  INK)
+	_label(t, "Numeral",  CINZEL_BOLD,               26 if m else 34,  INK)
+	_label(t, "Eyebrow",  tracked(CINZEL_SEMI, 3 if m else 4), 12 if m else 13, INK_MUTED)
+	_label(t, "Caption",  SPECTRAL_ITALIC,           14 if m else 16,  INK_SOFT)
+	_label(t, "Body",     SPECTRAL,                  15 if m else 17,  INK_SOFT)
+	_label(t, "Verse",    SPECTRAL_ITALIC,           15 if m else 17,  INK_SOFT)
 
 static func _button_colors(t: Theme, type: String, normal: Color, hover: Color, pressed: Color, disabled: Color) -> void:
 	t.set_color("font_color", type, normal)
@@ -130,32 +133,50 @@ static func _focus_ring(radius := 3) -> StyleBoxFlat:
 	s.set_expand_margin_all(3)
 	return s
 
-static func _buttons(t: Theme) -> void:
-	# Primary (also the plain Button default, so a stray Button still looks at home)
-	var pad := Vector2(28, 12)
-	var normal  := bordered(box(TERRACOTTA, pad), TERRACOTTA_DEEP, 0, 3)
-	var hover   := bordered(box(TERRACOTTA.lightened(0.08), pad), TERRACOTTA_DEEP, 0, 3)
-	var pressed := box(TERRACOTTA_DEEP, pad)
+static func _buttons(t: Theme, m: bool) -> void:
+	# Primary (also the plain Button default, so a stray Button still looks at home).
+	# Phones: 14dp vertical pad + 15sp text + lip ≈ 48dp, Material's minimum target.
+	var pad := Vector2(24, 14) if m else Vector2(28, 12)
+	var r := 4 if m else 2
+	var normal  := bordered(box(TERRACOTTA, pad, r), TERRACOTTA_DEEP, 0, 3)
+	var hover   := bordered(box(TERRACOTTA.lightened(0.08), pad, r), TERRACOTTA_DEEP, 0, 3)
+	var pressed := box(TERRACOTTA_DEEP, pad, r)
 	pressed.border_width_top = 3                  # pressed into the stone
 	pressed.border_color = Color(DUSK, 0.35)
-	var disabled := bordered(box(Color(RULE, 0.55), pad), Color(RULE, 0.8), 0, 3)
+	var disabled := bordered(box(Color(RULE, 0.55), pad, r), Color(RULE, 0.8), 0, 3)
 	for type: String in ["Button", "PrimaryButton"]:
 		if type != "Button":
 			t.set_type_variation(type, "Button")
 		_button_styles(t, type, normal, hover, pressed, disabled, _focus_ring())
 		_button_colors(t, type, CREAM, Color.WHITE, CREAM, Color(CREAM, 0.8))
 		t.set_font("font", type, tracked(CINZEL_BOLD, 2))
-		t.set_font_size("font_size", type, 17)
+		t.set_font_size("font_size", type, 15 if m else 17)
 
-	# Ghost — secondary actions
+	# Ghost — secondary actions. Phones get a parchment fill: an outline alone
+	# vanishes over bright sand.
 	t.set_type_variation("GhostButton", "Button")
-	var g_normal := bordered(box(Color(0, 0, 0, 0), pad), Color(RULE, 0.9), 1)
-	var g_hover  := bordered(box(Color(TERRACOTTA, 0.07), pad), TERRACOTTA, 1)
-	var g_press  := bordered(box(Color(TERRACOTTA, 0.14), pad), TERRACOTTA_DEEP, 1)
+	var g_pad := pad + Vector2(0, 1.5) if m else pad
+	var g_normal := bordered(box(Color(PARCHMENT, 0.8) if m else Color(0, 0, 0, 0), g_pad, r), Color(RULE, 0.9), 1)
+	var g_hover  := bordered(box(Color(TERRACOTTA, 0.07), g_pad, r), TERRACOTTA, 1)
+	var g_press  := bordered(box(Color(TERRACOTTA, 0.14), g_pad, r), TERRACOTTA_DEEP, 1)
 	_button_styles(t, "GhostButton", g_normal, g_hover, g_press, g_normal, _focus_ring())
 	_button_colors(t, "GhostButton", INK_SOFT, TERRACOTTA, TERRACOTTA_DEEP, Color(INK_MUTED, 0.6))
 	t.set_font("font", "GhostButton", tracked(CINZEL_BOLD, 2))
-	t.set_font_size("font_size", "GhostButton", 16)
+	t.set_font_size("font_size", "GhostButton", 15 if m else 16)
+
+	# Icon-only (pause, settings): round parchment disc — 48dp with a 24dp glyph
+	t.set_type_variation("IconButton", "Button")
+	var i_normal := shadowed(bordered(box(Color(PARCHMENT, 0.92), Vector2(12, 12), 24), Color(RULE, 0.6), 1), 6, 0.18, 2.0)
+	var i_press  := bordered(box(PARCHMENT_DEEP, Vector2(12, 12), 24), TERRACOTTA, 1)
+	_button_styles(t, "IconButton", i_normal, i_normal, i_press, i_normal, _focus_ring(24))
+	for c: String in ["icon_normal_color", "icon_hover_color", "icon_focus_color", "icon_hover_pressed_color"]:
+		t.set_color(c, "IconButton", INK_SOFT)
+	t.set_color("icon_pressed_color", "IconButton", TERRACOTTA_DEEP)
+	# Flat variant for sheet headers — no disc until pressed
+	t.set_type_variation("FlatIconButton", "IconButton")
+	var f_normal := box(Color(0, 0, 0, 0), Vector2(12, 12), 24)
+	_button_styles(t, "FlatIconButton", f_normal, box(Color(TERRACOTTA, 0.08), Vector2(12, 12), 24),
+		box(Color(TERRACOTTA, 0.16), Vector2(12, 12), 24), f_normal, _focus_ring(24))
 
 	# Title-screen list entry: bare text; hover/focus lays a terracotta bookmark down the left
 	t.set_type_variation("MenuItem", "Button")
@@ -174,23 +195,24 @@ static func _buttons(t: Theme) -> void:
 
 	# Segmented toggle (settings choices)
 	t.set_type_variation("Segment", "Button")
-	var s_pad := Vector2(18, 9)
+	var s_pad := Vector2(14, 13) if m else Vector2(18, 9)
 	var s_normal := bordered(box(Color(PARCHMENT_DEEP, 0.55), s_pad), Color(RULE, 0.7), 1)
 	var s_hover  := bordered(box(Color(PARCHMENT_DEEP, 0.95), s_pad), TERRACOTTA, 1)
 	var s_on     := bordered(box(TERRACOTTA, s_pad), TERRACOTTA_DEEP, 1)
 	_button_styles(t, "Segment", s_normal, s_hover, s_on, s_normal, _focus_ring())
 	_button_colors(t, "Segment", INK_SOFT, TERRACOTTA_DEEP, CREAM, INK_MUTED)
 	t.set_font("font", "Segment", tracked(CINZEL_SEMI, 2))
-	t.set_font_size("font_size", "Segment", 14)
+	t.set_font_size("font_size", "Segment", 13 if m else 14)
 
-static func _panels(t: Theme) -> void:
-	t.set_stylebox("panel", "PanelContainer", plaque())
+static func _panels(t: Theme, m: bool) -> void:
+	var pl := plaque(Vector2(14, 9)) if m else plaque()
+	t.set_stylebox("panel", "PanelContainer", pl)
 	t.set_type_variation("Plaque", "PanelContainer")
-	t.set_stylebox("panel", "Plaque", plaque())
+	t.set_stylebox("panel", "Plaque", pl)
 	t.set_type_variation("Card", "PanelContainer")
-	t.set_stylebox("panel", "Card", plaque(Vector2(14, 10), 0.92))
+	t.set_stylebox("panel", "Card", plaque(Vector2(10, 7) if m else Vector2(14, 10), 0.92))
 	t.set_type_variation("Modal", "PanelContainer")
-	var modal := bordered(box(PARCHMENT, Vector2(44, 38), 4), Color(RULE, 0.6), 1, 4)
+	var modal := bordered(box(PARCHMENT, Vector2(28, 22) if m else Vector2(44, 38), 6 if m else 4), Color(RULE, 0.6), 1, 4)
 	t.set_stylebox("panel", "Modal", shadowed(modal, 36, 0.4, 10.0))
 
 	t.set_stylebox("panel", "TooltipPanel", bordered(box(Color(DUSK, 0.94), Vector2(10, 6)), Color(GOLD, 0.4), 1))
@@ -198,10 +220,11 @@ static func _panels(t: Theme) -> void:
 	t.set_font("font", "TooltipLabel", SPECTRAL)
 	t.set_font_size("font_size", "TooltipLabel", 15)
 
-static func _inputs(t: Theme) -> void:
+static func _inputs(t: Theme, m: bool) -> void:
 	# LineEdit — a writing well pressed into the parchment
-	var le := bordered(box(Color(CREAM, 0.9), Vector2(16, 11)), Color(RULE, 0.9), 1, 2)
-	var le_focus := bordered(box(CREAM, Vector2(16, 11)), TERRACOTTA, 1, 2)
+	var le_pad := Vector2(14, 12) if m else Vector2(16, 11)
+	var le := bordered(box(Color(CREAM, 0.9), le_pad), Color(RULE, 0.9), 1, 2)
+	var le_focus := bordered(box(CREAM, le_pad), TERRACOTTA, 1, 2)
 	t.set_stylebox("normal", "LineEdit", le)
 	t.set_stylebox("focus", "LineEdit", le_focus)
 	t.set_stylebox("read_only", "LineEdit", le)
@@ -222,19 +245,24 @@ static func _inputs(t: Theme) -> void:
 	t.set_stylebox("background", "ProgressBar", track)
 	t.set_stylebox("fill", "ProgressBar", fill)
 
-	# HSlider
-	var rail := box(Color(DUSK, 0.18), Vector2(0, 3), 2)
-	var rail_fill := box(TERRACOTTA, Vector2(0, 3), 2)
+	# HSlider — phones: thicker rail, 28dp thumb (the 48dp target comes from row height)
+	var rail_h := 4 if m else 3
+	var rail := box(Color(DUSK, 0.18), Vector2(0, rail_h), 3)
+	var rail_fill := box(TERRACOTTA, Vector2(0, rail_h), 3)
 	t.set_stylebox("slider", "HSlider", rail)
 	t.set_stylebox("grabber_area", "HSlider", rail_fill)
 	t.set_stylebox("grabber_area_highlight", "HSlider", rail_fill)
-	t.set_icon("grabber", "HSlider", _disc(20, CREAM, TERRACOTTA))
-	t.set_icon("grabber_highlight", "HSlider", _disc(20, Color.WHITE, TERRACOTTA_DEEP))
-	t.set_icon("grabber_disabled", "HSlider", _disc(20, PARCHMENT_DEEP, RULE))
+	var d := 28 if m else 20
+	t.set_icon("grabber", "HSlider", _disc(d, CREAM, TERRACOTTA))
+	t.set_icon("grabber_highlight", "HSlider", _disc(d, Color.WHITE, TERRACOTTA_DEEP))
+	t.set_icon("grabber_disabled", "HSlider", _disc(d, PARCHMENT_DEEP, RULE))
 	t.set_stylebox("focus", "HSlider", _focus_ring(4))
 
-## Filled circle with a ring — slider grabber
-static func _disc(d: int, fill: Color, ring: Color) -> ImageTexture:
+## Filled circle with a ring — slider grabber. Rasterised at device pixels and
+## shown at `size` UI units, so it stays round under the phone UI scale.
+static func _disc(size: int, fill: Color, ring: Color) -> ImageTexture:
+	var k := UiIcons.density()
+	var d := roundi(size * k)
 	var img := Image.create_empty(d, d, false, Image.FORMAT_RGBA8)
 	var c := (d - 1) * 0.5
 	var r := d * 0.5 - 1.0
@@ -242,6 +270,8 @@ static func _disc(d: int, fill: Color, ring: Color) -> ImageTexture:
 		for x in d:
 			var dist := Vector2(x - c, y - c).length()
 			var a := clampf(r - dist + 0.5, 0.0, 1.0)
-			var col := ring if dist > r - 2.5 else fill
+			var col := ring if dist > r - 2.5 * k else fill
 			img.set_pixel(x, y, Color(col, col.a * a))
-	return ImageTexture.create_from_image(img)
+	var tex := ImageTexture.create_from_image(img)
+	tex.set_size_override(Vector2i(size, size))
+	return tex

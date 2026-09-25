@@ -34,6 +34,7 @@ const COLORS := {
 
 func _ready() -> void:
 	count_label.text = kind.capitalize() + ("s" if kind == "beam" else "")
+	Mobile.world_text(count_label)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(kind) + hash(name)
 	if rubble_stock > 0:

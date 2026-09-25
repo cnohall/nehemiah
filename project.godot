@@ -19,6 +19,7 @@ config/description="Co-op 2-4 player HD-2D isometric action-strategy, 445 BC Jer
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
+boot_splash/bg_color=Color(0.105, 0.068, 0.044, 1)
 
 [autoload]
 
@@ -36,6 +37,7 @@ NetworkManager="*res://scenes/network_manager/network_manager.gd"
 GameState="*res://scenes/game_state/game_state.gd"
 Sfx="*res://scenes/sfx/sfx.gd"
 Settings="*res://scenes/settings/settings.gd"
+Mobile="*res://scenes/mobile/mobile.gd"
 
 [display]
 
@@ -44,6 +46,7 @@ window/size/viewport_height=1080
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=4
+window/size/mode.mobile=3
 
 [dotnet]
 

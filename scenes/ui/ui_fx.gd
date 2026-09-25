@@ -25,3 +25,12 @@ static func rise_in(node: Control, offset := Vector2(0, 14), dur := 0.45, delay 
 		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tw.tween_property(node, "modulate:a", 1.0, dur * 0.8).set_delay(delay)
 	return tw
+
+## Short horizontal shake — "that didn't work" (wrong room code)
+static func shake(node: Control, amount := 10.0) -> void:
+	var home := node.position
+	var tw := node.create_tween()
+	for i in 4:
+		var d := amount * (1.0 - i / 4.0) * (1 if i % 2 == 0 else -1)
+		tw.tween_property(node, "position:x", home.x + d, 0.05)
+	tw.tween_property(node, "position:x", home.x, 0.05)

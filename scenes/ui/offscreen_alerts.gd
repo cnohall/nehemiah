@@ -9,9 +9,10 @@ extends Control
 const HIT_WINDOW   := 2500    # ms a wall counts as "under attack" after its last hit
 const REALERT_MS   := 8000    # a wall that stays under fire rings again after this
 # px from each screen edge to the pointer's centre — top/bottom clear the HUD plaques
-const MARGIN_SIDE   := 64.0
-const MARGIN_TOP    := 205.0
-const MARGIN_BOTTOM := 125.0
+# (the phone layout sets its own)
+var margin_side   := 64.0
+var margin_top    := 205.0
+var margin_bottom := 125.0
 const ONSCREEN_PAD := 40.0    # a target this close inside the edge counts as visible
 const RADIUS       := 22.0
 const TIP          := 14.0    # how far the arrow tip sticks out past the disc
@@ -61,7 +62,7 @@ func _draw() -> void:
 # Disc pinned to the screen edge, arrow pointing at the off-screen target
 func _pointer(target: Vector2, color: Color, text: String, pulse: float) -> void:
 	var size := get_viewport_rect().size
-	var box := Rect2(MARGIN_SIDE, MARGIN_TOP, size.x - MARGIN_SIDE * 2.0, size.y - MARGIN_TOP - MARGIN_BOTTOM)
+	var box := Rect2(margin_side, margin_top, size.x - margin_side * 2.0, size.y - margin_top - margin_bottom)
 	var centre := box.get_center()
 	var dir := (target - centre).normalized()
 	# Push out from the box centre until we hit its edge

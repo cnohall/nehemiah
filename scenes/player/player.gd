@@ -780,6 +780,7 @@ func _toast(text: String) -> void:
 	l.font = _FONT
 	l.font_size = 34
 	l.pixel_size = 0.01
+	Mobile.world_text(l)
 	l.outline_size = 10
 	l.modulate = Color(0.98, 0.95, 0.88)
 	l.outline_modulate = Color(0.20, 0.14, 0.08)

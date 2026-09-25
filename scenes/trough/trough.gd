@@ -172,6 +172,7 @@ func _build_visuals() -> void:
 	_label.font = _FONT
 	_label.font_size = 36
 	_label.pixel_size = 0.01
+	Mobile.world_text(_label)
 	_label.outline_size = 10
 	_label.modulate = Color(0.98, 0.95, 0.88)
 	_label.outline_modulate = Color(0.20, 0.14, 0.08)

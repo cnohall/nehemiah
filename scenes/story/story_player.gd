@@ -35,6 +35,8 @@ var _hint: Label
 var _wait_row: Control
 var _wait_label: Label
 var _start_now: Button
+var _skip: Button
+var _mobile := false
 
 var _slide_tween: Tween
 var _type_tween: Tween
@@ -42,6 +44,7 @@ var _drift_tween: Tween
 
 func _ready() -> void:
 	layer = 20
+	_mobile = Mobile.enabled()
 	_build()
 	_root.hide()
 
@@ -55,6 +58,8 @@ func play(slides: Array) -> void:
 	_waiting = 0
 	_wait_row.hide()
 	_hint.show()
+	if _skip:
+		_skip.show()
 	_root.show()
 	UiFx.fade_in(_root, 0.7)
 	_advance()
@@ -84,6 +89,11 @@ func _input(event: InputEvent) -> void:
 		return
 	var click: bool = event is InputEventMouseButton and event.pressed \
 		and event.button_index == MOUSE_BUTTON_LEFT
+	if click and _skip and _skip.visible and _skip.get_global_rect().has_point(event.position):
+		get_viewport().set_input_as_handled()
+		Mobile.haptic()
+		_finish()
+		return
 	if click or event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
 		_advance()
@@ -176,6 +186,8 @@ func _finish() -> void:
 		_type_tween.kill()
 	_reveal_all()
 	_hint.hide()
+	if _skip:
+		_skip.hide()
 	_refresh_wait()
 	finished.emit()
 
@@ -201,6 +213,8 @@ func _set_label(l: Label, value: String) -> void:
 func _build() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	if _mobile:
+		_root.theme = Mobile.theme   # themes don't cross the CanvasLayer
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 
@@ -232,29 +246,32 @@ func _build() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side: String in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 140)
-	margin.add_theme_constant_override("margin_top", 80)
-	margin.add_theme_constant_override("margin_bottom", 64)
+	# Phones: dp-sized margins inside the safe area, a narrower measure
+	var ins := Mobile.safe_insets() if _mobile else Vector4.ZERO
+	margin.add_theme_constant_override("margin_left", int(ins.x + (48 if _mobile else 140)))
+	margin.add_theme_constant_override("margin_right", int(ins.z + (48 if _mobile else 140)))
+	margin.add_theme_constant_override("margin_top", int(ins.y + (24 if _mobile else 80)))
+	margin.add_theme_constant_override("margin_bottom", int(ins.w + (20 if _mobile else 64)))
 	_root.add_child(margin)
 
 	var column := VBoxContainer.new()
 	column.alignment = BoxContainer.ALIGNMENT_END
-	column.add_theme_constant_override("separation", 28)
+	column.add_theme_constant_override("separation", 14 if _mobile else 28)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(column)
 
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 10)
-	content.custom_minimum_size.x = TEXT_WIDTH
+	content.add_theme_constant_override("separation", 6 if _mobile else 10)
+	content.custom_minimum_size.x = 600.0 if _mobile else TEXT_WIDTH
 	content.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(content)
 	_content = content
 
-	_eyebrow = _label(&"Eyebrow", 15, UiStyle.GOLD)
+	var m := _mobile
+	_eyebrow = _label(&"Eyebrow", 12 if m else 15, UiStyle.GOLD)
 	content.add_child(_eyebrow)
-	_title = _label(&"Heading", 58, UiStyle.CREAM)
+	_title = _label(&"Heading", 32 if m else 58, UiStyle.CREAM)
 	_title.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 5))
 	content.add_child(_title)
 	var rule := ColorRect.new()
@@ -262,20 +279,20 @@ func _build() -> void:
 	rule.custom_minimum_size = Vector2(72, 2)
 	rule.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	content.add_child(rule)
-	_text = _label(&"Body", 26, Color(UiStyle.CREAM, 0.92))
-	_text.add_theme_constant_override("line_spacing", 6)
+	_text = _label(&"Body", 17 if m else 26, Color(UiStyle.CREAM, 0.92))
+	_text.add_theme_constant_override("line_spacing", 3 if m else 6)
 	content.add_child(_text)
-	_verse = _label(&"Verse", 28, UiStyle.PARCHMENT)
-	_verse.add_theme_constant_override("line_spacing", 6)
+	_verse = _label(&"Verse", 18 if m else 28, UiStyle.PARCHMENT)
+	_verse.add_theme_constant_override("line_spacing", 3 if m else 6)
 	content.add_child(_verse)
-	_ref = _label(&"Eyebrow", 14, Color(UiStyle.GOLD, 0.85))
+	_ref = _label(&"Eyebrow", 12 if m else 14, Color(UiStyle.GOLD, 0.85))
 	content.add_child(_ref)
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 24)
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(footer)
-	_page = _label(&"Eyebrow", 13, Color(UiStyle.CREAM, 0.5), false)
+	_page = _label(&"Eyebrow", 12 if m else 13, Color(UiStyle.CREAM, 0.5), false)
 	footer.add_child(_page)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -285,7 +302,7 @@ func _build() -> void:
 	_wait_row = HBoxContainer.new()
 	_wait_row.add_theme_constant_override("separation", 20)
 	footer.add_child(_wait_row)
-	_wait_label = _label(&"Caption", 18, Color(UiStyle.CREAM, 0.75), false)
+	_wait_label = _label(&"Caption", 14 if m else 18, Color(UiStyle.CREAM, 0.75), false)
 	_wait_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_wait_row.add_child(_wait_label)
 	_start_now = Button.new()
@@ -295,9 +312,28 @@ func _build() -> void:
 	_start_now.pressed.connect(start_now_requested.emit)
 	_wait_row.add_child(_start_now)
 
-	_hint = _label(&"Eyebrow", 13, Color(UiStyle.CREAM, 0.55), false)
-	_hint.text = "E · Click   Continue          Esc   Skip"
+	_hint = _label(&"Eyebrow", 12 if m else 13, Color(UiStyle.CREAM, 0.55), false)
+	_hint.text = "Tap to continue" if m else "E · Click   Continue          Esc   Skip"
 	footer.add_child(_hint)
+
+	# Touch has no Esc: a real Skip target, top-right (back gesture also skips)
+	if m:
+		_skip = Button.new()
+		_skip.theme_type_variation = &"GhostButton"
+		_skip.text = "Skip"
+		_skip.focus_mode = Control.FOCUS_NONE
+		var ghost := UiStyle.bordered(UiStyle.box(Color(UiStyle.DUSK, 0.35), Vector2(20, 13), 24), Color(UiStyle.CREAM, 0.35), 1)
+		for st: String in ["normal", "hover", "pressed", "hover_pressed"]:
+			_skip.add_theme_stylebox_override(st, ghost)
+		for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+			_skip.add_theme_color_override(c, Color(UiStyle.CREAM, 0.85))
+		_root.add_child(_skip)
+		_skip.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_skip.offset_left = -(100 + ins.z)
+		_skip.offset_right = -(20 + ins.z)
+		_skip.offset_top = 16 + ins.y
+		_skip.offset_bottom = 64 + ins.y
+		_skip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 
 func _label(variation: StringName, font_size: int, color: Color, wrap := true) -> Label:
 	var l := Label.new()

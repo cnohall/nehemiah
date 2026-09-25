@@ -7,12 +7,14 @@ extends Control
 #
 # Left half: floating stick (appears under the thumb). Right corner: button cluster.
 # Enabled on mobile builds, or on desktop with `-- --touch` (mouse emulates one finger).
+# Sizes are dp (see Mobile): every button is at least a 52dp target.
 
-const STICK_RADIUS := 120.0
-const KNOB_RADIUS  := 52.0
+const STICK_RADIUS := 58.0
+const KNOB_RADIUS  := 26.0
 const STICK_ZONE   := 0.45     # left fraction of the screen that spawns the stick
 const AIM_DEADZONE := 0.25     # sling drag shorter than this = auto-aim
-const EDGE         := 36.0     # gap from the (safe-area) screen edge
+const EDGE         := 18.0     # gap from the (safe-area) screen edge
+const IDLE_ALPHA   := 0.62     # resting buttons stay out of the way of the world
 
 ## Sling held: player aims from aim_vec (screen-space, length 0..1) instead of the mouse
 static var aiming := false
@@ -20,6 +22,9 @@ static var aim_vec := Vector2.ZERO
 
 # Controls that, while visible, own the screen (pause menu, end screen …)
 var blockers: Array[Control] = []
+# Real GUI controls on top of the stick zone (pause, room code, Begin …): touches
+# landing on them are left for the GUI instead of spawning the stick
+var passthrough: Array[Control] = []
 
 # name → { action, pos, r, label }. Laid out in _layout().
 var _buttons := {}
@@ -37,7 +42,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not OS.has_feature("mobile"):
 		Input.emulate_touch_from_mouse = true
-	get_viewport().size_changed.connect(_layout)
+	get_viewport().size_changed.connect(_layout.call_deferred)
 	_layout()
 
 func _exit_tree() -> void:
@@ -59,13 +64,13 @@ func _layout() -> void:
 	var vp := get_viewport_rect().size
 	_safe = _safe_rect(vp)
 	var br := _safe.end - Vector2(EDGE, EDGE)
-	# Sling is the thumb's home: biggest, in the corner. The rest fan around it.
+	# Sling is the thumb's home: biggest, in the corner. The rest fan around it on
+	# an arc the thumb sweeps without re-gripping.
 	_buttons = {
-		sling    = { action = "throw_charge", pos = br - Vector2(120, 120), r = 96.0, label = "Sling" },
-		interact = { action = "interact",     pos = br - Vector2(330, 70),  r = 74.0, label = "Carry" },
-		dash     = { action = "dash",         pos = br - Vector2(90, 330),  r = 62.0, label = "Dash" },
-		drop     = { action = "drop",         pos = br - Vector2(290, 270), r = 50.0, label = "Drop" },
-		pause    = { action = "pause",        pos = _safe.position + Vector2(EDGE + 30, EDGE + 30), r = 34.0, label = "II" },
+		sling    = { action = "throw_charge", pos = br - Vector2(50, 54),   r = 46.0, label = "Sling", icon = "sling" },
+		interact = { action = "interact",     pos = br - Vector2(160, 36),  r = 36.0, label = "Carry", icon = "carry" },
+		dash     = { action = "dash",         pos = br - Vector2(36, 164),  r = 30.0, label = "Dash",  icon = "dash" },
+		drop     = { action = "drop",         pos = br - Vector2(138, 128), r = 26.0, label = "Drop",  icon = "drop" },
 	}
 
 # Display safe area (notch, rounded corners) mapped into viewport coordinates
@@ -92,6 +97,9 @@ func _input(event: InputEvent) -> void:
 		_touch_move(event.index, event.position)
 
 func _touch_down(index: int, pos: Vector2) -> void:
+	for c in passthrough:
+		if is_instance_valid(c) and c.is_visible_in_tree() and c.get_global_rect().grow(4.0).has_point(pos):
+			return
 	for name: String in _buttons:
 		var b: Dictionary = _buttons[name]
 		# Generous hit area — thumbs land off-centre
@@ -101,6 +109,7 @@ func _touch_down(index: int, pos: Vector2) -> void:
 				aiming = true
 				aim_vec = Vector2.ZERO
 			_send(b.action, true)
+			Mobile.haptic()
 			get_viewport().set_input_as_handled()
 			return
 	if pos.x < _safe.position.x + _safe.size.x * STICK_ZONE and not _touches.values().has("stick"):
@@ -169,23 +178,38 @@ func _send(action: String, pressed: bool, strength := 1.0) -> void:
 # ── Drawing ────────────────────────────────────────────────
 
 func _draw() -> void:
-	var font := UiStyle.CINZEL_SEMI
+	var font := UiStyle.tracked(UiStyle.CINZEL_BOLD, 1)
 	var held: Array = _touches.values()
 	if held.has("stick"):
-		draw_circle(_stick_center, STICK_RADIUS, Color(UiStyle.DUSK, 0.22))
-		draw_arc(_stick_center, STICK_RADIUS, 0, TAU, 64, Color(UiStyle.CREAM, 0.55), 3.0, true)
-		draw_circle(_stick_center + _stick_vec * STICK_RADIUS, KNOB_RADIUS, Color(UiStyle.PARCHMENT, 0.85))
+		draw_circle(_stick_center, STICK_RADIUS, Color(UiStyle.DUSK, 0.2))
+		draw_arc(_stick_center, STICK_RADIUS, 0, TAU, 64, Color(UiStyle.CREAM, 0.6), 2.0, true)
+		var knob := _stick_center + _stick_vec * STICK_RADIUS
+		draw_circle(knob + Vector2(0, 2), KNOB_RADIUS, Color(UiStyle.DUSK, 0.18))
+		draw_circle(knob, KNOB_RADIUS, Color(UiStyle.PARCHMENT, 0.92))
+	# Sling drag: aim line first, so the button sits over its root
+	if aiming and aim_vec != Vector2.ZERO:
+		var p: Vector2 = _buttons.sling.pos
+		var tip: Vector2 = p + aim_vec * STICK_RADIUS * 1.6
+		draw_line(p, tip, Color(UiStyle.CREAM, 0.9), 4.0, true)
+		draw_circle(tip, 6.0, UiStyle.CREAM)
 	for name: String in _buttons:
 		var b: Dictionary = _buttons[name]
 		var down := held.has(name)
-		var fill := UiStyle.TERRACOTTA if name == "sling" else UiStyle.PARCHMENT
-		draw_circle(b.pos, b.r, Color(fill, 0.78 if down else 0.5))
-		draw_arc(b.pos, b.r, 0, TAU, 48, Color(UiStyle.CREAM if name == "sling" else UiStyle.INK_SOFT, 0.8), 3.0, true)
-		var size := 22 if b.r > 60 else 17
-		var ink := UiStyle.CREAM if name == "sling" else UiStyle.INK
-		var w := font.get_string_size(b.label, HORIZONTAL_ALIGNMENT_CENTER, -1, size).x
-		draw_string(font, b.pos + Vector2(-w * 0.5, size * 0.35), b.label, HORIZONTAL_ALIGNMENT_LEFT, -1, size, ink)
-	# Sling drag: show the aim direction off the button
-	if aiming and aim_vec != Vector2.ZERO:
-		var p: Vector2 = _buttons.sling.pos
-		draw_line(p, p + aim_vec * STICK_RADIUS * 1.3, Color(UiStyle.CREAM, 0.9), 5.0, true)
+		var primary := name == "sling"
+		var fill := UiStyle.TERRACOTTA if primary else UiStyle.PARCHMENT
+		var ink := UiStyle.CREAM if primary else UiStyle.INK
+		var a := 0.95 if down else IDLE_ALPHA
+		var r: float = b.r * (0.94 if down else 1.0)   # pressed: sink a touch
+		draw_circle(b.pos + Vector2(0, 2.5), r, Color(UiStyle.DUSK, 0.22 * a))
+		draw_circle(b.pos, r, Color(fill, a))
+		draw_arc(b.pos, r - 1.0, 0, TAU, 48, Color(UiStyle.TERRACOTTA_DEEP if primary else UiStyle.RULE, a), 1.5, true)
+		# Glyph above a small caption; the smallest button is icon-only
+		var labelled := r >= 30.0
+		var glyph := r * (0.62 if not labelled else 0.56)
+		var gpos: Vector2 = b.pos - Vector2(glyph, glyph) * 0.5 - Vector2(0, 6.0 if labelled else 0.0)
+		draw_texture_rect(UiIcons.get_icon(b.icon, glyph), Rect2(gpos, Vector2(glyph, glyph)), false, Color(ink, 0.95))
+		if labelled:
+			var size := 11
+			var w := font.get_string_size(b.label.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+			draw_string(font, b.pos + Vector2(-w * 0.5, glyph * 0.5 + 8.0), b.label.to_upper(),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(ink, 0.9))

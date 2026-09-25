@@ -29,7 +29,10 @@ func _ready() -> void:
 
 func apply() -> void:
 	# Embedded/headless runs have no real window to resize
-	if DisplayServer.get_name() != "headless":
+	if OS.has_feature("mobile"):
+		# Fullscreen = immersive on Android (system bars hidden); no vsync choice
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	elif DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
 			else DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync

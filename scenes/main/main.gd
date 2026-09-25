@@ -36,7 +36,7 @@ func _ready() -> void:
 	GameState.game_won.connect(_on_game_won)
 	GameState.game_lost.connect(_on_game_lost)
 
-	camera.size = 24.0
+	camera.size = Mobile.CAMERA_SIZE if Mobile.enabled() else 24.0
 	camera.look_at(Vector3(0, 0, 2), Vector3.UP)
 	camera.make_current()
 
