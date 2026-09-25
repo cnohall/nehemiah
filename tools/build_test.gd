@@ -24,6 +24,7 @@ var _shots := 0
 var _shot_phase := 0
 var _stages := 0
 var _sessions := 0
+var _deliver_to: Node3D
 var _stage_at_start: Variant = null
 var _mode := "offline"
 
@@ -111,6 +112,16 @@ func _process(delta: float) -> bool:
 			else:
 				var need: String = _site.next_need()
 				var pile := _pile_for(need)
+				_deliver_to = _site
+				if pile == null and need == "mortar":
+					# "mixing" twist: feed the trough lime and water, wait, then carry the mortar
+					var trough := _trough()
+					var feed: String = trough.next_need() if trough != null else ""
+					if feed.is_empty():
+						_wait = 0.3   # mixing
+						return false
+					pile = _pile_for(feed)
+					_deliver_to = trough
 				if pile == null:
 					print("FAIL: no pile for ", need)
 					quit(1)
@@ -124,9 +135,9 @@ func _process(delta: float) -> bool:
 				print("FAIL: pickup failed")
 				quit(1)
 				return true
-			_goto(_site)
+			_goto(_deliver_to)
 			_press()
-			_state = "after_deliver"
+			_state = "after_deliver" if _deliver_to == _site else "next"
 			_wait = 0.3
 		"after_deliver":
 			if not gs.active_build or not _site.can_build() or _player._work_site == null:
@@ -163,6 +174,12 @@ func _pile_for(kind: String) -> Node3D:
 	for p in _main.get_tree().get_nodes_in_group("supply_piles"):
 		if p.kind == kind:
 			return p
+	return null
+
+func _trough() -> Node3D:
+	for n in _main.find_children("*", "StaticBody3D", true, false):
+		if n.has_method("request_pickup") and n.has_method("work_material") and n.visible:
+			return n
 	return null
 
 func _goto(n: Node3D) -> void:
