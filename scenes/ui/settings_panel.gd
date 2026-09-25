@@ -11,6 +11,10 @@ signal closed
 @onready var _vsync_off:  Button = %VsyncOff
 @onready var _volume:     HSlider = %Volume
 @onready var _volume_val: Label  = %VolumeValue
+@onready var _music:      HSlider = %Music
+@onready var _music_val:  Label  = %MusicValue
+@onready var _sfx:        HSlider = %Sfx
+@onready var _sfx_val:    Label  = %SfxValue
 @onready var _done:       Button = %Done
 
 func _ready() -> void:
@@ -21,6 +25,10 @@ func _ready() -> void:
 	_vsync_off.pressed.connect(_toggle.bind("vsync", false))
 	_volume.value_changed.connect(_on_volume)
 	_volume.drag_ended.connect(func(_changed): Settings.save())
+	_music.value_changed.connect(_on_music)
+	_music.drag_ended.connect(func(_changed): Settings.save())
+	_sfx.value_changed.connect(_on_sfx)
+	_sfx.drag_ended.connect(func(_changed): Settings.save())
 	_done.pressed.connect(close)
 
 func open() -> void:
@@ -30,6 +38,10 @@ func open() -> void:
 	_vsync_off.button_pressed  = not Settings.vsync
 	_volume.set_value_no_signal(Settings.volume * 100.0)
 	_volume_val.text = "%d%%" % roundi(_volume.value)
+	_music.set_value_no_signal(Settings.music_volume * 100.0)
+	_music_val.text = "%d%%" % roundi(_music.value)
+	_sfx.set_value_no_signal(Settings.sfx_volume * 100.0)
+	_sfx_val.text = "%d%%" % roundi(_sfx.value)
 	show()
 	UiFx.fade_in(self, 0.18)
 	(_fullscreen if Settings.fullscreen else _windowed).grab_focus()
@@ -53,3 +65,13 @@ func _on_volume(v: float) -> void:
 	Settings.volume = v / 100.0
 	Settings.apply()
 	_volume_val.text = "%d%%" % roundi(v)
+
+func _on_music(v: float) -> void:
+	Settings.music_volume = v / 100.0
+	Settings.apply()
+	_music_val.text = "%d%%" % roundi(v)
+
+func _on_sfx(v: float) -> void:
+	Settings.sfx_volume = v / 100.0
+	Settings.apply()
+	_sfx_val.text = "%d%%" % roundi(v)

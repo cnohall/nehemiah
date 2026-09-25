@@ -56,6 +56,7 @@ func _impact() -> void:
 					break
 	if _target == null:
 		_puff()
+		Sfx.play("sling_miss", global_position)
 	queue_free()
 
 # Faint streak behind the stone (world-space particles left in its wake)
@@ -80,12 +81,8 @@ func _add_trail() -> void:
 	p.color_ramp = ramp
 	var quad := QuadMesh.new()
 	quad.size = Vector2(0.12, 0.12)
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	mat.vertex_color_use_as_albedo = true
-	quad.material = mat
+	quad.material = DustFx.material()
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.mesh = quad
 	add_child(p)
 
@@ -108,13 +105,9 @@ func _puff() -> void:
 	ramp.set_color(1, Color(0.87, 0.78, 0.60, 0.0))
 	p.color_ramp = ramp
 	var quad := QuadMesh.new()
-	quad.size = Vector2(0.3, 0.3)
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	mat.vertex_color_use_as_albedo = true
-	quad.material = mat
+	quad.size = Vector2(0.45, 0.45)
+	quad.material = DustFx.material()
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.mesh = quad
 	get_tree().current_scene.add_child(p)
 	p.global_position = _land + Vector3(0, 0.1, 0)

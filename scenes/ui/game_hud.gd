@@ -11,6 +11,15 @@ const MAX_SLOTS     := 4
 const ROMAN         := ["I", "II", "III", "IV"]
 const WIN_VERSE     := "“So the wall was completed on the 25th day of Elul, in 52 days.”"
 const WIN_VERSE_REF := "Nehemiah 6:15"
+# Key → what it does. Shown while gathering and on day 1, and whenever paused.
+const CONTROLS := [
+	["WASD", "Move"],
+	["E", "Pick up · deliver · revive"],
+	["G", "Drop"],
+	["Space", "Dash"],
+	["Hold RMB", "Sling — release to throw"],
+	["Esc", "Menu"],
+]
 
 @onready var day_number:   Label       = $Root/DayPlaque/VBox/DayRow/DayNumber
 @onready var day_of:       Label       = $Root/DayPlaque/VBox/DayRow/DayOf
@@ -38,9 +47,16 @@ var _cards: Array[Dictionary] = []
 var _banner_tween: Tween
 var _last_breaches := 0
 var _last_enemies := 0
+var _controls: Control
+var _controls_tween: Tween
 
 func _ready() -> void:
 	_build_player_cards()
+	_build_controls_hint()
+	# Under the banner and menus, over the world-facing plaques
+	var alerts := OffscreenAlerts.new()
+	$Root.add_child(alerts)
+	$Root.move_child(alerts, banner.get_index())
 	if NetworkManager.in_steam_lobby():
 		_build_invite_panel()
 	breach_pips.count = GameState.MAX_BREACHES
@@ -68,7 +84,7 @@ func _ready() -> void:
 	_on_phase_changed(GameState.phase)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event.is_action_pressed("pause") or end_screen.visible:
+	if not event.is_action_pressed("pause") or end_screen.visible or GameState.phase == GameState.Phase.STORY:
 		return
 	get_viewport().set_input_as_handled()
 	if pause_menu.visible:
@@ -76,10 +92,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		pause_menu.show()
 		UiFx.fade_in(pause_menu, 0.16)
+		_refresh_controls()
 		$Root/PauseMenu/Center/Modal/VBox/Resume.grab_focus()
 
 func _close_pause() -> void:
 	pause_menu.hide()
+	_refresh_controls()
 
 func _leave() -> void:
 	NetworkManager.disconnect_session()
@@ -104,6 +122,8 @@ func _refresh_progress() -> void:
 	match GameState.phase:
 		GameState.Phase.GATHER:
 			phase_label.text = "Gathering the crew"
+		GameState.Phase.STORY:
+			phase_label.text = ""
 		GameState.Phase.DAWN:
 			phase_label.text = "Dawn — ready the workers"
 		GameState.Phase.DUSK:
@@ -131,12 +151,17 @@ func _on_breaches_changed(count: int) -> void:
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	_refresh_progress()
 	gather.visible = phase == GameState.Phase.GATHER
+	_refresh_controls()
 	var section := GameState.get_current_section()
 	match phase:
 		GameState.Phase.DAWN:
 			var first_day := GameState.day_in_section(GameState.current_day).x == 0
-			_show_banner("Day %d" % GameState.current_day,
-				("A new stretch: %s  ·  %s" if first_day else "%s  ·  %s") % [section["name"], section["ref"]])
+			var sub: String = ("A new stretch: %s  ·  %s" if first_day else "%s  ·  %s") % [section["name"], section["ref"]]
+			# First day of a section that brings something new: say what
+			if first_day:
+				for twist: String in GameState.new_twists():
+					sub += "\n" + GameState.TWIST_INTRO.get(twist, "")
+			_show_banner("Day %d" % GameState.current_day, sub)
 		GameState.Phase.DUSK:
 			_show_banner("Day %d complete" % GameState.current_day, "Rest, and return at first light.")
 		GameState.Phase.WON:
@@ -232,30 +257,78 @@ func set_player_health(slot: int, frac: float) -> void:
 	(card.fill as StyleBoxFlat).bg_color = UiStyle.OLIVE if frac > 0.6 \
 		else (UiStyle.AMBER if frac > 0.3 else UiStyle.TERRACOTTA)
 
-func set_player_carry(slot: int, item_name: String) -> void:
+# What a worker carries shows over their head in the world; the card only flags trouble
+func set_player_downed(slot: int, downed: bool) -> void:
 	if slot >= _cards.size():
 		return
-	var lbl: Label = _cards[slot].carry
-	if item_name == "Downed":
-		lbl.text = "Downed"
-		lbl.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
-	elif item_name.is_empty():
-		lbl.text = "Empty-handed"
-		lbl.add_theme_color_override("font_color", UiStyle.INK_MUTED)
-	else:
-		lbl.text = "Carrying %s" % item_name.to_lower()
-		lbl.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	_cards[slot].carry.visible = downed
 
 func set_player_color(slot: int, color: Color) -> void:
 	if slot >= _cards.size():
 		return
 	(_cards[slot].swatch as ColorRect).color = color
 
+# ── Controls hint ──────────────────────────────────────────
+
+func _build_controls_hint() -> void:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(16, 12), 0.9))
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$Root.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 6)
+	panel.add_child(vb)
+	var title := Label.new()
+	title.theme_type_variation = &"Eyebrow"
+	title.text = "Controls"
+	vb.add_child(title)
+	var key_box := UiStyle.bordered(UiStyle.box(UiStyle.PARCHMENT_DEEP, Vector2(7, 1), 3), UiStyle.RULE, 1, 2)
+	for row: Array in CONTROLS:
+		var hb := HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 10)
+		vb.add_child(hb)
+		var key := Label.new()
+		key.text = row[0]
+		key.add_theme_font_override("font", UiStyle.CINZEL_SEMI)
+		key.add_theme_font_size_override("font_size", 13)
+		key.add_theme_color_override("font_color", UiStyle.INK)
+		key.add_theme_stylebox_override("normal", key_box)
+		key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		key.custom_minimum_size.x = 78
+		hb.add_child(key)
+		var what := Label.new()
+		what.theme_type_variation = &"Body"
+		what.add_theme_font_size_override("font_size", 15)
+		what.text = row[1]
+		hb.add_child(what)
+	_controls = panel
+	_refresh_controls()
+
+func _refresh_controls() -> void:
+	if _controls == null:
+		return
+	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1
+	var want := (early and not GameState.is_over()) or pause_menu.visible
+	if want == _controls.visible:
+		return
+	if _controls_tween:
+		_controls_tween.kill()
+	if want:
+		_controls.show()
+		UiFx.fade_in(_controls, 0.2)
+	else:
+		_controls_tween = create_tween()
+		_controls_tween.tween_property(_controls, "modulate:a", 0.0, 0.8)
+		_controls_tween.tween_callback(_controls.hide)
+
 func _build_player_cards() -> void:
 	for slot in MAX_SLOTS:
 		var root := PanelContainer.new()
 		root.theme_type_variation = &"Card"
-		root.custom_minimum_size = Vector2(250, 0)
+		root.custom_minimum_size = Vector2(190, 0)
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		root.visible = false
 		var vb := VBoxContainer.new()
@@ -276,6 +349,9 @@ func _build_player_cards() -> void:
 		var carry := Label.new()
 		carry.theme_type_variation = &"Caption"
 		carry.add_theme_font_size_override("font_size", 14)
+		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
+		carry.text = "Downed"
+		carry.visible = false
 		top.add_child(carry)
 		var bar := ProgressBar.new()
 		bar.theme_type_variation = &"Meter"
@@ -290,19 +366,34 @@ func _build_player_cards() -> void:
 		players_row.add_child(root)
 		_cards.append({ root = root, swatch = swatch, name = name_lbl,
 			carry = carry, bar = bar, fill = fill })
-		set_player_carry(slot, "")
 
 # ── Steam invite ───────────────────────────────────────────
 
-# Bottom-right: open the Steam invite overlay, or copy the lobby code for when
-# the overlay isn't available (running from the editor)
+# Bottom-right: toggle an in-game friend list to invite from, or copy the lobby
+# code as a fallback
 func _build_invite_panel() -> void:
+	var anchor := VBoxContainer.new()
+	anchor.add_theme_constant_override("separation", 8)
+	$Root.add_child(anchor)
+	anchor.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
+	anchor.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	anchor.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+	var list_panel := PanelContainer.new()
+	list_panel.theme_type_variation = &"Card"
+	list_panel.hide()
+	anchor.add_child(list_panel)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(260, 0)
+	list_panel.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+
 	var panel := PanelContainer.new()
 	panel.theme_type_variation = &"Card"
-	$Root.add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
-	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	anchor.add_child(panel)
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 10)
 	panel.add_child(hb)
@@ -315,7 +406,10 @@ func _build_invite_panel() -> void:
 	invite.theme_type_variation = &"PrimaryButton"
 	invite.text = "Invite friends"
 	invite.focus_mode = Control.FOCUS_NONE
-	invite.pressed.connect(NetworkManager.invite_friends)
+	invite.pressed.connect(func():
+		list_panel.visible = not list_panel.visible
+		if list_panel.visible:
+			_fill_friend_list(list, scroll))
 	hb.add_child(invite)
 	var copy := Button.new()
 	copy.theme_type_variation = &"GhostButton"
@@ -326,6 +420,29 @@ func _build_invite_panel() -> void:
 		DisplayServer.clipboard_set(NetworkManager.lobby_code())
 		copy.text = "Copied")
 	hb.add_child(copy)
+
+func _fill_friend_list(list: VBoxContainer, scroll: ScrollContainer) -> void:
+	for c in list.get_children():
+		c.queue_free()
+	var friends := NetworkManager.online_friends()
+	if friends.is_empty():
+		var none := Label.new()
+		none.text = "No friends online"
+		list.add_child(none)
+	for f: Dictionary in friends:
+		var b := Button.new()
+		b.theme_type_variation = &"GhostButton"
+		b.text = f.name + ("  · in game" if f.in_game else "")
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.focus_mode = Control.FOCUS_NONE
+		b.clip_text = true
+		b.pressed.connect(func():
+			var ok := NetworkManager.invite_friend(f.id)
+			b.text = "%s  · %s" % [f.name, "invited" if ok else "invite failed"]
+			b.disabled = ok)
+		list.add_child(b)
+	# Grow with the list up to ~8 rows, then scroll
+	scroll.custom_minimum_size.y = minf(maxf(friends.size(), 1) * 40.0, 320.0)
 
 # ── Helpers ────────────────────────────────────────────────
 

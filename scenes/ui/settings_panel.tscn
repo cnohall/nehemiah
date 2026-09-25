@@ -149,6 +149,60 @@ theme_type_variation = &"Body"
 text = "80%"
 horizontal_alignment = 2
 
+[node name="MusicLabel" type="Label" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Body"
+text = "Music"
+
+[node name="MusicRow" type="HBoxContainer" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Music" type="HSlider" parent="Center/Modal/VBox/Grid/MusicRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+step = 1.0
+value = 60.0
+
+[node name="MusicValue" type="Label" parent="Center/Modal/VBox/Grid/MusicRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "60%"
+horizontal_alignment = 2
+
+[node name="SfxLabel" type="Label" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Body"
+text = "Effects"
+
+[node name="SfxRow" type="HBoxContainer" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Sfx" type="HSlider" parent="Center/Modal/VBox/Grid/SfxRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+step = 1.0
+value = 80.0
+
+[node name="SfxValue" type="Label" parent="Center/Modal/VBox/Grid/SfxRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "80%"
+horizontal_alignment = 2
+
 [node name="Footer" type="HBoxContainer" parent="Center/Modal/VBox"]
 layout_mode = 2
 alignment = 2

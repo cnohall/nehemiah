@@ -15,6 +15,8 @@ const LOBBY_TAG_VAL := "1"
 const LOBBY_TYPE_FRIENDS_ONLY := 1
 const STEAM_RESULT_OK         := 1
 const LOBBY_ENTER_SUCCESS     := 1
+const FRIEND_FLAG_IMMEDIATE   := 4
+const PERSONA_OFFLINE         := 0
 
 signal lobby_created
 signal lobby_joined(success: bool)
@@ -96,9 +98,30 @@ func join_steam(lobby_id: int) -> void:
 	_hosting_lobby = false
 	_steam.joinLobby(lobby_id)
 
-func invite_friends() -> void:
-	if _steam and _lobby_id:
-		_steam.activateGameOverlayInviteDialog(_lobby_id)
+# Online Steam friends, those already in the game first. Used by the in-game
+# invite list — the overlay invite dialog only works when Steam launched the exe.
+func online_friends() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not _steam:
+		return out
+	for i in _steam.getFriendCount(FRIEND_FLAG_IMMEDIATE):
+		var id: int = _steam.getFriendByIndex(i, FRIEND_FLAG_IMMEDIATE)
+		if _steam.getFriendPersonaState(id) == PERSONA_OFFLINE:
+			continue
+		var game: Dictionary = _steam.getFriendGamePlayed(id)
+		out.append({ id = id, name = _steam.getFriendPersonaName(id),
+			in_game = game.get("id", 0) == STEAM_APP_ID })
+	out.sort_custom(func(a, b):
+		if a.in_game != b.in_game:
+			return a.in_game
+		return a.name.naturalnocasecmp_to(b.name) < 0)
+	return out
+
+# Sends a lobby invite via Steam chat; accepting it fires join_requested
+func invite_friend(steam_id: int) -> bool:
+	if not (_steam and _lobby_id):
+		return false
+	return _steam.inviteUserToLobby(_lobby_id, steam_id)
 
 # ── Session teardown ───────────────────────────────────────
 

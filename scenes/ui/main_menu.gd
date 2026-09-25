@@ -22,6 +22,9 @@ const DRIFT_TIME := 16.0
 @onready var fade:          ColorRect = $Fade
 
 func _ready() -> void:
+	Sfx.play_music("calm")  # back from a finished game, the music may be off
+	# Credits sit over bright sand — give them a soft parchment backing
+	$Credits.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.PARCHMENT, 0.82), Vector2(12, 6), 3))
 	host_btn.pressed.connect(_on_host)
 	join_btn.pressed.connect(_on_join)
 	settings_btn.pressed.connect(_on_settings)

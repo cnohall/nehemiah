@@ -39,6 +39,22 @@ const CARRY_HEIGHT    := 1.95     # just above the head of a ~1.7 m figure
 const SLING_RELEASE_Y := 1.5      # overhead hand height
 const SLING_RELEASE_FRAME := 3    # frame of the "slash" swing where the stone leaves the hand
 const TOAST_TIME      := 1.2
+# Dash (Overcooked 2 style): short burst in the move direction, works while carrying
+const DASH_SPEED      := 20.0
+const DASH_TIME       := 0.14
+const DASH_COOLDOWN   := 0.7
+# Short ramp so starts and stops have a little weight without going floaty
+const ACCEL           := 140.0    # ~0.06 s to full run
+const DECEL           := 160.0    # ~0.05 s to a stop
+# Beams ("beams" twist): one worker can drag a beam alone, slowly; a second worker takes
+# the other end and the pair move at carrying pace, tethered to each other
+const BEAM_SOLO_SPEED := 2.4
+const BEAM_PAIR_SPEED := 4.8
+const BEAM_TETHER     := 2.4      # max distance between the two ends' carriers
+const BEAM_HELP_REACH := 2.0
+const BEAM_HOLD_Y     := 1.45     # shoulder height
+const FOCUS_COLOR     := Color(0.99, 0.93, 0.74, 0.95)   # cream ring under what [E] will use
+const FOCUS_POLL      := 0.1
 const RUN_ANIM_SPEED  := 8.0      # ground speed the run cycle was drawn for
 const WALK_ANIM_SPEED := 4.5
 
@@ -47,12 +63,6 @@ const MOVE_DIRS := {
 	"move_south": Vector3( 1, 0,  1),
 	"move_east":  Vector3( 1, 0, -1),
 	"move_west":  Vector3(-1, 0,  1),
-}
-
-const CARRY_COLORS := {
-	"stone":  Color(0.72, 0.68, 0.60),
-	"wood":   Color(0.50, 0.33, 0.17),
-	"mortar": Color(0.86, 0.80, 0.66),
 }
 
 # Worker sheets (tunic colour per player slot) — composed from LPC layers, see assets/sprites/CREDITS.md
@@ -65,6 +75,9 @@ const _SHEETS     := [
 ]
 const _ANIMS      := ["idle", "walk", "run", "windup", "slash", "halfslash", "collapse"]
 const SLING_STONE := preload("res://scenes/sling_stone/sling_stone.tscn")
+const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
+const MAX_DROPPED  := 40      # oldest ground item vanishes past this
+const DROP_JITTER  := 0.25    # so repeated drops don't stack on one spot
 const MARKER_SHADER := preload("res://assets/shaders/ground_marker.gdshader")
 
 # Replicated animation name — owner writes, every peer plays it
@@ -76,7 +89,10 @@ var anim := "idle_down":
 
 var health: float = MAX_HEALTH
 var carried_kind: String = ""
+# Peer id of the worker whose beam we're holding the other end of (0 = none). Server-set.
+var helping_id := 0
 var downed := false
+var slot_color := Color.WHITE   # ring / HUD colour, set by Main
 var _facing := "down"
 var _is_busy := false
 var _sling_cd := 0.0
@@ -90,6 +106,12 @@ var _whirl: Node3D
 var _whirl_time := 0.0
 var _whirl_angle := 0.0
 var _hp_bar: HealthBar
+var _dash_time := 0.0
+var _dash_cd := 0.0
+var _dash_dir := Vector3.ZERO
+var _focus_ring: MeshInstance3D
+var _focus_poll := 0.0
+var _beam: Node3D   # carried beam, placed in world space between the two ends
 
 # Replicated: the sling is being whirled (owner writes, every peer shows it)
 var whirling := false:
@@ -108,6 +130,7 @@ func _ready() -> void:
 	$MultiplayerSynchronizer.add_visibility_filter(func(id: int) -> bool:
 		return not multiplayer.is_server() or id == 1 or NetworkManager.is_peer_ready(id))
 	_sprite.setup(_SHEETS[0], _ANIMS)
+	_sprite.footstep.connect(func(): Sfx.play("step", global_position))
 	_sprite.play(anim)
 	_carry_prop = Node3D.new()
 	_carry_prop.position.y = CARRY_HEIGHT
@@ -118,6 +141,7 @@ func _ready() -> void:
 	add_child(_hp_bar)
 
 func _process(delta: float) -> void:
+	_update_beam()
 	if whirling:
 		_update_whirl(delta)
 	if downed:
@@ -130,6 +154,7 @@ func _process(delta: float) -> void:
 		_hp_bar.show_health(health / MAX_HEALTH)
 
 func set_slot(slot: int, c: Color) -> void:
+	slot_color = c
 	_sprite.set_sheet(_SHEETS[slot % _SHEETS.size()], _ANIMS)
 	_sprite.set_ring_color(c)
 
@@ -137,13 +162,16 @@ func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
 		return
 	_sling_cd = maxf(0.0, _sling_cd - delta)
-	if downed or GameState.is_over():
+	_dash_cd = maxf(0.0, _dash_cd - delta)
+	_update_focus(delta)
+	if downed or GameState.is_over() or GameState.phase == GameState.Phase.STORY:
 		velocity = Vector3.ZERO
+		_dash_time = 0.0
 		_cancel_charge()
 		return
 	if _is_busy:
 		_cancel_charge()  # hit or acting — wind-up is lost
-	_handle_movement()
+	_handle_movement(delta)
 	if not _is_busy:
 		_handle_interact()
 		_handle_attack(delta)
@@ -151,19 +179,222 @@ func _physics_process(delta: float) -> void:
 
 # ── Movement ───────────────────────────────────────────────
 
-func _handle_movement() -> void:
+func _handle_movement(delta: float) -> void:
 	var dir := Vector3.ZERO
 	for action in MOVE_DIRS:
 		if Input.is_action_pressed(action):
 			dir += MOVE_DIRS[action]
 	if dir.length_squared() > 0:
 		dir = dir.normalized()
-	velocity = dir * (CARRY_SPEED if not carried_kind.is_empty() else RUN_SPEED)
-	if _charging:
-		velocity *= CHARGE_MOVE_MULT
+	var on_beam := carried_kind == "beam" or helping_id != 0
+	if Input.is_action_just_pressed("dash") and _dash_cd <= 0.0 and not _is_busy and not _charging and not on_beam:
+		# Standing still: dash the way we're facing
+		_dash_dir = dir if dir != Vector3.ZERO else _facing_vector()
+		_dash_time = DASH_TIME
+		_dash_cd = DASH_COOLDOWN
+		_dash_fx.rpc()
+	if _dash_time > 0.0:
+		_dash_time -= delta
+		velocity = _dash_dir * DASH_SPEED
+	else:
+		var target := dir * (CARRY_SPEED if not carried_kind.is_empty() else RUN_SPEED)
+		if on_beam:
+			target = dir * (BEAM_PAIR_SPEED if _beam_partner() != null else BEAM_SOLO_SPEED)
+		if _charging:
+			target *= CHARGE_MOVE_MULT
+		var rate := ACCEL if target.length_squared() > velocity.length_squared() else DECEL
+		velocity = velocity.move_toward(target, rate * delta)
 	move_and_slide()
+	_tether_to_partner()
 	global_position.x = clampf(global_position.x, PLAY_AREA.position.x, PLAY_AREA.end.x)
 	global_position.z = clampf(global_position.z, PLAY_AREA.position.y, PLAY_AREA.end.y)
+
+# ── Beams ──────────────────────────────────────────────────
+
+## The worker on the other end of our beam, or null
+func _beam_partner() -> Node3D:
+	if helping_id != 0:
+		return get_parent().get_node_or_null(str(helping_id))
+	if carried_kind == "beam":
+		var me := get_multiplayer_authority()
+		for p in get_tree().get_nodes_in_group("players"):
+			if p.helping_id == me:
+				return p
+	return null
+
+# Owner: can't walk further from the other end than the beam allows — the pair has to
+# move together (each side clamps itself, so neither can drag the other)
+func _tether_to_partner() -> void:
+	var partner := _beam_partner()
+	if partner == null:
+		return
+	var off := global_position - partner.global_position
+	off.y = 0.0
+	if off.length() > BEAM_TETHER:
+		var p := partner.global_position + off.normalized() * BEAM_TETHER
+		global_position = Vector3(p.x, global_position.y, p.z)
+
+## A lone beam carrier within reach who could use a hand
+func _carrier_needing_help(at: Vector3) -> Node3D:
+	for p in get_tree().get_nodes_in_group("players"):
+		if p != self and p.carried_kind == "beam" and not p.downed and p._beam_partner() == null \
+				and at.distance_to(p.global_position) < BEAM_HELP_REACH:
+			return p
+	return null
+
+@rpc("any_peer", "call_local", "reliable")
+func _set_helping(carrier_id: int) -> void:
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	helping_id = carrier_id
+	_sprite.squash(Vector2(1.08, 0.92) if carrier_id != 0 else Vector2(0.95, 1.05))
+
+# Server: let go of whoever holds the other end of our beam
+func _release_helper() -> void:
+	var me := get_multiplayer_authority()
+	for p in get_tree().get_nodes_in_group("players"):
+		if p.helping_id == me:
+			p._set_helping.rpc(0)
+
+# Every peer: lay the beam from our shoulder to the partner's, or drag it behind us alone
+func _update_beam() -> void:
+	if carried_kind != "beam":
+		if _beam != null:
+			_beam.queue_free()
+			_beam = null
+		return
+	if _beam == null:
+		_beam = Node3D.new()
+		_beam.top_level = true
+		_beam.add_child(DroppedItem.build_prop("beam"))
+		add_child(_beam)
+	var a := global_position + Vector3.UP * BEAM_HOLD_Y
+	var partner := _beam_partner()
+	var b: Vector3
+	if partner != null:
+		b = partner.global_position + Vector3.UP * BEAM_HOLD_Y
+	else:
+		# Alone: one end on the shoulder, the other dragging in the sand behind
+		var back := -_facing_vector()
+		b = global_position + back * 2.2 + Vector3.UP * 0.15
+	var along := b - a
+	if along.length_squared() < 0.01:
+		return
+	var x := along.normalized()
+	var z := x.cross(Vector3.UP).normalized()
+	if z.length_squared() < 0.01:
+		z = Vector3.FORWARD
+	_beam.global_transform = Transform3D(Basis(x, z.cross(x), z), (a + b) * 0.5)
+
+func _facing_vector() -> Vector3:
+	match _facing:
+		"up":    return MOVE_DIRS["move_north"].normalized()
+		"left":  return MOVE_DIRS["move_west"].normalized()
+		"right": return MOVE_DIRS["move_east"].normalized()
+	return MOVE_DIRS["move_south"].normalized()
+
+# Owner → everyone: puff of dust + stretch so a dash reads on every screen
+@rpc("authority", "call_local", "unreliable")
+func _dash_fx() -> void:
+	_sprite.squash(Vector2(0.92, 1.08))
+	Sfx.play("dash", global_position)
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.explosiveness = 0.9
+	p.amount = 10
+	p.lifetime = 0.5
+	p.direction = Vector3.UP
+	p.spread = 80.0
+	p.initial_velocity_min = 0.8
+	p.initial_velocity_max = 1.6
+	p.gravity = Vector3(0, -1.0, 0)
+	p.scale_amount_min = 0.5
+	p.scale_amount_max = 0.9
+	p.scale_amount_curve = DustFx.grow_curve()
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(0.92, 0.84, 0.66, 0.7))
+	ramp.set_color(1, Color(0.92, 0.84, 0.66, 0.0))
+	p.color_ramp = ramp
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.5, 0.5)
+	quad.material = DustFx.material()
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.mesh = quad
+	p.top_level = true  # stays where the dash started
+	add_child(p)
+	p.global_position = global_position + Vector3(0, 0.15, 0)
+	p.emitting = true
+	p.finished.connect(p.queue_free)
+
+# ── Interaction focus (owner, local only) ──────────────────
+
+# Mirrors _server_interact's priorities from replicated state, so the ring shows
+# exactly what [E] will act on — Overcooked's counter highlight.
+func _focus_target(at: Vector3) -> Node3D:
+	for p in get_tree().get_nodes_in_group("players"):
+		if p != self and p.downed and at.distance_to(p.global_position) < REVIVE_REACH:
+			return p
+	if helping_id != 0:
+		return null
+	if not carried_kind.is_empty():
+		return _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
+	var carrier := _carrier_needing_help(at)
+	if carrier != null:
+		return carrier
+	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
+	if site != null:
+		return site
+	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
+	var pile := _nearest_in_reach("supply_piles", at, func(_p): return true)
+	if item != null and (pile == null or _reach_dist(item, at) <= _reach_dist(pile, at)):
+		return item
+	return pile
+
+func _update_focus(delta: float) -> void:
+	_focus_poll -= delta
+	if _focus_poll > 0.0:
+		return
+	_focus_poll = FOCUS_POLL
+	if _focus_ring == null:
+		_build_focus_ring()
+	var target: Node3D = null
+	if not downed and not GameState.is_over():
+		target = _focus_target(global_position)
+	_focus_ring.visible = target != null
+	if target == null:
+		return
+	# Walls are long — ring the spot on the wall nearest us, not its centre
+	var spot := target.global_position
+	var size := 1.5
+	if target.has_method("approach_point"):
+		spot = target.approach_point(global_position, 0.0)
+	elif target.is_in_group("supply_piles"):
+		size = 2.6
+	elif target.is_in_group("dropped_items"):
+		size = 1.1
+	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + 0.05, spot.z)
+	_focus_ring.mesh.size = Vector2(size, size)
+
+func _build_focus_ring() -> void:
+	var quad := QuadMesh.new()
+	quad.orientation = PlaneMesh.FACE_Y
+	var mat := ShaderMaterial.new()
+	mat.shader = MARKER_SHADER
+	mat.set_shader_parameter("shadow_color", Color(0, 0, 0, 0))
+	mat.set_shader_parameter("ring_color", FOCUS_COLOR)
+	mat.set_shader_parameter("ring_radius", 0.42)
+	mat.set_shader_parameter("ring_width", 0.05)
+	_focus_ring = MeshInstance3D.new()
+	_focus_ring.mesh = quad
+	_focus_ring.material_override = mat
+	_focus_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_focus_ring.top_level = true
+	_focus_ring.visible = false
+	add_child(_focus_ring)
+	# Gentle breathing pulse
+	var tw := _focus_ring.create_tween().set_loops()
+	tw.tween_property(_focus_ring, "scale", Vector3.ONE * 1.08, 0.45).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(_focus_ring, "scale", Vector3.ONE * 0.94, 0.45).set_trans(Tween.TRANS_SINE)
 
 # ── Animation ──────────────────────────────────────────────
 
@@ -204,7 +435,7 @@ func _handle_interact() -> void:
 	if Input.is_action_just_pressed("interact"):
 		_server_interact.rpc_id(1, global_position)
 	if Input.is_action_just_pressed("drop"):
-		_server_drop.rpc_id(1)
+		_server_drop.rpc_id(1, global_position)
 
 # Owner sends its position with the request: the reliable RPC can overtake the
 # unreliable position sync, so the server's copy may still be a frame behind.
@@ -218,10 +449,22 @@ func _server_interact(at: Vector3) -> void:
 			p._set_downed.rpc(false)
 			_action.rpc("halfslash")
 			return
+	if helping_id != 0:
+		_set_helping.rpc(0)
+		_tell("Let go of the beam")
+		return
+	if carried_kind.is_empty():
+		var carrier := _carrier_needing_help(at)
+		if carrier != null:
+			_set_helping.rpc(carrier.get_multiplayer_authority())
+			_sfx.rpc("pickup")
+			_tell("Holding the other end — [E] to let go")
+			return
 	# Nearest valid thing wins — sections and gate pillars overlap in reach
 	if not carried_kind.is_empty():
-		var dest := _nearest_in_reach("wall_sections", at, func(s): return s.needs(carried_kind))
+		var dest := _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
 		if dest != null and dest.deposit(carried_kind, 1):
+			_sfx.rpc("deposit_" + carried_kind)
 			_set_carried.rpc("")
 			_action.rpc("halfslash")
 			# Last load for this stage → raise it straight away (no separate Build press)
@@ -231,17 +474,26 @@ func _server_interact(at: Vector3) -> void:
 		_tell(_why_not_needed(at))
 		return
 	# Fallback for sections that were already full (e.g. filled before a change of rules)
-	var site := _nearest_in_reach("wall_sections", at, func(s): return s.can_build())
+	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
 	if site != null and site.try_build():
 		_action.rpc("halfslash")
 		return
+	# Whichever is closer: something lying on the ground, or a stockpile
+	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
 	var pile := _nearest_in_reach("supply_piles", at, func(_p): return true)
+	if item != null and (pile == null or _reach_dist(item, at) <= _reach_dist(pile, at)):
+		var kind: String = item.kind
+		if item.take():
+			_sfx.rpc("pickup")
+			_set_carried.rpc(kind)
+		return
 	if pile != null and pile.request_pickup():
+		_sfx.rpc("pickup")
 		_set_carried.rpc(pile.kind)
 
 # Server: explain a refused delivery (the carried material isn't wanted here)
 func _why_not_needed(at: Vector3) -> String:
-	var wall := _nearest_in_reach("wall_sections", at, func(_s): return true)
+	var wall := _nearest_in_reach("build_sites", at, func(_s): return true)
 	if wall == null:
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
 			return "Hands full — deliver it, or [G] to drop"
@@ -252,10 +504,28 @@ func _why_not_needed(at: Vector3) -> String:
 	return "Needs %s first" % need
 
 @rpc("any_peer", "call_local", "reliable")
-func _server_drop() -> void:
-	if _from_owner() and not carried_kind.is_empty():
-		_tell("Dropped %s" % carried_kind)
-		_set_carried.rpc("")
+func _server_drop(at: Vector3) -> void:
+	if not _from_owner():
+		return
+	if helping_id != 0:
+		_set_helping.rpc(0)
+	elif not carried_kind.is_empty():
+		_drop_carried(at)
+
+# Server: put the load on the ground where it stays until someone picks it up
+func _drop_carried(at: Vector3) -> void:
+	var items: Node3D = get_node("../../Items")
+	if items.get_child_count() >= MAX_DROPPED:
+		items.get_child(0).queue_free()
+	var item: DroppedItem = DROPPED_ITEM.instantiate()
+	item.kind = carried_kind
+	item.position = Vector3(at.x + randf_range(-DROP_JITTER, DROP_JITTER), GROUND_Y,
+		at.z + randf_range(-DROP_JITTER, DROP_JITTER))
+	# Filter must be in place before add_child — the spawner snapshots visibility on enter
+	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
+	items.add_child(item, true)
+	_sfx.rpc("drop")
+	_set_carried.rpc("")
 
 @rpc("any_peer", "call_local", "reliable")
 func _set_carried(kind: String) -> void:
@@ -263,12 +533,24 @@ func _set_carried(kind: String) -> void:
 		return
 	carried_kind = kind
 	_rebuild_carry_prop()
+	if multiplayer.is_server() and kind != "beam":
+		_release_helper()
+	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
+		_toast("Heavy — a partner can take the other end [E]")
+	# Pick up → squashed under the load; put down → spring back up
+	_sprite.squash(Vector2(1.08, 0.92) if not kind.is_empty() else Vector2(0.95, 1.05))
 
 # Server → everyone: the owner plays the action (its anim then replicates)
 @rpc("any_peer", "call_local", "reliable")
 func _action(anim_base: String) -> void:
 	if multiplayer.get_remote_sender_id() == 1 and is_multiplayer_authority():
 		_play_action(anim_base)
+
+# Server → everyone: a sound at this worker's feet
+@rpc("any_peer", "call_local", "unreliable")
+func _sfx(event: String) -> void:
+	if multiplayer.get_remote_sender_id() == 1:
+		Sfx.play(event, global_position)
 
 # ── Attack ─────────────────────────────────────────────────
 
@@ -394,6 +676,7 @@ func _throw_stone(target_path: NodePath, land: Vector3, damage: float) -> void:
 	var target: Node3D = null
 	if not target_path.is_empty():
 		target = get_node_or_null(target_path) as Node3D
+	Sfx.play("throw", global_position)
 	var stone := SLING_STONE.instantiate()
 	get_tree().current_scene.add_child(stone)
 	stone.global_position = global_position + Vector3(0, SLING_RELEASE_Y, 0)
@@ -408,7 +691,9 @@ func take_damage(amount: float) -> void:
 	_on_hurt.rpc(new_health)
 	if new_health <= 0.0:
 		if not carried_kind.is_empty():
-			_set_carried.rpc("")
+			_drop_carried(global_position)
+		if helping_id != 0:
+			_set_helping.rpc(0)
 		_set_downed.rpc(true)
 
 @rpc("any_peer", "call_local", "reliable")
@@ -417,6 +702,8 @@ func _on_hurt(new_health: float) -> void:
 		return
 	health = new_health
 	_sprite.hit_flash()
+	if new_health > 0.0:
+		Sfx.play("hurt", global_position)
 	if is_multiplayer_authority() and not _is_busy and new_health > 0.0:
 		# Short stagger — the sheet's "hurt" row is a full collapse, kept for downed
 		_is_busy = true
@@ -429,6 +716,7 @@ func _set_downed(value: bool) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	downed = value
+	Sfx.play("downed" if value else "revive", global_position)
 	if value:
 		_down_timer = DOWNED_TIME
 	else:
@@ -441,10 +729,10 @@ func _set_downed(value: bool) -> void:
 # ── Late join (server → one peer) ──────────────────────────
 
 func send_status_to(peer_id: int) -> void:
-	_sync_status.rpc_id(peer_id, carried_kind, downed, health)
+	_sync_status.rpc_id(peer_id, carried_kind, downed, health, helping_id)
 
 @rpc("any_peer", "call_remote", "reliable")
-func _sync_status(kind: String, is_downed: bool, hp: float) -> void:
+func _sync_status(kind: String, is_downed: bool, hp: float, helping: int) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	carried_kind = kind
@@ -452,6 +740,7 @@ func _sync_status(kind: String, is_downed: bool, hp: float) -> void:
 	if is_downed:
 		_down_timer = DOWNED_TIME  # exact remaining time isn't sent; close enough for a late joiner
 	health = hp
+	helping_id = helping
 	_rebuild_carry_prop()
 
 # ── Feedback ───────────────────────────────────────────────
@@ -554,37 +843,8 @@ func _update_whirl(delta: float) -> void:
 func _rebuild_carry_prop() -> void:
 	for c in _carry_prop.get_children():
 		c.queue_free()
-	if carried_kind.is_empty():
-		return
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = CARRY_COLORS.get(carried_kind, Color.GRAY)
-	mat.roughness = 0.9
-	match carried_kind:
-		"wood":
-			for z: float in [-0.09, 0.09]:
-				var log_mesh := CylinderMesh.new()
-				log_mesh.top_radius = 0.08
-				log_mesh.bottom_radius = 0.08
-				log_mesh.height = 0.9
-				_add_prop_mesh(log_mesh, mat, Vector3(0, 0, z), Vector3(0, 0, PI / 2))
-		"stone":
-			var block := BoxMesh.new()
-			block.size = Vector3(0.45, 0.28, 0.32)
-			_add_prop_mesh(block, mat, Vector3.ZERO, Vector3(0, 0.4, 0))
-		"mortar":
-			var basket := CylinderMesh.new()
-			basket.top_radius = 0.22
-			basket.bottom_radius = 0.16
-			basket.height = 0.26
-			_add_prop_mesh(basket, mat, Vector3.ZERO, Vector3.ZERO)
-
-func _add_prop_mesh(mesh: Mesh, mat: Material, pos: Vector3, rot: Vector3) -> void:
-	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
-	mi.material_override = mat
-	mi.position = pos
-	mi.rotation = rot
-	_carry_prop.add_child(mi)
+	if not carried_kind.is_empty() and carried_kind != "beam":
+		_carry_prop.add_child(DroppedItem.build_prop(carried_kind))
 
 # ── Helpers ────────────────────────────────────────────────
 
@@ -596,9 +856,12 @@ func _nearest_in_reach(group: String, from: Vector3, accept: Callable) -> Node3D
 	var best: Node3D = null
 	var best_dist := INTERACT_REACH
 	for node: Node3D in get_tree().get_nodes_in_group(group):
-		var d: float = node.distance_to_point(from) if node.has_method("distance_to_point") \
-			else from.distance_to(node.global_position)
+		var d := _reach_dist(node, from)
 		if d < best_dist and accept.call(node):
 			best_dist = d
 			best = node
 	return best
+
+func _reach_dist(node: Node3D, from: Vector3) -> float:
+	return node.distance_to_point(from) if node.has_method("distance_to_point") \
+		else from.distance_to(node.global_position)

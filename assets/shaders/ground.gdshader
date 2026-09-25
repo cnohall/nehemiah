@@ -5,11 +5,11 @@ uniform float scale     : hint_range(0.01, 0.2)  = 0.042;
 uniform float roughness : hint_range(0.0,  1.0)  = 0.97;
 
 // Warm sandy Jerusalem palette (matched to reference)
-uniform vec3 col_sand_bright = vec3(0.875, 0.745, 0.475);  // highlight sand
-uniform vec3 col_sand_mid    = vec3(0.795, 0.660, 0.385);  // base sand
-uniform vec3 col_sand_dark   = vec3(0.695, 0.560, 0.295);  // shadow sand
-uniform vec3 col_dirt        = vec3(0.590, 0.465, 0.235);  // dark dirt patch
-uniform vec3 col_trodden     = vec3(0.640, 0.525, 0.360);  // packed earth under foot
+uniform vec3 col_sand_bright = vec3(0.800, 0.660, 0.420);  // highlight sand
+uniform vec3 col_sand_mid    = vec3(0.720, 0.575, 0.340);  // base sand
+uniform vec3 col_sand_dark   = vec3(0.580, 0.460, 0.270);  // shadow sand
+uniform vec3 col_dirt        = vec3(0.500, 0.390, 0.220);  // dark dirt patch
+uniform vec3 col_trodden     = vec3(0.600, 0.465, 0.330);  // packed earth under foot
 
 varying vec2 world_xz;
 

@@ -14,6 +14,7 @@ const PLAYER_COLORS := [Color(0.93, 0.66, 0.22), Color(0.52, 0.70, 0.28), Color(
 @onready var director: Node                 = $DayDirector
 
 var hud: CanvasLayer = null
+var story: StoryPlayer = null
 var _cam_snapped := false
 var _hud_timer := 0.0
 
@@ -21,6 +22,14 @@ func _ready() -> void:
 	hud = HUD_SCENE.instantiate()
 	add_child(hud)
 	hud.begin_requested.connect(director.begin)
+
+	story = StoryPlayer.new()
+	add_child(story)
+	director.story_started.connect(func(day: int): story.play(StoryData.slides_for_day(day)))
+	director.story_waiting_changed.connect(story.set_waiting)
+	director.story_ended.connect(story.close)
+	story.finished.connect(director.finish_reading)
+	story.start_now_requested.connect(director.force_story_end)
 
 	NetworkManager.peer_connected.connect(_on_peer_connected)
 	NetworkManager.peer_disconnected.connect(_on_peer_disconnected)
@@ -77,7 +86,7 @@ func _refresh_hud() -> void:
 			var pl = players[slot]
 			hud.set_player_present(slot, true, pl.name == local_name)
 			hud.set_player_health(slot, pl.health / pl.MAX_HEALTH)
-			hud.set_player_carry(slot, "Downed" if pl.downed else pl.carried_kind.capitalize())
+			hud.set_player_downed(slot, pl.downed)
 		else:
 			hud.set_player_present(slot, false, false)
 
@@ -141,6 +150,7 @@ func _request_roster() -> void:
 	for p in players_root.get_children():
 		p.send_status_to(caller)
 	GameState.send_state_to(caller)
+	director.send_story_to(caller)
 
 @rpc("authority", "reliable")
 func _receive_roster_entry(peer_id: int) -> void:

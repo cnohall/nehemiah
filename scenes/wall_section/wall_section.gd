@@ -16,6 +16,9 @@ const MATERIAL_COST_BY_CREW := [
 	{ Stage.FRAMED: { "wood": 3 }, Stage.STACKED: { "stone": 5 }, Stage.MORTARED: { "mortar": 2 } },
 	{ Stage.FRAMED: { "wood": 3 }, Stage.STACKED: { "stone": 6 }, Stage.MORTARED: { "mortar": 2 } },
 ]
+# "beams" twist (Neh. 3:3 "they laid its beams"): framing takes long beams, carried in
+# pairs, instead of loose timber
+const BEAM_COST_BY_CREW    := [1, 2, 2]
 const MAX_HEALTH           := 150.0
 const DEGRADE_HEALTH_RATIO := 0.5
 const LABEL_RANGE          := 6.0
@@ -27,7 +30,7 @@ const MERLON_H     := 0.45
 const GAP_ROUGH    := 0.07   # joint width before mortar
 const GAP_MORTARED := 0.03
 
-const STONE_COLOR  := Color(0.74, 0.64, 0.48)   # Jerusalem limestone
+const STONE_COLOR  := Color(0.80, 0.74, 0.63)   # Jerusalem limestone — paler than the ground so the wall leads
 const MORTAR_COLOR := Color(0.62, 0.56, 0.46)
 const EARTH_COLOR  := Color(0.55, 0.45, 0.30)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)   # today's work — amber footing
@@ -39,10 +42,13 @@ const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 	set(value):
 		if value == stage:
 			return
+		if is_node_ready() and not decorative:
+			Sfx.play("build" if value > stage else "wall_crumble", global_position)
 		stage = value
 		if is_node_ready():
 			_update_visuals()
 			_dust_puff()
+			_bounce()
 			stage_changed.emit(stage)
 
 # Outer stretches repaired by other families (Neh. 3) — not networked, not buildable.
@@ -58,9 +64,18 @@ var is_target := false:
 			_foundation_mat.albedo_color = TARGET_COLOR if value else EARTH_COLOR
 			_update_label()
 
-var health: float = MAX_HEALTH
+# Replicated; a drop shakes the stones on every peer so an attack reads at a glance
+var health: float = MAX_HEALTH:
+	set(value):
+		if value < health and is_node_ready():
+			_shake()
+			Sfx.play("wall_hit", global_position)
+			last_hit_msec = Time.get_ticks_msec()
+		health = value
+# Local clock of the last hit seen on this peer — drives the HUD's off-screen alert
+var last_hit_msec := -100000
 # Materials deposited here, waiting to be built
-var pending: Dictionary = { "stone": 0, "wood": 0, "mortar": 0 }:
+var pending: Dictionary = _empty_pending():
 	set(value):
 		pending = value
 		if is_node_ready():
@@ -72,6 +87,7 @@ var _visual: Node3D
 var _label: Label3D
 var _foundation_mat: StandardMaterial3D
 var _label_poll := 0.0
+var _juice_tween: Tween
 
 @onready var _col: CollisionShape3D = $CollisionShape3D
 
@@ -90,7 +106,9 @@ func _ready() -> void:
 		set_process(false)
 		GameState.day_changed.connect(_follow_campaign)
 	else:
-		add_to_group("wall_sections")
+		add_to_group("wall_sections")   # what enemies batter
+		add_to_group("build_sites")     # what workers deliver to (walls + gate doors)
+		GameState.section_changed.connect(_update_label.unbind(1))
 		_build_sync()
 		GameState.crew_changed.connect(_update_label.unbind(1))
 	_update_visuals()
@@ -104,6 +122,9 @@ func _process(delta: float) -> void:
 	_label.visible = (is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and _local_player_near())
 	if damaged:
 		_update_label()
+
+static func _empty_pending() -> Dictionary:
+	return { "stone": 0, "wood": 0, "mortar": 0, "beam": 0 }
 
 # ── Deposit / Build (server) ───────────────────────────────
 
@@ -123,6 +144,8 @@ func needs(kind: String) -> bool:
 
 func cost_for(target_stage: int) -> Dictionary:
 	var tier := clampi(GameState.crew_size, 1, MATERIAL_COST_BY_CREW.size()) - 1
+	if target_stage == Stage.FRAMED and GameState.has_twist("beams"):
+		return { "beam": BEAM_COST_BY_CREW[tier] }
 	return MATERIAL_COST_BY_CREW[tier][target_stage]
 
 ## Material still missing for the next stage ("" when finished)
@@ -188,7 +211,7 @@ func is_complete() -> bool:
 
 ## New circuit section: back to bare foundations
 func reset_slot() -> void:
-	pending = { "stone": 0, "wood": 0, "mortar": 0 }
+	pending = _empty_pending()
 	health = MAX_HEALTH
 	stage = Stage.EMPTY
 
@@ -204,6 +227,18 @@ func distance_to_point(p: Vector3) -> float:
 	var clamped := local.clamp(-half, half)
 	return Vector2(local.x - clamped.x, local.z - clamped.z).length()
 
+# Spot just outside the footprint on the side facing `from` — where an attacker stands
+func approach_point(from: Vector3, standoff: float) -> Vector3:
+	var local := to_local(from) - _center
+	var half := _size * 0.5
+	var clamped := local.clamp(-half, half)
+	var out := Vector3(local.x - clamped.x, 0.0, local.z - clamped.z)
+	if out.length_squared() < 0.0001:
+		out = Vector3(0.0, 0.0, signf(local.z) if local.z != 0.0 else -1.0)
+	var p := to_global(_center + clamped + out.normalized() * standoff)
+	p.y = from.y
+	return p
+
 # ── Damage (server) ────────────────────────────────────────
 
 func take_damage(amount: float) -> void:
@@ -214,7 +249,7 @@ func take_damage(amount: float) -> void:
 		_degrade()
 
 func _degrade() -> void:
-	pending = { "stone": 0, "wood": 0, "mortar": 0 }
+	pending = _empty_pending()
 	health = MAX_HEALTH * DEGRADE_HEALTH_RATIO
 	stage = (stage - 1) as Stage
 	# Knocked back to bare foundation — slot stays so it can be rebuilt
@@ -249,7 +284,7 @@ func _update_visuals() -> void:
 			_add_courses(rng, 0.25, GAP_ROUGH * 2.0)  # ruined footing, walkable
 		Stage.FRAMED:
 			_add_courses(rng, minf(COURSE_H, _size.y), GAP_ROUGH)
-			_add_scaffold()
+			_add_scaffold(rng)
 		Stage.STACKED:
 			_add_courses(rng, _size.y, GAP_ROUGH)
 		Stage.MORTARED:
@@ -285,8 +320,12 @@ func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void
 			var s := Vector3(blen - gap, row_h - gap, depth)
 			var pos := Vector3(x + blen * 0.5, y0 + row_h * (r + 0.5), _center.z)
 			transforms.append(Transform3D(Basis.from_scale(s), pos))
+			# Value jitter + a warm/cool drift per block; the odd weathered stone reused from rubble
 			var v := rng.randf_range(-0.07, 0.06)
-			colors.append(Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.2))
+			if rng.randf() < 0.08:
+				v -= 0.12
+			var w := rng.randf_range(-0.025, 0.025)
+			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.2 - w))
 			x += blen
 	_add_multimesh(transforms, colors)
 
@@ -314,19 +353,78 @@ func _add_merlons() -> void:
 				colors.append(STONE_COLOR)
 	_add_multimesh(transforms, colors)
 
-func _add_scaffold() -> void:
-	var h := _size.y + 0.3
-	var posts := maxi(2, ceili(_size.x / 1.6) + 1)
+# Timber scaffold marking the wall's full height: rough poles, X-braces, putlogs
+# with short plank runs, and a ladder on the city side (Neh. 4:17 builders at work)
+func _add_scaffold(rng: RandomNumberGenerator) -> void:
+	var h := _size.y + 0.35
+	var bays := maxi(1, roundi(_size.x / 1.5))
+	var x0 := _center.x - _size.x * 0.5
+	var bay := _size.x / bays
+	var off := _size.z * 0.5 + 0.28
+	var tops: Array[Vector3] = []
 	for side: float in [-1.0, 1.0]:
-		var z := _center.z + side * (_size.z * 0.5 + 0.18)
-		for i in posts:
-			var x := _center.x - _size.x * 0.5 + _size.x * i / (posts - 1)
-			_add_box(Vector3(0.12, h, 0.12), Vector3(x, h * 0.5, z), WOOD_COLOR)
-		for y: float in [h * 0.5, h - 0.06]:
-			_add_box(Vector3(_size.x + 0.2, 0.09, 0.09), Vector3(_center.x, y, z), WOOD_COLOR.darkened(0.1))
-	# Walk boards across the top
-	_add_box(Vector3(_size.x, 0.05, _size.z + 0.5), Vector3(_center.x, h * 0.5 + 0.07, _center.z),
-		WOOD_COLOR.lightened(0.08))
+		var z := _center.z + side * off
+		var feet: Array[Vector3] = []
+		var heads: Array[Vector3] = []
+		for i in bays + 1:
+			var x := x0 + bay * i
+			var foot := Vector3(x + rng.randf_range(-0.05, 0.05), 0.0, z)
+			var head := Vector3(x + rng.randf_range(-0.08, 0.08), h + rng.randf_range(-0.1, 0.15), z + side * 0.04)
+			_add_pole(foot, head, 0.055, WOOD_COLOR.darkened(rng.randf_range(0.0, 0.15)))
+			feet.append(foot)
+			heads.append(head)
+		# Ledger lashed along the top, X-brace in alternate bays
+		var ly := h - 0.12
+		_add_pole(Vector3(x0 - 0.15, ly, z), Vector3(x0 + _size.x + 0.15, ly, z), 0.035, WOOD_COLOR.darkened(0.1))
+		for i in bays:
+			if (i + int(side > 0.0)) % 2 == 0:
+				var a := feet[i] + Vector3(0, 0.15, 0)
+				var b := Vector3(heads[i + 1].x, ly, z)
+				_add_pole(a, b, 0.03, WOOD_COLOR.darkened(0.18))
+		if side > 0.0:
+			tops = heads
+	# Putlogs across the wall with short, slightly skewed plank runs on top
+	for i in bays + 1:
+		var x := tops[i].x
+		_add_pole(Vector3(x, h - 0.08, _center.z - off - 0.1), Vector3(x, h - 0.08, _center.z + off + 0.1),
+			0.03, WOOD_COLOR.darkened(0.1))
+	for i in bays:
+		if rng.randf() < 0.75:
+			_add_box(Vector3(bay * rng.randf_range(0.7, 0.95), 0.04, 0.28),
+				Vector3(x0 + bay * (i + 0.5), h - 0.03, _center.z + rng.randf_range(-0.2, 0.2)),
+				WOOD_COLOR.lightened(rng.randf_range(0.06, 0.16)))
+			_visual.get_child(-1).rotation.y = rng.randf_range(-0.06, 0.06)
+	# Ladder leaning on the city side
+	var lx := x0 + bay * (rng.randi_range(0, bays - 1) + 0.5)
+	var base_z := _center.z + off + 0.75
+	var top_z := _center.z + off + 0.05
+	for dx: float in [-0.2, 0.2]:
+		_add_pole(Vector3(lx + dx, 0.0, base_z), Vector3(lx + dx, h + 0.1, top_z), 0.03, WOOD_COLOR.lightened(0.05))
+	var rungs := int(h / 0.32)
+	for r in range(1, rungs + 1):
+		var t := float(r) / (rungs + 1)
+		var y := (h + 0.1) * t
+		var z := lerpf(base_z, top_z, t)
+		_add_pole(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
+
+# Round-ish timber between two points (6-sided, so it catches light like a pole)
+func _add_pole(a: Vector3, b: Vector3, radius: float, color: Color) -> void:
+	var mi := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius * 0.85
+	mesh.bottom_radius = radius
+	mesh.height = a.distance_to(b)
+	mesh.radial_segments = 6
+	mesh.rings = 1
+	mi.mesh = mesh
+	var dir := (b - a).normalized()
+	mi.basis = Basis(Quaternion(Vector3.UP, dir)) if absf(dir.dot(Vector3.UP)) < 0.999 else Basis()
+	mi.position = (a + b) * 0.5
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.95
+	mi.material_override = mat
+	_visual.add_child(mi)
 
 func _add_box(size: Vector3, pos: Vector3, color: Color) -> StandardMaterial3D:
 	var mi := MeshInstance3D.new()
@@ -380,6 +478,22 @@ static func _stone_material() -> StandardMaterial3D:
 		_stone_mat.roughness = 0.92
 	return _stone_mat
 
+# Stage raised: pop up from slightly squashed, cartoon-style
+func _bounce() -> void:
+	if _juice_tween:
+		_juice_tween.kill()
+	_visual.position = Vector3.ZERO
+	_visual.scale = Vector3(1.02, 0.9, 1.02)
+	_juice_tween = create_tween()
+	_juice_tween.tween_property(_visual, "scale", Vector3.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _shake() -> void:
+	if _juice_tween and _juice_tween.is_running():
+		return
+	_juice_tween = create_tween()
+	for x: float in [0.07, -0.06, 0.04, -0.02, 0.0]:
+		_juice_tween.tween_property(_visual, "position:x", x, 0.04)
+
 func _dust_puff() -> void:
 	var p := CPUParticles3D.new()
 	p.one_shot = true
@@ -395,20 +509,20 @@ func _dust_puff() -> void:
 	p.gravity = Vector3(0, -0.6, 0)
 	p.damping_min = 0.8
 	p.damping_max = 1.4
-	p.scale_amount_min = 0.5
-	p.scale_amount_max = 1.2
+	p.scale_amount_min = 0.6
+	p.scale_amount_max = 1.3
+	p.scale_amount_curve = DustFx.grow_curve()
+	p.angle_min = 0.0
+	p.angle_max = 360.0
+	# Earthier than the limestone so the puff reads against a fresh wall
 	var ramp := Gradient.new()
-	ramp.set_color(0, Color(0.87, 0.78, 0.60, 0.55))
-	ramp.set_color(1, Color(0.87, 0.78, 0.60, 0.0))
+	ramp.set_color(0, Color(0.78, 0.68, 0.52, 0.5))
+	ramp.set_color(1, Color(0.78, 0.68, 0.52, 0.0))
 	p.color_ramp = ramp
 	var quad := QuadMesh.new()
-	quad.size = Vector2(0.7, 0.7)
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	mat.vertex_color_use_as_albedo = true
-	quad.material = mat
+	quad.size = Vector2(1.0, 1.0)
+	quad.material = DustFx.material()
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.mesh = quad
 	p.position = Vector3(_center.x, 0.3, _center.z)
 	add_child(p)

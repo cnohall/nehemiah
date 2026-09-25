@@ -2,15 +2,15 @@ class_name Enemy
 extends CharacterBody3D
 
 # Server simulates; clients receive position / type / anim / hits via MultiplayerSynchronizer.
-# Goal: reach the inner city through gaps in the wall. Nearby workers get attacked;
-# walls get battered only when they're what's stopping progress.
+# Runners head for the inner city through gaps in the wall; wreckers march on the
+# nearest built wall and batter it until it falls back a stage. Nearby workers are
+# attacked either way, so only killing them stops the damage.
 
 enum Type { SCOUT, BRUTE, RAIDER }
 
 const SPEED        := { Type.SCOUT: 3.5, Type.BRUTE: 2.5, Type.RAIDER: 4.0 }
 const HEALTH       := { Type.SCOUT: 40.0, Type.BRUTE: 100.0, Type.RAIDER: 60.0 }
 const DAMAGE       := { Type.SCOUT: 5.0,  Type.BRUTE: 15.0,  Type.RAIDER: 8.0  }
-const TINT         := { Type.SCOUT: Color(1, 1, 1), Type.BRUTE: Color(0.85, 0.72, 0.66), Type.RAIDER: Color(0.95, 0.88, 0.70) }
 const SCALE        := { Type.SCOUT: 1.0, Type.BRUTE: 1.2, Type.RAIDER: 1.0 }
 
 const AGGRO_RANGE       := 4.5    # start chasing a worker this close
@@ -25,8 +25,17 @@ const STUCK_DIST        := 0.35
 const BREACH_Z          := 13.5   # past this line the enemy is inside the city
 const GOAL_Z            := 15.0
 const GOAL_X_SPREAD     := 12.0
+const WRECKER_CHANCE    := 0.5    # share of scouts/raiders that go for the wall; brutes always do
+const WALL_STANDOFF     := 0.6    # where a wrecker stands, measured out from the wall face
 
-const _TEXTURE := preload("res://assets/sprites/enemy.png")
+# One sheet per type (tools/build_enemy_sheets.py) — distinct silhouettes, one dark colour family
+const _TEXTURES := {
+	Type.SCOUT:  preload("res://assets/sprites/enemy_scout.png"),
+	Type.BRUTE:  preload("res://assets/sprites/enemy_brute.png"),
+	Type.RAIDER: preload("res://assets/sprites/enemy_raider.png"),
+}
+# Oxblood rim instead of the players' brown — reads as foe even in a crowd
+const OUTLINE_COLOR := Color(0.36, 0.07, 0.05)
 const _ANIMS   := ["idle", "walk", "thrust", "collapse"]
 const CORPSE_TIME := 0.9
 
@@ -37,6 +46,11 @@ signal died
 # Replicated animation name — server writes, every peer plays it
 var anim := "idle_down":
 	set(value):
+		if _sprite != null and _sprite.animation != value:
+			if value.begins_with("thrust"):
+				Sfx.play("enemy_swing", global_position)
+			elif value == "collapse":
+				Sfx.play("enemy_die", global_position)
 		anim = value
 		if _sprite != null and _sprite.animation != value:
 			_sprite.play(value)
@@ -47,6 +61,7 @@ var hits := 0:
 		hits = value
 		if _sprite != null:
 			_sprite.hit_flash()
+			Sfx.play("enemy_hit", global_position)
 
 # Replicated so clients can draw the health bar
 var health: float = -1.0:
@@ -58,6 +73,8 @@ var health: float = -1.0:
 				_bar.visible = false  # no bar over a corpse
 var _bar: HealthBar
 var _target_player: Node3D = null
+var _target_wall: Node3D = null
+var _wrecker := false
 var _goal: Vector3
 var _attack_timer := 0.0
 var _repath_timer := 0.0
@@ -78,10 +95,12 @@ func _ready() -> void:
 	_bar.position.y = 2.05 * SCALE[type]
 	add_child(_bar)
 	add_to_group("enemies")
-	_sprite.setup(_TEXTURE, _ANIMS, TINT[type], SCALE[type])
+	_sprite.setup(_TEXTURES[type], _ANIMS, Color.WHITE, SCALE[type])
+	_sprite.set_outline_color(OUTLINE_COLOR)
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
 	_goal = Vector3(randf_range(-GOAL_X_SPREAD, GOAL_X_SPREAD), 0.0, GOAL_Z)
+	_wrecker = type == Type.BRUTE or randf() < WRECKER_CHANCE
 	_stuck_origin = global_position
 
 func _physics_process(delta: float) -> void:
@@ -99,7 +118,7 @@ func _physics_process(delta: float) -> void:
 	if _busy:
 		return
 	_pick_target()
-	if _try_attack_player():
+	if _try_attack_player() or _try_attack_wall():
 		return
 	_move(delta)
 	_check_stuck(delta)
@@ -108,6 +127,7 @@ func _physics_process(delta: float) -> void:
 # ── Targeting ──────────────────────────────────────────────
 
 func _pick_target() -> void:
+	_pick_wall()
 	if is_instance_valid(_target_player) and not _target_player.downed \
 			and _dist_flat(_target_player) < LEASH_RANGE:
 		return
@@ -121,13 +141,37 @@ func _pick_target() -> void:
 			best = d
 			_target_player = p
 
+# Wreckers lock onto the nearest built wall. Once it's knocked down to bare
+# foundation they pour through the breach instead.
+func _pick_wall() -> void:
+	if not _wrecker:
+		return
+	if is_instance_valid(_target_wall):
+		if _target_wall.is_built():
+			return
+		_target_wall = null
+		_wrecker = false
+		return
+	var best := INF
+	for section in get_tree().get_nodes_in_group("wall_sections"):
+		if not section.is_built():
+			continue
+		var d: float = section.distance_to_point(global_position)
+		if d < best:
+			best = d
+			_target_wall = section
+
 func _dist_flat(n: Node3D) -> float:
 	return Vector2(n.global_position.x - global_position.x, n.global_position.z - global_position.z).length()
 
 # ── Movement ───────────────────────────────────────────────
 
 func _move(delta: float) -> void:
-	var dest := _target_player.global_position if _target_player else _goal
+	var dest := _goal
+	if _target_player:
+		dest = _target_player.global_position
+	elif _target_wall:
+		dest = _target_wall.approach_point(global_position, WALL_STANDOFF)
 	_repath_timer -= delta
 	if _repath_timer <= 0.0:
 		_repath_timer = REPATH_INTERVAL
@@ -179,6 +223,18 @@ func _try_attack_player() -> bool:
 	velocity = Vector3.ZERO
 	if _attack_timer <= 0.0:
 		_attack(_target_player, _target_player.global_position)
+	else:
+		anim = "idle_" + _facing
+	return true
+
+func _try_attack_wall() -> bool:
+	if _target_player != null or _target_wall == null \
+			or _target_wall.distance_to_point(global_position) > WALL_REACH:
+		return false
+	velocity = Vector3.ZERO
+	var at: Vector3 = _target_wall.approach_point(global_position, 0.0)
+	if _attack_timer <= 0.0:
+		_attack(_target_wall, at)
 	else:
 		anim = "idle_" + _facing
 	return true

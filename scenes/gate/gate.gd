@@ -1,28 +1,254 @@
 extends Node3D
 
-# Lintel spans the opening once both pillars are fully built.
+# Opening between two buildable pillars, finished one of two ways once both pillars
+# stand complete — either way it closes the gap to enemies:
+#   gate sections with the "doors" twist — timber → doors hung (Neh. 3:3 "set up its
+#     doors, its bolts and its bars"); lintel spans the top
+#   stretches with no gate in the text (GameState.has_gate() false) — stone → infill
+# Implements the build-site interface players use (see wall_section.gd).
+# Server owns pending / finished; clients mirror them via the Sync child.
 
-const LINTEL_SIZE := Vector3(3.4, 0.55, 1.0)
-const LINTEL_Y    := 2.2
+signal stage_changed(new_stage: int)
+
+const LINTEL_SIZE  := Vector3(3.4, 0.55, 1.0)
+const LINTEL_Y     := 2.2
+const OPENING      := Vector3(3.0, 2.2, 0.35)   # door leaves fill this
+const COST_BY_CREW := [2, 3, 3]                 # loads for crews of 1, 2, 3+
+const STONE_COLOR  := Color(0.80, 0.74, 0.64)   # reads like the wall's textured limestone
+const LABEL_RANGE  := 6.0
+const LABEL_POLL   := 0.2
+const DOOR_COLOR   := Color(0.42, 0.29, 0.17)
+const BAR_COLOR    := Color(0.36, 0.30, 0.24)
+const TARGET_COLOR := Color(0.86, 0.58, 0.22)
+const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 
 @onready var _pillars: Array = [$PillarLeft, $PillarRight]
 
+var is_target := false:
+	set(value):
+		is_target = value
+		if is_node_ready():
+			_refresh()
+var pending := 0:
+	set(value):
+		pending = value
+		if is_node_ready():
+			_update_label()
+var finished := false:
+	set(value):
+		if value == finished:
+			return
+		finished = value
+		if is_node_ready():
+			if value:
+				Sfx.play("build", global_position)
+			_refresh()
+			stage_changed.emit(1 if value else 0)
+
 var _lintel: MeshInstance3D
+var _doors: Node3D
+var _infill: Node3D
+var _door_body: StaticBody3D
+var _footing: MeshInstance3D
+var _label: Label3D
+var _label_poll := 0.0
 
 func _ready() -> void:
-	_lintel = MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = LINTEL_SIZE
-	_lintel.mesh = mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.74, 0.65, 0.50)
-	mat.roughness = 0.95
-	_lintel.material_override = mat
-	_lintel.position = Vector3(0, LINTEL_Y + LINTEL_SIZE.y * 0.5, 0)
+	_lintel = _box_mesh(LINTEL_SIZE, Vector3(0, LINTEL_Y + LINTEL_SIZE.y * 0.5, 0), Color(0.74, 0.65, 0.50))
 	add_child(_lintel)
+	_build_doors()
+	_build_label()
+	add_to_group("build_sites")
+	_build_sync()
 	for p in _pillars:
 		p.stage_changed.connect(_refresh.unbind(1))
+	GameState.section_changed.connect(_refresh.unbind(1))
+	GameState.crew_changed.connect(_update_label.unbind(1))
 	_refresh()
 
+func _process(delta: float) -> void:
+	_label_poll -= delta
+	if _label_poll > 0.0:
+		return
+	_label_poll = LABEL_POLL
+	_label.visible = _open_for_work() and (is_target or _local_player_near())
+
+# ── Build-site interface (server mutates) ──────────────────
+
+func needs(kind: String) -> bool:
+	return _open_for_work() and kind == _material() and pending < _cost()
+
+func next_need() -> String:
+	return _material() if needs(_material()) else ""
+
+func deposit(kind: String, amount: int) -> bool:
+	if not multiplayer.is_server() or not needs(kind):
+		return false
+	pending += amount
+	return true
+
+func can_build() -> bool:
+	return _open_for_work() and pending >= _cost()
+
+func try_build() -> bool:
+	if not multiplayer.is_server() or not can_build():
+		return false
+	finished = true
+	return true
+
+## Done when doors hang / the gap is sealed — or at once when this section has no such step
+func is_complete() -> bool:
+	return finished or _material().is_empty()
+
+func reset_slot() -> void:
+	pending = 0
+	finished = false
+
+func repair(_fraction: float) -> void:
+	pass
+
+func distance_to_point(p: Vector3) -> float:
+	var local := to_local(p)
+	var half := OPENING * 0.5
+	var clamped := local.clamp(-half, half)
+	return Vector2(local.x - clamped.x, local.z - clamped.z).length()
+
+func approach_point(from: Vector3, standoff: float) -> Vector3:
+	var local := to_local(from)
+	var half := OPENING * 0.5
+	var clamped := local.clamp(-half, half)
+	var side := signf(local.z) if local.z != 0.0 else 1.0
+	var p := to_global(Vector3(clamped.x, 0.0, half.z * side + standoff * side))
+	p.y = from.y
+	return p
+
+## What finishes this opening here: "wood" (doors), "stone" (infill) or "" (left open)
+func _material() -> String:
+	if not GameState.has_gate():
+		return "stone"
+	return "wood" if GameState.has_twist("doors") else ""
+
+# The last step can start once both pillars stand finished
+func _open_for_work() -> bool:
+	return not _material().is_empty() and not finished \
+		and _pillars.all(func(p): return p.is_complete())
+
+func _cost() -> int:
+	return COST_BY_CREW[clampi(GameState.crew_size, 1, COST_BY_CREW.size()) - 1]
+
+# ── Visuals ────────────────────────────────────────────────
+
 func _refresh() -> void:
-	_lintel.visible = _pillars.all(func(p): return p.stage == p.Stage.MORTARED)
+	var gate := GameState.has_gate()
+	_lintel.visible = gate and _pillars.all(func(p): return p.stage == p.Stage.MORTARED)
+	_doors.visible = finished and gate
+	_infill.visible = finished and not gate
+	_door_body.get_child(0).set_deferred("disabled", not finished)
+	_footing.visible = _open_for_work() and is_target
+	_update_label()
+
+# Two plank leaves with cross battens and a heavy bar across both
+func _build_doors() -> void:
+	_doors = Node3D.new()
+	add_child(_doors)
+	var leaf_w := OPENING.x * 0.5 - 0.03
+	for side: float in [-1.0, 1.0]:
+		var cx := side * (leaf_w * 0.5 + 0.015)
+		for i in 4:
+			var plank_w := leaf_w / 4.0
+			var x := cx - leaf_w * 0.5 + plank_w * (i + 0.5)
+			var v := (hash(Vector2(side, i)) % 7) * 0.008
+			_doors.add_child(_box_mesh(Vector3(plank_w - 0.02, OPENING.y, 0.12), Vector3(x, OPENING.y * 0.5, 0),
+				Color(DOOR_COLOR.r + v, DOOR_COLOR.g + v, DOOR_COLOR.b + v)))
+		for y: float in [0.45, OPENING.y - 0.45]:
+			_doors.add_child(_box_mesh(Vector3(leaf_w - 0.1, 0.14, 0.05), Vector3(cx, y, -0.09), DOOR_COLOR.darkened(0.2)))
+	_doors.add_child(_box_mesh(Vector3(OPENING.x + 0.3, 0.16, 0.12), Vector3(0, OPENING.y * 0.55, -0.16), BAR_COLOR))
+	# No gate here: the gap is walled up in courses matching the pillars
+	_infill = Node3D.new()
+	add_child(_infill)
+	var rows := 4
+	for r in rows:
+		var h := OPENING.y / rows
+		var stagger := 0.25 if r % 2 == 1 else 0.0
+		var x := -OPENING.x * 0.5
+		var i := 0
+		while x < OPENING.x * 0.5 - 0.05:
+			var w := minf(0.9 - (stagger if i == 0 else 0.0), OPENING.x * 0.5 - x)
+			var v := (hash(Vector2(r, i)) % 9) * 0.01 - 0.04
+			_infill.add_child(_box_mesh(Vector3(w - 0.05, h - 0.05, 0.9), Vector3(x + w * 0.5, h * (r + 0.5) + 0.1, 0),
+				Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v)))
+			x += w
+			i += 1
+	# Closed doors block movement like the wall
+	_door_body = StaticBody3D.new()
+	_door_body.collision_layer = 8
+	_door_body.collision_mask = 4
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = OPENING
+	shape.shape = box
+	shape.position.y = OPENING.y * 0.5
+	shape.disabled = true
+	_door_body.add_child(shape)
+	add_child(_door_body)
+	# Amber footing in the opening when the doors are today's work
+	_footing = _box_mesh(Vector3(OPENING.x, 0.04, 1.0), Vector3(0, 0.12, 0), TARGET_COLOR)
+	add_child(_footing)
+
+func _box_mesh(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mi.mesh = mesh
+	mi.position = pos
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.95
+	mi.material_override = mat
+	return mi
+
+# ── Label ──────────────────────────────────────────────────
+
+func _build_label() -> void:
+	_label = Label3D.new()
+	_label.font = _FONT
+	_label.font_size = 40
+	_label.pixel_size = 0.01
+	_label.outline_size = 10
+	_label.modulate = Color(0.98, 0.95, 0.88)
+	_label.outline_modulate = Color(0.20, 0.14, 0.08)
+	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_label.no_depth_test = true
+	_label.position = Vector3(0, 3.4, 0)
+	_label.visible = false
+	add_child(_label)
+
+func _update_label() -> void:
+	if _label == null:
+		return
+	var lines: PackedStringArray = []
+	if is_target:
+		lines.append("— Today's work —")
+	var what := "Doors" if GameState.has_gate() else "Seal the gap"
+	lines.append("%s  ·  %s %d/%d" % [what, _material().capitalize(), mini(pending, _cost()), _cost()])
+	_label.text = "\n".join(lines)
+
+func _local_player_near() -> bool:
+	for p: Node3D in get_tree().get_nodes_in_group("players"):
+		if p.is_multiplayer_authority():
+			return distance_to_point(p.global_position) < LABEL_RANGE
+	return false
+
+# ── Networking ─────────────────────────────────────────────
+
+func _build_sync() -> void:
+	var cfg := SceneReplicationConfig.new()
+	for prop: NodePath in [^".:pending", ^".:finished", ^".:is_target"]:
+		cfg.add_property(prop)
+		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
+	var sync := MultiplayerSynchronizer.new()
+	sync.name = "Sync"
+	sync.replication_interval = 0.1
+	sync.replication_config = cfg
+	NetworkManager.gate_sync(sync)
+	add_child(sync)
