@@ -65,6 +65,16 @@ func hit_flash() -> void:
 	_flash_tween = create_tween()
 	_flash_tween.tween_method(func(v: float): _mat.set_shader_parameter("flash", v), 1.0, 0.0, FLASH_TIME)
 
+## Freeze the current frame for a beat so a hit lands with weight (visual only —
+## movement carries on, so nothing desyncs)
+func hitstop(duration: float) -> void:
+	if not is_playing():
+		return
+	pause()
+	await get_tree().create_timer(duration).timeout
+	if is_instance_valid(self) and not is_playing():
+		play()
+
 ## Cartoon squash & stretch (x, y factors), springing back to normal. Feet stay planted.
 func squash(amount: Vector2) -> void:
 	if _squash_tween:

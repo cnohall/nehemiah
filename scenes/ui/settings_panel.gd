@@ -9,6 +9,8 @@ signal closed
 @onready var _fullscreen: Button = %Fullscreen
 @onready var _vsync_on:   Button = %VsyncOn
 @onready var _vsync_off:  Button = %VsyncOff
+@onready var _shake_on:   Button = %ShakeOn
+@onready var _shake_off:  Button = %ShakeOff
 @onready var _volume:     HSlider = %Volume
 @onready var _volume_val: Label  = %VolumeValue
 @onready var _music:      HSlider = %Music
@@ -23,6 +25,8 @@ func _ready() -> void:
 	_fullscreen.pressed.connect(_toggle.bind("fullscreen", true))
 	_vsync_on.pressed.connect(_toggle.bind("vsync", true))
 	_vsync_off.pressed.connect(_toggle.bind("vsync", false))
+	_shake_on.pressed.connect(_toggle.bind("screen_shake", true))
+	_shake_off.pressed.connect(_toggle.bind("screen_shake", false))
 	_volume.value_changed.connect(_on_volume)
 	_volume.drag_ended.connect(func(_changed): Settings.save())
 	_music.value_changed.connect(_on_music)
@@ -36,6 +40,8 @@ func open() -> void:
 	_fullscreen.button_pressed = Settings.fullscreen
 	_vsync_on.button_pressed   = Settings.vsync
 	_vsync_off.button_pressed  = not Settings.vsync
+	_shake_on.button_pressed   = Settings.screen_shake
+	_shake_off.button_pressed  = not Settings.screen_shake
 	_volume.set_value_no_signal(Settings.volume * 100.0)
 	_volume_val.text = "%d%%" % roundi(_volume.value)
 	_music.set_value_no_signal(Settings.music_volume * 100.0)

@@ -1,10 +1,12 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/settings_panel.gd" id="1_script"]
 
 [sub_resource type="ButtonGroup" id="Group_display"]
 
 [sub_resource type="ButtonGroup" id="Group_vsync"]
+
+[sub_resource type="ButtonGroup" id="Group_shake"]
 
 [node name="SettingsPanel" type="Control"]
 layout_mode = 3
@@ -120,6 +122,34 @@ layout_mode = 2
 theme_type_variation = &"Segment"
 toggle_mode = true
 button_group = SubResource("Group_vsync")
+text = "Off"
+
+[node name="ShakeLabel" type="Label" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Body"
+text = "Screen shake"
+
+[node name="ShakeRow" type="HBoxContainer" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="ShakeOn" type="Button" parent="Center/Modal/VBox/Grid/ShakeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_type_variation = &"Segment"
+toggle_mode = true
+button_group = SubResource("Group_shake")
+text = "On"
+
+[node name="ShakeOff" type="Button" parent="Center/Modal/VBox/Grid/ShakeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_type_variation = &"Segment"
+toggle_mode = true
+button_group = SubResource("Group_shake")
 text = "Off"
 
 [node name="VolumeLabel" type="Label" parent="Center/Modal/VBox/Grid"]

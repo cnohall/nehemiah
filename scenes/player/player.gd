@@ -57,13 +57,15 @@ const FOCUS_COLOR     := Color(0.99, 0.93, 0.74, 0.95)   # cream ring under what
 const FOCUS_POLL      := 0.1
 const RUN_ANIM_SPEED  := 8.0      # ground speed the run cycle was drawn for
 const WALK_ANIM_SPEED := 4.5
+const STICK_DEADZONE  := 0.2
+# A press that lands while an action is still playing is kept this long, not dropped
+const INPUT_BUFFER    := 0.15
+# Gamepad sling: no cursor, so the aim cone is wider and an idle stick throws where we face
+const PAD_ASSIST_DEG  := 35.0
 
-const MOVE_DIRS := {
-	"move_north": Vector3(-1, 0, -1),
-	"move_south": Vector3( 1, 0,  1),
-	"move_east":  Vector3( 1, 0, -1),
-	"move_west":  Vector3(-1, 0,  1),
-}
+# Screen directions on the ground plane (isometric camera looks down -x -z)
+const SCREEN_RIGHT := Vector3(1, 0, -1) * 0.70710678
+const SCREEN_DOWN  := Vector3(1, 0, 1) * 0.70710678
 
 # Worker sheets (tunic colour per player slot) — composed from LPC layers, see assets/sprites/CREDITS.md
 const _FONT       := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
@@ -112,6 +114,8 @@ var _dash_dir := Vector3.ZERO
 var _focus_ring: MeshInstance3D
 var _focus_poll := 0.0
 var _beam: Node3D   # carried beam, placed in world space between the two ends
+var _buffered := {}   # action → seconds left to act on an early press
+var _move_dir := Vector3.ZERO   # last non-zero move input (pad aim falls back to it)
 
 # Replicated: the sling is being whirled (owner writes, every peer shows it)
 var whirling := false:
@@ -163,6 +167,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_sling_cd = maxf(0.0, _sling_cd - delta)
 	_dash_cd = maxf(0.0, _dash_cd - delta)
+	_buffer_input(delta)
 	_update_focus(delta)
 	if downed or GameState.is_over() or GameState.phase == GameState.Phase.STORY:
 		velocity = Vector3.ZERO
@@ -179,17 +184,33 @@ func _physics_process(delta: float) -> void:
 
 # ── Movement ───────────────────────────────────────────────
 
+## Screen-space stick / keys → ground direction. Keys give length 1; a stick can be
+## pushed part-way for a slower walk.
+static func screen_to_ground(v: Vector2) -> Vector3:
+	return SCREEN_RIGHT * v.x + SCREEN_DOWN * v.y
+
+# Remember presses for a moment, so one made during a pickup / throw animation still counts
+func _buffer_input(delta: float) -> void:
+	for action: String in ["interact", "drop", "dash"]:
+		if Input.is_action_just_pressed(action):
+			_buffered[action] = INPUT_BUFFER
+		elif _buffered.has(action):
+			_buffered[action] -= delta
+			if _buffered[action] <= 0.0:
+				_buffered.erase(action)
+
+func _consume(action: String) -> bool:
+	return _buffered.erase(action)
+
 func _handle_movement(delta: float) -> void:
-	var dir := Vector3.ZERO
-	for action in MOVE_DIRS:
-		if Input.is_action_pressed(action):
-			dir += MOVE_DIRS[action]
-	if dir.length_squared() > 0:
-		dir = dir.normalized()
+	var dir := screen_to_ground(Input.get_vector("move_west", "move_east", "move_north", "move_south", STICK_DEADZONE))
+	if dir != Vector3.ZERO:
+		_move_dir = dir.normalized()
 	var on_beam := carried_kind == "beam" or helping_id != 0
-	if Input.is_action_just_pressed("dash") and _dash_cd <= 0.0 and not _is_busy and not _charging and not on_beam:
+	if _buffered.has("dash") and _dash_cd <= 0.0 and not _is_busy and not _charging and not on_beam:
+		_consume("dash")
 		# Standing still: dash the way we're facing
-		_dash_dir = dir if dir != Vector3.ZERO else _facing_vector()
+		_dash_dir = dir.normalized() if dir != Vector3.ZERO else _facing_vector()
 		_dash_time = DASH_TIME
 		_dash_cd = DASH_COOLDOWN
 		_dash_fx.rpc()
@@ -288,10 +309,10 @@ func _update_beam() -> void:
 
 func _facing_vector() -> Vector3:
 	match _facing:
-		"up":    return MOVE_DIRS["move_north"].normalized()
-		"left":  return MOVE_DIRS["move_west"].normalized()
-		"right": return MOVE_DIRS["move_east"].normalized()
-	return MOVE_DIRS["move_south"].normalized()
+		"up":    return -SCREEN_DOWN
+		"left":  return -SCREEN_RIGHT
+		"right": return SCREEN_RIGHT
+	return SCREEN_DOWN
 
 # Owner → everyone: puff of dust + stretch so a dash reads on every screen
 @rpc("authority", "call_local", "unreliable")
@@ -432,9 +453,9 @@ func _play_action(anim_base: String) -> void:
 # ── Interact / Drop ────────────────────────────────────────
 
 func _handle_interact() -> void:
-	if Input.is_action_just_pressed("interact"):
+	if _consume("interact"):
 		_server_interact.rpc_id(1, global_position)
-	if Input.is_action_just_pressed("drop"):
+	if _consume("drop"):
 		_server_drop.rpc_id(1, global_position)
 
 # Owner sends its position with the request: the reliable RPC can overtake the
@@ -458,7 +479,7 @@ func _server_interact(at: Vector3) -> void:
 		if carrier != null:
 			_set_helping.rpc(carrier.get_multiplayer_authority())
 			_sfx.rpc("pickup")
-			_tell("Holding the other end — [E] to let go")
+			_tell("Holding the other end — {interact} to let go")
 			return
 	# Nearest valid thing wins — sections and gate pillars overlap in reach
 	if not carried_kind.is_empty():
@@ -496,7 +517,7 @@ func _why_not_needed(at: Vector3) -> String:
 	var wall := _nearest_in_reach("build_sites", at, func(_s): return true)
 	if wall == null:
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
-			return "Hands full — deliver it, or [G] to drop"
+			return "Hands full — deliver it, or {drop} to drop"
 		return "Bring it to a wall"
 	var need: String = wall.next_need()
 	if need.is_empty():
@@ -536,7 +557,7 @@ func _set_carried(kind: String) -> void:
 	if multiplayer.is_server() and kind != "beam":
 		_release_helper()
 	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
-		_toast("Heavy — a partner can take the other end [E]")
+		_toast("Heavy — a partner can take the other end {interact}")
 	# Pick up → squashed under the load; put down → spring back up
 	_sprite.squash(Vector2(1.08, 0.92) if not kind.is_empty() else Vector2(0.95, 1.05))
 
@@ -563,9 +584,18 @@ func _handle_attack(delta: float) -> void:
 			whirling = true
 		return
 	_charge = minf(1.0, _charge + delta / SLING_CHARGE_TIME)
-	_update_aim(_cursor_on_ground())
+	_update_aim(_pad_aim_point() if InputMode.using_pad else _cursor_on_ground())
 	if not Input.is_action_pressed("throw_charge"):
 		release_throw()
+
+# Right stick picks the direction; left alone, the throw goes the way we're walking /
+# facing. Always thrown at the full range the charge allows — the assist finds the enemy.
+func _pad_aim_point() -> Vector3:
+	var stick := Input.get_vector("aim_west", "aim_east", "aim_north", "aim_south", STICK_DEADZONE)
+	var dir := screen_to_ground(stick).normalized() if stick != Vector2.ZERO else _move_dir
+	if dir == Vector3.ZERO:
+		dir = _facing_vector()
+	return global_position + dir * _sling_range(_charge)
 
 ## Owner: finish the wind-up and throw at the current aim point
 func release_throw() -> void:
@@ -582,7 +612,7 @@ func release_throw() -> void:
 			and _sprite.frame < SLING_RELEASE_FRAME:
 		await _sprite.frame_changed
 	if is_instance_valid(self) and _sprite.animation.begins_with("slash"):
-		_server_sling.rpc_id(1, global_position, land, charge)
+		_server_sling.rpc_id(1, global_position, land, charge, InputMode.using_pad)
 
 func _cancel_charge() -> void:
 	_charging = false
@@ -597,7 +627,7 @@ func _update_aim(cursor: Vector3) -> void:
 	var dist := clampf(flat.length(), SLING_MIN_THROW, reach)
 	var dir := flat.normalized() if flat.length_squared() > 0.001 else Vector3.FORWARD
 	_aim_point = Vector3(global_position.x, GROUND_Y, global_position.z) + dir * dist
-	var locked := _assist_target(global_position, _aim_point, reach)
+	var locked := _assist_target(global_position, _aim_point, reach, _assist_cone(InputMode.using_pad))
 	_show_aim_marker(locked.global_position if locked else _aim_point, locked != null)
 
 func _cursor_on_ground() -> Vector3:
@@ -634,16 +664,19 @@ func _show_aim_marker(at: Vector3, locked: bool) -> void:
 	_aim_marker.global_position = Vector3(at.x, GROUND_Y + 0.04, at.z)
 	_aim_marker.visible = true
 
+static func _assist_cone(pad: bool) -> float:
+	return PAD_ASSIST_DEG if pad else AIM_ASSIST_DEG
+
 static func _sling_range(charge: float) -> float:
 	return lerpf(SLING_MIN_RANGE, SLING_MAX_RANGE, charge)
 
 # Enemy nearest the aim line inside the assist cone and within reach, or null
-func _assist_target(from: Vector3, land: Vector3, reach: float) -> Node3D:
+func _assist_target(from: Vector3, land: Vector3, reach: float, cone_deg: float) -> Node3D:
 	var aim := Vector2(land.x - from.x, land.z - from.z)
 	if aim.length_squared() < 0.001:
 		return null
 	var best: Node3D = null
-	var best_angle := deg_to_rad(AIM_ASSIST_DEG)
+	var best_angle := deg_to_rad(cone_deg)
 	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
 		var to := Vector2(enemy.global_position.x - from.x, enemy.global_position.z - from.z)
 		if to.length() > reach + 0.5:
@@ -655,7 +688,7 @@ func _assist_target(from: Vector3, land: Vector3, reach: float) -> Node3D:
 	return best
 
 @rpc("any_peer", "call_local", "reliable")
-func _server_sling(at: Vector3, land: Vector3, charge: float) -> void:
+func _server_sling(at: Vector3, land: Vector3, charge: float, pad: bool) -> void:
 	if not _from_owner() or downed:
 		return
 	charge = clampf(charge, 0.0, 1.0)
@@ -664,7 +697,7 @@ func _server_sling(at: Vector3, land: Vector3, charge: float) -> void:
 	var flat := Vector3(land.x - at.x, 0.0, land.z - at.z)
 	if flat.length() > reach:
 		land = Vector3(at.x, GROUND_Y, at.z) + flat.normalized() * reach
-	var target := _assist_target(at, land, reach)
+	var target := _assist_target(at, land, reach, _assist_cone(pad))
 	var damage := lerpf(SLING_MIN_DAMAGE, SLING_MAX_DAMAGE, charge)
 	_throw_stone.rpc(target.get_path() if target else NodePath(), land, damage)
 
@@ -704,6 +737,8 @@ func _on_hurt(new_health: float) -> void:
 	_sprite.hit_flash()
 	if new_health > 0.0:
 		Sfx.play("hurt", global_position)
+	if is_multiplayer_authority():
+		_jolt(0.35, 0.4, 0.2, 0.15)
 	if is_multiplayer_authority() and not _is_busy and new_health > 0.0:
 		# Short stagger — the sheet's "hurt" row is a full collapse, kept for downed
 		_is_busy = true
@@ -719,6 +754,8 @@ func _set_downed(value: bool) -> void:
 	Sfx.play("downed" if value else "revive", global_position)
 	if value:
 		_down_timer = DOWNED_TIME
+		if is_multiplayer_authority():
+			_jolt(0.6, 0.3, 0.8, 0.35)
 	else:
 		health = MAX_HEALTH * REVIVE_HEALTH
 	if is_multiplayer_authority():
@@ -745,6 +782,11 @@ func _sync_status(kind: String, is_downed: bool, hp: float, helping: int) -> voi
 
 # ── Feedback ───────────────────────────────────────────────
 
+# Local player only: shake our camera and rumble our pad
+func _jolt(shake: float, weak: float, strong: float, duration: float) -> void:
+	get_tree().call_group("camera_rig", "shake", shake)
+	InputMode.rumble(weak, strong, duration)
+
 # Server → owning player only
 func _tell(text: String) -> void:
 	_feedback.rpc_id(get_multiplayer_authority(), text)
@@ -757,7 +799,8 @@ func _feedback(text: String) -> void:
 # Short floating line above the head (local only)
 func _toast(text: String) -> void:
 	var l := Label3D.new()
-	l.text = text
+	# "{interact}" → "[E]" or "[A]", whichever device this player is using
+	l.text = text.format({ "interact": "[%s]" % InputMode.key("interact"), "drop": "[%s]" % InputMode.key("drop") })
 	l.font = _FONT
 	l.font_size = 34
 	l.pixel_size = 0.01

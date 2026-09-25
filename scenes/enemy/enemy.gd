@@ -19,6 +19,7 @@ const ATTACK_RANGE      := 1.6
 const WALL_REACH        := 1.3    # footprint distance to count as "at the wall"
 const ATTACK_CD         := 1.6
 const STAGGER_TIME      := 0.3    # a sling hit knocks the wind out briefly
+const HITSTOP_TIME      := 0.09   # sprite holds its frame on a hit
 const REPATH_INTERVAL   := 0.3
 const STUCK_WINDOW      := 0.6    # seconds of no progress before bashing a wall
 const STUCK_DIST        := 0.35
@@ -61,6 +62,8 @@ var hits := 0:
 		hits = value
 		if _sprite != null:
 			_sprite.hit_flash()
+			_sprite.hitstop(HITSTOP_TIME)
+			_sprite.squash(Vector2(1.12, 0.9))
 			Sfx.play("enemy_hit", global_position)
 
 # Replicated so clients can draw the health bar

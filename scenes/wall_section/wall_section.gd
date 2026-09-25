@@ -44,6 +44,9 @@ const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 			return
 		if is_node_ready() and not decorative:
 			Sfx.play("build" if value > stage else "wall_crumble", global_position)
+			# Felt by whoever is close: a thud when a course goes up, a jolt when one falls
+			if GameState.phase == GameState.Phase.WORK and _local_player_near():
+				get_tree().call_group("camera_rig", "shake", 0.15 if value > stage else 0.45)
 		stage = value
 		if is_node_ready():
 			_update_visuals()

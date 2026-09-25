@@ -10,6 +10,7 @@ var vsync := true
 var volume := 0.8   # master bus, linear 0..1
 var music_volume := 0.6   # Music bus (created here), linear 0..1
 var sfx_volume := 0.8     # SFX bus (created here) — effects + jingles, linear 0..1
+var screen_shake := true
 
 func _ready() -> void:
 	var cfg := ConfigFile.new()
@@ -19,6 +20,7 @@ func _ready() -> void:
 		volume     = cfg.get_value("audio", "volume", volume)
 		music_volume = cfg.get_value("audio", "music_volume", music_volume)
 		sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
+		screen_shake = cfg.get_value("display", "screen_shake", screen_shake)
 	for bus_name in ["Music", "SFX"]:
 		if AudioServer.get_bus_index(bus_name) == -1:
 			AudioServer.add_bus()
@@ -47,6 +49,7 @@ func save() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "fullscreen", fullscreen)
 	cfg.set_value("display", "vsync", vsync)
+	cfg.set_value("display", "screen_shake", screen_shake)
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
