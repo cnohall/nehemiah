@@ -1,5 +1,5 @@
 # Nehemiah: The Wall — Game Design Document
-**Version 0.5 | September 2026**
+**Version 0.6 | September 2026**
 
 ---
 
@@ -9,8 +9,10 @@ Cooperative 2–4 player HD-2D isometric action-strategy set in 445 BC Jerusalem
 
 **Core loop per day:**
 1. Day begins — enemies spawn in waves
-2. Players fight, carry materials, and build walls simultaneously
+2. Players fight, carry materials, and build walls simultaneously — deliver a stage's loads, then stand at the wall and work it up (§5.4)
 3. Day ends when all wall sections for that day are complete (sprint model)
+
+**Platform:** desktop (Steam) first, built so a console / mobile port stays cheap: every action works on keyboard + mouse and on a gamepad, UI is navigable by pad, button hints follow the device in use (`InputMode`).
 
 **Win condition:** Complete the wall section on day 52
 **Loss condition:** The enemies break through the wall and reach the inner city
@@ -69,6 +71,28 @@ Just one type of structure so far
 2. ✅ **Dropped materials stay on the ground** (Overcooked-style) — done: [G] drops at your feet, downed workers drop their load, [E] picks up (nearest of ground item vs stockpile). Cleared when a new wall section starts
 3. ✅ **Enemies damage the wall if not killed** — done: "wreckers" (all brutes, ~50% of others) march on the nearest built wall and batter it. Makes fighting and building compete for the same players. Gives the loss condition a gradual build-up instead of a single breach
 4. ✅ **Movement feel** — done: dash on [Space]/[Shift] (short burst, 0.7 s cooldown, works while carrying)
+
+5. ✅ **Game feel pass** — gamepad (stick/d-pad, A pick up · B dash · Y drop · RT sling · right-stick aim · Start menu), analog walk, 0.15 s input buffer, camera look-ahead + shake (toggle in Settings), hitstop on sling hits, pad rumble. Camera a little closer (size 22)
+
+### 5.4 Hands-on building (Overcooked "chopping") — ✅ built, A/B with `-- --instant-build`
+Delivering the last load no longer raises a stage by itself: someone has to **stand at the wall and work it**.
+- The one who brings the last load starts working automatically; anyone else presses [E]/A at the wall ("Build [E]")
+- Working keeps going while you stand still (no holding); moving, dashing, dropping, the sling or **a hit** stops it. Progress is kept
+- Extra hands help: +70% each, max 3 at one site ("Enough hands here")
+- Hands are full while working — builders can't sling. Guarding the builders is the Neh. 4:17 moment
+- The next stage rises block by block (doors plank by plank) as the work fills; a knock + dust per stroke
+- Time per stage for one worker: framing 2 s, courses 3 s, mortar 2 s, doors/seal 2.5 s; solo works 25% faster
+- To keep days the same length, each stage costs one load less (never below 1); beams unchanged
+- **No tool.** A tool is a fetch step with no decision in it (Overcooked only uses tools when they're scarce). Could return as a one-section twist (a single shared plumb line)
+- Watch in playtests: solo pacing; whether hits interrupting work feels fair or nagging
+
+### 5.5 Readability & HUD (vertical-slice pass)
+- Bold player-colour ring; in multiplayer a small diamond in the player's colour over each head (pulses when downed)
+- Carried loads 35% bigger; stone a shade darker than the sand, mortar in a reed basket
+- Day plaque top-left (top-centre hid the wall being built). No enemy counter — off-screen pointers show threats
+- Controls card shows keys or pad buttons, whichever is in use
+- Gamepad host starts the day from the pause menu ("Begin the work", focused)
+- Join: friends already in a lobby are listed with one-click Join; pause menu opens Steam's invite overlay
 
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the HD-2D sprites and earthy palette, borrow Overcooked's readability:
