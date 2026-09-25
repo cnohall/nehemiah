@@ -560,6 +560,7 @@ static func _stone_material() -> StandardMaterial3D:
 		tex.color_ramp = grad
 		_stone_mat = StandardMaterial3D.new()
 		_stone_mat.vertex_color_use_as_albedo = true
+		_stone_mat.vertex_color_is_srgb = true   # STONE_COLOR etc. are sRGB
 		_stone_mat.albedo_texture = tex
 		_stone_mat.uv1_triplanar = true
 		_stone_mat.uv1_world_triplanar = true

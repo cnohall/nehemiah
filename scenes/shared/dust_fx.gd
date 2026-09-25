@@ -23,6 +23,7 @@ static func material() -> StandardMaterial3D:
 	_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 	_mat.vertex_color_use_as_albedo = true
+	_mat.vertex_color_is_srgb = true
 	_mat.albedo_texture = tex
 	return _mat
 

@@ -100,6 +100,12 @@ Keep the HD-2D sprites and earthy palette, borrow Overcooked's readability:
 - Pulsing cream ring under whatever [E] will act on (Overcooked's counter highlight)
 - Squash & stretch on pickup / drop / dash; walls bounce when a stage goes up, shake when hit
 - Crisp, warm, saturated lighting; tilt-shift blur kept light
+- **Vibrant pass (v0.6)** — reference: Clash of Clans / Overcooked readability, kept to the period palette (no neon):
+  - Value ladder: golden-ochre earth (mid) < pale limestone wall and whitewashed houses (light) < characters with dark outlines. The wall is always the brightest thing on the ground
+  - Hue contrast: warm sun, cool blue-violet shadows; dusty olive scrub patches and green bushes break up the earth
+  - Colour accents from daily life: painted doors (Levant blue-green, indigo), saturated awnings, rugs drying on flat roofs — the roofs are what the camera sees
+  - Stations: colour-neutral but high contrast (mortar = timber tub of grey mortar, not a white heap)
+  - Tech: all palette colours are sRGB (`vertex_color_is_srgb`, `source_color` in the ground shader); Filmic tonemap; the dirt track is drawn in the ground shader
 
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |

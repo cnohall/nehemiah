@@ -134,7 +134,7 @@ func _show_stock() -> void:
 		count_label.text = "Rubble" if count > 0 else "Picked clean"
 
 const TIMBER := Color(0.46, 0.34, 0.22)
-const REED   := Color(0.66, 0.57, 0.38)
+const REED   := Color(0.58, 0.47, 0.28)
 const LIME   := Color(0.88, 0.86, 0.80)
 
 # Each pile sits on what a work yard would really use — distinct shapes, natural colours
@@ -252,19 +252,33 @@ func _build_logs(rng: RandomNumberGenerator) -> void:
 				Vector3(PI / 2, 0, rng.randf_range(-0.05, 0.05)))
 
 func _build_mortar(rng: RandomNumberGenerator) -> void:
-	# Clay jars + a heap of lime
-	var heap := SphereMesh.new()
-	heap.radius = 0.55
-	heap.height = 0.5
-	_add(heap, COLORS["mortar"], Vector3(0.15, 0.0, 0.1), Vector3.ZERO)
-	for i in 3:
+	# Timber tub of grey mortar — reads as "mortar" against the pale ground, where a
+	# white lime heap vanished — with clay water jars beside it
+	var tub := CylinderMesh.new()
+	tub.top_radius = 0.62
+	tub.bottom_radius = 0.54
+	tub.height = 0.38
+	tub.radial_segments = 16
+	_add(tub, TIMBER.darkened(0.1), Vector3(0.1, 0.3, 0.05), Vector3.ZERO)
+	for y: float in [0.2, 0.42]:   # hoops
+		var hoop := CylinderMesh.new()
+		hoop.top_radius = 0.6 if y > 0.3 else 0.57
+		hoop.bottom_radius = hoop.top_radius
+		hoop.height = 0.05
+		hoop.radial_segments = 16
+		_add(hoop, TIMBER.darkened(0.45), Vector3(0.1, y, 0.05), Vector3.ZERO)
+	var fill := SphereMesh.new()
+	fill.radius = 0.56
+	fill.height = 0.26
+	_add(fill, DroppedItem.MORTAR_FILL, Vector3(0.1, 0.49, 0.05), Vector3.ZERO)
+	for i in 2:
 		var jar := CylinderMesh.new()
-		jar.top_radius = 0.14
+		jar.top_radius = 0.13
 		jar.bottom_radius = 0.2
 		jar.height = 0.5
 		jar.radial_segments = 12
-		var a := TAU * i / 3.0 + rng.randf() * 0.4
-		_add(jar, Color(0.66, 0.42, 0.28), Vector3(cos(a) * 0.6 - 0.2, 0.25, sin(a) * 0.55), Vector3.ZERO)
+		var a := PI * 0.75 + i * 0.9 + rng.randf() * 0.3
+		_add(jar, Color(0.74, 0.40, 0.24), Vector3(cos(a) * 0.95, 0.35, sin(a) * 0.85), Vector3.ZERO)
 
 func _box(size: Vector3) -> BoxMesh:
 	var b := BoxMesh.new()

@@ -4,12 +4,17 @@ render_mode diffuse_lambert, specular_disabled, cull_back;
 uniform float scale     : hint_range(0.01, 0.2)  = 0.042;
 uniform float roughness : hint_range(0.0,  1.0)  = 0.97;
 
-// Warm sandy Jerusalem palette (matched to reference)
-uniform vec3 col_sand_bright = vec3(0.800, 0.660, 0.420);  // highlight sand
-uniform vec3 col_sand_mid    = vec3(0.720, 0.575, 0.340);  // base sand
-uniform vec3 col_sand_dark   = vec3(0.580, 0.460, 0.270);  // shadow sand
-uniform vec3 col_dirt        = vec3(0.500, 0.390, 0.220);  // dark dirt patch
-uniform vec3 col_trodden     = vec3(0.600, 0.465, 0.330);  // packed earth under foot
+// Warm Judean earth (sRGB). Mid-value ochre so the pale limestone wall, the
+// stations and the workers all stand out against it.
+uniform vec3 col_sand_bright : source_color = vec3(0.880, 0.720, 0.470);  // sunlit sand
+uniform vec3 col_sand_mid    : source_color = vec3(0.820, 0.620, 0.380);  // base earth
+uniform vec3 col_sand_dark   : source_color = vec3(0.720, 0.510, 0.320);  // darker drifts
+uniform vec3 col_dirt        : source_color = vec3(0.640, 0.400, 0.260);  // red-brown soil
+uniform vec3 col_trodden     : source_color = vec3(0.900, 0.790, 0.620);  // packed, pale path
+// Dirt track from the gate out toward the enemy camp (matches ScatterLayer.GATE_X)
+uniform float gate_x = -4.0;
+uniform vec3 col_scrub       : source_color = vec3(0.520, 0.570, 0.290);  // dry olive scrub
+uniform vec3 col_scrub_lit   : source_color = vec3(0.620, 0.650, 0.340);
 
 varying vec2 world_xz;
 
@@ -64,8 +69,21 @@ void fragment() {
 	float yard = 1.0 - smoothstep(5.0, 9.0, length(world_xz - vec2(0.0, 10.0)) + edge_noise);
 	float street = (1.0 - smoothstep(2.0, 3.5, abs(world_xz.x) + edge_noise))
 		* smoothstep(9.0, 13.0, world_xz.y);
-	float trodden = clamp(max(max(wall_band, yard), street), 0.0, 1.0);
-	col = mix(col, col_trodden, trodden * 0.55);
+	// The track: straight through the yard to the gate, then winding north
+	float track_x = world_xz.y < -1.5
+		? gate_x - 3.0 * sin(world_xz.y * 0.09) - (world_xz.y + 1.5) * 0.12
+		: gate_x;
+	float track = (1.0 - smoothstep(1.1, 2.0, abs(world_xz.x - track_x) + edge_noise * 0.6))
+		* (1.0 - smoothstep(13.0, 15.0, world_xz.y));
+	float trodden = clamp(max(max(max(wall_band, yard), street), track), 0.0, 1.0);
+	col = mix(col, col_trodden, trodden * 0.6);
+
+	// Patches of dry scrub off the beaten track — the hills weren't bare sand
+	float scrub = smoothstep(0.56, 0.66, fbm(p * 1.6 + vec2(11.3, 4.1)) + (mid - 0.5) * 0.25);
+	scrub *= 1.0 - trodden;
+	scrub *= 1.0 - (1.0 - smoothstep(6.0, 9.0, abs(world_xz.y))) * (1.0 - smoothstep(24.0, 28.0, abs(world_xz.x)));
+	vec3 scrub_col = mix(col_scrub, col_scrub_lit, smoothstep(0.35, 0.75, detail));
+	col = mix(col, scrub_col, scrub * 0.85);
 
 	// Micro grain — subtle brightness flicker for sandy texture
 	col *= 0.90 + 0.10 * micro;

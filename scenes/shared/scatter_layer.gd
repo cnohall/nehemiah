@@ -30,15 +30,22 @@ const ROCK_COLOR   := Color(0.62, 0.58, 0.50)
 const BUSH_COLOR   := Color(0.36, 0.42, 0.22)
 const OLIVE_LEAF   := Color(0.38, 0.44, 0.28)
 const OLIVE_TRUNK  := Color(0.36, 0.30, 0.24)
-const STONE_COLOR  := Color(0.70, 0.61, 0.46)
-const HOUSE_COLOR  := Color(0.76, 0.67, 0.52)
-const PAVING_COLOR := Color(0.60, 0.54, 0.43)
-const TRACK_COLOR  := Color(0.63, 0.51, 0.34)
+const STONE_COLOR  := Color(0.80, 0.71, 0.56)
+# Whitewash and bare limestone — lighter than the ground so the city reads as built
+const HOUSE_COLORS := [Color(0.92, 0.88, 0.80), Color(0.90, 0.83, 0.71), Color(0.88, 0.77, 0.62),
+	Color(0.91, 0.86, 0.78)]
+# Painted doors (blue-green is the old Levant favourite) and plain wood
+const DOOR_COLORS  := [Color(0.16, 0.44, 0.48), Color(0.20, 0.32, 0.56), Color(0.46, 0.29, 0.16),
+	Color(0.30, 0.44, 0.26)]
+# Rugs and cloth drying on the flat roofs — the colour you see from above
+const CLOTH_COLORS := [Color(0.80, 0.30, 0.18), Color(0.95, 0.66, 0.18), Color(0.25, 0.33, 0.64),
+	Color(0.50, 0.60, 0.22), Color(0.66, 0.24, 0.30)]
+const PAVING_COLOR := Color(0.84, 0.77, 0.64)
 const TENT_COLOR   := Color(0.20, 0.15, 0.12)   # black goat-hair
 const CLAY_COLOR   := Color(0.60, 0.38, 0.24)
 const OPENING      := Color(0.18, 0.13, 0.09)
-const AWNINGS      := [Color(0.62, 0.33, 0.20), Color(0.72, 0.56, 0.28),
-	Color(0.44, 0.47, 0.30), Color(0.42, 0.38, 0.44)]
+const AWNINGS      := [Color(0.80, 0.32, 0.18), Color(0.93, 0.64, 0.20),
+	Color(0.26, 0.34, 0.62), Color(0.50, 0.58, 0.24)]
 
 var _rng := RandomNumberGenerator.new()
 # Instances collected by kind, flushed into one MultiMesh each at the end
@@ -49,7 +56,6 @@ func _ready() -> void:
 	_build_pebbles()
 	_build_rubble()
 	_build_bushes()
-	_build_track()
 	_build_groves()
 	_build_outcrops()
 	_build_camp()
@@ -87,24 +93,6 @@ func _bush(at: Vector3) -> void:
 		_add("bush", Transform3D(_yaw().scaled(s), at + off), base.lightened(0.06 * i))
 
 # ── Outside ───────────────────────────────────────────────────
-
-# Packed-earth track: through the yard from the street to the gate, then out
-# toward the camp, gently winding
-func _build_track() -> void:
-	var yz := CITY.position.y - 1.0
-	while yz > 1.2:
-		var r := _rng.randf_range(1.2, 1.6)
-		var at := Vector3(GATE_X + _rng.randf_range(-0.4, 0.4), 0.1, yz)
-		_add("patch", Transform3D(_yaw().scaled(Vector3(r, 1.0, r * 0.8)), at), _vary(TRACK_COLOR, 0.025))
-		yz -= 1.0
-	var z := -1.5
-	while z > -HALF_Z - 4.0:
-		var x := GATE_X - 3.0 * sin(z * 0.09) - (z + 1.5) * 0.12
-		for i in 2:
-			var r := _rng.randf_range(1.3, 1.9)
-			var at := Vector3(x + _rng.randf_range(-0.5, 0.5), 0.1, z + _rng.randf_range(-0.4, 0.4))
-			_add("patch", Transform3D(_yaw().scaled(Vector3(r, 1.0, r * 0.8)), at), _vary(TRACK_COLOR, 0.025))
-		z -= 1.1
 
 # Olive groves in rows on low dry-stone terraces
 func _build_groves() -> void:
@@ -222,7 +210,7 @@ func _build_city() -> void:
 
 func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: bool) -> void:
 	var h := _rng.randf_range(2.2, 3.2)
-	var tint := _vary(HOUSE_COLOR, 0.05)
+	var tint := _vary(HOUSE_COLORS[_rng.randi() % HOUSE_COLORS.size()], 0.02)
 	_add("block", Transform3D(Basis.from_scale(Vector3(w, h, d)), c + Vector3(0, h * 0.5, 0)), tint)
 	# Parapet lip on the flat roof (Deut. 22:8)
 	_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.15, 0.25, d + 0.15)), c + Vector3(0, h + 0.1, 0)), tint.darkened(0.06))
@@ -239,10 +227,18 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 	# Door on the street face; north faces are the ones the camera sees
 	var face := -1.0 if faces_north else 1.0
 	var door_x := _rng.randf_range(-w * 0.25, w * 0.25)
-	_add("opening", Transform3D(Basis.from_scale(Vector3(0.8, 1.4, 0.06)), c + Vector3(door_x, 0.7, face * (d * 0.5 + 0.02))), OPENING)
+	_add("opening", Transform3D(Basis.from_scale(Vector3(0.8, 1.4, 0.06)), c + Vector3(door_x, 0.7, face * (d * 0.5 + 0.02))),
+		DOOR_COLORS[_rng.randi() % DOOR_COLORS.size()])
 	_add("opening", Transform3D(Basis.from_scale(Vector3(0.06, 0.45, 0.45)), c + Vector3(w * 0.5 + 0.02, h * 0.62, _rng.randf_range(-d * 0.2, d * 0.2))), OPENING)
+	# Rug or cloth laid out on the roof to dry
+	if _rng.randf() < 0.45:
+		var rw := minf(w * 0.5, _rng.randf_range(1.2, 2.0))
+		var rd := minf(d * 0.5, _rng.randf_range(0.9, 1.5))
+		var rug := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), h + 0.24, _rng.randf_range(-d * 0.15, d * 0.15))
+		_add("block", Transform3D(_yaw_small() * Basis.from_scale(Vector3(rw, 0.04, rd)), rug),
+			CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])
 	# Cloth awning over the door
-	if _rng.randf() < 0.35:
+	if _rng.randf() < 0.55:
 		var awn := Transform3D(Basis(Vector3.RIGHT, face * 0.25) * Basis.from_scale(Vector3(1.6, 0.05, 1.1)),
 			c + Vector3(door_x, 1.75, face * (d * 0.5 + 0.5)))
 		_add("block", awn, AWNINGS[_rng.randi() % AWNINGS.size()])
@@ -348,6 +344,7 @@ func _multimesh(mesh: Mesh, xf: Array[Transform3D], colors: Array[Color]) -> Mul
 		mm.set_instance_color(i, colors[i])
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
+	mat.vertex_color_is_srgb = true   # palette constants are authored in sRGB
 	mat.roughness = 1.0
 	mat.metallic_specular = 0.1
 	var mmi := MultiMeshInstance3D.new()
