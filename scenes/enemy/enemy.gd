@@ -29,15 +29,8 @@ const GOAL_X_SPREAD     := 12.0
 const WRECKER_CHANCE    := 0.5    # share of scouts/raiders that go for the wall; brutes always do
 const WALL_STANDOFF     := 0.6    # where a wrecker stands, measured out from the wall face
 
-# One sheet per type (tools/build_enemy_sheets.py) — distinct silhouettes, one dark colour family
-const _TEXTURES := {
-	Type.SCOUT:  preload("res://assets/sprites/enemy_scout.png"),
-	Type.BRUTE:  preload("res://assets/sprites/enemy_brute.png"),
-	Type.RAIDER: preload("res://assets/sprites/enemy_raider.png"),
-}
-# Oxblood rim instead of the players' brown — reads as foe even in a crowd
-const OUTLINE_COLOR := Color(0.36, 0.07, 0.05)
-const _ANIMS   := ["idle", "walk", "thrust", "collapse"]
+# Distinct silhouette per type (CharacterRig.enemy_look), one dark colour family
+const _LOOKS := { Type.SCOUT: "scout", Type.BRUTE: "brute", Type.RAIDER: "raider" }
 const CORPSE_TIME := 0.9
 
 @export var type: Type = Type.SCOUT
@@ -88,18 +81,17 @@ var _busy := false
 var _stagger := 0.0
 
 @onready var nav: NavigationAgent3D = $NavigationAgent3D
-@onready var _sprite: CharacterSprite = $Sprite3D
+@onready var _sprite: CharacterRig = $Figure
 
 func _ready() -> void:
 	# Server sets it; clients already received it as spawn state
 	if multiplayer.is_server() or health < 0.0:
 		health = HEALTH[type]
 	_bar = HealthBar.new(0.7, 0.08)
-	_bar.position.y = 2.05 * SCALE[type]
+	_bar.position.y = 2.6 * SCALE[type]
 	add_child(_bar)
 	add_to_group("enemies")
-	_sprite.setup(_TEXTURES[type], _ANIMS, Color.WHITE, SCALE[type])
-	_sprite.set_outline_color(OUTLINE_COLOR)
+	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type]), SCALE[type])
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
 	_goal = Vector3(randf_range(-GOAL_X_SPREAD, GOAL_X_SPREAD), 0.0, GOAL_Z)
@@ -244,7 +236,7 @@ func _try_attack_wall() -> bool:
 
 func _attack(victim: Node3D, at: Vector3) -> void:
 	_attack_timer = ATTACK_CD
-	_facing = LPCFrames.dir_from_velocity(at - global_position, _facing)
+	_facing = CharAnim.dir_from_velocity(at - global_position, _facing)
 	_busy = true
 	anim = "thrust_" + _facing
 	victim.take_damage(DAMAGE[type])
@@ -257,7 +249,7 @@ func _attack(victim: Node3D, at: Vector3) -> void:
 func _update_anim() -> void:
 	var moving := velocity.length_squared() > 0.01
 	if moving:
-		_facing = LPCFrames.dir_from_velocity(velocity, _facing)
+		_facing = CharAnim.dir_from_velocity(velocity, _facing)
 	anim = ("walk" if moving else "idle") + "_" + _facing
 
 # ── Damage (server) ────────────────────────────────────────

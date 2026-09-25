@@ -22,7 +22,6 @@ const BAR_COLOR    := Color(0.36, 0.30, 0.24)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)
 const WORK_TIME    := 2.5   # seconds for one worker to hang the doors / wall up the gap
 const SOLO_WORK_MULT := 0.75
-const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 
 @onready var _pillars: Array = [$PillarLeft, $PillarRight]
 
@@ -241,14 +240,7 @@ func _box_mesh(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 
 func _build_label() -> void:
 	_label = Label3D.new()
-	_label.font = _FONT
-	_label.font_size = 40
-	_label.pixel_size = 0.01
-	_label.outline_size = 10
-	_label.modulate = Color(0.98, 0.95, 0.88)
-	_label.outline_modulate = Color(0.20, 0.14, 0.08)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.no_depth_test = true
+	UiStyle.world_label(_label, 40)
 	_label.position = Vector3(0, 3.4, 0)
 	_label.visible = false
 	add_child(_label)

@@ -8,6 +8,7 @@ var _out := ""
 var _main: Node3D
 var _frame := 0
 var _players: Array = []
+var _enemies: Array = []
 const POSES := ["idle", "carry", "build", "windup", "collapse"]
 var _pose := 0
 var _hold := 0
@@ -55,6 +56,15 @@ func _stage() -> void:
 		_players[i].set_physics_process(false)
 		_players[i].global_position = Vector3(-3.0 + i * 2.0, 0.1, 6.0 + i * -2.0) + Vector3(0, 0, 2)
 		_players[i].set_slot(i, _main.PLAYER_COLORS[i])
+	# One of each enemy type behind the crew, for contrast
+	var eproto: PackedScene = load("res://scenes/enemy/enemy.tscn")
+	for i in 3:
+		var e := eproto.instantiate()
+		e.type = i
+		_main.get_node("Enemies").add_child(e, true)
+		e.set_physics_process(false)
+		e.global_position = Vector3(1.0 + i * 2.0, 0.1, 1.0 + i * -2.0)
+		_enemies.append(e)
 	var cam: Camera3D = _main.get_node("Camera3D")
 	var c: Vector3 = Vector3(0.0, 0.0, 5.0)
 	cam.global_position = c + _main.CAM_OFFSET
@@ -78,3 +88,6 @@ func _apply_pose(pose: String) -> void:
 			"collapse":
 				p.whirling = false
 				p.anim = "collapse"
+	for e in _enemies:
+		e.anim = {"idle": "idle_down", "carry": "walk_down", "build": "thrust_down",
+			"windup": "walk_left", "collapse": "collapse"}[pose]

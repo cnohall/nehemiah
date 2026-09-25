@@ -42,7 +42,6 @@ const EARTH_COLOR  := Color(0.55, 0.45, 0.30)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)   # today's work — amber footing
 const WOOD_COLOR   := Color(0.48, 0.32, 0.17)
 
-const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 
 @export var stage: Stage = Stage.EMPTY:
 	set(value):
@@ -623,14 +622,7 @@ func _dust_puff() -> void:
 
 func _build_label() -> void:
 	_label = Label3D.new()
-	_label.font = _FONT
-	_label.font_size = 40
-	_label.pixel_size = 0.01
-	_label.outline_size = 10
-	_label.modulate = Color(0.98, 0.95, 0.88)
-	_label.outline_modulate = Color(0.20, 0.14, 0.08)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.no_depth_test = true
+	UiStyle.world_label(_label, 40)
 	_label.position = Vector3(_center.x, _size.y + 1.0, _center.z)
 	_label.visible = false
 	add_child(_label)

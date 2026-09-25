@@ -5,8 +5,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="3_settings"]
 
 [sub_resource type="Gradient" id="Gradient_veil"]
-offsets = PackedFloat32Array(0, 0.34, 0.66)
-colors = PackedColorArray(0.959, 0.932, 0.883, 0.97, 0.959, 0.932, 0.883, 0.86, 0.959, 0.932, 0.883, 0)
+offsets = PackedFloat32Array(0, 0.28, 0.56)
+colors = PackedColorArray(0.959, 0.932, 0.883, 0.95, 0.959, 0.932, 0.883, 0.8, 0.959, 0.932, 0.883, 0)
 
 [sub_resource type="GradientTexture2D" id="Tex_veil"]
 gradient = SubResource("Gradient_veil")

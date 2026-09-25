@@ -95,7 +95,7 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Join: friends already in a lobby are listed with one-click Join; pause menu opens Steam's invite overlay
 
 ### 5.2a Art direction — "slightly Overcooked"
-Keep the HD-2D sprites and earthy palette, borrow Overcooked's readability:
+Keep the earthy palette, borrow Overcooked's readability:
 - Stations told apart by period-appropriate bases, not colour-coding: stone on a timber pallet, logs on sleeper beams, mortar on a reed mat with spilled lime (bright colour rugs tried and dropped: broke immersion)
 - Pulsing cream ring under whatever [E] will act on (Overcooked's counter highlight)
 - Squash & stretch on pickup / drop / dash; walls bounce when a stage goes up, shake when hit
@@ -105,6 +105,8 @@ Keep the HD-2D sprites and earthy palette, borrow Overcooked's readability:
   - Hue contrast: warm sun, cool blue-violet shadows; dusty olive scrub patches and green bushes break up the earth
   - Colour accents from daily life: painted doors (Levant blue-green, indigo), saturated awnings, rugs drying on flat roofs — the roofs are what the camera sees
   - Stations: colour-neutral but high contrast (mortar = timber tub of grey mortar, not a white heap)
+  - **Characters (v0.7)**: low-poly chibi figures built from primitives in code (`CharacterRig`), replacing the LPC pixel sprites, which clashed with the smooth low-poly world and were too small to read. Big head, stubby robe, dark outline (inverted hull), soft two-tone light. Player colour = the robe; cream head-wrap on top (what the camera sees most). Each slot has its own face (beard style, grey hair, skin tone) so the crew reads as four people. Enemies: dark goat-hair cloth, oxblood outline, a silhouette per type (scout: hood and spear; brute: bronze helmet, red shield, spear; raider: red hood, cape, dagger). Still a little cartoonish; levers if needed: smaller head, longer robe, less rim light
+  - World labels (site needs, pile names, toasts): bold Spectral, white on a heavy ink rim (`UiStyle.world_label`)
   - Tech: all palette colours are sRGB (`vertex_color_is_srgb`, `source_color` in the ground shader); Filmic tonemap; the dirt track is drawn in the ground shader
 
 ### 5.3 Backlog (bigger features, one at a time)

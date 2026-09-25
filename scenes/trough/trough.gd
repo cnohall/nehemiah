@@ -13,7 +13,6 @@ const WATER      := Color(0.36, 0.48, 0.52)
 const LIME       := Color(0.92, 0.91, 0.86)
 const MORTAR     := Color(0.70, 0.67, 0.60)
 const BAR_COLOR  := Color(0.86, 0.66, 0.30)
-const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 
 ## Kind this counts as while it holds finished mortar (read by Player pickups)
 var kind := "mortar"
@@ -176,14 +175,7 @@ func _build_visuals() -> void:
 	_bar.position = Vector3(0, 1.5, 0)
 	add_child(_bar)
 	_label = Label3D.new()
-	_label.font = _FONT
-	_label.font_size = 36
-	_label.pixel_size = 0.01
-	_label.outline_size = 10
-	_label.modulate = Color(0.98, 0.95, 0.88)
-	_label.outline_modulate = Color(0.20, 0.14, 0.08)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.no_depth_test = true
+	UiStyle.world_label(_label, 36)
 	_label.position = Vector3(0, 1.8, 0)
 	_label.visible = false
 	add_child(_label)

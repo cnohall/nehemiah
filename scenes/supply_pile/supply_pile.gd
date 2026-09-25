@@ -33,6 +33,7 @@ const COLORS := {
 }
 
 func _ready() -> void:
+	UiStyle.world_label(count_label, 36)
 	count_label.text = kind.capitalize() + ("s" if kind == "beam" else "")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(kind) + hash(name)

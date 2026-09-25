@@ -1,8 +1,14 @@
 extends Control
 
 const GAME_SCENE := "res://scenes/main/main.tscn"
-const DRIFT_PX   := 22.0    # slow backdrop pan, each way
-const DRIFT_TIME := 16.0
+const DRIFT_PX     := 22.0   # slow backdrop pan, each way
+const DRIFT_PERIOD := 64.0   # seconds for a full left-right-left sweep
+const PUSH_IN_ZOOM := 1.08
+const REST_ZOOM    := 1.035  # margin must cover DRIFT_PX at the edges
+const SETTLE_TIME  := 2.4
+
+var _rig: Node2D
+var _drift_t := 0.0
 
 @onready var backdrop:      TextureRect = $Backdrop
 @onready var column:        Control  = $Content/Column
@@ -59,19 +65,33 @@ func _intro() -> void:
 	UiFx.stagger(menu.get_children(), 0.45, 0.06, 0.65)
 	UiFx.fade_in(verse, 1.0, 1.0)
 	host_btn.grab_focus()
-	# Backdrop settles from a slight push-in, then drifts
-	backdrop.pivot_offset = backdrop.size * 0.5
-	backdrop.scale = Vector2.ONE * 1.08
-	var settle := create_tween()
-	settle.tween_property(backdrop, "scale", Vector2.ONE * 1.035, 2.4) \
-		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	settle.tween_callback(_drift)
+	# Backdrop moves on a Node2D rig: Control positions snap to whole pixels
+	# (gui/common/snap_controls_to_pixels), which turned a ~2px/s drift into
+	# visible one-pixel hops. Node2D transforms stay sub-pixel.
+	_rig = Node2D.new()
+	add_child(_rig)
+	move_child(_rig, backdrop.get_index())
+	backdrop.reparent(_rig, false)
+	backdrop.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	resized.connect(_layout_backdrop)
+	_layout_backdrop()
+	_animate_backdrop(0.0)
 
-func _drift() -> void:
-	var tw := create_tween().set_loops()
-	tw.tween_property(backdrop, "position:x", -DRIFT_PX, DRIFT_TIME).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(backdrop, "position:x", DRIFT_PX, DRIFT_TIME * 2.0).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(backdrop, "position:x", 0.0, DRIFT_TIME).set_trans(Tween.TRANS_SINE)
+func _layout_backdrop() -> void:
+	_rig.position = size * 0.5  # scale about screen centre
+	backdrop.position = -size * 0.5
+	backdrop.size = size
+
+# Push-in settles while one continuous sine drifts — no stops mid-sweep
+func _animate_backdrop(t: float) -> void:
+	var k := minf(t / SETTLE_TIME, 1.0)
+	var settle := 1.0 - pow(1.0 - k, 4.0)  # quart ease-out
+	_rig.scale = Vector2.ONE * lerpf(PUSH_IN_ZOOM, REST_ZOOM, settle)
+	_rig.position.x = size.x * 0.5 - sin(t * TAU / DRIFT_PERIOD) * DRIFT_PX
+
+func _process(delta: float) -> void:
+	_drift_t += delta
+	_animate_backdrop(_drift_t)
 
 # ── Network status ─────────────────────────────────────────
 

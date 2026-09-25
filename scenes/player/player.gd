@@ -22,10 +22,10 @@ const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
 const AIM_RING_FREE    := Color(0.45, 0.30, 0.12, 0.85)   # dark ochre — reads on sand
 const GROUND_Y         := 0.1     # top of the floor slab
-const WHIRL_HAND_Y     := 1.3     # throwing hand, about shoulder height
+const WHIRL_HAND_Y     := 1.7     # throwing hand, raised beside the head
 const WHIRL_SIDE       := 0.32    # hand offset to the side of the body (screen space)
 const WHIRL_RADIUS     := 0.42
-const HP_BAR_Y         := 2.3
+const HP_BAR_Y         := 2.75
 const DOWNED_BAR_COLOR := Color(0.78, 0.30, 0.20)
 const WHIRL_SPIN_MIN   := 9.0     # rad/s at the start of the wind-up…
 const WHIRL_SPIN_MAX   := 24.0    # …and at full charge
@@ -35,10 +35,10 @@ const REVIVE_HEALTH   := 0.5
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 # Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
 const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
-const CARRY_HEIGHT    := 2.0      # just above the head of a ~1.7 m figure
+const CARRY_HEIGHT    := 2.4      # just above the head of the ~2.2 m chibi figure
 const CARRY_SCALE     := 1.35     # loads read bigger overhead than on the ground (Overcooked)
-const PIP_Y           := 2.75     # player-colour marker above the head (multiplayer)
-const SLING_RELEASE_Y := 1.5      # overhead hand height
+const PIP_Y           := 3.2      # player-colour marker above the head (multiplayer)
+const SLING_RELEASE_Y := 1.9      # overhead hand height
 const SLING_RELEASE_FRAME := 3    # frame of the "slash" swing where the stone leaves the hand
 const TOAST_TIME      := 1.2
 # Dash (Overcooked 2 style): short burst in the move direction, works while carrying
@@ -54,7 +54,7 @@ const BEAM_SOLO_SPEED := 2.4
 const BEAM_PAIR_SPEED := 4.8
 const BEAM_TETHER     := 2.4      # max distance between the two ends' carriers
 const BEAM_HELP_REACH := 2.0
-const BEAM_HOLD_Y     := 1.45     # shoulder height
+const BEAM_HOLD_Y     := 1.25     # shoulder height
 const FOCUS_COLOR     := Color(0.99, 0.93, 0.74, 0.95)   # cream ring under what [E] will use
 const FOCUS_POLL      := 0.1
 const RUN_ANIM_SPEED  := 8.0      # ground speed the run cycle was drawn for
@@ -69,15 +69,7 @@ const PAD_ASSIST_DEG  := 35.0
 const SCREEN_RIGHT := Vector3(1, 0, -1) * 0.70710678
 const SCREEN_DOWN  := Vector3(1, 0, 1) * 0.70710678
 
-# Worker sheets (tunic colour per player slot) — composed from LPC layers, see assets/sprites/CREDITS.md
-const _FONT       := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
-const _SHEETS     := [
-	preload("res://assets/sprites/player_1.png"),
-	preload("res://assets/sprites/player_2.png"),
-	preload("res://assets/sprites/player_3.png"),
-	preload("res://assets/sprites/player_4.png"),
-]
-const _ANIMS      := ["idle", "walk", "run", "windup", "slash", "halfslash", "build", "collapse"]
+const _DEFAULT_ROBE := Color(0.93, 0.66, 0.22)   # until Main assigns a slot
 const SLING_STONE := preload("res://scenes/sling_stone/sling_stone.tscn")
 const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const MAX_DROPPED  := 40      # oldest ground item vanishes past this
@@ -130,7 +122,7 @@ var whirling := false:
 		if _whirl != null:
 			_whirl.visible = value
 
-@onready var _sprite: CharacterSprite = $Sprite3D
+@onready var _sprite: CharacterRig = $Figure
 
 func _ready() -> void:
 	add_to_group("players")
@@ -138,7 +130,7 @@ func _ready() -> void:
 	# game scene — its copy of this node doesn't exist yet
 	$MultiplayerSynchronizer.add_visibility_filter(func(id: int) -> bool:
 		return not multiplayer.is_server() or id == 1 or NetworkManager.is_peer_ready(id))
-	_sprite.setup(_SHEETS[0], _ANIMS)
+	_sprite.setup(CharacterRig.worker_look(0, _DEFAULT_ROBE))
 	_sprite.footstep.connect(func(): Sfx.play("step", global_position))
 	_sprite.strike.connect(_on_strike)
 	_sprite.play(anim)
@@ -154,6 +146,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_beam()
+	if carried_kind == "beam" or helping_id != 0:
+		_sprite.hold = "beam"
+	else:
+		_sprite.hold = "" if carried_kind.is_empty() else "overhead"
 	if whirling:
 		_update_whirl(delta)
 	if downed:
@@ -167,7 +163,7 @@ func _process(delta: float) -> void:
 
 func set_slot(slot: int, c: Color) -> void:
 	slot_color = c
-	_sprite.set_sheet(_SHEETS[slot % _SHEETS.size()], _ANIMS)
+	_sprite.set_look(CharacterRig.worker_look(slot, c))
 	_sprite.set_ring_color(c)
 	_refresh_pip()
 
@@ -477,7 +473,7 @@ func _update_anim() -> void:
 	var speed := velocity.length()
 	if _charging:
 		# Face the aim, not the walking direction, while winding up
-		_facing = LPCFrames.dir_from_velocity(_aim_point - global_position, _facing)
+		_facing = CharAnim.dir_from_velocity(_aim_point - global_position, _facing)
 		_sprite.speed_scale = 1.0
 		anim = "windup_" + _facing
 		return
@@ -486,7 +482,7 @@ func _update_anim() -> void:
 		anim = "idle_" + _facing
 		return
 	if not _charging:
-		_facing = LPCFrames.dir_from_velocity(velocity, _facing)
+		_facing = CharAnim.dir_from_velocity(velocity, _facing)
 	# Laden workers trudge; free hands run. Stride rate follows ground speed.
 	var laden := not carried_kind.is_empty()
 	_sprite.speed_scale = speed / (WALK_ANIM_SPEED if laden else RUN_ANIM_SPEED)
@@ -667,7 +663,7 @@ func release_throw() -> void:
 	var charge := _charge
 	_cancel_charge()
 	_sling_cd = SLING_COOLDOWN
-	_facing = LPCFrames.dir_from_velocity(land - global_position, _facing)
+	_facing = CharAnim.dir_from_velocity(land - global_position, _facing)
 	_play_action("slash")
 	# Release on the swing's release frame, not at wind-up
 	while is_instance_valid(self) and _sprite.animation.begins_with("slash") \
@@ -806,7 +802,7 @@ func _on_hurt(new_health: float) -> void:
 	if is_multiplayer_authority():
 		_jolt(0.35, 0.4, 0.2, 0.15)
 	if is_multiplayer_authority() and not _is_busy and new_health > 0.0:
-		# Short stagger — the sheet's "hurt" row is a full collapse, kept for downed
+		# Short stagger — "collapse" is kept for downed
 		_is_busy = true
 		await get_tree().create_timer(STAGGER_TIME).timeout
 		if is_instance_valid(self) and not downed:
@@ -868,7 +864,7 @@ func _set_working(site_path: NodePath) -> void:
 	if site != null:
 		_cancel_charge()
 		_dash_time = 0.0
-		_facing = LPCFrames.dir_from_velocity(site.approach_point(global_position, 0.0) - global_position, _facing)
+		_facing = CharAnim.dir_from_velocity(site.approach_point(global_position, 0.0) - global_position, _facing)
 		anim = "build_" + _facing
 		_sprite.squash(Vector2(1.06, 0.94))
 	elif not downed and not _is_busy:
@@ -935,14 +931,7 @@ func _toast(text: String) -> void:
 	var l := Label3D.new()
 	# "{interact}" → "[E]" or "[A]", whichever device this player is using
 	l.text = text.format({ "interact": "[%s]" % InputMode.key("interact"), "drop": "[%s]" % InputMode.key("drop") })
-	l.font = _FONT
-	l.font_size = 34
-	l.pixel_size = 0.01
-	l.outline_size = 10
-	l.modulate = Color(0.98, 0.95, 0.88)
-	l.outline_modulate = Color(0.20, 0.14, 0.08)
-	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	l.no_depth_test = true
+	UiStyle.world_label(l, 34)
 	l.position = Vector3(0, HP_BAR_Y + 0.3, 0)
 	add_child(l)
 	var tw := l.create_tween()

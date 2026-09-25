@@ -39,6 +39,25 @@ static func tracked(base: Font, spacing: int) -> FontVariation:
 	f.spacing_glyph = spacing
 	return f
 
+# ── World labels ───────────────────────────────────────────
+
+const WORLD_FONT := preload("res://assets/fonts/Spectral/Spectral-Bold.ttf")
+
+## Floating in-world text (site needs, pile names, toasts): bold cream on a heavy ink
+## rim, rasterised at 2x so glyphs stay crisp at gameplay zoom. `size` is the old
+## 1x font size; the result is ~20% larger on screen.
+static func world_label(l: Label3D, size := 40) -> Label3D:
+	l.font = WORLD_FONT
+	l.font_size = size * 2
+	l.pixel_size = 0.006
+	l.outline_size = 44
+	l.modulate = Color.WHITE   # tonemapping greys cream down; white lands on cream
+	l.outline_modulate = DUSK
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	return l
+
 # ── Stylebox helpers ───────────────────────────────────────
 
 static func box(bg: Color, pad := Vector2(16, 12), radius := 2) -> StyleBoxFlat:
@@ -69,6 +88,9 @@ static func shadowed(s: StyleBoxFlat, size: int, alpha: float, offset_y := 3.0) 
 static func plaque(pad := Vector2(22, 14), alpha := 0.94) -> StyleBoxFlat:
 	var s := bordered(box(Color(PARCHMENT, alpha), pad, 3), Color(RULE, 0.55), 1, 3)
 	return shadowed(s, 10, 0.22)
+
+static func theme_card() -> StyleBoxFlat:
+	return plaque(Vector2(14, 10), 0.92)
 
 static func empty(pad := Vector2.ZERO) -> StyleBoxEmpty:
 	var s := StyleBoxEmpty.new()
@@ -102,7 +124,7 @@ static func _labels(t: Theme) -> void:
 	_label(t, "Display",  tracked(CINZEL_XBOLD, 10), 124, INK)
 	_label(t, "Heading",  tracked(CINZEL_BOLD, 3),   30,  INK)
 	_label(t, "Numeral",  CINZEL_BOLD,               34,  INK)
-	_label(t, "Eyebrow",  tracked(CINZEL_SEMI, 4),   13,  INK_MUTED)
+	_label(t, "Eyebrow",  tracked(CINZEL_BOLD, 3),   15,  INK_SOFT)
 	_label(t, "Caption",  SPECTRAL_ITALIC,           16,  INK_SOFT)
 	_label(t, "Body",     SPECTRAL,                  17,  INK_SOFT)
 	_label(t, "Verse",    SPECTRAL_ITALIC,           17,  INK_SOFT)
@@ -188,7 +210,7 @@ static func _panels(t: Theme) -> void:
 	t.set_type_variation("Plaque", "PanelContainer")
 	t.set_stylebox("panel", "Plaque", plaque())
 	t.set_type_variation("Card", "PanelContainer")
-	t.set_stylebox("panel", "Card", plaque(Vector2(14, 10), 0.92))
+	t.set_stylebox("panel", "Card", theme_card())
 	t.set_type_variation("Modal", "PanelContainer")
 	var modal := bordered(box(PARCHMENT, Vector2(44, 38), 4), Color(RULE, 0.6), 1, 4)
 	t.set_stylebox("panel", "Modal", shadowed(modal, 36, 0.4, 10.0))

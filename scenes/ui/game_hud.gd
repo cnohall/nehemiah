@@ -300,6 +300,11 @@ func set_player_color(slot: int, color: Color) -> void:
 	if slot >= _cards.size():
 		return
 	(_cards[slot].swatch as ColorRect).color = color
+	# Player-colour spine down the card's left edge — matches the robe and ground ring
+	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat
+	card.border_color = color
+	card.border_width_left = 6
+	(_cards[slot].root as PanelContainer).add_theme_stylebox_override("panel", card)
 
 # ── Controls hint ──────────────────────────────────────────
 
@@ -377,12 +382,12 @@ func _build_player_cards() -> void:
 		top.add_theme_constant_override("separation", 8)
 		vb.add_child(top)
 		var swatch := ColorRect.new()
-		swatch.custom_minimum_size = Vector2(8, 8)
+		swatch.custom_minimum_size = Vector2(14, 14)
 		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		top.add_child(swatch)
 		var name_lbl := Label.new()
 		name_lbl.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 2))
-		name_lbl.add_theme_font_size_override("font_size", 15)
+		name_lbl.add_theme_font_size_override("font_size", 17)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(name_lbl)
 		var carry := Label.new()
@@ -394,7 +399,7 @@ func _build_player_cards() -> void:
 		top.add_child(carry)
 		var bar := ProgressBar.new()
 		bar.theme_type_variation = &"Meter"
-		bar.custom_minimum_size = Vector2(0, 6)
+		bar.custom_minimum_size = Vector2(0, 9)
 		bar.max_value = 1.0
 		bar.value = 1.0
 		bar.show_percentage = false
