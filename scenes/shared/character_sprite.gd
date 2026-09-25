@@ -94,10 +94,13 @@ func _apply_squash(f: Vector2) -> void:
 
 func _build_marker() -> void:
 	var quad := QuadMesh.new()
-	quad.size = Vector2(1.3, 1.3)
+	quad.size = Vector2(1.5, 1.5)
 	quad.orientation = PlaneMesh.FACE_Y
 	_marker_mat = ShaderMaterial.new()
 	_marker_mat.shader = MARKER_SHADER
+	# Bold enough to pick your worker out of a crowd at a glance
+	_marker_mat.set_shader_parameter("ring_radius", 0.34)
+	_marker_mat.set_shader_parameter("ring_width", 0.07)
 	var mi := MeshInstance3D.new()
 	mi.mesh = quad
 	mi.material_override = _marker_mat

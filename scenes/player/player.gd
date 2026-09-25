@@ -35,7 +35,9 @@ const REVIVE_HEALTH   := 0.5
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 # Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
 const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
-const CARRY_HEIGHT    := 1.95     # just above the head of a ~1.7 m figure
+const CARRY_HEIGHT    := 2.0      # just above the head of a ~1.7 m figure
+const CARRY_SCALE     := 1.35     # loads read bigger overhead than on the ground (Overcooked)
+const PIP_Y           := 2.75     # player-colour marker above the head (multiplayer)
 const SLING_RELEASE_Y := 1.5      # overhead hand height
 const SLING_RELEASE_FRAME := 3    # frame of the "slash" swing where the stone leaves the hand
 const TOAST_TIME      := 1.2
@@ -147,6 +149,8 @@ func _ready() -> void:
 	_hp_bar = HealthBar.new()
 	_hp_bar.position.y = HP_BAR_Y
 	add_child(_hp_bar)
+	_build_pip()
+	GameState.crew_changed.connect(func(_n): _refresh_pip())
 
 func _process(delta: float) -> void:
 	_update_beam()
@@ -165,6 +169,44 @@ func set_slot(slot: int, c: Color) -> void:
 	slot_color = c
 	_sprite.set_sheet(_SHEETS[slot % _SHEETS.size()], _ANIMS)
 	_sprite.set_ring_color(c)
+	_refresh_pip()
+
+# Small diamond in the player's colour over the head — who's who in a busy crew.
+# Only with company; pulses while downed so teammates see who needs help.
+var _pip: MeshInstance3D
+var _pip_tween: Tween
+
+func _build_pip() -> void:
+	var gem := SphereMesh.new()   # 4 segments × 2 rings = a diamond
+	gem.radius = 0.16
+	gem.height = 0.42
+	gem.radial_segments = 4
+	gem.rings = 1
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.no_depth_test = true
+	mat.render_priority = 1
+	_pip = MeshInstance3D.new()
+	_pip.mesh = gem
+	_pip.material_override = mat
+	_pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_pip.position.y = PIP_Y
+	_pip.rotation.y = PI / 4   # a face toward the iso camera
+	add_child(_pip)
+	_refresh_pip()
+
+func _refresh_pip() -> void:
+	if _pip == null:
+		return
+	_pip.visible = GameState.crew_size > 1
+	(_pip.material_override as StandardMaterial3D).albedo_color = slot_color
+	if _pip_tween:
+		_pip_tween.kill()
+		_pip.scale = Vector3.ONE
+	if downed:
+		_pip_tween = _pip.create_tween().set_loops()
+		_pip_tween.tween_property(_pip, "scale", Vector3.ONE * 1.6, 0.35).set_trans(Tween.TRANS_SINE)
+		_pip_tween.tween_property(_pip, "scale", Vector3.ONE, 0.35).set_trans(Tween.TRANS_SINE)
 
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
@@ -775,6 +817,7 @@ func _set_downed(value: bool) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	downed = value
+	_refresh_pip()
 	Sfx.play("downed" if value else "revive", global_position)
 	if value:
 		_down_timer = DOWNED_TIME
@@ -978,7 +1021,9 @@ func _rebuild_carry_prop() -> void:
 	for c in _carry_prop.get_children():
 		c.queue_free()
 	if not carried_kind.is_empty() and carried_kind != "beam":
-		_carry_prop.add_child(DroppedItem.build_prop(carried_kind))
+		var prop := DroppedItem.build_prop(carried_kind)
+		prop.scale = Vector3.ONE * CARRY_SCALE
+		_carry_prop.add_child(prop)
 
 # ── Helpers ────────────────────────────────────────────────
 

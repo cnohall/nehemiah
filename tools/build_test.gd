@@ -1,12 +1,15 @@
 extends SceneTree
 
-# End-to-end check of the carry → deliver → build loop, offline:
-#   Godot --path . --script res://tools/build_test.gd -- --nostory <out_dir>
+# End-to-end check of the carry → deliver → build loop:
+#   offline:  Godot --path . --script res://tools/build_test.gd -- --nostory <out_dir>
+#   network:  one `--headless ... -- --nostory --host <dir>` process plus one
+#             `... -- --nostory --client <dir>` — the client plays, the host serves
 # Teleports the player between the supply piles and today's first wall, pressing
 # interact like a player would, and prints how long each stage's work took.
 # Saves a screenshot mid-work. Exit code 0 = the day's first unit got fully built.
 
 const TIMEOUT := 90.0
+const HOST_LIFETIME := 80.0
 
 var _out := ""
 var _main: Node3D
@@ -20,21 +23,50 @@ var _work_started := -1.0
 var _shots := 0
 var _shot_phase := 0
 var _stages := 0
+var _mode := "offline"
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
-		if not a.begins_with("--"):
+		if a == "--host":
+			_mode = "host"
+		elif a == "--client":
+			_mode = "client"
+		elif not a.begins_with("--"):
 			_out = a
 	root.size = Vector2i(1920, 1080)
+	if _mode == "offline":
+		_start_main()
+
+func _start_main() -> void:
 	_main = load("res://scenes/main/main.tscn").instantiate()
 	root.add_child(_main)
 	current_scene = _main
 
 func _process(delta: float) -> bool:
 	_frame += 1
-	if _frame == 3:
+	var nm = root.get_node("NetworkManager")
+	if _frame == 2 and _mode == "host":
+		nm.host()
+		_start_main()
+	elif _frame == 2 and _mode == "client":
+		nm.join("127.0.0.1")
+	if _mode == "client" and _main == null:
+		# Status flips to connected a moment before the server hands out our peer id
+		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1:
+			_start_main()
+		return false
+	if _mode == "host" and _main != null:
+		_t += delta
+		# Begin once the client's player exists; then just serve
+		if _main.get_node("Players").get_child_count() >= 2 and root.get_node("GameState").phase == 5:
+			_main.director.begin()
+		if _t > HOST_LIFETIME:
+			quit(0)
+			return true
+		return false
+	if _frame == 3 and _mode == "offline":
 		_main.director.begin()
-	if _frame < 3:
+	if _frame < 3 or _main == null:
 		return false
 	_t += delta
 	if _t > TIMEOUT:
@@ -48,7 +80,11 @@ func _process(delta: float) -> bool:
 	match _state:
 		"wait":
 			if gs.phase == gs.Phase.WORK:
-				_player = _main.get_node("Players").get_child(0)
+				_player = _main.get_node("Players").get_node_or_null(str(root.multiplayer.get_unique_id()))
+				if _player == null:
+					print("players: ", _main.get_node("Players").get_children().map(func(n): return n.name), " me=", root.multiplayer.get_unique_id())
+					quit(1)
+					return true
 				_site = _pick_site()
 				print("site: ", _site.name, "  active_build=", gs.active_build)
 				_state = "next"
