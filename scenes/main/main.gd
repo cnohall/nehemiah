@@ -106,13 +106,6 @@ func _shake_offset(delta: float) -> Vector3:
 func _refresh_hud() -> void:
 	if hud == null:
 		return
-	# Enemies replicate to every peer, so the child count is valid on clients too
-	var alive := 0
-	for e in enemies_root.get_children():
-		if not e.is_queued_for_deletion():
-			alive += 1
-	hud.set_enemy_count(alive)
-
 	var players := _sorted_players()
 	var local_name := str(multiplayer.get_unique_id())
 	for slot in 4:

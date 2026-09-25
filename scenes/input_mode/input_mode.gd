@@ -10,7 +10,7 @@ const STICK_WAKE := 0.4   # stick travel that counts as "picked up the pad" (ign
 # Button / key label per action, for hints ("[E] to let go" → "[A] to let go")
 const KEYS := {
 	"move": "WASD", "interact": "E", "drop": "G", "dash": "Space",
-	"throw": "Hold Mouse", "pause": "Esc",
+	"throw": "Hold Click", "pause": "Esc",
 }
 const PAD := {
 	"move": "L Stick", "interact": "A", "drop": "Y", "dash": "B",

@@ -58,16 +58,12 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="DayPlaque" type="PanelContainer" parent="Root"]
-custom_minimum_size = Vector2(400, 0)
+custom_minimum_size = Vector2(360, 0)
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -200.0
+offset_left = 18.0
 offset_top = 18.0
-offset_right = 200.0
+offset_right = 378.0
 offset_bottom = 130.0
-grow_horizontal = 2
 mouse_filter = 2
 theme_type_variation = &"Plaque"
 
@@ -158,7 +154,7 @@ anchor_right = 1.0
 offset_left = -278.0
 offset_top = 18.0
 offset_right = -18.0
-offset_bottom = 120.0
+offset_bottom = 90.0
 grow_horizontal = 0
 mouse_filter = 2
 theme_type_variation = &"Plaque"
@@ -167,28 +163,6 @@ theme_type_variation = &"Plaque"
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 6
-
-[node name="EnemyRow" type="HBoxContainer" parent="Root/ThreatPlaque/VBox"]
-layout_mode = 2
-mouse_filter = 2
-
-[node name="EnemyLabel" type="Label" parent="Root/ThreatPlaque/VBox/EnemyRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"Eyebrow"
-text = "Enemies"
-
-[node name="EnemyCount" type="Label" parent="Root/ThreatPlaque/VBox/EnemyRow"]
-layout_mode = 2
-theme_type_variation = &"Numeral"
-theme_override_font_sizes/font_size = 26
-text = "0"
-
-[node name="Rule" type="ColorRect" parent="Root/ThreatPlaque/VBox"]
-custom_minimum_size = Vector2(0, 1)
-layout_mode = 2
-mouse_filter = 2
-color = Color(0.716, 0.63, 0.526, 0.5)
 
 [node name="BreachRow" type="HBoxContainer" parent="Root/ThreatPlaque/VBox"]
 layout_mode = 2

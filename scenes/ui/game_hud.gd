@@ -11,14 +11,15 @@ const MAX_SLOTS     := 4
 const ROMAN         := ["I", "II", "III", "IV"]
 const WIN_VERSE     := "“So the wall was completed on the 25th day of Elul, in 52 days.”"
 const WIN_VERSE_REF := "Nehemiah 6:15"
-# Key → what it does. Shown while gathering and on day 1, and whenever paused.
+# Action → what it does; the key / button label comes from InputMode for the device
+# in use. Shown while gathering and on day 1, and whenever paused.
 const CONTROLS := [
-	["WASD", "Move"],
-	["E", "Pick up · deliver · revive"],
-	["G", "Drop"],
-	["Space", "Dash"],
-	["Hold RMB", "Sling — release to throw"],
-	["Esc", "Menu"],
+	["move", "Move"],
+	["interact", "Pick up · deliver · build"],
+	["drop", "Drop"],
+	["dash", "Dash"],
+	["throw", "Sling — release to throw"],
+	["pause", "Menu"],
 ]
 
 @onready var day_number:   Label       = $Root/DayPlaque/VBox/DayRow/DayNumber
@@ -30,7 +31,6 @@ const CONTROLS := [
 @onready var work_count:   Label       = $Root/DayPlaque/VBox/WorkRow/WorkCount
 @onready var phase_label:  Label       = $Root/DayPlaque/VBox/PhaseLabel
 @onready var threat:       Control     = $Root/ThreatPlaque
-@onready var enemy_count:  Label       = $Root/ThreatPlaque/VBox/EnemyRow/EnemyCount
 @onready var breach_count: Label       = $Root/ThreatPlaque/VBox/BreachRow/BreachCount
 @onready var breach_pips:  PipRow      = $Root/ThreatPlaque/VBox/Pips
 @onready var players_row:  HBoxContainer = $Root/Players
@@ -46,9 +46,10 @@ const CONTROLS := [
 var _cards: Array[Dictionary] = []
 var _banner_tween: Tween
 var _last_breaches := 0
-var _last_enemies := 0
 var _controls: Control
 var _controls_tween: Tween
+var _pause_begin: Button     # host, while gathering: start from the menu (gamepad path)
+var _gather_hint: Label
 
 func _ready() -> void:
 	_build_player_cards()
@@ -71,6 +72,9 @@ func _ready() -> void:
 	$Root/GatherPanel/VBox/Begin.visible = is_host
 	$Root/GatherPanel/VBox/Waiting.visible = not is_host
 	$Root/GatherPanel/VBox/Begin.pressed.connect(begin_requested.emit)
+	# Mouse only: with a pad, A near a stockpile must not also start the day
+	$Root/GatherPanel/VBox/Begin.focus_mode = Control.FOCUS_NONE
+	_build_gamepad_begin()
 	GameState.crew_changed.connect(_on_crew_changed)
 	_on_crew_changed(GameState.crew_size)
 	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
@@ -93,7 +97,34 @@ func _unhandled_input(event: InputEvent) -> void:
 		pause_menu.show()
 		UiFx.fade_in(pause_menu, 0.16)
 		_refresh_controls()
-		$Root/PauseMenu/Center/Modal/VBox/Resume.grab_focus()
+		_pause_begin.visible = multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER
+		# One primary action at a time
+		$Root/PauseMenu/Center/Modal/VBox/Resume.theme_type_variation = 			$Root/PauseMenu/Center/Modal/VBox/Settings.theme_type_variation if _pause_begin.visible else &"PrimaryButton"
+		(_pause_begin if _pause_begin.visible else $Root/PauseMenu/Center/Modal/VBox/Resume).grab_focus()
+
+# Gamepad: Start opens the menu with "Begin the work" on top and focused; the gather
+# panel says so
+func _build_gamepad_begin() -> void:
+	_pause_begin = Button.new()
+	_pause_begin.text = "Begin the work"
+	_pause_begin.theme_type_variation = &"PrimaryButton"
+	_pause_begin.visible = false
+	_pause_begin.pressed.connect(func():
+		_close_pause()
+		begin_requested.emit())
+	var vb := $Root/PauseMenu/Center/Modal/VBox
+	vb.add_child(_pause_begin)
+	vb.move_child(_pause_begin, $Root/PauseMenu/Center/Modal/VBox/Resume.get_index())
+	_gather_hint = Label.new()
+	_gather_hint.theme_type_variation = &"Caption"
+	_gather_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_gather_hint.text = "or press %s to begin" % InputMode.PAD["pause"]
+	$Root/GatherPanel/VBox.add_child(_gather_hint)
+	_refresh_gather_hint()
+
+func _refresh_gather_hint() -> void:
+	if _gather_hint != null:
+		_gather_hint.visible = InputMode.using_pad and multiplayer.is_server()
 
 func _close_pause() -> void:
 	pause_menu.hide()
@@ -231,15 +262,6 @@ func _stat(value: String, caption: String) -> Control:
 func _on_crew_changed(size: int) -> void:
 	gather_crew.text = "%d of %d builders here" % [size, NetworkManager.MAX_PLAYERS]
 
-# ── Enemy count ────────────────────────────────────────────
-
-func set_enemy_count(count: int) -> void:
-	if count == _last_enemies:
-		return
-	enemy_count.text = str(count)
-	enemy_count.add_theme_color_override("font_color", UiStyle.TERRACOTTA_DEEP if count > 0 else UiStyle.INK)
-	_last_enemies = count
-
 # ── Player cards ───────────────────────────────────────────
 
 func set_player_present(slot: int, present: bool, is_local: bool) -> void:
@@ -286,12 +308,14 @@ func _build_controls_hint() -> void:
 	title.text = "Controls"
 	vb.add_child(title)
 	var key_box := UiStyle.bordered(UiStyle.box(UiStyle.PARCHMENT_DEEP, Vector2(7, 1), 3), UiStyle.RULE, 1, 2)
+	var keys: Array[Label] = []
 	for row: Array in CONTROLS:
 		var hb := HBoxContainer.new()
 		hb.add_theme_constant_override("separation", 10)
 		vb.add_child(hb)
 		var key := Label.new()
-		key.text = row[0]
+		key.text = InputMode.key(row[0])
+		keys.append(key)
 		key.add_theme_font_override("font", UiStyle.CINZEL_SEMI)
 		key.add_theme_font_size_override("font_size", 13)
 		key.add_theme_color_override("font_color", UiStyle.INK)
@@ -306,6 +330,10 @@ func _build_controls_hint() -> void:
 		hb.add_child(what)
 	_controls = panel
 	_refresh_controls()
+	InputMode.changed.connect(func(_pad: bool):
+		for i in keys.size():
+			keys[i].text = InputMode.key(CONTROLS[i][0])
+		_refresh_gather_hint())
 
 func _refresh_controls() -> void:
 	if _controls == null:
