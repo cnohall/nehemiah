@@ -468,7 +468,8 @@ func _build_focus_ring() -> void:
 # ── Animation ──────────────────────────────────────────────
 
 func _update_anim() -> void:
-	if _is_busy:
+	# Working: the build loop owns the pose (work can start mid-tick, from interact)
+	if _is_busy or _work_site != null:
 		return
 	var speed := velocity.length()
 	if _charging:
