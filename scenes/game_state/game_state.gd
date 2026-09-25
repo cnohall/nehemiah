@@ -22,7 +22,8 @@ const SECTIONS: Array = [
 const TOTAL_DAYS   := 52
 const MAX_BREACHES := 10   # enemies that may reach the inner city before the city falls
 
-enum Phase { DAWN, WORK, DUSK, WON, LOST }
+# GATHER: before day 1, waiting for the crew to join (appended so synced ints stay stable)
+enum Phase { DAWN, WORK, DUSK, WON, LOST, GATHER }
 
 signal day_changed(day: int)
 signal section_changed(section_index: int)
@@ -35,7 +36,7 @@ signal game_lost
 
 var current_day: int = 1
 var current_section_index: int = 0
-var phase: Phase = Phase.DAWN
+var phase: Phase = Phase.GATHER
 var breaches: int = 0
 var targets_done: int = 0
 var targets_total: int = 0
@@ -87,7 +88,7 @@ func advance_day() -> bool:
 func reset() -> void:
 	current_day = 1
 	current_section_index = 0
-	phase = Phase.DAWN
+	phase = Phase.GATHER
 	breaches = 0
 	targets_done = 0
 	targets_total = 0

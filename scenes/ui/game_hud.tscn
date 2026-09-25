@@ -225,6 +225,51 @@ grow_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 10
 
+[node name="GatherPanel" type="PanelContainer" parent="Root"]
+visible = false
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -210.0
+offset_top = -150.0
+offset_right = 210.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_type_variation = &"Plaque"
+
+[node name="VBox" type="VBoxContainer" parent="Root/GatherPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Eyebrow" type="Label" parent="Root/GatherPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"Eyebrow"
+text = "Gathering the crew"
+horizontal_alignment = 1
+
+[node name="Crew" type="Label" parent="Root/GatherPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "1 of 4 builders here"
+horizontal_alignment = 1
+
+[node name="Begin" type="Button" parent="Root/GatherPanel/VBox"]
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"PrimaryButton"
+text = "Begin the work"
+
+[node name="Waiting" type="Label" parent="Root/GatherPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "Waiting for the host to begin…"
+horizontal_alignment = 1
+
 [node name="Banner" type="Control" parent="Root"]
 visible = false
 layout_mode = 1

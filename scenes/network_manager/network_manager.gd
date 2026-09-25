@@ -29,6 +29,8 @@ var _ready_peers: Dictionary = {}
 # GodotSteam singleton, or null when the extension is missing / Steam isn't running.
 # Accessed dynamically so the project still runs without the addon.
 var _steam: Object = null
+# Why Steam init failed, shown in the menu so remote testers can report it
+var _steam_error := ""
 var _lobby_id := 0
 var _hosting_lobby := false
 
@@ -65,6 +67,9 @@ func join(address: String, port: int = DEFAULT_PORT) -> void:
 
 func steam_available() -> bool:
 	return _steam != null
+
+func steam_error() -> String:
+	return _steam_error
 
 func steam_name() -> String:
 	return _steam.getPersonaName() if _steam else ""
@@ -146,12 +151,15 @@ func _on_server_disconnected() -> void:
 
 func _init_steam() -> void:
 	if not Engine.has_singleton("Steam"):
+		# Extension didn't load: DLLs missing next to the exe, or blocked by AV
+		_steam_error = "Steam plugin failed to load"
 		return
 	var steam := Engine.get_singleton("Steam")
 	# embed_callbacks = true: GodotSteam pumps run_callbacks() itself each frame
 	var res: Dictionary = steam.steamInitEx(STEAM_APP_ID, true)
 	if res.get("status", -1) != 0:
-		print("NetworkManager: Steam unavailable (%s) — LAN only" % res.get("verbal", "?"))
+		_steam_error = "%s (code %d)" % [res.get("verbal", "?"), res.get("status", -1)]
+		print("NetworkManager: Steam unavailable (%s) — LAN only" % _steam_error)
 		return
 	_steam = steam
 	if _steam.has_method("initRelayNetworkAccess"):

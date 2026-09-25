@@ -45,7 +45,9 @@ const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 			_dust_puff()
 			stage_changed.emit(stage)
 
-# Outer stretches repaired by other families (Neh. 3) — finished, static, not networked
+# Outer stretches repaired by other families (Neh. 3) — not networked, not buildable.
+# They rise with the campaign (rubble on day 1, finished by day 52 — "the whole wall
+# was joined together to half its height", Neh. 4:6) and always block movement.
 @export var decorative := false
 
 # Server marks the units that must be finished today (DayDirector)
@@ -73,6 +75,11 @@ var _label_poll := 0.0
 
 @onready var _col: CollisionShape3D = $CollisionShape3D
 
+func _enter_tree() -> void:
+	# Before ready, so the starting stage doesn't play a dust puff
+	if decorative and not is_node_ready():
+		_follow_campaign(GameState.current_day)
+
 func _ready() -> void:
 	_size = (_col.shape as BoxShape3D).size
 	_center = _col.position
@@ -81,6 +88,7 @@ func _ready() -> void:
 	_build_label()
 	if decorative:
 		set_process(false)
+		GameState.day_changed.connect(_follow_campaign)
 	else:
 		add_to_group("wall_sections")
 		_build_sync()
@@ -157,6 +165,19 @@ func get_build_progress() -> float:
 	var kind: String = cost.keys()[0]
 	return minf(float(pending.get(kind, 0)) / float(cost[kind]), 1.0)
 
+## Decorative only: stage from how far the campaign has got. Each stretch is offset a
+## few days so they don't all rise together. Pure function of the day, so every peer agrees.
+func _follow_campaign(day: int) -> void:
+	var t := (day - 1 + (hash(global_position.x) % 7) - 3) / float(GameState.TOTAL_DAYS - 1)
+	var s := Stage.EMPTY
+	if day >= GameState.TOTAL_DAYS or t >= 0.9:
+		s = Stage.MORTARED
+	elif t >= 0.5:
+		s = Stage.STACKED
+	elif t >= 0.2:
+		s = Stage.FRAMED
+	stage = s
+
 func is_built() -> bool:
 	return stage != Stage.EMPTY
 
@@ -219,7 +240,7 @@ func _build_sync() -> void:
 func _update_visuals() -> void:
 	for c in _visual.get_children():
 		c.queue_free()
-	_col.set_deferred("disabled", stage == Stage.EMPTY)
+	_col.set_deferred("disabled", stage == Stage.EMPTY and not decorative)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(global_position.snapped(Vector3.ONE * 0.1))
 	_add_foundation()

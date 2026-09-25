@@ -33,6 +33,8 @@ const STAGGER_TIME    := 0.2
 const DOWNED_TIME     := 8.0      # self-revive if no teammate helps
 const REVIVE_HEALTH   := 0.5
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
+# Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
+const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
 const CARRY_HEIGHT    := 1.95     # just above the head of a ~1.7 m figure
 const SLING_RELEASE_Y := 1.5      # overhead hand height
 const SLING_RELEASE_FRAME := 3    # frame of the "slash" swing where the stone leaves the hand
@@ -160,6 +162,8 @@ func _handle_movement() -> void:
 	if _charging:
 		velocity *= CHARGE_MOVE_MULT
 	move_and_slide()
+	global_position.x = clampf(global_position.x, PLAY_AREA.position.x, PLAY_AREA.end.x)
+	global_position.z = clampf(global_position.z, PLAY_AREA.position.y, PLAY_AREA.end.y)
 
 # ── Animation ──────────────────────────────────────────────
 

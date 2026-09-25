@@ -30,7 +30,7 @@ filter/baking_aabb = AABB(-50, -1, -40, 100, 10, 80)
 size = Vector3(100, 0.2, 80)
 
 [sub_resource type="BoxMesh" id="FloorMesh"]
-size = Vector3(100, 0.2, 80)
+size = Vector3(220, 0.2, 180)
 
 [sub_resource type="ShaderMaterial" id="FloorMat"]
 shader = ExtResource("7_ground_shader")
@@ -171,44 +171,36 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 0)
 [node name="W1" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 0)
 decorative = true
-stage = 3
 
 [node name="W2" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0, 0)
 decorative = true
-stage = 3
 
 [node name="W3" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 0, 0)
 decorative = true
-stage = 3
 
 [node name="W4" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -48, 0, 0)
 decorative = true
-stage = 3
 
 [node name="OuterEast" type="Node3D" parent="Wall"]
 
 [node name="E1" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, 0)
 decorative = true
-stage = 3
 
 [node name="E2" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0, 0)
 decorative = true
-stage = 3
 
 [node name="E3" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0, 0)
 decorative = true
-stage = 3
 
 [node name="E4" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48, 0, 0)
 decorative = true
-stage = 3
 
 [node name="Supplies" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
 

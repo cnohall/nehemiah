@@ -3,6 +3,8 @@ extends CanvasLayer
 # In-game HUD. Reads GameState (mirrored on every peer) and is fed player/enemy
 # numbers by Main. Player cards and the Steam invite panel are built in code.
 
+signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDirector)
+
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 const BANNER_HOLD   := 3.2
 const MAX_SLOTS     := 4
@@ -29,6 +31,8 @@ const WIN_VERSE_REF := "Nehemiah 6:15"
 @onready var end_screen:   Control     = $Root/EndScreen
 @onready var pause_menu:   Control     = $Root/PauseMenu
 @onready var settings:     Control     = $Root/SettingsPanel
+@onready var gather:       Control     = $Root/GatherPanel
+@onready var gather_crew:  Label       = $Root/GatherPanel/VBox/Crew
 
 var _cards: Array[Dictionary] = []
 var _banner_tween: Tween
@@ -47,6 +51,12 @@ func _ready() -> void:
 	$Root/PauseMenu/Center/Modal/VBox/Resume.pressed.connect(_close_pause)
 	$Root/PauseMenu/Center/Modal/VBox/Settings.pressed.connect(settings.open)
 	$Root/PauseMenu/Center/Modal/VBox/Leave.pressed.connect(_leave)
+	var is_host := multiplayer.is_server()
+	$Root/GatherPanel/VBox/Begin.visible = is_host
+	$Root/GatherPanel/VBox/Waiting.visible = not is_host
+	$Root/GatherPanel/VBox/Begin.pressed.connect(begin_requested.emit)
+	GameState.crew_changed.connect(_on_crew_changed)
+	_on_crew_changed(GameState.crew_size)
 	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
 
 	GameState.day_changed.connect(refresh_day)
@@ -92,6 +102,8 @@ func _refresh_progress() -> void:
 	work_row.visible = working
 	phase_label.visible = not working
 	match GameState.phase:
+		GameState.Phase.GATHER:
+			phase_label.text = "Gathering the crew"
 		GameState.Phase.DAWN:
 			phase_label.text = "Dawn — ready the workers"
 		GameState.Phase.DUSK:
@@ -118,6 +130,7 @@ func _on_breaches_changed(count: int) -> void:
 
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	_refresh_progress()
+	gather.visible = phase == GameState.Phase.GATHER
 	var section := GameState.get_current_section()
 	match phase:
 		GameState.Phase.DAWN:
@@ -189,6 +202,9 @@ func _stat(value: String, caption: String) -> Control:
 	v.add_child(n)
 	v.add_child(l)
 	return v
+
+func _on_crew_changed(size: int) -> void:
+	gather_crew.text = "%d of %d builders here" % [size, NetworkManager.MAX_PLAYERS]
 
 # ── Enemy count ────────────────────────────────────────────
 

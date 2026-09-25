@@ -1,6 +1,7 @@
 extends Node
 
 # Server-side day loop (GDD "sprint model"):
+#   GATHER — before day 1: players join and walk around, nothing spawns
 #   DAWN  — today's wall units are marked, short breather, no spawns
 #   WORK  — enemies stream in; day ends when every target unit is fully built
 #   DUSK  — enemies withdraw, then the next day begins
@@ -40,10 +41,14 @@ func _ready() -> void:
 	GameState.game_won.connect(_on_game_over)
 	set_process(multiplayer.is_server())
 
-## Server: start the campaign from day 1
+## Server: open the session — the crew gathers until the host calls begin()
 func start() -> void:
 	GameState.reset()
-	_begin_day()
+
+## Server: host is ready — day 1 starts
+func begin() -> void:
+	if multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER:
+		_begin_day()
 
 func _process(delta: float) -> void:
 	_tick_nav(delta)

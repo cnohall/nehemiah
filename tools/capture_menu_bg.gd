@@ -40,6 +40,7 @@ func _stage_scene() -> void:
 	_main.get_node("PostFX").hide()   # the menu applies its own veil
 	for p in _main.get_node("Players").get_children():
 		p.queue_free()
+	_main.get_node("/root/GameState").day_changed.emit(GameState.TOTAL_DAYS)   # outer stretches finished
 	for w in _main.get_tree().get_nodes_in_group("wall_sections"):
 		w.is_target = false
 		w.stage = w.Stage.MORTARED

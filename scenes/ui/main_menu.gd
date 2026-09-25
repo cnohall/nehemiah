@@ -82,7 +82,7 @@ func _show_default_status() -> void:
 	elif NetworkManager.steam_available():
 		net_status.text = "LAN mode — share your IP address to play together"
 	else:
-		net_status.text = "Steam not running — LAN play only (share your IP address)"
+		net_status.text = "Steam unavailable: %s — LAN play only" % NetworkManager.steam_error()
 
 # ── Host ───────────────────────────────────────────────────
 

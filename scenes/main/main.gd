@@ -20,6 +20,7 @@ var _hud_timer := 0.0
 func _ready() -> void:
 	hud = HUD_SCENE.instantiate()
 	add_child(hud)
+	hud.begin_requested.connect(director.begin)
 
 	NetworkManager.peer_connected.connect(_on_peer_connected)
 	NetworkManager.peer_disconnected.connect(_on_peer_disconnected)

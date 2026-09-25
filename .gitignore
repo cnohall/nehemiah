@@ -13,3 +13,6 @@ Thumbs.db
 
 # Editor temp files
 *.tmp
+
+# Export output
+build/

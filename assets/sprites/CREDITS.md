@@ -8,7 +8,7 @@ to the individual layer authors is required when distributing the game.
 | File | Layers |
 |------|--------|
 | `player.png`, `enemy.png` | Generated with the tool above (base body, clothing, equipment) |
-| `player_1..4.png` | `player.png` + `feet/sandals/male` + `torso/clothes/longsleeve/longsleeve/male` + `hat/cloth/bandana/adult`, recoloured per player |
+| `player_1..4.png` | `player.png` (eyes recoloured brown) + `feet/sandals/male` + `legs/skirts/plain/male` + `torso/clothes/longsleeve/longsleeve/male` + `torso/waist/sash_narrow/male` + `hat/cloth/bandana/adult`; tunic dyed per player. Built by `tools/build_player_sheets.py` |
 
 TODO before release: copy the exact author lines for each layer from the generator's
 `CREDITS.csv` into this file.
