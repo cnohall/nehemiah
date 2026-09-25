@@ -21,6 +21,9 @@ const STEP_FRAMES  := [1, 5]   # footfalls in the 8-frame walk / run cycles
 const STRIKE_FRAME := 4        # downstroke of the build loop
 const TURN_RATE    := 16.0     # rad/s-ish smoothing toward the facing direction
 const BASE_SCALE   := 1.3
+# Building: turn a three-quarter view toward the camera so the mallet arm isn't
+# hidden behind the body when the wall is "up" screen (the usual case)
+const BUILD_TURN   := -0.65
 
 # Rig dimensions (metres, before scale). Feet at y = 0.
 const HIP_Y      := 0.34
@@ -249,6 +252,8 @@ func _update_facing(delta: float) -> void:
 		_last_pos = pos
 		_has_last = true
 	var want := atan2(target.x, target.z)
+	if _base == "build":
+		want += BUILD_TURN
 	_yaw = lerp_angle(_yaw, want, clampf(delta * TURN_RATE, 0.0, 1.0))
 	rotation.y = _yaw
 
@@ -300,7 +305,7 @@ func _apply_pose() -> void:
 			lean = lerpf(-0.15, 0.3, e)
 		"build":
 			# Raise over frames 0-3, slam on 4, recover 5-7
-			var keys := [-1.3, -2.0, -2.6, -2.8, -0.55, -0.75, -0.95, -1.1]
+			var keys := [-1.4, -2.3, -2.9, -3.2, -0.5, -0.75, -1.0, -1.2]
 			var fi := _t * fps
 			var i0 := int(fi) % 8
 			var i1 := (i0 + 1) % 8
@@ -308,7 +313,8 @@ func _apply_pose() -> void:
 			var a: float = lerpf(keys[i0], keys[i1], fr * fr if i0 == 3 else fr)
 			ar = Vector3(a, 0, -0.1)
 			al = Vector3(-0.8, 0, 0.25)
-			lean = 0.28 if i0 >= 4 and i0 <= 5 else 0.12
+			lean = 0.34 if i0 >= 4 and i0 <= 5 else (-0.08 if i0 == 3 else 0.12)
+			body_y = -0.03 if i0 == 4 else 0.0
 			head_rx = 0.15
 		"thrust":
 			var j := sin(k * PI)
@@ -459,8 +465,8 @@ func _build(look: Dictionary) -> void:
 	# Worker's mallet — shown only while building
 	if look.get("hat", "wrap") == "wrap":
 		_tool = _pivot(hands[1], Vector3(0, -0.04, 0.02))
-		_part(_tool, _cyl(0.025, 0.025, 0.46), Color(0.50, 0.34, 0.20), Vector3(0, -0.2, 0))
-		_part(_tool, _box(Vector3(0.26, 0.14, 0.14)), Color(0.60, 0.44, 0.28), Vector3(0, -0.42, 0))
+		_part(_tool, _cyl(0.03, 0.03, 0.56), Color(0.50, 0.34, 0.20), Vector3(0, -0.24, 0))
+		_part(_tool, _box(Vector3(0.36, 0.2, 0.2)), Color(0.62, 0.46, 0.30), Vector3(0, -0.52, 0))
 		_tool_visible()
 
 func _pivot(parent: Node3D, pos: Vector3) -> Node3D:

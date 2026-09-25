@@ -2,9 +2,11 @@ extends SceneTree
 
 # Readability check: the four player slots side by side at gameplay zoom, in each pose
 # (idle, carrying, working, winding up, downed), plus two enemies for contrast.
-#   Godot --path . --script res://tools/lineup_shots.gd -- --nostory <out_dir>
+#   Godot --path . --script res://tools/lineup_shots.gd -- --nostory [--close] <out_dir>
+# --close zooms in (ortho size 9) to judge faces and proportions.
 
 var _out := ""
+var _close := false
 var _main: Node3D
 var _frame := 0
 var _players: Array = []
@@ -15,7 +17,9 @@ var _hold := 0
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
-		if not a.begins_with("--"):
+		if a == "--close":
+			_close = true
+		elif not a.begins_with("--"):
 			_out = a
 	root.size = Vector2i(1920, 1080)
 	_main = load("res://scenes/main/main.tscn").instantiate()
@@ -68,6 +72,8 @@ func _stage() -> void:
 	var cam: Camera3D = _main.get_node("Camera3D")
 	var c: Vector3 = Vector3(0.0, 0.0, 5.0)
 	cam.global_position = c + _main.CAM_OFFSET
+	if _close:
+		cam.size = 9.0
 	_main.hud.hide()
 	_main.get_node("/root/GameState").set_crew(4)
 
@@ -81,7 +87,7 @@ func _apply_pose(pose: String) -> void:
 				p.carried_kind = ["stone", "wood", "mortar", "stone"][_players.find(p)]
 				p._rebuild_carry_prop()
 				p.anim = "walk_down"
-			"build": p.anim = "build_right"
+			"build": p.anim = "build_up" if _players.find(p) % 2 == 0 else "build_right"
 			"windup":
 				p.anim = "windup_right"
 				p.whirling = true
