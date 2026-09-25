@@ -15,4 +15,16 @@ Thumbs.db
 *.tmp
 
 # Export output
-build/
+/build/
+
+# Epic Online Services secrets
+eos_credentials.cfg
+
+# Android gradle build output (template itself is tracked — it carries EOS patches)
+android/build/build/
+android/build/.gradle/
+android/build/libs/debug/
+android/build/libs/release/
+android/build/assets/
+android/build/assetPackInstallTime/src/main/assets/
+android/build/src/main/assets/

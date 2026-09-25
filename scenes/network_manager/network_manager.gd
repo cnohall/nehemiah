@@ -17,12 +17,18 @@ const STEAM_RESULT_OK         := 1
 const LOBBY_ENTER_SUCCESS     := 1
 const FRIEND_FLAG_IMMEDIATE   := 4
 const PERSONA_OFFLINE         := 0
+# EOS room codes: 5 letters, no I/O so they read cleanly off a screen
+const ROOM_CODE_LEN   := 5
+const ROOM_CODE_CHARS := "ABCDEFGHJKLMNPQRSTUVWXYZ"
+const EOS_SCRIPT      := "res://scenes/network_manager/eos_online.gd"
+const JOIN_TIMEOUT    := 20.0
 
 signal lobby_created
 signal lobby_joined(success: bool)
 signal host_failed(reason: String)
 signal peer_connected(id: int)
 signal peer_disconnected(id: int)
+signal online_status_changed   # EOS finished (or failed) signing in
 
 # Peers whose game scene has loaded. Server-owned synchronizers filter on this so
 # nothing replicates to a client still sitting in the menu (its nodes don't exist yet).
@@ -35,6 +41,10 @@ var _steam: Object = null
 var _steam_error := ""
 var _lobby_id := 0
 var _hosting_lobby := false
+# EOS helper (eos_online.gd), or null when the EOSG extension is missing
+var _eos: Node = null
+# Why the last online host/join failed, for the menu
+var last_error := ""
 
 # Connect once — reconnecting per host()/join() call errors on the second attempt
 func _ready() -> void:
@@ -44,6 +54,7 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_init_steam()
+	_init_eos()
 
 # ── ENet (LAN / direct IP, headless tests) ─────────────────
 
@@ -123,6 +134,60 @@ func invite_friend(steam_id: int) -> bool:
 		return false
 	return _steam.inviteUserToLobby(_lobby_id, steam_id)
 
+# ── EOS (room codes + relayed P2P — works on PC and phones) ─
+
+func online_available() -> bool:
+	return _eos != null and _eos.online
+
+## Menu line for the online state: "" while signing in, else the error if any
+func online_error() -> String:
+	if _eos == null:
+		return "Online plugin missing"
+	return _eos.error
+
+func room_code() -> String:
+	return _eos.room_code if _eos else ""
+
+static func is_room_code(text: String) -> bool:
+	if text.length() != ROOM_CODE_LEN:
+		return false
+	for c in text.to_upper():
+		if not ROOM_CODE_CHARS.contains(c):
+			return false
+	return true
+
+func host_online() -> void:
+	var peer: MultiplayerPeer = await _eos.host()
+	if peer == null:
+		host_failed.emit(_eos.error)
+		return
+	multiplayer.multiplayer_peer = peer
+	lobby_created.emit()
+
+func join_online(code: String) -> void:
+	last_error = ""
+	var peer: MultiplayerPeer = await _eos.join(code)
+	if peer == null:
+		last_error = _eos.error
+		lobby_joined.emit(false)
+		return
+	multiplayer.multiplayer_peer = peer
+	# EOS reports a dead host by never connecting — give up after a while
+	await get_tree().create_timer(JOIN_TIMEOUT).timeout
+	if multiplayer.multiplayer_peer == peer 			and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTING:
+		disconnect_session()
+		last_error = "The host didn't answer."
+		lobby_joined.emit(false)
+
+func _init_eos() -> void:
+	# Checked by class name so the game still runs where the extension can't load
+	if not ClassDB.class_exists("EOSGMultiplayerPeer"):
+		return
+	_eos = load(EOS_SCRIPT).new()
+	_eos.name = "EOS"
+	_eos.status_changed.connect(online_status_changed.emit)
+	add_child(_eos)
+
 # ── Session teardown ───────────────────────────────────────
 
 func disconnect_session() -> void:
@@ -135,6 +200,8 @@ func disconnect_session() -> void:
 		_steam.clearRichPresence()
 	_lobby_id = 0
 	_hosting_lobby = false
+	if _eos:
+		_eos.leave()
 
 # ── Scene readiness (server) ───────────────────────────────
 

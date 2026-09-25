@@ -36,6 +36,7 @@ func _ready() -> void:
 	NetworkManager.lobby_created.connect(_on_lobby_created)
 	NetworkManager.lobby_joined.connect(_on_lobby_joined)
 	NetworkManager.host_failed.connect(_on_host_failed)
+	NetworkManager.online_status_changed.connect(_show_default_status)
 	# Mouse and keyboard share one highlight: hovering an entry focuses it
 	for b: Button in menu.get_children():
 		b.mouse_entered.connect(b.grab_focus)
@@ -79,19 +80,33 @@ func _drift() -> void:
 func _use_steam() -> bool:
 	return NetworkManager.steam_available() and not OS.get_cmdline_user_args().has("--lan")
 
+# EOS room codes: the default on phones; on PC Steam wins unless `-- --eos`
+func _use_eos() -> bool:
+	var args := OS.get_cmdline_user_args()
+	return NetworkManager.online_available() and not args.has("--lan") 		and (args.has("--eos") or not _use_steam())
+
 func _show_default_status() -> void:
-	if _use_steam():
+	if host_btn.disabled:
+		return  # mid-host: keep the progress/error line
+	if _use_eos():
+		net_status.text = "Online — host for a room code, or join with one"
+	elif _use_steam():
 		net_status.text = "Signed in to Steam as %s — invite friends once in game" % NetworkManager.steam_name()
 	elif NetworkManager.steam_available():
 		net_status.text = "LAN mode — share your IP address to play together"
+	elif NetworkManager.online_error().is_empty():
+		net_status.text = "Connecting to online services…"
 	else:
-		net_status.text = "Steam unavailable: %s — LAN play only" % NetworkManager.steam_error()
+		net_status.text = "Online unavailable: %s — LAN play only" % NetworkManager.online_error()
 
 # ── Host ───────────────────────────────────────────────────
 
 func _on_host() -> void:
 	host_btn.disabled = true
-	if _use_steam():
+	if _use_eos():
+		net_status.text = "Opening a room…"
+		NetworkManager.host_online()
+	elif _use_steam():
 		net_status.text = "Creating Steam lobby…"
 		NetworkManager.host_steam()
 	else:
@@ -119,12 +134,17 @@ func _open_join() -> void:
 func _on_connect() -> void:
 	var addr := address_input.text.strip_edges()
 	if addr.is_empty():
-		status_label.text = "Enter an address or lobby code first."
+		status_label.text = "Enter a room code or address first."
 		return
 	status_label.text = "Connecting…"
 	connect_btn.disabled = true
-	# Steam lobby ids are 64-bit numbers; anything else is treated as an IP/hostname
-	if addr.is_valid_int() and addr.length() > 12:
+	# 5 letters = EOS room code; Steam lobby ids are 64-bit numbers; else an IP/hostname
+	if NetworkManager.is_room_code(addr):
+		if not NetworkManager.online_available():
+			_join_failed("Online services aren't ready — check your connection.")
+			return
+		NetworkManager.join_online(addr)
+	elif addr.is_valid_int() and addr.length() > 12:
 		if not NetworkManager.steam_available():
 			_join_failed("That's a Steam lobby code — start Steam first.")
 			return
@@ -142,7 +162,8 @@ func _on_lobby_joined(success: bool) -> void:
 	if success:
 		get_tree().change_scene_to_file(GAME_SCENE)
 	else:
-		_join_failed("Connection failed. Check the address and that the host is running.")
+		var why := NetworkManager.last_error
+		_join_failed(why if not why.is_empty() else "Connection failed. Check the address and that the host is running.")
 
 # Panel may be hidden when the join came from a Steam invite, so surface it
 func _join_failed(msg: String) -> void:

@@ -22,6 +22,16 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+EOSGRuntime="*res://addons/epic-online-services-godot/runtime.gd"
+HPlatform="*res://addons/epic-online-services-godot/heos/hplatform.gd"
+HAuth="*res://addons/epic-online-services-godot/heos/hauth.gd"
+HAchievements="*res://addons/epic-online-services-godot/heos/hachievements.gd"
+HFriends="*res://addons/epic-online-services-godot/heos/hfriends.gd"
+HStats="*res://addons/epic-online-services-godot/heos/hstats.gd"
+HLeaderboards="*res://addons/epic-online-services-godot/heos/hleaderboards.gd"
+HLobbies="*res://addons/epic-online-services-godot/heos/hlobbies.gd"
+HP2P="*res://addons/epic-online-services-godot/heos/hp2p.gd"
+HSessions="*res://addons/epic-online-services-godot/heos/hsessions.gd"
 NetworkManager="*res://scenes/network_manager/network_manager.gd"
 GameState="*res://scenes/game_state/game_state.gd"
 Sfx="*res://scenes/sfx/sfx.gd"
@@ -33,10 +43,15 @@ window/size/viewport_width=1920
 window/size/viewport_height=1080
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation=4
 
 [dotnet]
 
 project/assembly_name="Nehemiah- The Wall"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/epic-online-services-godot/plugin.cfg")
 
 [gui]
 
@@ -101,6 +116,10 @@ pause={
 }
 
 [rendering]
+
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/size.mobile=1024
 
 lights_and_shadows/directional_shadow/size=2048
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=1

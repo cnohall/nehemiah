@@ -274,7 +274,7 @@ text = "Join Game"
 custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
 theme_type_variation = &"Body"
-text = "Enter the host's IP address, or the lobby code they copied from their game."
+text = "Enter the 5-letter room code from the host's screen — or their IP address on the same Wi-Fi."
 autowrap_mode = 3
 
 [node name="FieldGap" type="Control" parent="JoinPanel/Center/Modal/Content"]
@@ -284,11 +284,11 @@ layout_mode = 2
 [node name="FieldLabel" type="Label" parent="JoinPanel/Center/Modal/Content"]
 layout_mode = 2
 theme_type_variation = &"Eyebrow"
-text = "Address or lobby code"
+text = "Room code or address"
 
 [node name="AddressInput" type="LineEdit" parent="JoinPanel/Center/Modal/Content"]
 layout_mode = 2
-placeholder_text = "192.168.1.20"
+placeholder_text = "e.g. KRTWM"
 clear_button_enabled = true
 
 [node name="StatusLabel" type="Label" parent="JoinPanel/Center/Modal/Content"]

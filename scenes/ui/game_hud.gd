@@ -52,13 +52,18 @@ var _controls_tween: Tween
 
 func _ready() -> void:
 	_build_player_cards()
-	_build_controls_hint()
+	if TouchControls.enabled():
+		_build_touch_controls()
+	else:
+		_build_controls_hint()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
 	$Root.move_child(alerts, banner.get_index())
 	if NetworkManager.in_steam_lobby():
 		_build_invite_panel()
+	if not NetworkManager.room_code().is_empty():
+		_build_room_code()
 	breach_pips.count = GameState.MAX_BREACHES
 	day_of.text = "of %d" % GameState.TOTAL_DAYS
 	_last_breaches = GameState.breaches
@@ -270,6 +275,16 @@ func set_player_color(slot: int, color: Color) -> void:
 
 # ── Controls hint ──────────────────────────────────────────
 
+# Phones: on-screen stick + buttons instead of the key legend. Player cards move
+# to the top-left (next to the pause button) so the stick's corner stays clear.
+func _build_touch_controls() -> void:
+	var touch := TouchControls.new()
+	touch.blockers = [pause_menu, settings, end_screen]
+	$Root.add_child(touch)
+	$Root.move_child(touch, banner.get_index())
+	players_row.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	players_row.position = Vector2(120, 18)
+
 func _build_controls_hint() -> void:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(16, 12), 0.9))
@@ -366,6 +381,36 @@ func _build_player_cards() -> void:
 		players_row.add_child(root)
 		_cards.append({ root = root, swatch = swatch, name = name_lbl,
 			carry = carry, bar = bar, fill = fill })
+
+# ── EOS room code ──────────────────────────────────────────
+
+# The code friends type to join. Bottom-right on PC; top-left under the player
+# cards on touch, where the button cluster owns the corner.
+func _build_room_code() -> void:
+	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"Card"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$Root.add_child(panel)
+	if TouchControls.enabled():
+		panel.position = Vector2(120, 96)
+	else:
+		panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
+		panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 12)
+	panel.add_child(hb)
+	var lbl := Label.new()
+	lbl.theme_type_variation = &"Eyebrow"
+	lbl.text = "Room"
+	lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(lbl)
+	var code := Label.new()
+	code.text = NetworkManager.room_code()
+	code.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 4))
+	code.add_theme_font_size_override("font_size", 28)
+	code.add_theme_color_override("font_color", UiStyle.INK)
+	hb.add_child(code)
 
 # ── Steam invite ───────────────────────────────────────────
 

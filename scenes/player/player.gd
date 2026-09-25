@@ -180,12 +180,8 @@ func _physics_process(delta: float) -> void:
 # ── Movement ───────────────────────────────────────────────
 
 func _handle_movement(delta: float) -> void:
-	var dir := Vector3.ZERO
-	for action in MOVE_DIRS:
-		if Input.is_action_pressed(action):
-			dir += MOVE_DIRS[action]
-	if dir.length_squared() > 0:
-		dir = dir.normalized()
+	# Analog: keys give unit length, the touch stick anything in 0..1
+	var dir := _screen_to_ground(Input.get_vector("move_west", "move_east", "move_north", "move_south", 0.1))
 	var on_beam := carried_kind == "beam" or helping_id != 0
 	if Input.is_action_just_pressed("dash") and _dash_cd <= 0.0 and not _is_busy and not _charging and not on_beam:
 		# Standing still: dash the way we're facing
@@ -557,13 +553,13 @@ func _sfx(event: String) -> void:
 func _handle_attack(delta: float) -> void:
 	if not _charging:
 		# A click on HUD buttons / the Esc menu isn't a throw
-		if Input.is_action_just_pressed("throw_charge") and _sling_cd <= 0.0 and get_viewport().gui_get_hovered_control() == null:
+		if Input.is_action_just_pressed("throw_charge") and _sling_cd <= 0.0 				and (TouchControls.aiming or get_viewport().gui_get_hovered_control() == null):
 			_charging = true
 			_charge = 0.0
 			whirling = true
 		return
 	_charge = minf(1.0, _charge + delta / SLING_CHARGE_TIME)
-	_update_aim(_cursor_on_ground())
+	_update_aim(_touch_aim() if TouchControls.aiming else _cursor_on_ground())
 	if not Input.is_action_pressed("throw_charge"):
 		release_throw()
 
@@ -599,6 +595,29 @@ func _update_aim(cursor: Vector3) -> void:
 	_aim_point = Vector3(global_position.x, GROUND_Y, global_position.z) + dir * dist
 	var locked := _assist_target(global_position, _aim_point, reach)
 	_show_aim_marker(locked.global_position if locked else _aim_point, locked != null)
+
+# Screen-space direction → ground direction, same length. The camera is a fixed iso
+# view, so screen right/down are the east/south move axes.
+static func _screen_to_ground(v: Vector2) -> Vector3:
+	return (MOVE_DIRS["move_east"] * v.x + MOVE_DIRS["move_south"] * v.y) / sqrt(2.0)
+
+# Touch sling: dragged → throw that way (charge sets the range); tapped → nearest
+# enemy in reach, else straight ahead
+func _touch_aim() -> Vector3:
+	var reach := _sling_range(_charge)
+	var dir := _screen_to_ground(TouchControls.aim_vec.normalized())
+	if TouchControls.aim_vec == Vector2.ZERO:
+		var best: Node3D = null
+		var best_d := reach + 0.5
+		for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
+			var d := enemy.global_position.distance_to(global_position)
+			if d < best_d:
+				best_d = d
+				best = enemy
+		if best:
+			return best.global_position
+		dir = _facing_vector()
+	return global_position + dir * reach
 
 func _cursor_on_ground() -> Vector3:
 	var cam := get_viewport().get_camera_3d()
