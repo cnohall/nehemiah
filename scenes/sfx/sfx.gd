@@ -27,6 +27,11 @@ var _defs := {
 	"mix_done":       [_n("impactPlank_medium_%03d", 0, 5), -6.0, 1.1, 1.25],
 	"deposit_beam":   [_n("impactWood_heavy_%03d", 0, 5), -2.0, 0.85, 0.95],
 	"build":          [_n("impactPlank_medium_%03d", 0, 5), 0.0, 0.8, 0.95],
+	# One strike of the working loop, by what is being worked
+	"work_wood":      [_n("impactWood_medium_%03d", 0, 5), -8.0, 1.15, 1.35],
+	"work_beam":      [_n("impactWood_medium_%03d", 0, 5), -8.0, 1.0, 1.15],
+	"work_stone":     [_n("impactMining_%03d", 0, 5), -9.0, 1.2, 1.45],
+	"work_mortar":    [_n("impactSoft_medium_%03d", 0, 5), -7.0, 1.2, 1.4],
 	"wall_hit":       [_n("impactMining_%03d", 0, 5), -5.0, 0.6, 0.75],
 	"wall_crumble":   [_n("impactWood_heavy_%03d", 0, 5), 0.0, 0.6, 0.7],
 	"enemy_swing":    [["knifeSlice", "knifeSlice2"], -8.0, 0.85, 1.05],

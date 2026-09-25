@@ -32,6 +32,10 @@ const TWIST_INTRO := {
 }
 
 const TOTAL_DAYS   := 52
+# Hands-on building (GDD §5.4): delivered materials wait until workers stand at the
+# wall and raise it. Debug builds: `-- --instant-build` for the old deliver-and-done
+# rule, to A/B the two in playtests.
+var active_build: bool = not (OS.is_debug_build() and "--instant-build" in OS.get_cmdline_user_args())
 const MAX_BREACHES := 10   # enemies that may reach the inner city before the city falls
 
 # GATHER: before day 1, waiting for the crew to join; STORY: story cards before a day

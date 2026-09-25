@@ -91,6 +91,13 @@ func try_build() -> bool:
 func is_complete() -> bool:
 	return true
 
+## Mixing runs by itself — there's no hands-on work here (see BuildWork)
+func work() -> BuildWork:
+	return null
+
+func work_material() -> String:
+	return ""
+
 # ── Supply side: hands out the mixed load ──────────────────
 
 func request_pickup() -> bool:

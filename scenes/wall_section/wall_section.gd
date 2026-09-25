@@ -16,6 +16,12 @@ const MATERIAL_COST_BY_CREW := [
 	{ Stage.FRAMED: { "wood": 3 }, Stage.STACKED: { "stone": 5 }, Stage.MORTARED: { "mortar": 2 } },
 	{ Stage.FRAMED: { "wood": 3 }, Stage.STACKED: { "stone": 6 }, Stage.MORTARED: { "mortar": 2 } },
 ]
+# With hands-on building the labour moves from hauling to working the wall: one load
+# less per stage (never below one), paid back in work time
+const ACTIVE_BUILD_DISCOUNT := 1
+# Seconds of work for one worker to raise each stage (BuildWork); a solo builder is quicker
+const WORK_TIME := { Stage.FRAMED: 2.0, Stage.STACKED: 3.0, Stage.MORTARED: 2.0 }
+const SOLO_WORK_MULT := 0.75
 # "beams" twist (Neh. 3:3 "they laid its beams"): framing takes long beams, carried in
 # pairs, instead of loose timber
 const BEAM_COST_BY_CREW    := [1, 2, 2]
@@ -91,6 +97,10 @@ var _label: Label3D
 var _foundation_mat: StandardMaterial3D
 var _label_poll := 0.0
 var _juice_tween: Tween
+var _work: BuildWork
+# The next stage going up while workers are at it, revealed block by block
+var _preview: Node3D
+var _preview_skip := 0
 
 @onready var _col: CollisionShape3D = $CollisionShape3D
 
@@ -112,8 +122,16 @@ func _ready() -> void:
 		add_to_group("wall_sections")   # what enemies batter
 		add_to_group("build_sites")     # what workers deliver to (walls + gate doors)
 		GameState.section_changed.connect(_update_label.unbind(1))
+		_work = BuildWork.new()
+		_work.name = "Work"
+		_work.position = Vector3(_center.x, _size.y + 0.9, _center.z)
+		add_child(_work)
+		_work.progress_changed.connect(_on_work_progress)
+		InputMode.changed.connect(_update_label.unbind(1))
 		_build_sync()
 		GameState.crew_changed.connect(_update_label.unbind(1))
+		GameState.crew_changed.connect(_prime_work.unbind(1))
+		_prime_work()
 	_update_visuals()
 
 func _process(delta: float) -> void:
@@ -122,7 +140,8 @@ func _process(delta: float) -> void:
 		return
 	_label_poll = LABEL_POLL
 	var damaged := is_built() and health < MAX_HEALTH
-	_label.visible = (is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and _local_player_near())
+	var working := _work != null and _work.progress > 0.0   # the bar and rising stones say it all
+	_label.visible = not working and ((is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and _local_player_near()))
 	if damaged:
 		_update_label()
 
@@ -149,7 +168,20 @@ func cost_for(target_stage: int) -> Dictionary:
 	var tier := clampi(GameState.crew_size, 1, MATERIAL_COST_BY_CREW.size()) - 1
 	if target_stage == Stage.FRAMED and GameState.has_twist("beams"):
 		return { "beam": BEAM_COST_BY_CREW[tier] }
-	return MATERIAL_COST_BY_CREW[tier][target_stage]
+	var cost: Dictionary = MATERIAL_COST_BY_CREW[tier][target_stage].duplicate()
+	if GameState.active_build:
+		for kind: String in cost:
+			cost[kind] = maxi(1, cost[kind] - ACTIVE_BUILD_DISCOUNT)
+	return cost
+
+## BuildWork: the site that holds this progress
+func work() -> BuildWork:
+	return _work
+
+## Material being worked into the next stage ("" when finished) — picks the strike sound
+func work_material() -> String:
+	var next := stage + 1
+	return "" if next > Stage.MORTARED else cost_for(next).keys()[0]
 
 ## Material still missing for the next stage ("" when finished)
 func next_need() -> String:
@@ -180,7 +212,15 @@ func try_build() -> bool:
 	for kind in cost:
 		pending[kind] -= cost[kind]
 	stage = next as Stage
+	_prime_work()
 	return true
+
+func _prime_work() -> void:
+	if _work == null:
+		return
+	var next := stage + 1
+	if next <= Stage.MORTARED:
+		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0)
 
 # Returns how much of the next stage's required material is pending (0.0–1.0)
 func get_build_progress() -> float:
@@ -217,6 +257,8 @@ func reset_slot() -> void:
 	pending = _empty_pending()
 	health = MAX_HEALTH
 	stage = Stage.EMPTY
+	_work.reset()
+	_prime_work()
 
 ## Overnight repair of part of the damage
 func repair(fraction: float) -> void:
@@ -255,6 +297,8 @@ func _degrade() -> void:
 	pending = _empty_pending()
 	health = MAX_HEALTH * DEGRADE_HEALTH_RATIO
 	stage = (stage - 1) as Stage
+	_work.reset()
+	_prime_work()
 	# Knocked back to bare foundation — slot stays so it can be rebuilt
 	if stage == Stage.EMPTY:
 		destroyed.emit()
@@ -263,7 +307,7 @@ func _degrade() -> void:
 
 func _build_sync() -> void:
 	var cfg := SceneReplicationConfig.new()
-	for prop: NodePath in [^".:stage", ^".:pending", ^".:health", ^".:is_target"]:
+	for prop: NodePath in [^".:stage", ^".:pending", ^".:health", ^".:is_target", ^"Work:progress"]:
 		cfg.add_property(prop)
 		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
 	var sync := MultiplayerSynchronizer.new()
@@ -278,11 +322,54 @@ func _build_sync() -> void:
 func _update_visuals() -> void:
 	for c in _visual.get_children():
 		c.queue_free()
+	_clear_preview()
 	_col.set_deferred("disabled", stage == Stage.EMPTY and not decorative)
+	_add_foundation()
+	_build_stage(stage, _visual_rng())
+	_update_label()
+
+# Same seed every time, so a stage's preview lays exactly the blocks it will end up with
+func _visual_rng() -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(global_position.snapped(Vector3.ONE * 0.1))
-	_add_foundation()
-	match stage:
+	return rng
+
+# Every peer: workers' progress → the next stage rises in the order it's built
+func _on_work_progress(value: float) -> void:
+	var next := stage + 1
+	if value <= 0.0 or next > Stage.MORTARED:
+		_clear_preview()
+		return
+	if _preview == null:
+		_preview = Node3D.new()
+		add_child(_preview)
+		var real := _visual
+		_visual = _preview
+		_build_stage(next as Stage, _visual_rng())
+		_visual = real
+		# Pieces already standing in this stage are shown from the start
+		match next:
+			Stage.STACKED:
+				_preview_skip = _first_multimesh_count(_visual)
+			Stage.MORTARED:
+				_preview_skip = 1 + _first_multimesh_count(_preview)   # mortar core + courses
+			_:
+				_preview_skip = 0
+	BuildWork.reveal(_preview, value, _preview_skip)
+
+func _clear_preview() -> void:
+	if _preview != null:
+		_preview.queue_free()
+		_preview = null
+
+static func _first_multimesh_count(root: Node) -> int:
+	for c in root.get_children():
+		if c is MultiMeshInstance3D:
+			return c.multimesh.instance_count
+	return 0
+
+func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
+	match s:
 		Stage.EMPTY:
 			_add_courses(rng, 0.25, GAP_ROUGH * 2.0)  # ruined footing, walkable
 		Stage.FRAMED:
@@ -295,7 +382,6 @@ func _update_visuals() -> void:
 				_center, MORTAR_COLOR)
 			_add_courses(rng, _size.y, GAP_MORTARED)
 			_add_merlons()
-	_update_label()
 
 func _add_foundation() -> void:
 	var s := Vector3(_size.x + 0.35, 0.12, _size.z + 0.35)
@@ -550,10 +636,11 @@ func _build_label() -> void:
 
 func _update_label() -> void:
 	var lines: PackedStringArray = []
-	if is_target and not is_complete():
-		lines.append("— Today's work —")
 	var next := stage + 1
-	if next <= Stage.MORTARED:
+	if GameState.active_build and can_build():
+		# Everything's here — it needs hands, not loads
+		lines.append("Build  [%s]" % InputMode.key("interact"))
+	elif next <= Stage.MORTARED:
 		var cost: Dictionary = cost_for(next)
 		var parts: PackedStringArray = []
 		for kind: String in cost:

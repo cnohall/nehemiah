@@ -14,8 +14,10 @@ const FRAME_PX      := 64
 const FOOT_PAD_PX   := 2
 const SQUASH_TIME   := 0.28
 const STEP_FRAMES   := [1, 5]   # footfalls in the 8-frame walk / run cycles
+const STRIKE_FRAME  := 4        # downstroke of the build loop
 
 signal footstep
+signal strike   # tool meets stone in the "build" loop
 
 var _mat: ShaderMaterial
 var _marker_mat: ShaderMaterial
@@ -40,7 +42,9 @@ func setup(sheet: Texture2D, anims: Array, tint: Color = Color.WHITE, size_scale
 	_build_marker()
 	frame_changed.connect(func():
 		if frame in STEP_FRAMES and (animation.begins_with("run") or animation.begins_with("walk")):
-			footstep.emit())
+			footstep.emit()
+		elif frame == STRIKE_FRAME and animation.begins_with("build"):
+			strike.emit())
 
 ## Swap to another sheet with the same layout (e.g. a player's tunic colour)
 func set_sheet(sheet: Texture2D, anims: Array) -> void:

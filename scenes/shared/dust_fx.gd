@@ -26,6 +26,37 @@ static func material() -> StandardMaterial3D:
 	_mat.albedo_texture = tex
 	return _mat
 
+## One-shot burst of dust at a world point (added under `parent`, freed when done)
+static func puff(parent: Node, at: Vector3, amount := 8, size := 0.5,
+		color := Color(0.87, 0.78, 0.60, 0.6)) -> void:
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.explosiveness = 0.95
+	p.amount = amount
+	p.lifetime = 0.5
+	p.direction = Vector3.UP
+	p.spread = 70.0
+	p.initial_velocity_min = 0.6
+	p.initial_velocity_max = 1.4
+	p.gravity = Vector3(0, -2.5, 0)
+	p.scale_amount_min = 0.6
+	p.scale_amount_max = 1.0
+	p.scale_amount_curve = grow_curve()
+	var ramp := Gradient.new()
+	ramp.set_color(0, color)
+	ramp.set_color(1, Color(color, 0.0))
+	p.color_ramp = ramp
+	var quad := QuadMesh.new()
+	quad.size = Vector2(size, size)
+	quad.material = material()
+	p.mesh = quad
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.top_level = true
+	parent.add_child(p)
+	p.global_position = at
+	p.emitting = true
+	p.finished.connect(p.queue_free)
+
 # Puffs swell as they fade, like dust settling outward
 static func grow_curve() -> Curve:
 	var c := Curve.new()

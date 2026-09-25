@@ -75,7 +75,7 @@ const _SHEETS     := [
 	preload("res://assets/sprites/player_3.png"),
 	preload("res://assets/sprites/player_4.png"),
 ]
-const _ANIMS      := ["idle", "walk", "run", "windup", "slash", "halfslash", "collapse"]
+const _ANIMS      := ["idle", "walk", "run", "windup", "slash", "halfslash", "build", "collapse"]
 const SLING_STONE := preload("res://scenes/sling_stone/sling_stone.tscn")
 const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const MAX_DROPPED  := 40      # oldest ground item vanishes past this
@@ -115,6 +115,9 @@ var _focus_ring: MeshInstance3D
 var _focus_poll := 0.0
 var _beam: Node3D   # carried beam, placed in world space between the two ends
 var _buffered := {}   # action → seconds left to act on an early press
+# Hands-on building: the site we're working at (owner) / registered with (server)
+var _work_site: Node3D
+var building_site: Node3D
 var _move_dir := Vector3.ZERO   # last non-zero move input (pad aim falls back to it)
 
 # Replicated: the sling is being whirled (owner writes, every peer shows it)
@@ -135,6 +138,7 @@ func _ready() -> void:
 		return not multiplayer.is_server() or id == 1 or NetworkManager.is_peer_ready(id))
 	_sprite.setup(_SHEETS[0], _ANIMS)
 	_sprite.footstep.connect(func(): Sfx.play("step", global_position))
+	_sprite.strike.connect(_on_strike)
 	_sprite.play(anim)
 	_carry_prop = Node3D.new()
 	_carry_prop.position.y = CARRY_HEIGHT
@@ -174,6 +178,12 @@ func _physics_process(delta: float) -> void:
 		_dash_time = 0.0
 		_cancel_charge()
 		return
+	if _work_site != null:
+		if _wants_to_stop_work():
+			_stop_work()
+		else:
+			velocity = Vector3.ZERO
+			return
 	if _is_busy:
 		_cancel_charge()  # hit or acting — wind-up is lost
 	_handle_movement(delta)
@@ -448,7 +458,8 @@ func _play_action(anim_base: String) -> void:
 	await _sprite.animation_finished
 	if is_instance_valid(self) and not downed:
 		_is_busy = false
-		anim = "idle_" + _facing
+		if _work_site == null:
+			anim = "idle_" + _facing
 
 # ── Interact / Drop ────────────────────────────────────────
 
@@ -487,17 +498,26 @@ func _server_interact(at: Vector3) -> void:
 		if dest != null and dest.deposit(carried_kind, 1):
 			_sfx.rpc("deposit_" + carried_kind)
 			_set_carried.rpc("")
+			if dest.can_build():
+				# Last load for this stage: the one who brought it sets straight to work
+				# (hands-on building), or it goes up at once (old rule)
+				if GameState.active_build:
+					_start_work(dest)
+				elif dest.try_build():
+					_action.rpc("halfslash")
+					_tell("Stage built!")
+				return
 			_action.rpc("halfslash")
-			# Last load for this stage → raise it straight away (no separate Build press)
-			if dest.can_build() and dest.try_build():
-				_tell("Stage built!")
 			return
 		_tell(_why_not_needed(at))
 		return
-	# Fallback for sections that were already full (e.g. filled before a change of rules)
+	# Everything delivered, waiting for hands
 	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
-	if site != null and site.try_build():
-		_action.rpc("halfslash")
+	if site != null:
+		if GameState.active_build:
+			_start_work(site)
+		elif site.try_build():
+			_action.rpc("halfslash")
 		return
 	# Whichever is closer: something lying on the ground, or a stockpile
 	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
@@ -720,6 +740,10 @@ func _throw_stone(target_path: NodePath, land: Vector3, damage: float) -> void:
 func take_damage(amount: float) -> void:
 	if not multiplayer.is_server() or downed:
 		return
+	# A blow knocks you off the work (Neh. 4:17 — someone has to guard the builders)
+	if building_site != null:
+		building_site.work().remove_builder(self)
+		stop_building_from_server()
 	var new_health := clampf(health - amount, 0.0, MAX_HEALTH)
 	_on_hurt.rpc(new_health)
 	if new_health <= 0.0:
@@ -762,6 +786,73 @@ func _set_downed(value: bool) -> void:
 		_is_busy = value
 		_sprite.speed_scale = 1.0
 		anim = "collapse" if value else "idle_" + _facing
+
+# ── Working at the wall ────────────────────────────────────
+
+# Server: join the work at a site whose materials are all in
+func _start_work(site: Node3D) -> void:
+	if building_site != null and building_site != site:
+		building_site.work().remove_builder(self)
+	if not site.work().add_builder(self):
+		building_site = null
+		_tell("Enough hands here")
+		return
+	building_site = site
+	_set_working.rpc_id(get_multiplayer_authority(), site.get_path())
+
+## Server: the work is done or we were pulled off it
+func stop_building_from_server() -> void:
+	building_site = null
+	_set_working.rpc_id(get_multiplayer_authority(), NodePath())
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_stop_work() -> void:
+	if not _from_owner() or building_site == null:
+		return
+	building_site.work().remove_builder(self)
+	building_site = null
+
+# Server → owner: start / stop the working loop
+@rpc("any_peer", "call_local", "reliable")
+func _set_working(site_path: NodePath) -> void:
+	if multiplayer.get_remote_sender_id() != 1 or not is_multiplayer_authority():
+		return
+	var site: Node3D = get_node_or_null(site_path) if not site_path.is_empty() else null
+	if site == _work_site:
+		return
+	_work_site = site
+	_sprite.speed_scale = 1.0
+	if site != null:
+		_cancel_charge()
+		_dash_time = 0.0
+		_facing = LPCFrames.dir_from_velocity(site.approach_point(global_position, 0.0) - global_position, _facing)
+		anim = "build_" + _facing
+		_sprite.squash(Vector2(1.06, 0.94))
+	elif not downed and not _is_busy:
+		anim = "idle_" + _facing
+
+# Owner: walking off, dashing, dropping or reaching for the sling ends the work
+func _wants_to_stop_work() -> bool:
+	_consume("interact")   # already working — a repeat press does nothing
+	var move := Input.get_vector("move_west", "move_east", "move_north", "move_south", STICK_DEADZONE)
+	return move.length() > 0.35 or _buffered.has("dash") or _buffered.has("drop") \
+		or Input.is_action_just_pressed("throw_charge") or _is_busy
+
+func _stop_work() -> void:
+	_work_site = null
+	_server_stop_work.rpc_id(1)
+	if not _is_busy:
+		anim = "idle_" + _facing
+
+# Every peer: one strike of the tool — a knock and a little dust off the wall
+func _on_strike() -> void:
+	var site := _nearest_in_reach("build_sites", global_position, func(s): return not s.work_material().is_empty())
+	var mat: String = site.work_material() if site != null else "stone"
+	Sfx.play("work_" + mat, global_position)
+	var at: Vector3 = site.approach_point(global_position, 0.0) if site != null else global_position
+	DustFx.puff(self, Vector3(at.x, 0.9, at.z), 5, 0.35)
+	if is_multiplayer_authority():
+		InputMode.rumble(0.15, 0.0, 0.05)
 
 # ── Late join (server → one peer) ──────────────────────────
 
