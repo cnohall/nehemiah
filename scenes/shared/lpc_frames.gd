@@ -14,6 +14,8 @@ const ANIM_CFG: Dictionary = {
 	"run":       { "row": 38, "cycle": [0, 1, 2, 3, 4, 5, 6, 7], "loop": true,  "fps": 13.0, "dirs": 4 },
 	"thrust":    { "row": 4,  "cycle": [0, 1, 2, 3, 4, 5, 6, 7], "loop": false, "fps": 16.0, "dirs": 4 },
 	"slash":     { "row": 12, "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 16.0, "dirs": 4 },
+	# Sling wind-up: the swing's raised-arm frames, rocking while the sling whirls
+	"windup":    { "row": 12, "cycle": [0, 1],                   "loop": true,  "fps": 5.0,  "dirs": 4 },
 	"halfslash": { "row": 50, "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 16.0, "dirs": 4 },
 	# Row 20 is the generator's "hurt" — a full collapse to the ground. Used for downed/death.
 	"collapse":  { "row": 20, "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 10.0, "dirs": 1 },

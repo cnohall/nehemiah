@@ -20,11 +20,19 @@ const SLING_MIN_THROW  := 1.5     # never land closer than this
 const AIM_ASSIST_DEG   := 18.0    # enemies inside this cone of the aim get homed on
 const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
-const AIM_RING_FREE    := Color(0.95, 0.80, 0.45, 0.8)
+const AIM_RING_FREE    := Color(0.45, 0.30, 0.12, 0.85)   # dark ochre — reads on sand
+const GROUND_Y         := 0.1     # top of the floor slab
+const WHIRL_HAND_Y     := 1.3     # throwing hand, about shoulder height
+const WHIRL_SIDE       := 0.32    # hand offset to the side of the body (screen space)
+const WHIRL_RADIUS     := 0.42
+const HP_BAR_Y         := 2.3
+const DOWNED_BAR_COLOR := Color(0.78, 0.30, 0.20)
+const WHIRL_SPIN_MIN   := 9.0     # rad/s at the start of the wind-up…
+const WHIRL_SPIN_MAX   := 24.0    # …and at full charge
 const STAGGER_TIME    := 0.2
 const DOWNED_TIME     := 8.0      # self-revive if no teammate helps
 const REVIVE_HEALTH   := 0.5
-const RESPAWN_POS     := Vector3(0, 0.5, 8)
+const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 const CARRY_HEIGHT    := 1.95     # just above the head of a ~1.7 m figure
 const SLING_RELEASE_Y := 1.5      # overhead hand height
 const SLING_RELEASE_FRAME := 3    # frame of the "slash" swing where the stone leaves the hand
@@ -53,7 +61,7 @@ const _SHEETS     := [
 	preload("res://assets/sprites/player_3.png"),
 	preload("res://assets/sprites/player_4.png"),
 ]
-const _ANIMS      := ["idle", "walk", "run", "slash", "halfslash", "collapse"]
+const _ANIMS      := ["idle", "walk", "run", "windup", "slash", "halfslash", "collapse"]
 const SLING_STONE := preload("res://scenes/sling_stone/sling_stone.tscn")
 const MARKER_SHADER := preload("res://assets/shaders/ground_marker.gdshader")
 
@@ -76,26 +84,54 @@ var _charging := false
 var _charge := 0.0
 var _aim_point := Vector3.ZERO
 var _aim_marker: MeshInstance3D
+var _whirl: Node3D
+var _whirl_time := 0.0
+var _whirl_angle := 0.0
+var _hp_bar: HealthBar
+
+# Replicated: the sling is being whirled (owner writes, every peer shows it)
+var whirling := false:
+	set(value):
+		whirling = value
+		_whirl_time = 0.0
+		if _whirl != null:
+			_whirl.visible = value
 
 @onready var _sprite: CharacterSprite = $Sprite3D
 
 func _ready() -> void:
 	add_to_group("players")
+	# Server-owned (host) player: don't replicate to a client still loading the
+	# game scene — its copy of this node doesn't exist yet
+	$MultiplayerSynchronizer.add_visibility_filter(func(id: int) -> bool:
+		return not multiplayer.is_server() or id == 1 or NetworkManager.is_peer_ready(id))
 	_sprite.setup(_SHEETS[0], _ANIMS)
 	_sprite.play(anim)
 	_carry_prop = Node3D.new()
 	_carry_prop.position.y = CARRY_HEIGHT
 	add_child(_carry_prop)
+	_build_whirl()
+	_hp_bar = HealthBar.new()
+	_hp_bar.position.y = HP_BAR_Y
+	add_child(_hp_bar)
+
+func _process(delta: float) -> void:
+	if whirling:
+		_update_whirl(delta)
+	if downed:
+		# Every peer counts down locally; the server's copy decides the self-revive
+		_down_timer -= delta
+		_hp_bar.show_value(_down_timer / DOWNED_TIME, DOWNED_BAR_COLOR)
+		if multiplayer.is_server() and _down_timer <= 0.0:
+			_set_downed.rpc(false)
+	else:
+		_hp_bar.show_health(health / MAX_HEALTH)
 
 func set_slot(slot: int, c: Color) -> void:
 	_sprite.set_sheet(_SHEETS[slot % _SHEETS.size()], _ANIMS)
 	_sprite.set_ring_color(c)
 
 func _physics_process(delta: float) -> void:
-	if multiplayer.is_server() and downed:
-		_down_timer -= delta
-		if _down_timer <= 0.0:
-			_set_downed.rpc(false)
 	if not is_multiplayer_authority():
 		return
 	_sling_cd = maxf(0.0, _sling_cd - delta)
@@ -134,6 +170,9 @@ func _update_anim() -> void:
 	if _charging:
 		# Face the aim, not the walking direction, while winding up
 		_facing = LPCFrames.dir_from_velocity(_aim_point - global_position, _facing)
+		_sprite.speed_scale = 1.0
+		anim = "windup_" + _facing
+		return
 	if speed < 0.1:
 		_sprite.speed_scale = 1.0
 		anim = "idle_" + _facing
@@ -231,9 +270,11 @@ func _action(anim_base: String) -> void:
 
 func _handle_attack(delta: float) -> void:
 	if not _charging:
-		if Input.is_action_just_pressed("throw_charge") and _sling_cd <= 0.0:
+		# A click on HUD buttons / the Esc menu isn't a throw
+		if Input.is_action_just_pressed("throw_charge") and _sling_cd <= 0.0 and get_viewport().gui_get_hovered_control() == null:
 			_charging = true
 			_charge = 0.0
+			whirling = true
 		return
 	_charge = minf(1.0, _charge + delta / SLING_CHARGE_TIME)
 	_update_aim(_cursor_on_ground())
@@ -259,6 +300,7 @@ func release_throw() -> void:
 
 func _cancel_charge() -> void:
 	_charging = false
+	whirling = false
 	if _aim_marker:
 		_aim_marker.visible = false
 
@@ -268,7 +310,7 @@ func _update_aim(cursor: Vector3) -> void:
 	var reach := _sling_range(_charge)
 	var dist := clampf(flat.length(), SLING_MIN_THROW, reach)
 	var dir := flat.normalized() if flat.length_squared() > 0.001 else Vector3.FORWARD
-	_aim_point = Vector3(global_position.x, 0.0, global_position.z) + dir * dist
+	_aim_point = Vector3(global_position.x, GROUND_Y, global_position.z) + dir * dist
 	var locked := _assist_target(global_position, _aim_point, reach)
 	_show_aim_marker(locked.global_position if locked else _aim_point, locked != null)
 
@@ -286,12 +328,13 @@ func _cursor_on_ground() -> Vector3:
 func _show_aim_marker(at: Vector3, locked: bool) -> void:
 	if _aim_marker == null:
 		var quad := QuadMesh.new()
-		quad.size = Vector2(2.0, 2.0)
+		# Ring drawn at the stone's real impact radius (0.9 m)
+		quad.size = Vector2(2.4, 2.4)
 		quad.orientation = PlaneMesh.FACE_Y
 		var mat := ShaderMaterial.new()
 		mat.shader = MARKER_SHADER
 		mat.set_shader_parameter("shadow_color", Color(0, 0, 0, 0))
-		mat.set_shader_parameter("ring_radius", 0.22)
+		mat.set_shader_parameter("ring_radius", 0.375)
 		mat.set_shader_parameter("ring_width", 0.03)
 		_aim_marker = MeshInstance3D.new()
 		_aim_marker.mesh = quad
@@ -302,7 +345,7 @@ func _show_aim_marker(at: Vector3, locked: bool) -> void:
 	var c := AIM_RING_LOCKED if locked else AIM_RING_FREE
 	c.a *= lerpf(0.45, 1.0, _charge)  # ring firms up as the charge builds
 	_aim_marker.material_override.set_shader_parameter("ring_color", c)
-	_aim_marker.global_position = Vector3(at.x, 0.05, at.z)
+	_aim_marker.global_position = Vector3(at.x, GROUND_Y + 0.04, at.z)
 	_aim_marker.visible = true
 
 static func _sling_range(charge: float) -> float:
@@ -334,7 +377,7 @@ func _server_sling(at: Vector3, land: Vector3, charge: float) -> void:
 	# Don't trust the client's landing point beyond what its charge allows
 	var flat := Vector3(land.x - at.x, 0.0, land.z - at.z)
 	if flat.length() > reach:
-		land = Vector3(at.x, 0.0, at.z) + flat.normalized() * reach
+		land = Vector3(at.x, GROUND_Y, at.z) + flat.normalized() * reach
 	var target := _assist_target(at, land, reach)
 	var damage := lerpf(SLING_MIN_DAMAGE, SLING_MAX_DAMAGE, charge)
 	_throw_stone.rpc(target.get_path() if target else NodePath(), land, damage)
@@ -402,6 +445,8 @@ func _sync_status(kind: String, is_downed: bool, hp: float) -> void:
 		return
 	carried_kind = kind
 	downed = is_downed
+	if is_downed:
+		_down_timer = DOWNED_TIME  # exact remaining time isn't sent; close enough for a late joiner
 	health = hp
 	_rebuild_carry_prop()
 
@@ -428,13 +473,77 @@ func _toast(text: String) -> void:
 	l.outline_modulate = Color(0.20, 0.14, 0.08)
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
-	l.position = Vector3(0, CARRY_HEIGHT + 0.45, 0)
+	l.position = Vector3(0, HP_BAR_Y + 0.3, 0)
 	add_child(l)
 	var tw := l.create_tween()
 	tw.set_parallel()
 	tw.tween_property(l, "position:y", l.position.y + 0.5, TOAST_TIME)
 	tw.tween_property(l, "modulate:a", 0.0, TOAST_TIME * 0.4).set_delay(TOAST_TIME * 0.6)
 	tw.chain().tween_callback(l.queue_free)
+
+# ── Sling whirl ────────────────────────────────────────────
+
+# Cord + stone swung in a vertical circle from the throwing hand, beside the body.
+# The circle faces the camera so it reads from the isometric view.
+func _build_whirl() -> void:
+	_whirl = Node3D.new()
+	_whirl.top_level = true  # placed in world space every frame
+	_whirl.visible = false
+	add_child(_whirl)
+	var cord_mat := StandardMaterial3D.new()
+	cord_mat.albedo_color = Color(0.36, 0.26, 0.16)
+	cord_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var cord := CylinderMesh.new()
+	cord.top_radius = 0.02
+	cord.bottom_radius = 0.02
+	cord.height = WHIRL_RADIUS
+	cord.radial_segments = 4
+	var cord_mi := MeshInstance3D.new()
+	cord_mi.mesh = cord
+	cord_mi.material_override = cord_mat
+	cord_mi.rotation.z = PI / 2          # lie along local +X
+	cord_mi.position.x = WHIRL_RADIUS * 0.5
+	cord_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_whirl.add_child(cord_mi)
+	var stone := SphereMesh.new()
+	stone.radius = 0.09
+	stone.height = 0.15
+	var stone_mat := StandardMaterial3D.new()
+	stone_mat.albedo_color = Color(0.55, 0.50, 0.44)
+	var stone_mi := MeshInstance3D.new()
+	stone_mi.mesh = stone
+	stone_mi.material_override = stone_mat
+	stone_mi.position.x = WHIRL_RADIUS
+	_whirl.add_child(stone_mi)
+	# Faint motion-blur ring along the stone's path, so the spin reads at a glance
+	var blur := QuadMesh.new()
+	blur.size = Vector2(WHIRL_RADIUS * 2.5, WHIRL_RADIUS * 2.5)  # local XY plane
+	var blur_mat := ShaderMaterial.new()
+	blur_mat.shader = MARKER_SHADER
+	blur_mat.set_shader_parameter("shadow_color", Color(0, 0, 0, 0))
+	blur_mat.set_shader_parameter("ring_color", Color(0.95, 0.90, 0.78, 0.45))
+	blur_mat.set_shader_parameter("ring_radius", 0.4)   # = WHIRL_RADIUS on this quad
+	blur_mat.set_shader_parameter("ring_width", 0.06)
+	var blur_mi := MeshInstance3D.new()
+	blur_mi.mesh = blur
+	blur_mi.material_override = blur_mat
+	blur_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_whirl.add_child(blur_mi)
+
+func _update_whirl(delta: float) -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	# Spin speeds up as the charge builds (time-based so every peer agrees)
+	_whirl_time += delta
+	_whirl_angle += lerpf(WHIRL_SPIN_MIN, WHIRL_SPIN_MAX, minf(_whirl_time / SLING_CHARGE_TIME, 1.0)) * delta
+	var right := cam.global_basis.x
+	# Throwing (right) hand: screen-left when facing the camera or right, screen-right otherwise.
+	# Facing comes from the replicated anim ("windup_left") so remote peers agree.
+	var facing := anim.get_slice("_", 1)
+	var side := -1.0 if facing == "down" or facing == "right" else 1.0
+	var hand := global_position + Vector3.UP * WHIRL_HAND_Y + right * side * WHIRL_SIDE
+	_whirl.global_transform = Transform3D(cam.global_basis * Basis(Vector3.BACK, _whirl_angle), hand)
 
 # ── Carried prop ───────────────────────────────────────────
 

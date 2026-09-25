@@ -1,0 +1,161 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/settings_panel.gd" id="1_script"]
+
+[sub_resource type="ButtonGroup" id="Group_display"]
+
+[sub_resource type="ButtonGroup" id="Group_vsync"]
+
+[node name="SettingsPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Scrim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.105, 0.068, 0.044, 0.5)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Modal" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+theme_type_variation = &"Modal"
+
+[node name="VBox" type="VBoxContainer" parent="Center/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 26
+
+[node name="Header" type="VBoxContainer" parent="Center/Modal/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Eyebrow" type="Label" parent="Center/Modal/VBox/Header"]
+layout_mode = 2
+theme_type_variation = &"Eyebrow"
+text = "Preferences"
+
+[node name="Title" type="Label" parent="Center/Modal/VBox/Header"]
+layout_mode = 2
+theme_type_variation = &"Heading"
+text = "Settings"
+
+[node name="Rule" type="ColorRect" parent="Center/Modal/VBox"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+color = Color(0.716, 0.63, 0.526, 0.6)
+
+[node name="Grid" type="GridContainer" parent="Center/Modal/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 40
+theme_override_constants/v_separation = 22
+columns = 2
+
+[node name="DisplayLabel" type="Label" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Body"
+text = "Display"
+
+[node name="DisplayRow" type="HBoxContainer" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Windowed" type="Button" parent="Center/Modal/VBox/Grid/DisplayRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_type_variation = &"Segment"
+toggle_mode = true
+button_group = SubResource("Group_display")
+text = "Windowed"
+
+[node name="Fullscreen" type="Button" parent="Center/Modal/VBox/Grid/DisplayRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_type_variation = &"Segment"
+toggle_mode = true
+button_group = SubResource("Group_display")
+text = "Fullscreen"
+
+[node name="VsyncLabel" type="Label" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Body"
+text = "Vertical sync"
+
+[node name="VsyncRow" type="HBoxContainer" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="VsyncOn" type="Button" parent="Center/Modal/VBox/Grid/VsyncRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_type_variation = &"Segment"
+toggle_mode = true
+button_group = SubResource("Group_vsync")
+text = "On"
+
+[node name="VsyncOff" type="Button" parent="Center/Modal/VBox/Grid/VsyncRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+theme_type_variation = &"Segment"
+toggle_mode = true
+button_group = SubResource("Group_vsync")
+text = "Off"
+
+[node name="VolumeLabel" type="Label" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Body"
+text = "Volume"
+
+[node name="VolumeRow" type="HBoxContainer" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Volume" type="HSlider" parent="Center/Modal/VBox/Grid/VolumeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+step = 1.0
+value = 80.0
+
+[node name="VolumeValue" type="Label" parent="Center/Modal/VBox/Grid/VolumeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "80%"
+horizontal_alignment = 2
+
+[node name="Footer" type="HBoxContainer" parent="Center/Modal/VBox"]
+layout_mode = 2
+alignment = 2
+
+[node name="Done" type="Button" parent="Center/Modal/VBox/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+text = "Done"

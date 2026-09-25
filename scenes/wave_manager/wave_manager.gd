@@ -73,7 +73,7 @@ func _pick_type() -> Enemy.Type:
 func _do_spawn(type: Enemy.Type) -> void:
 	var e: Enemy = ENEMY_SCENE.instantiate()
 	e.type = type
-	e.position = Vector3(randf_range(-SPAWN_X_HALF, SPAWN_X_HALF), 0.2, SPAWN_Z)
+	e.position = Vector3(randf_range(-SPAWN_X_HALF, SPAWN_X_HALF), 0.1, SPAWN_Z)  # floor top
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(e.get_node("MultiplayerSynchronizer"))
 	enemies_root.add_child(e, true)

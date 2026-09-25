@@ -48,7 +48,15 @@ var hits := 0:
 		if _sprite != null:
 			_sprite.hit_flash()
 
-var health: float
+# Replicated so clients can draw the health bar
+var health: float = -1.0:
+	set(value):
+		health = value
+		if _bar != null:
+			_bar.show_health(health / HEALTH[type])
+			if health <= 0.0:
+				_bar.visible = false  # no bar over a corpse
+var _bar: HealthBar
 var _target_player: Node3D = null
 var _goal: Vector3
 var _attack_timer := 0.0
@@ -63,7 +71,12 @@ var _stagger := 0.0
 @onready var _sprite: CharacterSprite = $Sprite3D
 
 func _ready() -> void:
-	health = HEALTH[type]
+	# Server sets it; clients already received it as spawn state
+	if multiplayer.is_server() or health < 0.0:
+		health = HEALTH[type]
+	_bar = HealthBar.new(0.7, 0.08)
+	_bar.position.y = 2.05 * SCALE[type]
+	add_child(_bar)
 	add_to_group("enemies")
 	_sprite.setup(_TEXTURE, _ANIMS, TINT[type], SCALE[type])
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed

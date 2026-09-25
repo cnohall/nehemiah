@@ -1,289 +1,465 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/game_hud.gd" id="1_script"]
+[ext_resource type="Script" path="res://scenes/ui/widgets/circuit_strip.gd" id="2_circuit"]
+[ext_resource type="Script" path="res://scenes/ui/widgets/pip_row.gd" id="3_pips"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="4_settings"]
 
-[sub_resource type="FontFile" id="FontFile_cinzel_bold"]
-font_path = "res://assets/fonts/Cinzel/static/Cinzel-Bold.ttf"
+[sub_resource type="Gradient" id="Gradient_band"]
+offsets = PackedFloat32Array(0, 0.28, 0.72, 1)
+colors = PackedColorArray(0.105, 0.068, 0.044, 0, 0.105, 0.068, 0.044, 0.74, 0.105, 0.068, 0.044, 0.74, 0.105, 0.068, 0.044, 0)
 
-[sub_resource type="FontFile" id="FontFile_cinzel_reg"]
-font_path = "res://assets/fonts/Cinzel/static/Cinzel-Regular.ttf"
+[sub_resource type="GradientTexture2D" id="Tex_band"]
+gradient = SubResource("Gradient_band")
+width = 512
+height = 4
+fill_to = Vector2(1, 0)
 
-[sub_resource type="FontFile" id="FontFile_spectral_italic"]
-font_path = "res://assets/fonts/Spectral/Spectral-Italic.ttf"
+[sub_resource type="Gradient" id="Gradient_rule_l"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.877, 0.684, 0.339, 0, 0.877, 0.684, 0.339, 1)
 
-[sub_resource type="FontFile" id="FontFile_spectral_reg"]
-font_path = "res://assets/fonts/Spectral/Spectral-Regular.ttf"
+[sub_resource type="GradientTexture2D" id="Tex_rule_l"]
+gradient = SubResource("Gradient_rule_l")
+width = 128
+height = 2
+fill_to = Vector2(1, 0)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_PanelBg"]
-bg_color = Color(0.936, 0.912, 0.872, 0.91)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.70, 0.58, 0.42, 0.28)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_left = 3
-corner_radius_bottom_right = 3
-content_margin_left = 14.0
-content_margin_top = 10.0
-content_margin_right = 14.0
-content_margin_bottom = 10.0
-shadow_color = Color(0.10, 0.08, 0.05, 0.22)
-shadow_size = 12
-shadow_offset = Vector2(0.0, 3.0)
+[sub_resource type="Gradient" id="Gradient_rule_r"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.877, 0.684, 0.339, 1, 0.877, 0.684, 0.339, 0)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_PlayerCardBg"]
-bg_color = Color(0.936, 0.912, 0.872, 0.88)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.70, 0.58, 0.42, 0.25)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_left = 3
-corner_radius_bottom_right = 3
-content_margin_left = 10.0
-content_margin_top = 8.0
-content_margin_right = 10.0
-content_margin_bottom = 8.0
-shadow_color = Color(0.10, 0.08, 0.05, 0.16)
-shadow_size = 8
-shadow_offset = Vector2(0.0, 2.0)
+[sub_resource type="GradientTexture2D" id="Tex_rule_r"]
+gradient = SubResource("Gradient_rule_r")
+width = 128
+height = 2
+fill_to = Vector2(1, 0)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_HealthFill"]
-bg_color = Color(0.46, 0.59, 0.26, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_left = 2
-corner_radius_bottom_right = 2
+[sub_resource type="Gradient" id="Gradient_gold"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(0.877, 0.684, 0.339, 0, 0.877, 0.684, 0.339, 0.9, 0.877, 0.684, 0.339, 0)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_HealthBg"]
-bg_color = Color(0.22, 0.17, 0.11, 0.38)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_left = 2
-corner_radius_bottom_right = 2
+[sub_resource type="GradientTexture2D" id="Tex_gold"]
+gradient = SubResource("Gradient_gold")
+width = 256
+height = 2
+fill_to = Vector2(1, 0)
 
 [node name="GameHUD" type="CanvasLayer"]
 script = ExtResource("1_script")
 
-[node name="TopCenter" type="VBoxContainer" parent="."]
-layout_mode = 1
-anchor_left = 0.5
-anchor_top = 0.0
-anchor_right = 0.5
-anchor_bottom = 0.0
-offset_left = -145.0
-offset_top = 8.0
-offset_right = 145.0
-offset_bottom = 100.0
-grow_horizontal = 2
-theme_override_constants/separation = 4
-
-[node name="DayPanel" type="PanelContainer" parent="TopCenter"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_PanelBg")
-
-[node name="VBox" type="VBoxContainer" parent="TopCenter/DayPanel"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="DayNumber" type="Label" parent="TopCenter/DayPanel/VBox"]
-layout_mode = 2
-text = "Day 1 of 52"
-horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_cinzel_bold")
-theme_override_font_sizes/font_size = 17
-theme_override_colors/font_color = Color(0.13, 0.10, 0.07, 1)
-
-[node name="DaySection" type="Label" parent="TopCenter/DayPanel/VBox"]
-layout_mode = 2
-text = "Sheep Gate · Neh. 3:1"
-horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_spectral_italic")
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
-
-[node name="WavePanel" type="PanelContainer" parent="."]
-layout_mode = 1
-anchor_left = 1.0
-anchor_top = 0.0
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
 anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -156.0
-offset_top = 8.0
-offset_right = -8.0
-offset_bottom = 80.0
-grow_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_PanelBg")
-
-[node name="VBox" type="VBoxContainer" parent="WavePanel"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="WaveHeader" type="Label" parent="WavePanel/VBox"]
-layout_mode = 2
-text = "Enemies"
-horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
-theme_override_font_sizes/font_size = 10
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
-
-[node name="EnemyCount" type="Label" parent="WavePanel/VBox"]
-layout_mode = 2
-text = "0"
-horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_cinzel_bold")
-theme_override_font_sizes/font_size = 26
-theme_override_colors/font_color = Color(0.13, 0.10, 0.07, 1)
-
-[node name="PlayersPanel" type="HBoxContainer" parent="."]
-layout_mode = 1
-anchor_left = 0.0
-anchor_top = 1.0
-anchor_right = 0.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = -104.0
-offset_right = 452.0
-offset_bottom = -8.0
-grow_vertical = 0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DayPlaque" type="PanelContainer" parent="Root"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 18.0
+offset_right = 200.0
+offset_bottom = 130.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_type_variation = &"Plaque"
+
+[node name="VBox" type="VBoxContainer" parent="Root/DayPlaque"]
+layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 6
 
-[node name="Player1" type="PanelContainer" parent="PlayersPanel"]
+[node name="DayRow" type="HBoxContainer" parent="Root/DayPlaque/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(104, 0)
-theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
 
-[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player1"]
+[node name="DayWord" type="Label" parent="Root/DayPlaque/VBox/DayRow"]
 layout_mode = 2
-theme_override_constants/separation = 4
+size_flags_vertical = 4
+theme_type_variation = &"Eyebrow"
+theme_override_font_sizes/font_size = 14
+text = "Day"
 
-[node name="PlayerName" type="Label" parent="PlayersPanel/Player1/VBox"]
+[node name="DayNumber" type="Label" parent="Root/DayPlaque/VBox/DayRow"]
 layout_mode = 2
-text = "P1"
+theme_type_variation = &"Numeral"
+theme_override_font_sizes/font_size = 36
+text = "1"
+
+[node name="DayOf" type="Label" parent="Root/DayPlaque/VBox/DayRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"Eyebrow"
+theme_override_font_sizes/font_size = 14
+text = "of 52"
+
+[node name="Section" type="Label" parent="Root/DayPlaque/VBox"]
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "Sheep Gate · Neh. 3:1"
 horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
 
-[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player1/VBox"]
+[node name="Circuit" type="Control" parent="Root/DayPlaque/VBox"]
+custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
-custom_minimum_size = Vector2(80, 6)
-max_value = 100.0
-value = 100.0
+mouse_filter = 2
+script = ExtResource("2_circuit")
+
+[node name="WorkRow" type="HBoxContainer" parent="Root/DayPlaque/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="WorkLabel" type="Label" parent="Root/DayPlaque/VBox/WorkRow"]
+layout_mode = 2
+theme_type_variation = &"Eyebrow"
+text = "Today's work"
+
+[node name="WorkBar" type="ProgressBar" parent="Root/DayPlaque/VBox/WorkRow"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"Meter"
+max_value = 1.0
 show_percentage = false
-theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
 
-[node name="CarryLabel" type="Label" parent="PlayersPanel/Player1/VBox"]
+[node name="WorkCount" type="Label" parent="Root/DayPlaque/VBox/WorkRow"]
 layout_mode = 2
-text = ""
+theme_type_variation = &"Body"
+theme_override_colors/font_color = Color(0.138, 0.094, 0.057, 1)
+theme_override_font_sizes/font_size = 15
+text = "0 / 0"
+
+[node name="PhaseLabel" type="Label" parent="Root/DayPlaque/VBox"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"Eyebrow"
+theme_override_colors/font_color = Color(0.676, 0.313, 0.124, 1)
+text = "Dawn — ready the workers"
 horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_spectral_italic")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
 
-[node name="Player2" type="PanelContainer" parent="PlayersPanel"]
-layout_mode = 2
-custom_minimum_size = Vector2(104, 0)
-theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
+[node name="ThreatPlaque" type="PanelContainer" parent="Root"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -278.0
+offset_top = 18.0
+offset_right = -18.0
+offset_bottom = 120.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_type_variation = &"Plaque"
 
-[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player2"]
+[node name="VBox" type="VBoxContainer" parent="Root/ThreatPlaque"]
 layout_mode = 2
-theme_override_constants/separation = 4
+mouse_filter = 2
+theme_override_constants/separation = 6
 
-[node name="PlayerName" type="Label" parent="PlayersPanel/Player2/VBox"]
+[node name="EnemyRow" type="HBoxContainer" parent="Root/ThreatPlaque/VBox"]
 layout_mode = 2
-text = "P2"
+mouse_filter = 2
+
+[node name="EnemyLabel" type="Label" parent="Root/ThreatPlaque/VBox/EnemyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Eyebrow"
+text = "Enemies"
+
+[node name="EnemyCount" type="Label" parent="Root/ThreatPlaque/VBox/EnemyRow"]
+layout_mode = 2
+theme_type_variation = &"Numeral"
+theme_override_font_sizes/font_size = 26
+text = "0"
+
+[node name="Rule" type="ColorRect" parent="Root/ThreatPlaque/VBox"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.716, 0.63, 0.526, 0.5)
+
+[node name="BreachRow" type="HBoxContainer" parent="Root/ThreatPlaque/VBox"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="BreachLabel" type="Label" parent="Root/ThreatPlaque/VBox/BreachRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Eyebrow"
+text = "City breaches"
+
+[node name="BreachCount" type="Label" parent="Root/ThreatPlaque/VBox/BreachRow"]
+layout_mode = 2
+theme_type_variation = &"Body"
+theme_override_font_sizes/font_size = 15
+text = "0 / 10"
+
+[node name="Pips" type="Control" parent="Root/ThreatPlaque/VBox"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_pips")
+
+[node name="Players" type="HBoxContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = -84.0
+offset_right = 518.0
+offset_bottom = -18.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Banner" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_top = 0.2
+anchor_right = 1.0
+anchor_bottom = 0.2
+offset_top = -12.0
+offset_bottom = 150.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Band" type="TextureRect" parent="Root/Banner"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("Tex_band")
+expand_mode = 1
+
+[node name="VBox" type="VBoxContainer" parent="Root/Banner"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="TitleRow" type="HBoxContainer" parent="Root/Banner/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="RuleL" type="TextureRect" parent="Root/Banner/VBox/TitleRow"]
+custom_minimum_size = Vector2(140, 2)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = SubResource("Tex_rule_l")
+expand_mode = 1
+
+[node name="Title" type="Label" parent="Root/Banner/VBox/TitleRow"]
+layout_mode = 2
+theme_type_variation = &"Heading"
+theme_override_colors/font_color = Color(0.982, 0.966, 0.933, 1)
+theme_override_font_sizes/font_size = 50
+text = "Day 1"
+
+[node name="RuleR" type="TextureRect" parent="Root/Banner/VBox/TitleRow"]
+custom_minimum_size = Vector2(140, 2)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = SubResource("Tex_rule_r")
+expand_mode = 1
+
+[node name="Sub" type="Label" parent="Root/Banner/VBox"]
+layout_mode = 2
+theme_type_variation = &"Caption"
+theme_override_colors/font_color = Color(0.899, 0.851, 0.779, 1)
+theme_override_font_sizes/font_size = 20
+text = "A new stretch: Sheep Gate · Neh. 3:1"
 horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
 
-[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player2/VBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(80, 6)
-max_value = 100.0
-value = 100.0
-show_percentage = false
-theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
+[node name="EndScreen" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="CarryLabel" type="Label" parent="PlayersPanel/Player2/VBox"]
+[node name="Scrim" type="ColorRect" parent="Root/EndScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.105, 0.068, 0.044, 0.86)
+
+[node name="Center" type="CenterContainer" parent="Root/EndScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/EndScreen/Center"]
+custom_minimum_size = Vector2(820, 0)
 layout_mode = 2
-text = ""
+theme_override_constants/separation = 14
+
+[node name="Eyebrow" type="Label" parent="Root/EndScreen/Center/VBox"]
+layout_mode = 2
+theme_type_variation = &"Eyebrow"
+theme_override_colors/font_color = Color(0.877, 0.684, 0.339, 1)
+theme_override_font_sizes/font_size = 16
+text = "Day 52 of 52"
 horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_spectral_italic")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
 
-[node name="Player3" type="PanelContainer" parent="PlayersPanel"]
+[node name="Title" type="Label" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(104, 0)
-theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
-
-[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player3"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="PlayerName" type="Label" parent="PlayersPanel/Player3/VBox"]
-layout_mode = 2
-text = "P3"
+theme_type_variation = &"Display"
+theme_override_colors/font_color = Color(0.982, 0.966, 0.933, 1)
+theme_override_font_sizes/font_size = 68
+text = "The wall is finished"
 horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
 
-[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player3/VBox"]
+[node name="Rule" type="TextureRect" parent="Root/EndScreen/Center/VBox"]
+custom_minimum_size = Vector2(420, 2)
 layout_mode = 2
-custom_minimum_size = Vector2(80, 6)
-max_value = 100.0
-value = 100.0
-show_percentage = false
-theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
+size_flags_horizontal = 4
+mouse_filter = 2
+texture = SubResource("Tex_gold")
+expand_mode = 1
 
-[node name="CarryLabel" type="Label" parent="PlayersPanel/Player3/VBox"]
+[node name="Message" type="Label" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
-text = ""
+theme_type_variation = &"Verse"
+theme_override_colors/font_color = Color(0.899, 0.851, 0.779, 1)
+theme_override_font_sizes/font_size = 22
+text = "“So the wall was completed on the 25th day of Elul, in 52 days.”"
 horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_spectral_italic")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+autowrap_mode = 3
 
-[node name="Player4" type="PanelContainer" parent="PlayersPanel"]
+[node name="Ref" type="Label" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(104, 0)
-theme_override_styles/panel = SubResource("StyleBoxFlat_PlayerCardBg")
-
-[node name="VBox" type="VBoxContainer" parent="PlayersPanel/Player4"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="PlayerName" type="Label" parent="PlayersPanel/Player4/VBox"]
-layout_mode = 2
-text = "P4"
+theme_type_variation = &"Eyebrow"
+theme_override_colors/font_color = Color(0.877, 0.684, 0.339, 1)
+text = "Nehemiah 6:15"
 horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_cinzel_reg")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
 
-[node name="HealthBar" type="ProgressBar" parent="PlayersPanel/Player4/VBox"]
+[node name="StatsGap" type="Control" parent="Root/EndScreen/Center/VBox"]
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
-custom_minimum_size = Vector2(80, 6)
-max_value = 100.0
-value = 100.0
-show_percentage = false
-theme_override_styles/background = SubResource("StyleBoxFlat_HealthBg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_HealthFill")
 
-[node name="CarryLabel" type="Label" parent="PlayersPanel/Player4/VBox"]
+[node name="Stats" type="HBoxContainer" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
-text = ""
-horizontal_alignment = 1
-theme_override_fonts/font = SubResource("FontFile_spectral_italic")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.45, 0.36, 0.26, 1)
+theme_override_constants/separation = 72
+alignment = 1
+
+[node name="ButtonGap" type="Control" parent="Root/EndScreen/Center/VBox"]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Root/EndScreen/Center/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="MenuButton" type="Button" parent="Root/EndScreen/Center/VBox/Buttons"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+text = "Return to Title"
+
+[node name="PauseMenu" type="Control" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Scrim" type="ColorRect" parent="Root/PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.105, 0.068, 0.044, 0.45)
+
+[node name="Center" type="CenterContainer" parent="Root/PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Modal" type="PanelContainer" parent="Root/PauseMenu/Center"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_type_variation = &"Modal"
+
+[node name="VBox" type="VBoxContainer" parent="Root/PauseMenu/Center/Modal"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Eyebrow" type="Label" parent="Root/PauseMenu/Center/Modal/VBox"]
+layout_mode = 2
+theme_type_variation = &"Eyebrow"
+text = "The work goes on"
+
+[node name="Title" type="Label" parent="Root/PauseMenu/Center/Modal/VBox"]
+layout_mode = 2
+theme_type_variation = &"Heading"
+text = "Menu"
+
+[node name="Hint" type="Label" parent="Root/PauseMenu/Center/Modal/VBox"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "The game keeps running for your crew while this is open."
+autowrap_mode = 3
+
+[node name="Gap" type="Control" parent="Root/PauseMenu/Center/Modal/VBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="Resume" type="Button" parent="Root/PauseMenu/Center/Modal/VBox"]
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+text = "Resume"
+
+[node name="Settings" type="Button" parent="Root/PauseMenu/Center/Modal/VBox"]
+layout_mode = 2
+theme_type_variation = &"GhostButton"
+text = "Settings"
+
+[node name="Leave" type="Button" parent="Root/PauseMenu/Center/Modal/VBox"]
+layout_mode = 2
+theme_type_variation = &"GhostButton"
+text = "Leave to Title"
+
+[node name="SettingsPanel" parent="Root" instance=ExtResource("4_settings")]
+layout_mode = 1

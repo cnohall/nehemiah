@@ -18,6 +18,9 @@ var _t := 0.0
 var _duration := 0.5
 var _arc := 1.0
 
+func _ready() -> void:
+	_add_trail()
+
 func init(target: Node3D, land: Vector3, damage: float) -> void:
 	_target = target
 	_land = land
@@ -54,6 +57,37 @@ func _impact() -> void:
 	if _target == null:
 		_puff()
 	queue_free()
+
+# Faint streak behind the stone (world-space particles left in its wake)
+func _add_trail() -> void:
+	var p := CPUParticles3D.new()
+	p.local_coords = false
+	p.amount = 18
+	p.lifetime = 0.22
+	p.spread = 0.0
+	p.initial_velocity_min = 0.0
+	p.initial_velocity_max = 0.0
+	p.gravity = Vector3.ZERO
+	p.scale_amount_min = 1.0
+	p.scale_amount_max = 1.0
+	var curve := Curve.new()
+	curve.add_point(Vector2(0, 1))
+	curve.add_point(Vector2(1, 0.2))
+	p.scale_amount_curve = curve
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(0.93, 0.88, 0.76, 0.55))
+	ramp.set_color(1, Color(0.93, 0.88, 0.76, 0.0))
+	p.color_ramp = ramp
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.12, 0.12)
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	mat.vertex_color_use_as_albedo = true
+	quad.material = mat
+	p.mesh = quad
+	add_child(p)
 
 # Small dust kick where a stone lands (so misses read)
 func _puff() -> void:

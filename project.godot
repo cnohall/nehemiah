@@ -24,6 +24,7 @@ config/icon="res://icon.svg"
 
 NetworkManager="*res://scenes/network_manager/network_manager.gd"
 GameState="*res://scenes/game_state/game_state.gd"
+Settings="*res://scenes/settings/settings.gd"
 
 [display]
 
@@ -35,6 +36,10 @@ window/stretch/aspect="expand"
 [dotnet]
 
 project/assembly_name="Nehemiah- The Wall"
+
+[gui]
+
+theme/custom="res://assets/ui/theme.tres"
 
 [input]
 
@@ -90,11 +95,9 @@ pause={
 
 [rendering]
 
-anti_aliasing/quality/msaa_3d=2
-camera/depth_of_field/depth_of_field_bokeh_shape=0
-camera/depth_of_field/depth_of_field_bokeh_quality=1
-environment/ssao/quality=1
-environment/ssao/half_size=true
-environment/glow/upscale_mode=0
 lights_and_shadows/directional_shadow/size=2048
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=1
+camera/depth_of_field/depth_of_field_bokeh_shape=0
+environment/ssao/quality=1
+anti_aliasing/quality/msaa_3d=2
+environment/glow/upscale_mode=0

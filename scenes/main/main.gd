@@ -70,14 +70,15 @@ func _refresh_hud() -> void:
 	hud.set_enemy_count(alive)
 
 	var players := _sorted_players()
+	var local_name := str(multiplayer.get_unique_id())
 	for slot in 4:
 		if slot < players.size():
 			var pl = players[slot]
+			hud.set_player_present(slot, true, pl.name == local_name)
 			hud.set_player_health(slot, pl.health / pl.MAX_HEALTH)
 			hud.set_player_carry(slot, "Downed" if pl.downed else pl.carried_kind.capitalize())
 		else:
-			hud.set_player_health(slot, 0.0)
-			hud.set_player_carry(slot, "")
+			hud.set_player_present(slot, false, false)
 
 # ── Spawning ───────────────────────────────────────────────
 
@@ -133,11 +134,12 @@ func _request_roster() -> void:
 	var caller := multiplayer.get_remote_sender_id()
 	for peer_id in players_root.get_children().map(func(n): return int(n.name)):
 		_receive_roster_entry.rpc_id(caller, peer_id)
+	# Players now exist on the caller (reliable RPCs arrive in order), so it may see them
+	NetworkManager.mark_peer_ready(caller)
 	# Per-player state the roster doesn't carry (what they hold, downed, health)
 	for p in players_root.get_children():
 		p.send_status_to(caller)
 	GameState.send_state_to(caller)
-	NetworkManager.mark_peer_ready(caller)
 
 @rpc("authority", "reliable")
 func _receive_roster_entry(peer_id: int) -> void:
