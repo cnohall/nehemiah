@@ -105,7 +105,7 @@ text = "Sheep Gate · Neh. 3:1"
 horizontal_alignment = 1
 
 [node name="Circuit" type="Control" parent="Root/DayPlaque/VBox"]
-custom_minimum_size = Vector2(0, 12)
+custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
 mouse_filter = 2
 script = ExtResource("2_circuit")
@@ -121,12 +121,12 @@ theme_type_variation = &"Eyebrow"
 text = "Today's work"
 
 [node name="WorkBar" type="ProgressBar" parent="Root/DayPlaque/VBox/WorkRow"]
-custom_minimum_size = Vector2(0, 6)
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_type_variation = &"Meter"
+theme_type_variation = &"WorkMeter"
 max_value = 1.0
 show_percentage = false
 

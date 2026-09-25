@@ -244,6 +244,15 @@ static func _inputs(t: Theme) -> void:
 	t.set_stylebox("background", "ProgressBar", track)
 	t.set_stylebox("fill", "ProgressBar", fill)
 
+	# WorkMeter — engraved amber channel, matches the circuit strip
+	t.set_type_variation("WorkMeter", "ProgressBar")
+	var work_track := bordered(box(Color(DUSK, 0.16), Vector2.ZERO, 3), Color(DUSK, 0.22), 0)
+	work_track.border_width_top = 1
+	var work_fill := bordered(box(AMBER, Vector2.ZERO, 3), Color(GOLD, 0.9), 0)
+	work_fill.border_width_top = 1
+	t.set_stylebox("background", "WorkMeter", work_track)
+	t.set_stylebox("fill", "WorkMeter", work_fill)
+
 	# HSlider
 	var rail := box(Color(DUSK, 0.18), Vector2(0, 3), 2)
 	var rail_fill := box(TERRACOTTA, Vector2(0, 3), 2)

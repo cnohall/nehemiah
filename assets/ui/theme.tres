@@ -523,6 +523,32 @@ corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vc3k2"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.105, 0.068, 0.044, 0.16)
+border_width_top = 1
+border_color = Color(0.105, 0.068, 0.044, 0.22)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_16nee"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.825, 0.516, 0.145, 1)
+border_width_top = 1
+border_color = Color(0.877, 0.684, 0.339, 0.9)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [resource]
 default_font = ExtResource("1_im0sm")
 default_font_size = 18
@@ -663,3 +689,6 @@ Verse/base_type = &"Label"
 Verse/colors/font_color = Color(0.391, 0.318, 0.257, 1)
 Verse/font_sizes/font_size = 17
 Verse/fonts/font = ExtResource("3_86uey")
+WorkMeter/base_type = &"ProgressBar"
+WorkMeter/styles/background = SubResource("StyleBoxFlat_vc3k2")
+WorkMeter/styles/fill = SubResource("StyleBoxFlat_16nee")

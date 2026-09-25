@@ -175,8 +175,10 @@ func _refresh_progress() -> void:
 		GameState.Phase.LOST:
 			phase_label.text = "The city has fallen"
 	var total := maxi(GameState.targets_total, 1)
-	create_tween().tween_property(work_bar, "value", float(GameState.targets_done) / total, 0.35) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var share := float(GameState.targets_done) / total
+	var tw := create_tween().set_parallel().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(work_bar, "value", share, 0.35)
+	tw.tween_property(circuit, "today_progress", share, 0.35)
 	work_count.text = "%d / %d" % [GameState.targets_done, GameState.targets_total]
 
 func _on_breaches_changed(count: int) -> void:
