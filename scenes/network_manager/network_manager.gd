@@ -117,6 +117,26 @@ func online_friends() -> Array[Dictionary]:
 		return a.name.naturalnocasecmp_to(b.name) < 0)
 	return out
 
+## Friends currently in a lobby of this game — one click to join from the menu
+func friend_lobbies() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not _steam:
+		return out
+	for i in _steam.getFriendCount(FRIEND_FLAG_IMMEDIATE):
+		var id: int = _steam.getFriendByIndex(i, FRIEND_FLAG_IMMEDIATE)
+		var game: Dictionary = _steam.getFriendGamePlayed(id)
+		var lobby: int = game.get("lobby", 0)
+		if game.get("id", 0) == STEAM_APP_ID and lobby != 0:
+			out.append({ name = _steam.getFriendPersonaName(id), lobby = lobby })
+	return out
+
+## Steam's own invite dialog (works with a gamepad). False when the overlay is off.
+func open_invite_overlay() -> bool:
+	if not (_steam and _lobby_id) or not _steam.isOverlayEnabled():
+		return false
+	_steam.activateGameOverlayInviteDialog(_lobby_id)
+	return true
+
 # Sends a lobby invite via Steam chat; accepting it fires join_requested
 func invite_friend(steam_id: int) -> bool:
 	if not (_steam and _lobby_id):

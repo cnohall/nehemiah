@@ -115,6 +115,17 @@ func _build_gamepad_begin() -> void:
 	var vb := $Root/PauseMenu/Center/Modal/VBox
 	vb.add_child(_pause_begin)
 	vb.move_child(_pause_begin, $Root/PauseMenu/Center/Modal/VBox/Resume.get_index())
+	# Steam's invite overlay: the gamepad-friendly way to bring friends in
+	if NetworkManager.in_steam_lobby():
+		var invite := Button.new()
+		invite.text = "Invite friends"
+		invite.theme_type_variation = &"GhostButton"
+		invite.pressed.connect(func():
+			if not NetworkManager.open_invite_overlay():
+				invite.text = "Overlay off — use the Crew panel"
+				invite.disabled = true)
+		vb.add_child(invite)
+		vb.move_child(invite, $Root/PauseMenu/Center/Modal/VBox/Settings.get_index())
 	_gather_hint = Label.new()
 	_gather_hint.theme_type_variation = &"Caption"
 	_gather_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

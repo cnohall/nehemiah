@@ -274,7 +274,7 @@ text = "Join Game"
 custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
 theme_type_variation = &"Body"
-text = "Enter the host's IP address, or the lobby code they copied from their game."
+text = "Accept a Steam invite, pick a friend below, or enter the host's IP address / lobby code."
 autowrap_mode = 3
 
 [node name="FieldGap" type="Control" parent="JoinPanel/Center/Modal/Content"]

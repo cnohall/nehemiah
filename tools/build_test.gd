@@ -23,6 +23,8 @@ var _work_started := -1.0
 var _shots := 0
 var _shot_phase := 0
 var _stages := 0
+var _sessions := 0
+var _stage_at_start: Variant = null
 var _mode := "offline"
 
 func _initialize() -> void:
@@ -90,7 +92,7 @@ func _process(delta: float) -> bool:
 				_state = "next"
 		"next":
 			if gs.phase == gs.Phase.DUSK:
-				print("PASS: day's work done, %d stages, t=%.1f s" % [_stages, _t])
+				print("PASS: day's work done — %d stages raised in %d work sessions, t=%.1f s" % [_stages, _sessions, _t])
 				quit(0)
 				return true
 			if _site == null or _site.is_complete() or (_site.next_need() == "" and not _site.can_build()):
@@ -103,6 +105,7 @@ func _process(delta: float) -> bool:
 				_press()
 				_state = "working"
 				_work_started = _t
+				_stage_at_start = _site.get("stage")
 				_shot_phase = 0
 				_wait = 0.2
 			else:
@@ -131,6 +134,7 @@ func _process(delta: float) -> bool:
 			else:
 				_state = "working"
 				_work_started = _t
+				_stage_at_start = _site.get("stage")
 				_shot_phase = 0
 		"working":
 			var prog: float = _site.work().progress
@@ -139,8 +143,12 @@ func _process(delta: float) -> bool:
 				_shots += 1
 				_player.get_viewport().get_texture().get_image().save_png("%s/work_%02d.png" % [_out, _shots])
 			if _player._work_site == null:
-				_stages += 1
-				print("  stage %d raised after %.2f s of work (stage=%s)" % [_stages, _t - _work_started, str(_site.get("stage"))])
+				_sessions += 1
+				var raised: bool = _site.is_complete() or _site.get("stage") != _stage_at_start
+				if raised:
+					_stages += 1
+				print("  work session %d: %.2f s, %s" % [_sessions, _t - _work_started,
+					"stage raised" if raised else "interrupted (hit / not ready)"])
 				_state = "next"
 	return false
 

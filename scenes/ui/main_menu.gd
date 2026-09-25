@@ -114,7 +114,40 @@ func _open_join() -> void:
 		return
 	join_panel.show()
 	UiFx.fade_in(join_panel, 0.18)
-	address_input.grab_focus()
+	_fill_friend_games()
+
+# Friends already playing: one button each, focused first — no code to type
+func _fill_friend_games() -> void:
+	var content := $JoinPanel/Center/Modal/Content
+	var box: VBoxContainer = content.get_node_or_null("FriendGames")
+	if box == null:
+		box = VBoxContainer.new()
+		box.name = "FriendGames"
+		box.add_theme_constant_override("separation", 8)
+		content.add_child(box)
+		content.move_child(box, content.get_node("FieldGap").get_index())
+	for c in box.get_children():
+		c.queue_free()
+	var games := NetworkManager.friend_lobbies() if _use_steam() else []
+	if games.is_empty():
+		address_input.grab_focus()
+		return
+	var head := Label.new()
+	head.theme_type_variation = &"Eyebrow"
+	head.text = "Friends building now"
+	box.add_child(head)
+	var first: Button = null
+	for g: Dictionary in games:
+		var b := Button.new()
+		b.theme_type_variation = &"PrimaryButton" if first == null else &"GhostButton"
+		b.text = "Join %s" % g.name
+		b.pressed.connect(func():
+			status_label.text = "Joining %s…" % g.name
+			NetworkManager.join_steam(g.lobby))
+		box.add_child(b)
+		if first == null:
+			first = b
+	first.grab_focus()
 
 func _on_connect() -> void:
 	var addr := address_input.text.strip_edges()
