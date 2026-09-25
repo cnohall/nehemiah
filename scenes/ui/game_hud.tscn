@@ -79,7 +79,7 @@ offset_left = -145.0
 offset_top = 8.0
 offset_right = 145.0
 offset_bottom = 100.0
-grow_horizontal = 3
+grow_horizontal = 2
 theme_override_constants/separation = 4
 
 [node name="DayPanel" type="PanelContainer" parent="TopCenter"]

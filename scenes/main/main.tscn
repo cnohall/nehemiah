@@ -1,12 +1,17 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene format=3]
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scenes/wave_manager/wave_manager.gd" id="2_wave"]
 [ext_resource type="PackedScene" path="res://scenes/supply_pile/supply_pile.tscn" id="3_pile"]
 [ext_resource type="PackedScene" path="res://scenes/wall_section/wall_section.tscn" id="4_wall"]
+[ext_resource type="PackedScene" path="res://scenes/watchtower/watchtower.tscn" id="5_tower"]
+[ext_resource type="PackedScene" path="res://scenes/gate/gate.tscn" id="6_gate"]
+[ext_resource type="Shader" path="res://assets/shaders/ground.gdshader" id="7_ground_shader"]
+[ext_resource type="Script" path="res://scenes/shared/scatter_layer.gd" id="8_scatter"]
+[ext_resource type="Script" path="res://scenes/day_director/day_director.gd" id="9_director"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
-geometry/parsed_geometry_type = 2
+geometry/parsed_geometry_type = 1
 geometry/collision_mask = 9
 agent/height = 1.8
 agent/radius = 0.4
@@ -19,19 +24,86 @@ edge/max_length = 12.0
 edge/max_error = 3.0
 detail/sample_distance = 6.0
 detail/sample_max_error = 1.0
-filter/baking_aabb = AABB(-100, -1, -100, 200, 10, 200)
+filter/baking_aabb = AABB(-50, -1, -40, 100, 10, 80)
 
-[sub_resource type="StandardMaterial3D" id="FloorMat"]
-albedo_color = Color(0.72, 0.65, 0.50, 1)
-roughness = 1.0
-metallic_specular = 0.0
+[sub_resource type="BoxShape3D" id="FloorShape"]
+size = Vector3(100, 0.2, 80)
+
+[sub_resource type="BoxMesh" id="FloorMesh"]
+size = Vector3(100, 0.2, 80)
+
+[sub_resource type="ShaderMaterial" id="FloorMat"]
+shader = ExtResource("7_ground_shader")
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+sky_top_color = Color(0.42, 0.58, 0.82, 1)
+sky_horizon_color = Color(0.93, 0.82, 0.66, 1)
+ground_bottom_color = Color(0.55, 0.45, 0.32, 1)
+ground_horizon_color = Color(0.93, 0.82, 0.66, 1)
+sun_angle_max = 20.0
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mat")
 
 [sub_resource type="Environment" id="Environment_1"]
-background_mode = 1
-background_color = Color(0.65, 0.74, 0.88, 1)
+background_mode = 2
+sky = SubResource("Sky_1")
 ambient_light_source = 2
-ambient_light_color = Color(0.68, 0.60, 0.48, 1)
-ambient_light_energy = 0.6
+ambient_light_color = Color(0.56, 0.62, 0.74, 1)
+ambient_light_energy = 0.45
+reflected_light_source = 2
+tonemap_mode = 3
+tonemap_exposure = 0.92
+tonemap_white = 6.0
+ssao_enabled = true
+ssao_radius = 1.4
+ssao_intensity = 1.6
+ssao_power = 1.4
+ssao_detail = 0.6
+glow_enabled = true
+glow_levels/1 = 0.0
+glow_levels/2 = 0.6
+glow_levels/3 = 1.0
+glow_levels/5 = 0.4
+glow_intensity = 0.55
+glow_strength = 0.9
+glow_bloom = 0.08
+glow_blend_mode = 1
+glow_hdr_threshold = 0.85
+adjustment_enabled = true
+adjustment_brightness = 1.0
+adjustment_contrast = 1.1
+adjustment_saturation = 1.12
+
+[sub_resource type="CameraAttributesPractical" id="CamAttr_1"]
+
+[sub_resource type="Shader" id="Vignette_shader"]
+code = "shader_type canvas_item;
+
+// Screen-space finishing pass: tilt-shift blur (top/bottom of screen, sampled from
+// the screen texture's mip chain — far cheaper than the 3D DOF pass) + warm vignette.
+
+uniform float vignette_strength = 0.38;
+uniform vec3 tint = vec3(0.24, 0.14, 0.06);
+uniform float focus_center = 0.52;   // screen-y of the sharp band
+uniform float focus_half = 0.27;     // half-height of the sharp band
+uniform float blur_ramp = 0.28;
+uniform float max_lod = 1.6;
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
+
+void fragment() {
+	float off = abs(SCREEN_UV.y - focus_center);
+	float lod = smoothstep(focus_half, focus_half + blur_ramp, off) * max_lod;
+	vec3 col = textureLod(screen_tex, SCREEN_UV, lod).rgb;
+	vec2 uv = SCREEN_UV - 0.5;
+	uv.x *= SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;
+	float v = smoothstep(0.35, 0.95, length(uv) * 1.1);
+	COLOR = vec4(mix(col, col * tint * 2.2, v * vignette_strength), 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="Vignette_mat"]
+shader = SubResource("Vignette_shader")
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -40,23 +112,32 @@ script = ExtResource("1_main")
 transform = Transform3D(0.707107, -0.408248, 0.57735, 0, 0.816497, 0.57735, -0.707107, -0.408248, 0.57735, 20, 20, 20)
 current = true
 projection = 1
-size = 20.0
+size = 24.0
 near = 0.1
 far = 200.0
+attributes = SubResource("CamAttr_1")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 10, 0)
-light_color = Color(1, 0.957, 0.878, 1)
+transform = Transform3D(-0.447214, 0.554, -0.7, 0, 0.782, 0.62, 0.894427, 0.277, -0.35, 0, 10, 0)
+light_color = Color(1, 0.88, 0.70, 1)
 light_energy = 1.2
 shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_mode = 1
+directional_shadow_max_distance = 60.0
+sky_mode = 1
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")
 
-[node name="Floor" type="CSGBox3D" parent="."]
-size = Vector3(200, 0.2, 200)
-use_collision = true
-material = SubResource("FloorMat")
+[node name="Floor" type="StaticBody3D" parent="." groups=["navigation_mesh_source_group"]]
+
+[node name="Shape" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("FloorShape")
+
+[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("FloorMesh")
+surface_material_override/0 = SubResource("FloorMat")
 
 [node name="NavRegion" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_1")
@@ -65,25 +146,108 @@ navigation_mesh = SubResource("NavigationMesh_1")
 
 [node name="Enemies" type="Node3D" parent="."]
 
-[node name="Blocks" type="Node3D" parent="."]
+[node name="Wall" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
 
-[node name="WallSection" parent="Blocks" instance=ExtResource("4_wall")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+[node name="TowerLeft" parent="Wall" instance=ExtResource("5_tower")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 0)
 
-[node name="StockStone" parent="." instance=ExtResource("3_pile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -5)
+[node name="Section1" parent="Wall" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 0)
+
+[node name="SheepGate" parent="Wall" instance=ExtResource("6_gate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+
+[node name="Section3" parent="Wall" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 0)
+
+[node name="Section4" parent="Wall" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 0)
+
+[node name="TowerRight" parent="Wall" instance=ExtResource("5_tower")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 0)
+
+[node name="OuterWest" type="Node3D" parent="Wall"]
+
+[node name="W1" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 0)
+decorative = true
+stage = 3
+
+[node name="W2" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0, 0)
+decorative = true
+stage = 3
+
+[node name="W3" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 0, 0)
+decorative = true
+stage = 3
+
+[node name="W4" parent="Wall/OuterWest" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -48, 0, 0)
+decorative = true
+stage = 3
+
+[node name="OuterEast" type="Node3D" parent="Wall"]
+
+[node name="E1" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, 0)
+decorative = true
+stage = 3
+
+[node name="E2" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0, 0)
+decorative = true
+stage = 3
+
+[node name="E3" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0, 0)
+decorative = true
+stage = 3
+
+[node name="E4" parent="Wall/OuterEast" instance=ExtResource("4_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48, 0, 0)
+decorative = true
+stage = 3
+
+[node name="Supplies" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
+
+[node name="StockStone" parent="Supplies" instance=ExtResource("3_pile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 10)
 kind = "stone"
 count = 999
 
-[node name="StockWood" parent="." instance=ExtResource("3_pile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
+[node name="StockWood" parent="Supplies" instance=ExtResource("3_pile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
 kind = "wood"
 count = 999
 
-[node name="StockMortar" parent="." instance=ExtResource("3_pile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -5)
+[node name="StockMortar" parent="Supplies" instance=ExtResource("3_pile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 10)
 kind = "mortar"
 count = 999
 
+[node name="EnemySpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/enemy/enemy.tscn")
+spawn_path = NodePath("../Enemies")
+
 [node name="WaveManager" type="Node" parent="."]
 script = ExtResource("2_wave")
+
+[node name="DayDirector" type="Node" parent="."]
+script = ExtResource("9_director")
+
+[node name="ScatterLayer" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
+script = ExtResource("8_scatter")
+
+[node name="PostFX" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="Vignette" type="ColorRect" parent="PostFX"]
+material = SubResource("Vignette_mat")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

@@ -1,0 +1,30 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/wall_section/wall_section.gd" id="1_script"]
+[ext_resource type="Script" path="res://scenes/gate/gate.gd" id="2_gate"]
+
+[sub_resource type="BoxShape3D" id="pillar_shape"]
+size = Vector3(2.5, 2.5, 1)
+
+[node name="Gate" type="Node3D"]
+script = ExtResource("2_gate")
+
+[node name="PillarLeft" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.75, 0, 0)
+collision_layer = 8
+collision_mask = 4
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PillarLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("pillar_shape")
+
+[node name="PillarRight" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.75, 0, 0)
+collision_layer = 8
+collision_mask = 4
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PillarRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("pillar_shape")

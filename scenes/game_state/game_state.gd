@@ -1,5 +1,8 @@
 extends Node
 
+# Campaign state. The server mutates it (via DayDirector) and broadcasts every change;
+# clients only mirror it. Everything else reads from here and listens to the signals.
+
 # 12 sections clockwise from Sheep Gate (Nehemiah 3)
 const SECTIONS: Array = [
 	{ "name": "Sheep Gate",     "ref": "Neh. 3:1",  "days": [1,2,3,4]          },
@@ -16,16 +19,29 @@ const SECTIONS: Array = [
 	{ "name": "Miphkad Gate",   "ref": "Neh. 3:31", "days": [51,52]            },
 ]
 
-const TOTAL_DAYS := 52
+const TOTAL_DAYS   := 52
+const MAX_BREACHES := 10   # enemies that may reach the inner city before the city falls
+
+enum Phase { DAWN, WORK, DUSK, WON, LOST }
 
 signal day_changed(day: int)
 signal section_changed(section_index: int)
+signal phase_changed(phase: Phase)
+signal breaches_changed(count: int)
+signal progress_changed(done: int, total: int)
+signal crew_changed(size: int)
 signal game_won
 signal game_lost
 
 var current_day: int = 1
 var current_section_index: int = 0
-# peer_id → { "role": String, "health": float }
+var phase: Phase = Phase.DAWN
+var breaches: int = 0
+var targets_done: int = 0
+var targets_total: int = 0
+# Players in the session — building costs scale with it (see WallSection.cost_for)
+var crew_size: int = 1
+# peer_id → { "role": String }
 var players: Dictionary = {}
 
 # ── Queries ────────────────────────────────────────────────
@@ -36,36 +52,114 @@ func get_section_for_day(day: int) -> Dictionary:
 func get_current_section() -> Dictionary:
 	return get_section_for_day(current_day)
 
-# ── Progression ────────────────────────────────────────────
+## 0-based index of `day` within its section, and that section's day count
+func day_in_section(day: int) -> Vector2i:
+	var days: Array = get_section_for_day(day)["days"]
+	return Vector2i(days.find(day), days.size())
 
-func advance_day() -> void:
-	if current_day >= TOTAL_DAYS:
-		game_won.emit()
+func is_over() -> bool:
+	return phase == Phase.WON or phase == Phase.LOST
+
+# ── Mutations (server) ─────────────────────────────────────
+
+func set_phase(p: Phase) -> void:
+	_apply(current_day, current_section_index, p, breaches, targets_done, targets_total)
+
+func set_progress(done: int, total: int) -> void:
+	_apply(current_day, current_section_index, phase, breaches, done, total)
+
+func add_breach() -> void:
+	if is_over():
 		return
-	current_day += 1
-	var new_idx := _section_index_for_day(current_day)
-	if new_idx != current_section_index:
-		current_section_index = new_idx
-		section_changed.emit(current_section_index)
-	day_changed.emit(current_day)
+	var b := breaches + 1
+	_apply(current_day, current_section_index, Phase.LOST if b >= MAX_BREACHES else phase,
+		b, targets_done, targets_total)
 
-func trigger_loss() -> void:
-	game_lost.emit()
-
-# ── Players ────────────────────────────────────────────────
-
-func register_player(peer_id: int, role: String) -> void:
-	players[peer_id] = { "role": role, "health": 100.0 }
-
-func remove_player(peer_id: int) -> void:
-	players.erase(peer_id)
+## Returns false when there is no next day (campaign won)
+func advance_day() -> bool:
+	if current_day >= TOTAL_DAYS:
+		set_phase(Phase.WON)
+		return false
+	var day := current_day + 1
+	_apply(day, _section_index_for_day(day), Phase.DAWN, breaches, 0, 0)
+	return true
 
 func reset() -> void:
 	current_day = 1
 	current_section_index = 0
+	phase = Phase.DAWN
+	breaches = 0
+	targets_done = 0
+	targets_total = 0
 	players.clear()
 
+## Push full state to one peer (late join)
+func send_state_to(peer_id: int) -> void:
+	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
+	_sync_crew.rpc_id(peer_id, crew_size)
+
+## Server: players joined/left
+func set_crew(size: int) -> void:
+	_apply_crew(size)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_crew.rpc(size)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_crew(size: int) -> void:
+	_apply_crew(size)
+
+func _apply_crew(size: int) -> void:
+	size = maxi(1, size)
+	if size != crew_size:
+		crew_size = size
+		crew_changed.emit(size)
+
+# ── Players ────────────────────────────────────────────────
+
+func register_player(peer_id: int, role: String) -> void:
+	players[peer_id] = { "role": role }
+
+func remove_player(peer_id: int) -> void:
+	players.erase(peer_id)
+
 # ── Internal ───────────────────────────────────────────────
+
+func _apply(day: int, section: int, p: Phase, b: int, done: int, total: int) -> void:
+	_set_state(day, section, p, b, done, total)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync.rpc(day, section, p, b, done, total)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync(day: int, section: int, p: int, b: int, done: int, total: int) -> void:
+	_set_state(day, section, p as Phase, b, done, total)
+
+# Assign, then emit only what changed — every peer runs this
+func _set_state(day: int, section: int, p: Phase, b: int, done: int, total: int) -> void:
+	var day_new := day != current_day
+	var section_new := section != current_section_index
+	var phase_new := p != phase
+	var breach_new := b != breaches
+	var progress_new := done != targets_done or total != targets_total
+	current_day = day
+	current_section_index = section
+	phase = p
+	breaches = b
+	targets_done = done
+	targets_total = total
+	if section_new:
+		section_changed.emit(section)
+	if day_new:
+		day_changed.emit(day)
+	if breach_new:
+		breaches_changed.emit(b)
+	if progress_new:
+		progress_changed.emit(done, total)
+	if phase_new:
+		phase_changed.emit(p)
+		if p == Phase.WON:
+			game_won.emit()
+		elif p == Phase.LOST:
+			game_lost.emit()
 
 func _section_index_for_day(day: int) -> int:
 	for i in SECTIONS.size():
