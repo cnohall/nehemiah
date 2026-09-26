@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nehemiah",
+  "main": "src/index.js",
+  "compatibility_date": "2026-01-01",
+  "durable_objects": {
+    "bindings": [{ "name": "LOBBY", "class_name": "Lobby" }]
+  },
+  // SQLite-backed so it runs on the free plan
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby"] }],
+  "r2_buckets": [{ "binding": "GAME", "bucket_name": "nehemiah-game" }],
+  "observability": { "enabled": true }
+}

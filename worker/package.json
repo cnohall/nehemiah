@@ -1,0 +1,15 @@
+{
+  "name": "nehemiah-worker",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Nehemiah on Cloudflare: web build from R2 + room-code signaling in a Durable Object",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "upload:local": "node deploy.mjs --local",
+    "deploy": "node deploy.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.62.0"
+  }
+}

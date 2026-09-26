@@ -20,3 +20,8 @@ eos_credentials.cfg
 
 # Online server deps
 server/node_modules/
+
+# Cloudflare worker
+worker/node_modules/
+worker/.wrangler/
+worker/.dev.vars

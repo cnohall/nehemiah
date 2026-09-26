@@ -1,10 +1,14 @@
 // Protocol smoke test: host, join, relay, full room, host leaving. `npm test`
+// SERVER=http://localhost:8787 runs it against an already-running server (e.g. `wrangler dev`).
 import assert from "node:assert/strict";
 import WebSocket from "ws";
 import { createServer, PROTOCOL } from "./server.js";
 
-const srv = await createServer({ port: 0, log: () => {} });
-const url = `ws://localhost:${srv.port}/ws`;
+const srv = process.env.SERVER ? null : await createServer({ port: 0, log: () => {} });
+const base = process.env.SERVER || `http://localhost:${srv.port}`;
+const url = base.replace(/^http/, "ws") + "/ws";
+const openRooms = async () => (await (await fetch(base + "/health")).json()).rooms;
+const roomsBefore = await openRooms();
 
 function client() {
   const ws = new WebSocket(url);
@@ -73,8 +77,8 @@ host.ws.close();
 await a.next("closed");
 await c.next("closed");
 await new Promise((r) => setTimeout(r, 50));
-assert.equal(srv.rooms.size, 0);
+assert.equal(await openRooms(), roomsBefore);
 
 for (const p of [a, c, old]) p.ws.close();
-await srv.close();
+await srv?.close();
 console.log("PASS");
