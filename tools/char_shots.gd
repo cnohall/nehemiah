@@ -10,7 +10,7 @@ var _main: Node3D
 var _frame := 0
 var _players: Array = []
 var _enemies: Array = []
-const POSES := ["front", "carry", "side", "build"]
+const POSES := ["front", "carry", "side", "build", "hero"]
 var _pose := 0
 var _hold := 0
 
@@ -36,6 +36,11 @@ func _process(_delta: float) -> bool:
 	_hold += 1
 	if _hold == 1:
 		_apply_pose(POSES[_pose])
+		# Hero: one builder filling the frame, as in the character sheet
+		if POSES[_pose] == "hero":
+			var cam: Camera3D = _main.get_node("Camera3D")
+			cam.size = 2.6
+			cam.global_position = _players[0].global_position + Vector3(0.25, 0, -1.75) + _main.CAM_OFFSET
 	if _hold == 14:
 		root.get_texture().get_image().save_png("%s/%s_%s.png" % [_out, _tag, POSES[_pose]])
 		_pose += 1
@@ -89,5 +94,6 @@ func _apply_pose(pose: String) -> void:
 				p.anim = "walk_down"
 			"side": p.anim = "idle_left" if i % 2 == 0 else "idle_right"
 			"build": p.anim = "build_right"
+			"hero": p.anim = "idle_down"
 	for e in _enemies:
 		e.anim = "idle_down"

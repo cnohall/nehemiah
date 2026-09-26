@@ -36,6 +36,7 @@ const REVIVE_HEALTH   := 0.5
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 # Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
 const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
+const CARRY_FRONT_SCALE := 0.8   # a load hugged at the chest reads a little smaller than overhead
 const CARRY_HEIGHT    := 2.4      # just above the head of the ~2.2 m chibi figure
 const CARRY_SCALE     := 1.35     # loads read bigger overhead than on the ground (Overcooked)
 const PIP_Y           := 3.2      # player-colour marker above the head (multiplayer)
@@ -101,6 +102,7 @@ var _is_busy := false
 var _sling_cd := 0.0
 var _down_timer := 0.0
 var _carry_prop: Node3D
+var _carry_front: Node3D   # the load at the chest, parented to the rig's carry anchor
 var _charging := false
 var _charge := 0.0
 var _aim_point := Vector3.ZERO
@@ -165,7 +167,7 @@ func _process(delta: float) -> void:
 	if carried_kind == "beam" or helping_id != 0:
 		_sprite.hold = "beam"
 	else:
-		_sprite.hold = "" if carried_kind.is_empty() else "overhead"
+		_sprite.hold = "" if carried_kind.is_empty() else "front"
 	if whirling:
 		_update_whirl(delta)
 	if downed:
@@ -186,6 +188,7 @@ func set_slot(slot: int, c: Color) -> void:
 	_sprite.set_look(CharacterRig.worker_look(slot, c))
 	_sprite.set_ring_color(c)
 	_refresh_pip()
+	_rebuild_carry_prop()   # a new rig means a new chest anchor
 
 # Small diamond in the player's colour over the head — who's who in a busy crew.
 # Only with company; pulses while downed so teammates see who needs help.
@@ -1168,10 +1171,22 @@ func _update_whirl(delta: float) -> void:
 func _rebuild_carry_prop() -> void:
 	for c in _carry_prop.get_children():
 		c.queue_free()
+	if is_instance_valid(_carry_front):
+		_carry_front.queue_free()
+	_carry_front = null
 	if not carried_kind.is_empty() and carried_kind != "beam":
 		var prop := DroppedItem.build_prop(carried_kind)
-		prop.scale = Vector3.ONE * CARRY_SCALE
-		_carry_prop.add_child(prop)
+		# Hugged at the chest (the rig's anchor turns and bobs with the body); the rig is
+		# scaled, so undo that to keep the load its usual size
+		var anchor := _sprite.carry_anchor()
+		if anchor != null:
+			prop.scale = Vector3.ONE * CARRY_SCALE * CARRY_FRONT_SCALE / _sprite.scale.x
+			prop.position = Vector3(0, -0.04, 0)
+			anchor.add_child(prop)
+			_carry_front = prop
+		else:
+			prop.scale = Vector3.ONE * CARRY_SCALE
+			_carry_prop.add_child(prop)
 
 # ── Helpers ────────────────────────────────────────────────
 
