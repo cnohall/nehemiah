@@ -249,10 +249,37 @@ func _build_streets() -> void:
 		z += STEP * 0.95
 		row += 1
 	# Well at the crossing: stone drum, dark water, and a trough
-	var well := Transform3D(Basis.from_scale(Vector3(1.6, 0.8, 1.6)), WELL_POS + Vector3(0, 0.4, 0))
-	_add("drum", well, _vary(STONE_COLOR, 0.03))
-	_add("drum", Transform3D(Basis.from_scale(Vector3(1.25, 0.05, 1.25)), WELL_POS + Vector3(0, 0.77, 0)), WATER_COLOR)
-	_add("block", Transform3D(Basis.from_scale(Vector3(1.6, 0.35, 0.5)), WELL_POS + Vector3(1.6, 0.18, 0.4)), _vary(STONE_COLOR, 0.03))
+	_well(WELL_POS)
+
+# The city well: a ring of cut stones in two courses, dark water well down inside, a
+# timber frame with a bucket on its rope, and a stone trough beside it. No RNG draws
+# (the city layout after it is seeded).
+func _well(c: Vector3) -> void:
+	const N := 10
+	const R := 0.72
+	for course in 2:
+		for i in N:
+			var a := TAU * (i + course * 0.5) / N
+			var tint := 0.03 * sin(i * 2.3 + course)
+			_add("block", Transform3D(Basis(Vector3.UP, -a).scaled_local(Vector3(0.36, 0.3, 0.46)),
+				c + Vector3(cos(a) * R, 0.15 + course * 0.31, sin(a) * R)), Palette.WALL_STONE.darkened(0.06 + tint))
+	# Coping stones round the lip, a shade lighter
+	for i in N:
+		var a := TAU * (i + 0.25) / N
+		_add("block", Transform3D(Basis(Vector3.UP, -a).scaled_local(Vector3(0.4, 0.1, 0.5)),
+			c + Vector3(cos(a) * R, 0.69, sin(a) * R)), Palette.WALL_STONE.lightened(0.04))
+	# Dark shaft, water a way down
+	_add("drum", Transform3D(Basis.from_scale(Vector3(1.0, 0.5, 1.0)), c + Vector3(0, 0.36, 0)), Color(0.16, 0.13, 0.11))
+	_add("drum", Transform3D(Basis.from_scale(Vector3(0.98, 0.02, 0.98)), c + Vector3(0, 0.5, 0)), WATER_COLOR.darkened(0.35))
+	# Frame: two posts, a crossbeam, the bucket hanging on its rope
+	for sx: float in [-1.0, 1.0]:
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.14, 1.9, 0.14)), c + Vector3(sx * 0.95, 0.95, 0)), BEAM_COLOR)
+	_add("timber", Transform3D(Basis.from_scale(Vector3(2.2, 0.13, 0.13)), c + Vector3(0, 1.86, 0)), BEAM_COLOR.lightened(0.05))
+	_add("block", Transform3D(Basis.from_scale(Vector3(0.03, 0.62, 0.03)), c + Vector3(0.15, 1.5, 0)), Color(0.72, 0.62, 0.44))
+	_add("drum", Transform3D(Basis.from_scale(Vector3(0.28, 0.24, 0.28)), c + Vector3(0.15, 1.1, 0)), BEAM_COLOR.darkened(0.1))
+	# Trough for the animals
+	_add("block", Transform3D(Basis.from_scale(Vector3(1.5, 0.38, 0.55)), c + Vector3(1.75, 0.19, 0.45)), Palette.WALL_STONE.darkened(0.08))
+	_add("block", Transform3D(Basis.from_scale(Vector3(1.3, 0.04, 0.38)), c + Vector3(1.75, 0.36, 0.45)), WATER_COLOR)
 
 # Distance inside the street's edge (negative within the last metre)
 func _street_edge(p: Vector2) -> float:
