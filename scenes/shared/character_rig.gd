@@ -21,7 +21,7 @@ const STEP_FRAMES  := [1, 5]   # footfalls in the 8-frame walk / run cycles
 const STRIKE_FRAME := 4        # downstroke of the build loop
 const TURN_RATE    := 16.0     # rad/s-ish smoothing toward the facing direction
 const BASE_SCALE   := 1.3
-const ROUNDING     := 2.0      # corner radius as a multiple of each part's authored bevel
+const ROUNDING     := 3.5      # corner radius as a multiple of each part's authored bevel
 # Building: turn a three-quarter view toward the camera so the mallet arm isn't
 # hidden behind the body when the wall is "up" screen (the usual case)
 const BUILD_TURN   := -0.65
@@ -437,10 +437,10 @@ func _build(look: Dictionary) -> void:
 	_part(_torso, _bbox(Vector3(0.54, 0.5, 0.38), 0.08), robe, Vector3(0, 0.35, 0))
 	if long_robe:
 		_part(_torso, _bbox(Vector3(0.62, 0.5, 0.44), 0.08), robe, Vector3(0, -0.06, 0))
-		_part(_torso, _bbox(Vector3(0.64, 0.06, 0.46), 0.02), trim, Vector3(0, -0.29, 0))
+		_part(_torso, _bbox(Vector3(0.625, 0.07, 0.445), 0.06), trim, Vector3(0, -0.28, 0))
 	else:
 		_part(_torso, _bbox(Vector3(0.62, 0.34, 0.44), 0.07), robe, Vector3(0, 0.02, 0))
-		_part(_torso, _bbox(Vector3(0.64, 0.07, 0.46), 0.025), trim, Vector3(0, -0.13, 0))
+		_part(_torso, _bbox(Vector3(0.625, 0.08, 0.445), 0.06), trim, Vector3(0, -0.12, 0))
 	_part(_torso, _bbox(Vector3(0.59, 0.11, 0.42), 0.03), look["sash"], Vector3(0, 0.17, 0))
 	# Sash ends hanging at the hip
 	if look.get("sash_tails", false):
@@ -530,11 +530,11 @@ func _build(look: Dictionary) -> void:
 	# Face: eyes with a catch-light, brows, nose
 	for sx: float in [-1.0, 1.0]:
 		# White of the eye, a big dark iris looking slightly inward, a catch-light
-		_part(_head, _bbox(Vector3(0.115, 0.13, 0.04), 0.02), Color(0.97, 0.94, 0.88), hc + Vector3(0.13 * sx, 0.03, front - 0.005))
-		_part(_head, _bbox(Vector3(0.078, 0.105, 0.04), 0.018), Color(0.12, 0.07, 0.04), hc + Vector3(0.13 * sx - 0.012 * sx, 0.025, front + 0.01))
-		_part(_head, _bbox(Vector3(0.03, 0.03, 0.02), 0.006), Color(1, 0.97, 0.9), hc + Vector3(0.13 * sx + 0.005, 0.05, front + 0.03))
+		_part(_head, _bbox(Vector3(0.115, 0.13, 0.04), 0.02), Color(0.97, 0.94, 0.88), hc + Vector3(0.13 * sx, 0.03, front + 0.0))
+		_part(_head, _bbox(Vector3(0.078, 0.105, 0.04), 0.018), Color(0.12, 0.07, 0.04), hc + Vector3(0.13 * sx - 0.012 * sx, 0.025, front + 0.018))
+		_part(_head, _bbox(Vector3(0.03, 0.03, 0.02), 0.006), Color(1, 0.97, 0.9), hc + Vector3(0.13 * sx + 0.005, 0.05, front + 0.04))
 		var brow := _part(_head, _bbox(Vector3(0.17, 0.06, 0.06), 0.02), look.get("brow", hair),
-			hc + Vector3(0.13 * sx, 0.13, front + 0.005))
+			hc + Vector3(0.13 * sx, 0.125, front + 0.02))
 		# Inner ends low: determined on the crew, scowling on enemies
 		brow.rotation.z = (0.42 if look.get("brows", false) else 0.14) * sx
 	_part(_head, _bbox(Vector3(0.12, 0.13, 0.1), 0.045), skin.darkened(0.06), hc + Vector3(0, -0.05, front + 0.025))
@@ -723,7 +723,8 @@ static func _box(size: Vector3) -> Mesh:
 static func _bbox(size: Vector3, bevel: float) -> Mesh:
 	return _cached("bb%s%.3f" % [size, bevel], func():
 		var m := minf(size.x, minf(size.y, size.z))
-		return Chunky.round_box(size, minf(bevel * ROUNDING, m * 0.48), 2 if m < 0.08 else 3))
+		var r := Vector3.ONE * bevel * ROUNDING
+		return Chunky.round_box(size, r.min(size * 0.48), 2 if m < 0.08 else 3))
 
 static func _torus(inner: float, outer: float) -> Mesh:
 	return _cached("t%.3f,%.3f" % [inner, outer], func():

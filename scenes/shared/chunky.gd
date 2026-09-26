@@ -100,21 +100,20 @@ static func bevel_box(size: Vector3, bevel: float) -> ArrayMesh:
 				_tri(st, pts[0], pts[1], pts[2], n)
 	return st.commit()
 
-## A box with rounded edges and corners (radius r) and smooth normals — the soft,
-## toy-figure look for characters. Rounding segments are spaced by angle so the curve
-## is even; flat faces stay a single quad strip.
-static func round_box(size: Vector3, r: float, seg := 3) -> ArrayMesh:
+## A box with rounded edges and corners and smooth normals — the soft, toy-figure look
+## for characters. `r` is the corner radius per axis (ellipsoidal corners), so a thin
+## band can still be round in plan. Rounding segments are spaced by angle.
+static func round_box(size: Vector3, r: Vector3, seg := 3) -> ArrayMesh:
 	var h := size * 0.5
-	r = minf(r, minf(h.x, minf(h.y, h.z)) * 0.98)
-	var inner := h - Vector3.ONE * r
-	# Per-axis sample coordinates on the flat cube, far side to near side
+	r = r.clamp(Vector3.ONE * 0.0005, h * 0.98)
+	var inner := h - r
 	var coords: Array[PackedFloat32Array] = []
 	for axis in 3:
 		var c := PackedFloat32Array()
 		for j in range(seg, -1, -1):
-			c.append(-inner[axis] - r * tan(PI * 0.25 * j / seg))
+			c.append(-inner[axis] - r[axis] * tan(PI * 0.25 * j / seg))
 		for j in range(0, seg + 1):
-			c.append(inner[axis] + r * tan(PI * 0.25 * j / seg))
+			c.append(inner[axis] + r[axis] * tan(PI * 0.25 * j / seg))
 		coords.append(c)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -128,21 +127,19 @@ static func round_box(size: Vector3, r: float, seg := 3) -> ArrayMesh:
 			face_n[axis] = s
 			for a in cu.size() - 1:
 				for b in cv.size() - 1:
-					var q: Array[Vector3] = []
-					for k: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1)]:
-						var p := Vector3.ZERO
-						p[axis] = s * h[axis]
-						p[u] = cu[a + k.x]
-						p[v] = cv[b + k.y]
-						q.append(p)
 					var pts: Array[Vector3] = []
 					var ns: Array[Vector3] = []
-					for p in q:
+					for k: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1)]:
+						var p := Vector3.ZERO
+						p[axis] = s * h[axis] * (r[axis] / r[axis])
+						p[u] = cu[a + k.x]
+						p[v] = cv[b + k.y]
+						# Map the flat cube point onto the ellipsoidal corner
 						var c := p.clamp(-inner, inner)
-						var d := p - c
-						var n := d.normalized() if d.length() > 0.00001 else face_n
-						pts.append(c + n * r)
-						ns.append(n)
+						var d := (p - c) / r
+						var e := d.normalized() if d.length() > 0.00001 else face_n
+						pts.append(c + e * r)
+						ns.append((e / r).normalized())
 					_stri(st, pts[0], pts[1], pts[2], ns[0], ns[1], ns[2], face_n)
 					_stri(st, pts[0], pts[2], pts[3], ns[0], ns[2], ns[3], face_n)
 	st.index()
