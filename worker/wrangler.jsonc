@@ -9,5 +9,6 @@
   // SQLite-backed so it runs on the free plan
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby"] }],
   "r2_buckets": [{ "binding": "GAME", "bucket_name": "nehemiah-game" }],
+  "routes": [{ "pattern": "nehemiahgame.com", "custom_domain": true }],
   "observability": { "enabled": true }
 }
