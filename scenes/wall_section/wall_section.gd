@@ -392,7 +392,7 @@ static func _first_multimesh_count(root: Node) -> int:
 func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
 	match s:
 		Stage.EMPTY:
-			_add_courses(rng, 0.25, GAP_ROUGH * 2.0)  # ruined footing, walkable
+			_add_ruin(rng)  # broken footing, walkable
 		Stage.FRAMED:
 			_add_courses(rng, minf(COURSE_H, _size.y), GAP_ROUGH)
 			_add_scaffold(rng)
@@ -437,6 +437,33 @@ func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void
 			var w := rng.randf_range(-0.02, 0.03)
 			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.2 - w))
 			x += blen
+	_add_multimesh(transforms, colors)
+
+# What's left of the old wall (Neh. 2:13 "broken down"): the bottom course, stones
+# cracked, sunk and tilted, a few gone, the odd one still standing a course higher
+func _add_ruin(rng: RandomNumberGenerator) -> void:
+	var transforms: Array[Transform3D] = []
+	var colors: Array[Color] = []
+	var x0 := _center.x - _size.x * 0.5
+	var x := x0
+	while x < x0 + _size.x - 0.1:
+		var blen := minf(rng.randf_range(0.6, 1.1), x0 + _size.x - x)
+		if rng.randf() > 0.12:
+			var h := rng.randf_range(0.16, 0.34)
+			var depth := _size.z * rng.randf_range(0.75, 1.0)
+			var s := Vector3(blen - 0.08, h, depth)
+			var b := Basis.from_euler(Vector3(rng.randf_range(-0.08, 0.08), rng.randf_range(-0.1, 0.1), rng.randf_range(-0.1, 0.1)))
+			var pos := Vector3(x + blen * 0.5, 0.12 + h * 0.5 - 0.03, _center.z + rng.randf_range(-0.08, 0.08))
+			transforms.append(Transform3D(b.scaled_local(s), pos))
+			var v := rng.randf_range(-0.12, 0.0)
+			colors.append(Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.1))
+			# A stone from the next course still in place
+			if rng.randf() < 0.18:
+				var s2 := Vector3(blen * rng.randf_range(0.5, 0.8), 0.3, depth * 0.8)
+				transforms.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.12, 0.12)).scaled_local(s2),
+					pos + Vector3(rng.randf_range(-0.1, 0.1), h * 0.5 + 0.15, 0)))
+				colors.append(Color(STONE_COLOR.r - 0.06, STONE_COLOR.g - 0.06, STONE_COLOR.b - 0.07))
+		x += blen
 	_add_multimesh(transforms, colors)
 
 func _add_merlons() -> void:
