@@ -11,6 +11,8 @@
 [ext_resource type="Script" path="res://scenes/day_director/day_director.gd" id="9_director"]
 [ext_resource type="Script" path="res://scenes/section_stage/section_stage.gd" id="10_stage"]
 [ext_resource type="PackedScene" path="res://scenes/trough/trough.tscn" id="11_trough"]
+[ext_resource type="Script" path="res://scenes/section_terrain/section_terrain.gd" id="12_terrain"]
+[ext_resource type="Script" path="res://scenes/day_light/day_light.gd" id="13_daylight"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 geometry/parsed_geometry_type = 1
@@ -272,6 +274,18 @@ rubble_stock = 4
 
 [node name="SectionStage" type="Node" parent="."]
 script = ExtResource("10_stage")
+
+[node name="SectionTerrain" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
+script = ExtResource("12_terrain")
+
+[node name="DayLight" type="Node" parent="."]
+script = ExtResource("13_daylight")
+
+[node name="Visitors" type="Node3D" parent="."]
+
+[node name="VisitorSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/messenger/messenger.tscn")
+spawn_path = NodePath("../Visitors")
 
 [node name="EnemySpawner" type="MultiplayerSpawner" parent="."]
 _spawnable_scenes = PackedStringArray("res://scenes/enemy/enemy.tscn")

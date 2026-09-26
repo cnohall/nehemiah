@@ -24,6 +24,7 @@ var _root: Control
 var _frame: Control           # the "camera": art + backdrop, scaled for the drift
 var _art: TextureRect
 var _backdrop: StoryBackdrop
+var _map: CircuitMap
 var _content: Control
 var _eyebrow: Label
 var _title: Label
@@ -116,9 +117,17 @@ func _advance() -> void:
 func _show_slide(slide: Dictionary) -> void:
 	var art_path: String = slide.get("art", "")
 	var has_art := not art_path.is_empty() and ResourceLoader.exists(art_path)
-	_art.visible = has_art
-	_backdrop.visible = not has_art
-	if has_art:
+	var has_map := slide.has("map")
+	_art.visible = has_art and not has_map
+	_backdrop.visible = not has_art and not has_map
+	_map.visible = has_map
+	# The map sits on the right; the text keeps to a narrower column beside it
+	_content.custom_minimum_size.x = TEXT_WIDTH * (0.55 if has_map else 1.0)
+	if has_map:
+		_map.section = slide["map"]
+		_map.inspect = slide.get("inspect", false)
+		_map.play()
+	elif has_art:
 		_art.texture = load(art_path)
 	else:
 		_backdrop.sky = slide.get("sky", "dusk")
@@ -131,7 +140,7 @@ func _show_slide(slide: Dictionary) -> void:
 	_set_label(_ref, slide.get("ref", ""))
 	_page.text = "%d / %d" % [_index + 1, _slides.size()] if _slides.size() > 1 else ""
 
-	_drift()
+	_drift(not has_map)
 	_content.modulate.a = 1.0
 	var fade := create_tween().set_parallel()
 	fade.tween_property(_frame, "modulate:a", 1.0, FADE).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -154,10 +163,15 @@ func _reveal_all() -> void:
 	for n: CanvasItem in [_eyebrow, _title, _verse, _ref]:
 		n.modulate.a = 1.0
 
-# Ken Burns: zoom in slowly about the centre, alternating the pan per slide
-func _drift() -> void:
+# Ken Burns: zoom in slowly about the centre, alternating the pan per slide.
+# The map holds still — its labels should stay crisp and readable.
+func _drift(moving := true) -> void:
 	if _drift_tween:
 		_drift_tween.kill()
+	if not moving:
+		_frame.scale = Vector2.ONE
+		_frame.position = Vector2.ZERO
+		return
 	var dir := 1.0 if _index % 2 == 0 else -1.0
 	_frame.pivot_offset = _frame.size * 0.5
 	_frame.scale = Vector2.ONE * 1.05   # enough overscan that the pan never shows an edge
@@ -224,6 +238,11 @@ func _build() -> void:
 	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_frame.add_child(_art)
+	_map = CircuitMap.new()
+	_map.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map.hide()
+	_frame.add_child(_map)
 
 	# Vignette, then a dark wash under the text so it reads over any art
 	_root.add_child(_gradient_rect(true))

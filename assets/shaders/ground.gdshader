@@ -15,6 +15,14 @@ uniform vec3 col_trodden     : source_color = vec3(0.900, 0.790, 0.620);  // pac
 uniform float gate_x = -4.0;
 uniform vec3 col_scrub       : source_color = vec3(0.520, 0.570, 0.290);  // dry olive scrub
 uniform vec3 col_scrub_lit   : source_color = vec3(0.620, 0.650, 0.340);
+// Per-section look (SectionTerrain): where the supply yard is trodden, how much scrub
+// grows (+ = greener, e.g. the King's Garden), an overall cast (ash at the Dung Gate)
+// and how far the ground outside falls away into shade (the valleys)
+uniform vec2 yard_center = vec2(0.0, 10.0);
+uniform float scrub_bias = 0.0;
+uniform vec3 section_tint : source_color = vec3(0.5, 0.5, 0.5);
+uniform float tint_amount = 0.0;
+uniform float outside_shade = 0.0;
 
 varying vec2 world_xz;
 
@@ -66,7 +74,7 @@ void fragment() {
 	float edge_noise = (detail - 0.5) * 1.6;
 	float wall_band = 1.0 - smoothstep(2.5, 5.0, abs(world_xz.y) + edge_noise);
 	wall_band *= 1.0 - smoothstep(22.0, 26.0, abs(world_xz.x));
-	float yard = 1.0 - smoothstep(5.0, 9.0, length(world_xz - vec2(0.0, 10.0)) + edge_noise);
+	float yard = 1.0 - smoothstep(5.0, 9.0, length(world_xz - yard_center) + edge_noise);
 	float street = (1.0 - smoothstep(2.0, 3.5, abs(world_xz.x) + edge_noise))
 		* smoothstep(9.0, 13.0, world_xz.y);
 	// The track: straight through the yard to the gate, then winding north
@@ -79,11 +87,16 @@ void fragment() {
 	col = mix(col, col_trodden, trodden * 0.6);
 
 	// Patches of dry scrub off the beaten track — the hills weren't bare sand
-	float scrub = smoothstep(0.56, 0.66, fbm(p * 1.6 + vec2(11.3, 4.1)) + (mid - 0.5) * 0.25);
+	float scrub = smoothstep(0.56 - scrub_bias, 0.66 - scrub_bias, fbm(p * 1.6 + vec2(11.3, 4.1)) + (mid - 0.5) * 0.25);
 	scrub *= 1.0 - trodden;
 	scrub *= 1.0 - (1.0 - smoothstep(6.0, 9.0, abs(world_xz.y))) * (1.0 - smoothstep(24.0, 28.0, abs(world_xz.x)));
 	vec3 scrub_col = mix(col_scrub, col_scrub_lit, smoothstep(0.35, 0.75, detail));
 	col = mix(col, scrub_col, scrub * 0.85);
+
+	col = mix(col, section_tint, tint_amount * (0.7 + 0.6 * (mid - 0.5)));
+	// Falling away outside the wall: darker and a touch cooler with distance
+	float fall = smoothstep(-4.0, -30.0, world_xz.y) * outside_shade;
+	col = mix(col, col * vec3(0.72, 0.74, 0.86), fall);
 
 	// Micro grain — subtle brightness flicker for sandy texture
 	col *= 0.90 + 0.10 * micro;

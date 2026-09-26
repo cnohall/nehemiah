@@ -4,6 +4,7 @@ extends SceneTree
 #   offline:  Godot --path . --script res://tools/build_test.gd -- --nostory <out_dir>
 #   network:  one `--headless ... -- --nostory --host <dir>` process plus one
 #             `... -- --nostory --client <dir>` — the client plays, the host serves
+#   `--dusk`: keep running after the day's work is done and screenshot the dusk tally
 # Teleports the player between the supply piles and today's first wall, pressing
 # interact like a player would, and prints how long each stage's work took.
 # Saves a screenshot mid-work. Exit code 0 = the day's first unit got fully built.
@@ -27,6 +28,10 @@ var _sessions := 0
 var _deliver_to: Node3D
 var _stage_at_start: Variant = null
 var _mode := "offline"
+var _retries := 0
+var _dusk := false
+var _dusk_t := 0.0
+const DUSK_SHOTS := [0.3, 1.2, 2.2, 3.4, 5.0]
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
@@ -34,6 +39,8 @@ func _initialize() -> void:
 			_mode = "host"
 		elif a == "--client":
 			_mode = "client"
+		elif a == "--dusk":
+			_dusk = true
 		elif not a.begins_with("--"):
 			_out = a
 	root.size = Vector2i(1920, 1080)
@@ -94,8 +101,13 @@ func _process(delta: float) -> bool:
 		"next":
 			if gs.phase == gs.Phase.DUSK:
 				print("PASS: day's work done — %d stages raised in %d work sessions, t=%.1f s" % [_stages, _sessions, _t])
-				quit(0)
-				return true
+				if not _dusk:
+					quit(0)
+					return true
+				_state = "dusk"
+				_dusk_t = 0.0
+				_t = 0.0
+				return false
 			if _site == null or _site.is_complete() or (_site.next_need() == "" and not _site.can_build()):
 				_site = _pick_site()
 				if _site == null:
@@ -131,10 +143,20 @@ func _process(delta: float) -> bool:
 				_state = "deliver"
 				_wait = 0.3
 		"deliver":
+			if _player.carried_kind.is_empty() and _retries < 5:
+				# The press can land while the last swing still plays (slow frames) — try again
+				_retries += 1
+				_state = "next"
+				_wait = 0.3
+				return false
 			if _player.carried_kind.is_empty():
-				print("FAIL: pickup failed")
+				print("  player: busy=%s work_site=%s building=%s anim=%s led=%s downed=%s" % [_player._is_busy,
+					_player._work_site, _player.building_site, _player.anim, _player._led_by, _player.downed])
+				print("FAIL: pickup failed at ",_player.global_position, " for ", _site.next_need(),
+					" piles: ", _main.get_tree().get_nodes_in_group("supply_piles").map(func(p): return "%s@%s" % [p.kind, p.global_position]))
 				quit(1)
 				return true
+			_retries = 0
 			_goto(_deliver_to)
 			_press()
 			_state = "after_deliver" if _deliver_to == _site else "next"
@@ -147,6 +169,14 @@ func _process(delta: float) -> bool:
 				_work_started = _t
 				_stage_at_start = _site.get("stage")
 				_shot_phase = 0
+		"dusk":
+			_dusk_t += delta
+			var i := DUSK_SHOTS.find_custom(func(at: float): return at > _dusk_t - delta and at <= _dusk_t)
+			if i != -1:
+				_player.get_viewport().get_texture().get_image().save_png("%s/dusk_%d.png" % [_out, i])
+			if _dusk_t > DUSK_SHOTS[-1] + 0.1:
+				quit(0)
+				return true
 		"working":
 			var prog: float = _site.work().progress
 			if _shots < 12 and prog > 0.25 * (1 + _shot_phase) and _shot_phase < 3:
@@ -183,7 +213,10 @@ func _trough() -> Node3D:
 	return null
 
 func _goto(n: Node3D) -> void:
-	var p: Vector3 = n.approach_point(_player.global_position, 0.6) if n.has_method("approach_point") \
+	# Walls: step up from straight south of the site, not from wherever we are — from a
+	# far yard the nearest spot on a pillar is the corner it shares with the next wall
+	var from := Vector3(n.global_position.x, 0.1, n.global_position.z + 4.0)
+	var p: Vector3 = n.approach_point(from, 0.6) if n.has_method("approach_point") \
 		else n.global_position + Vector3(0, 0, 1.2)
 	_player.global_position = Vector3(p.x, 0.1, p.z)
 	_player.velocity = Vector3.ZERO

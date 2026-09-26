@@ -14,6 +14,13 @@ const SHAKE_MAX_OFFSET := 0.45
 const SHAKE_DECAY      := 2.2
 const SHAKE_FREQ       := 22.0
 const HUD_INTERVAL := 0.1
+# Dusk: the last stone lands in slow motion, the light turns gold, the camera leans in
+const DUSK_SLOWMO      := 0.3    # time scale…
+const DUSK_SLOWMO_TIME := 0.5    # …for this many real seconds
+const DUSK_CAM_SIZE    := 19.0
+const DUSK_SUN_COLOR   := Color(1.0, 0.74, 0.5)
+const DUSK_SUN_ENERGY  := 1.45
+const LIGHT_FADE       := 1.6
 # Player ring / HUD colours by join order: amber, olive, terracotta, sky
 const PLAYER_COLORS := [Color(0.93, 0.66, 0.22), Color(0.52, 0.70, 0.28), Color(0.86, 0.38, 0.26), Color(0.38, 0.62, 0.86)]
 
@@ -21,6 +28,7 @@ const PLAYER_COLORS := [Color(0.93, 0.66, 0.22), Color(0.52, 0.70, 0.28), Color(
 @onready var enemies_root: Node3D           = $Enemies
 @onready var camera: Camera3D               = $Camera3D
 @onready var director: Node                 = $DayDirector
+@onready var sun: DirectionalLight3D        = $Sun
 
 var hud: CanvasLayer = null
 var story: StoryPlayer = null
@@ -30,12 +38,19 @@ var _lead := Vector3.ZERO
 var _trauma := 0.0
 var _shake_t := 0.0
 var _hud_timer := 0.0
+var _day_sun_color: Color
+var _day_sun_energy: float
+var _mood_tween: Tween
 
 func _ready() -> void:
 	add_to_group("camera_rig")
 	hud = HUD_SCENE.instantiate()
 	add_child(hud)
 	hud.begin_requested.connect(director.begin)
+	director.day_tallied.connect(hud.show_tally)
+	_day_sun_color = sun.light_color
+	_day_sun_energy = sun.light_energy
+	GameState.phase_changed.connect(_on_phase_changed)
 
 	story = StoryPlayer.new()
 	add_child(story)
@@ -47,7 +62,6 @@ func _ready() -> void:
 
 	NetworkManager.peer_connected.connect(_on_peer_connected)
 	NetworkManager.peer_disconnected.connect(_on_peer_disconnected)
-	GameState.game_won.connect(_on_game_won)
 	GameState.game_lost.connect(_on_game_lost)
 
 	camera.size = CAM_SIZE
@@ -100,6 +114,35 @@ func _shake_offset(delta: float) -> Vector3:
 	var x := sin(_shake_t) * 0.6 + sin(_shake_t * 2.3 + 1.7) * 0.4
 	var y := sin(_shake_t * 1.3 + 0.4) * 0.6 + sin(_shake_t * 2.9 + 3.1) * 0.4
 	return (camera.global_basis.x * x + camera.global_basis.y * y) * k
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
+
+# ── Day mood ───────────────────────────────────────────────
+
+func _on_phase_changed(phase: GameState.Phase) -> void:
+	match phase:
+		GameState.Phase.DUSK:
+			_slowmo()
+			_set_mood(DUSK_SUN_COLOR, DUSK_SUN_ENERGY, DUSK_CAM_SIZE)
+			shake(0.25)
+		GameState.Phase.DAWN, GameState.Phase.STORY, GameState.Phase.LOST:
+			_set_mood(_day_sun_color, _day_sun_energy, CAM_SIZE)
+
+# The finishing blow lands heavy: a breath of slow motion, then back to speed
+func _slowmo() -> void:
+	Engine.time_scale = DUSK_SLOWMO
+	await get_tree().create_timer(DUSK_SLOWMO_TIME, true, false, true).timeout
+	if is_inside_tree():
+		Engine.time_scale = 1.0
+
+func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
+	if _mood_tween:
+		_mood_tween.kill()
+	_mood_tween = create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_mood_tween.tween_property(sun, "light_color", sun_color, LIGHT_FADE)
+	_mood_tween.tween_property(sun, "light_energy", sun_energy, LIGHT_FADE)
+	_mood_tween.tween_property(camera, "size", cam_size, LIGHT_FADE)
 
 # ── HUD ────────────────────────────────────────────────────
 
@@ -185,9 +228,7 @@ func _receive_roster_entry(peer_id: int) -> void:
 
 # ── Win / Loss ─────────────────────────────────────────────
 
-# HUD shows the end screen; stop the fight underneath it
-func _on_game_won() -> void:
-	get_tree().call_group("enemies", "set_physics_process", false)
-
+# HUD shows the end screen; stop the fight underneath it. On a win the enemy withdraws
+# instead (DayDirector sends them off).
 func _on_game_lost() -> void:
 	get_tree().call_group("enemies", "set_physics_process", false)

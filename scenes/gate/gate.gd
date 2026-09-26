@@ -162,6 +162,16 @@ func _prime_work() -> void:
 
 # ── Visuals ────────────────────────────────────────────────
 
+## Every peer, at dusk: the new doors / infill take a bow with the wall
+func celebrate() -> void:
+	if not finished:
+		return
+	var leaf: Node3D = _doors if GameState.has_gate() else _infill
+	leaf.scale = Vector3(1.04, 0.9, 1.04)
+	create_tween().tween_property(leaf, "scale", Vector3.ONE, 0.45) 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	DustFx.puff(self, global_position + Vector3.UP * 0.3, 16, 0.9)
+	Sfx.play("deposit_beam", global_position)
+
 func _refresh() -> void:
 	var gate := GameState.has_gate()
 	_lintel.visible = gate and _pillars.all(func(p): return p.stage == p.Stage.MORTARED)

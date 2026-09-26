@@ -15,9 +15,9 @@ const MAX_DISTANCE := 40.0
 # name: [files, volume_db, pitch_min, pitch_max]
 var _defs := {
 	"step":           [_n("footstep0%d", 0, 10), -20.0, 0.9, 1.1],
-	"pickup":         [["handleSmallLeather", "handleSmallLeather2"], -4.0, 0.95, 1.1],
+	"pickup":         [["handleSmallLeather", "handleSmallLeather2"], -2.0, 0.95, 1.1],
 	"drop":           [["dropLeather"], -2.0, 0.9, 1.05],
-	"dash":           [["cloth1", "cloth2", "cloth3", "cloth4"], -3.0, 1.15, 1.35],
+	"dash":           [["cloth1", "cloth2", "cloth3", "cloth4"], -4.0, 1.15, 1.35],
 	"throw":          [["clothBelt", "clothBelt2"], -4.0, 1.3, 1.5],
 	"deposit_stone":  [_n("impactMining_%03d", 0, 5), -3.0, 0.9, 1.05],
 	"deposit_wood":   [_n("impactWood_medium_%03d", 0, 5), -3.0, 0.9, 1.1],
@@ -40,10 +40,23 @@ var _defs := {
 	"sling_miss":     [_n("impactGeneric_light_%03d", 0, 5), -8.0, 0.8, 1.0],
 	"hurt":           [_n("impactSoft_heavy_%03d", 0, 5), -2.0, 0.9, 1.1],
 	"downed":         [_n("impactPunch_heavy_%03d", 0, 5), 0.0, 0.6, 0.7],
-	"revive":         [["clothBelt", "clothBelt2"], -2.0, 0.9, 1.0],
+	"revive":         [["clothBelt", "clothBelt2"], 0.0, 0.9, 1.0],
 	"breach":         [_n("impactBell_heavy_%03d", 0, 5), -4.0, 0.7, 0.75],
 	# Off-screen trouble (HUD pointer): the breach bell, higher and lighter
 	"alert":          [_n("impactBell_heavy_%03d", 0, 5), -10.0, 1.25, 1.3],
+	# Dusk tally: a light tap as each number starts counting, a wooden knock as it lands
+	"tally":          [_n("impactGeneric_light_%03d", 0, 5), -10.0, 1.3, 1.45],
+	"tally_land":     [_n("impactWood_medium_%03d", 0, 5), -7.0, 1.05, 1.2],
+}
+# Per-clip gain (dB) levelling the source files to ~-14 dB peak RMS, so variants of one
+# event match and the quiet cloth/leather pack sits with the impacts. Measured by
+# tools/audio_audit.py — rerun it after swapping a clip.
+const TRIM := {
+	"footstep00": -1.0, "footstep01": -1.5, "footstep02": 3.5, "footstep03": 2.5, "footstep04": 7.0,
+	"footstep05": 2.0, "footstep06": -3.0, "footstep07": 0.0, "footstep08": -6.5, "footstep09": 5.0,
+	"cloth1": 7.5, "cloth2": 13.0, "cloth3": 13.0, "cloth4": 18.0,
+	"clothBelt": 16.5, "clothBelt2": 15.0,
+	"handleSmallLeather": 18.5, "handleSmallLeather2": 24.0,
 }
 # UI-level (non-positional) music stings
 var _jingle_defs := {
@@ -98,7 +111,7 @@ func _ready() -> void:
 	add_child(_flat)
 	_jingle = AudioStreamPlayer.new()
 	_jingle.bus = "SFX"
-	_jingle.volume_db = -6.0
+	_jingle.volume_db = 0.0     # a short pluck; any lower and a deposit thud covers it
 	add_child(_jingle)
 	_listener = AudioListener3D.new()
 	add_child(_listener)
@@ -153,17 +166,18 @@ func play(event: String, at: Variant = null) -> void:
 	var def: Array = _defs[event]
 	var stream: AudioStream = streams.pick_random()
 	var pitch := randf_range(def[2], def[3])
+	var db: float = def[1] + TRIM.get(stream.resource_path.get_file().get_basename(), 0.0)
 	if at is Vector3:
 		var p := _pool[_next]
 		_next = (_next + 1) % POOL_SIZE
 		p.stream = stream
-		p.volume_db = def[1]
+		p.volume_db = db
 		p.pitch_scale = pitch
 		p.global_position = at
 		p.play()
 	else:
 		_flat.stream = stream
-		_flat.volume_db = def[1]
+		_flat.volume_db = db
 		_flat.pitch_scale = pitch
 		_flat.play()
 

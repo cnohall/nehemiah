@@ -64,6 +64,7 @@ Just one type of structure so far
 - 12 wall sections × ~4 days each ≈ 48–52 days → matches the Day 52 win condition
 - Each section plays like one Overcooked level
 - Short clips/cutscenes between sections as checkpoint and reward
+  - ✅ **Circuit map** (`CircuitMap`, on the story cards): top-down Jerusalem with the 12 sections on the ring. Prologue = Nehemiah's night ride (Neh 2:13-15), every stretch broken. Each section card: the stretch just finished rises in gold, the next one pulses, and the three foes watch from their lands. Later: 3D diorama version, win-screen ring closing, level select for replays
 
 ### 5.2 Next (low cost, high impact)
 1. ✅ **Sound** — done: footsteps, pickup/drop/deposit (per material), dash, sling throw/hit/miss, enemy swing/death, wall build/hit/crumble, alarm bell on breach, jingles for day start/end + win/loss. Kenney CC0 packs, `Sfx` autoload
@@ -73,6 +74,7 @@ Just one type of structure so far
 4. ✅ **Movement feel** — done: dash on [Space]/[Shift] (short burst, 0.7 s cooldown, works while carrying)
 
 5. ✅ **Game feel pass** — gamepad (stick/d-pad, A pick up · B dash · Y drop · RT sling · right-stick aim · Start menu), analog walk, 0.15 s input buffer, camera look-ahead + shake (toggle in Settings), hitstop on sling hits, pad rumble. Camera a little closer (size 22)
+6. ✅ **Rewarding day end** — the last stage lands in a breath of slow motion; enemies turn tail and run (shrink away in a puff); today's finished units bounce and puff one after another; the crew throws both arms up (the fallen get back up, builders down tools); light turns gold and the camera leans in. Then a tally card counts up the day: time, loads carried, foes felled, how many slipped through, and in co-op each worker's share (the day's best carrier / best shot in gold). The last day of a section reads "The <gate> stands". Dusk 6 → 9 s. No score, no stars — just the day's numbers
 
 ### 5.4 Hands-on building (Overcooked "chopping") — ✅ built, A/B with `-- --instant-build`
 Delivering the last load no longer raises a stage by itself: someone has to **stand at the wall and work it**.
@@ -150,7 +152,7 @@ Keep the earthy palette, borrow Overcooked's readability:
 ### 6.1 Also against repetition
 - **Layout per section** — each section is its own map (terrain, where the supply yard sits, where the gaps are), not a re-skin.
 - **Section intros** — a short, still illustrated card or clip between sections with its Neh 3 reference, and the narrative beat where one applies (mockery, conspiracy, Ono). Dignified, no cartoon cutscenes. ◐ System done (`StoryData` / `StoryPlayer`, Phase.STORY): prologue before day 1 (Neh 1–2), a card per section, beats at Jeshanah (4:2), Broad Wall (4:3), Valley Gate (4:7-20), East Gate (6:2-4). Every reader must finish (or skip) before the day starts; host can "Begin now". Drawn silhouette backdrops stand in until art exists (`art` key per slide). TODO: verify NWT quotations, commission art, ending story after day 52
-- **Section rating** (later) — 1–3 marks per section for pace, no breaches and wall health. Replay value without coins or loot.
+- **Section rating** ✅ — three marks per section, each earned on its own: *In good time* (section work time ≤ par: 7 min + extra for beams/salvage/mixing/haul — TODO tune, the log prints time vs par), *None got through* (no breaches in the section), *The wall holds* (average wall health ≥ 80% at the end). Shown on the section's last dusk card, beside each gate on the circuit map, and totalled on the end screen. Each player's best per section is saved to `user://progress.cfg` (not for `--day=N` runs) — ready for a replay picker on the map. Replay value without coins or loot.
 
 ### 6.2 Style guardrails (against "cartoonish")
 Borrow Overcooked's **structure and readability**, not its tone.
@@ -160,7 +162,14 @@ Borrow Overcooked's **structure and readability**, not its tone.
 - Humour, if any, comes from the co-op chaos between players — never from the setting or biblical figures
 
 ### 6.3 Build order
-1. Section framework — ◐ twists done (`GameState.SECTIONS[i].twists`, `has_twist()`, dawn banner introduces new twists, twist-only supply piles). ✅ per-section layouts (data-driven, `SECTIONS[i].yard` / `.gate`, applied by `SectionStage` on every peer): supply yard moves per section (Dung Gate ~30 m east = long haul); stretches with no gate (Broad Wall, Tower of Ovens) seal the opening with stone instead of doors. Terrain/map shape per section still to come
+1. Section framework — ◐ twists done (`GameState.SECTIONS[i].twists`, `has_twist()`, dawn banner introduces new twists, twist-only supply piles). ✅ per-section layouts (data-driven, `SECTIONS[i].yard` / `.gate`, applied by `SectionStage` on every peer): supply yard moves per section (Dung Gate ~30 m east = long haul); stretches with no gate (Broad Wall, Tower of Ovens) seal the opening with stone instead of doors. ✅ Terrain per section (`SECTIONS[i].terrain`, built by `SectionTerrain`, solid + in the nav bake, ground tint/scrub/valley shade per section): sheepfold · fish stalls · burned ruins · forge & perfume stalls · bread ovens · valley terraces (two gaps funnel enemies) · refuse heaps (lanes on the long haul) · Pool of Shelah + King's Garden · torches + Ophel boulders · priests' houses (narrow lanes) · Kidron olive grove · market + sheepfold again. Sections can pin single piles (`piles`) and set enemy pace (`pressure`)
 2. ✅ Doors step (gate sections: after both pillars, deliver timber → doors hang and close the gap) and ✅ beams (Fish + Jeshanah Gate: framing takes beams; drag alone slowly, or a partner takes the other end — tethered pair at carry pace)
 3. ✅ Salvage (3): Jeshanah has no stone pile — 5 burned rubble heaps (3 inside, 2 **outside** the wall) with 4 stones each, refilled at dawn. ✅ Mortar mixing (5): Tower of Ovens + Valley Gate have no mortar pile — lime (bin) + water (clay jars) → stone trough mixes by itself in 4 s (progress bar, stirring paddle) → carry mortar to the wall. Next: horn (6)
-4. The rest, in section order
+4. ✅ Sections 7–12 (first pass, needs playtest):
+   - **Dung Gate** `haul`: yard 30 m east, refuse heaps split the route. **Hand-off** (all sections): [G] beside an empty-handed teammate puts the load in their hands
+   - **Fountain Gate** `spring`: pressure ×0.55, water jars by the pool near the wall, mixing
+   - **Water Gate** `night`: from its 2nd day darkness falls over ~16 s of work (`DayLight`), torches light up, each worker carries a lamp; lifts at dawn
+   - **Horse Gate** `cramped`: row of low priests' houses between wall and yard, ~2 m lanes
+   - **East Gate** `schemes`: up to 4 messengers a day (6:4), one at a time. He walks up and waits beside a worker; when he's nearer than anything else, [E] goes with him — led off ~7 s, then walk back. Ignored 12 s, he leaves
+   - **Miphkad Gate**: doors + beams + salvage + mixing + schemes, pressure ×1.3; on the win the enemy withdraws (6:16)
+   - Still open: the horn (6), double-thick sections (4), night on the finale?, per-section terrain *shape* (heights)

@@ -323,6 +323,18 @@ func _apply_pose() -> void:
 			lean = j * 0.3
 			spear_rx = PI * 0.5 * minf(1.0, k * 4.0) * (1.0 if k < 0.85 else (1.0 - k) / 0.15)
 			spear_z = j * 0.45
+		"cheer":
+			# Two hops; arms fly up on the first and wave overhead
+			var hop := absf(sin(k * TAU))
+			body_y = hop * 0.28
+			var up := minf(1.0, k * 6.0)
+			var wave := sin(_t * 16.0) * 0.18 * up
+			al = Vector3(lerpf(-0.08, -2.7, up) + wave, 0, lerpf(0.14, 0.45, up))
+			ar = Vector3(lerpf(-0.08, -2.7, up) - wave, 0, lerpf(-0.14, -0.45, up))
+			ll = -hop * 0.35
+			lr = -hop * 0.35
+			lean = -0.12 * up
+			head_rx = -0.2 * up
 		"collapse":
 			var c := ease(k, 2.2)
 			body_rx = -1.45 * c

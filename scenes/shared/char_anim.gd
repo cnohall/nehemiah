@@ -21,6 +21,8 @@ const ANIM_CFG: Dictionary = {
 	"build":     { "cycle": [0, 1, 2, 3, 4, 5, 5, 0], "loop": true,  "fps": 12.0 },
 	# Downed / death: fall to the ground and stay
 	"collapse":  { "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 10.0 },
+	# Day's work done: two hops with both arms thrown up
+	"cheer":     { "cycle": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "loop": false, "fps": 10.0 },
 }
 
 ## Map a 3D velocity vector to a facing using the isometric camera axes.

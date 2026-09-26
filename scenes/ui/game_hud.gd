@@ -7,6 +7,18 @@ signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDi
 
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 const BANNER_HOLD   := 3.2
+# Dusk tally: waits for the cheer and slow-mo to land, then counts the day up
+const TALLY_DELAY   := 0.6
+const TALLY_HOLD    := 5.6
+const TALLY_COUNT   := 0.55    # seconds each number takes to count up
+const TALLY_STEP    := 0.3     # between one number starting and the next
+const BANNER_PAD    := 28.0    # space above and below the banner text
+const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
+const TALLY_H       := 118.0   # …plus the numbers row…
+const CREW_H        := 40.0    # …plus one line per worker's share (multiplayer)
+const MARKS_H       := 64.0    # …plus the section's marks on its last day
+const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
+const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
 const ROMAN         := ["I", "II", "III", "IV"]
 const WIN_VERSE     := "“So the wall was completed on the 25th day of Elul, in 52 days.”"
@@ -18,7 +30,7 @@ const CONTROLS := [
 	["interact", "Pick up · deliver · build"],
 	["drop", "Drop"],
 	["dash", "Dash"],
-	["throw", "Sling — release to throw"],
+	["throw", "Sling — charge, then throw"],
 	["pause", "Menu"],
 ]
 
@@ -50,6 +62,10 @@ var _controls: Control
 var _controls_tween: Tween
 var _pause_begin: Button     # host, while gathering: start from the menu (gamepad path)
 var _gather_hint: Label
+var _pad_lost_note: Label   # pause menu line shown after the pad in use disconnects
+var _tally: VBoxContainer
+var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
+var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 
 func _ready() -> void:
 	_build_player_cards()
@@ -78,6 +94,14 @@ func _ready() -> void:
 	GameState.crew_changed.connect(_on_crew_changed)
 	_on_crew_changed(GameState.crew_size)
 	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
+	_pad_lost_note = Label.new()
+	_pad_lost_note.theme_type_variation = &"Caption"
+	_pad_lost_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pad_lost_note.text = "Controller disconnected — reconnect it to carry on"
+	_pad_lost_note.visible = false
+	$Root/PauseMenu/Center/Modal/VBox.add_child(_pad_lost_note)
+	$Root/PauseMenu/Center/Modal/VBox.move_child(_pad_lost_note, 0)
+	InputMode.pad_lost.connect(_on_pad_lost)
 
 	GameState.day_changed.connect(refresh_day)
 	GameState.phase_changed.connect(_on_phase_changed)
@@ -88,19 +112,39 @@ func _ready() -> void:
 	_on_phase_changed(GameState.phase)
 
 func _unhandled_input(event: InputEvent) -> void:
+	# B / Esc backs out of the menu, like every other screen
+	var back := event.is_action_pressed("ui_cancel") and not event.is_action_pressed("pause")
+	if back and pause_menu.visible and not settings.visible:
+		get_viewport().set_input_as_handled()
+		_close_pause()
+		return
 	if not event.is_action_pressed("pause") or end_screen.visible or GameState.phase == GameState.Phase.STORY:
 		return
 	get_viewport().set_input_as_handled()
 	if pause_menu.visible:
 		_close_pause()
 	else:
-		pause_menu.show()
-		UiFx.fade_in(pause_menu, 0.16)
-		_refresh_controls()
-		_pause_begin.visible = multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER
-		# One primary action at a time
-		$Root/PauseMenu/Center/Modal/VBox/Resume.theme_type_variation = 			$Root/PauseMenu/Center/Modal/VBox/Settings.theme_type_variation if _pause_begin.visible else &"PrimaryButton"
-		(_pause_begin if _pause_begin.visible else $Root/PauseMenu/Center/Modal/VBox/Resume).grab_focus()
+		_open_pause()
+
+func _open_pause() -> void:
+	if pause_menu.visible:
+		return
+	pause_menu.show()
+	InputMode.set_menu_open(true)
+	UiFx.fade_in(pause_menu, 0.16)
+	_refresh_controls()
+	_pause_begin.visible = multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER
+	# One primary action at a time
+	$Root/PauseMenu/Center/Modal/VBox/Resume.theme_type_variation = 			$Root/PauseMenu/Center/Modal/VBox/Settings.theme_type_variation if _pause_begin.visible else &"PrimaryButton"
+	(_pause_begin if _pause_begin.visible else $Root/PauseMenu/Center/Modal/VBox/Resume).grab_focus()
+
+# Pad unplugged mid-game: bring the menu up (online play can't freeze, but the player
+# at least stops acting on ghost input) and say what happened
+func _on_pad_lost() -> void:
+	if end_screen.visible or GameState.phase == GameState.Phase.STORY:
+		return
+	_open_pause()
+	_pad_lost_note.show()
 
 # Gamepad: Start opens the menu with "Begin the work" on top and focused; the gather
 # panel says so
@@ -129,17 +173,23 @@ func _build_gamepad_begin() -> void:
 	_gather_hint = Label.new()
 	_gather_hint.theme_type_variation = &"Caption"
 	_gather_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_gather_hint.text = "or press %s to begin" % InputMode.PAD["pause"]
 	$Root/GatherPanel/VBox.add_child(_gather_hint)
 	_refresh_gather_hint()
 
 func _refresh_gather_hint() -> void:
 	if _gather_hint != null:
 		_gather_hint.visible = InputMode.using_pad and multiplayer.is_server()
+		_gather_hint.text = "or press %s to begin" % InputMode.key("pause")
 
 func _close_pause() -> void:
 	pause_menu.hide()
+	settings.hide()
+	_pad_lost_note.hide()
+	InputMode.set_menu_open(false)
 	_refresh_controls()
+
+func _exit_tree() -> void:
+	InputMode.set_menu_open(false)
 
 func _leave() -> void:
 	NetworkManager.disconnect_session()
@@ -206,16 +256,24 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 				for twist: String in GameState.new_twists():
 					sub += "\n" + GameState.TWIST_INTRO.get(twist, "")
 			_show_banner("Day %d" % GameState.current_day, sub)
-		GameState.Phase.DUSK:
-			_show_banner("Day %d complete" % GameState.current_day, "Rest, and return at first light.")
 		GameState.Phase.WON:
 			_show_end(true)
 		GameState.Phase.LOST:
 			_show_end(false)
 
-func _show_banner(title: String, sub: String) -> void:
+func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally := false) -> void:
+	if _tally != null:
+		_tally_band.visible = with_tally
 	banner_title.text = title
 	banner_sub.text = sub
+	if _tally != null and not with_tally:
+		_tally.hide()
+	if not with_tally:
+		# Grow the band with the text (a new stretch can bring two twist lines)
+		var content := ($Root/Banner/VBox as Control).get_combined_minimum_size().y
+		banner.offset_bottom = maxf(BANNER_H, banner.offset_top + content + BANNER_PAD * 2.0)
+	banner.anchor_top = TALLY_Y if with_tally else BANNER_Y
+	banner.anchor_bottom = banner.anchor_top
 	if _banner_tween:
 		_banner_tween.kill()
 	banner.show()
@@ -224,7 +282,7 @@ func _show_banner(title: String, sub: String) -> void:
 	_banner_tween = create_tween()
 	_banner_tween.tween_property(banner, "modulate:a", 1.0, 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_banner_tween.tween_property(banner_sub, "modulate:a", 1.0, 0.5)
-	_banner_tween.tween_interval(BANNER_HOLD)
+	_banner_tween.tween_interval(hold)
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_banner_tween.tween_callback(banner.hide)
 
@@ -250,10 +308,142 @@ func _show_end(won: bool) -> void:
 	stats.add_child(_stat(str(days_done), "Days built"))
 	stats.add_child(_stat("%d / %d" % [sections_done, GameState.SECTIONS.size()], "Sections"))
 	stats.add_child(_stat(str(GameState.breaches), "Breaches"))
+	if sections_done > 0:
+		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
 	end_screen.show()
 	UiFx.fade_in(end_screen, 0.9)
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
 	vb.get_node("Buttons/MenuButton").grab_focus()
+
+# ── Dusk tally ─────────────────────────────────────────────
+
+## The day's numbers (DayDirector.day_tallied): what the crew did, then who did what
+func show_tally(stats: Dictionary) -> void:
+	await get_tree().create_timer(TALLY_DELAY, true, false, true).timeout
+	if GameState.phase != GameState.Phase.DUSK:
+		return
+	if _tally == null:
+		_tally = VBoxContainer.new()
+		_tally.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tally.add_theme_constant_override("separation", 10)
+		$Root/Banner/VBox.add_child(_tally)
+		_tally_band = $Root/Banner/Band.duplicate()
+		$Root/Banner.add_child(_tally_band)
+		$Root/Banner.move_child(_tally_band, 1)
+	for c in _tally.get_children():
+		c.queue_free()
+
+	var day := GameState.current_day
+	var pos := GameState.day_in_section(day)
+	var section := GameState.get_current_section()
+	var title := "Day %d complete" % day
+	var sub := "Not one enemy got through." if stats["breaches"] == 0 		else "%d slipped through — but the wall stands." % stats["breaches"]
+	# Last day of a stretch: the whole section is done — say so
+	if pos.x == pos.y - 1:
+		title = "The %s stands" % section["name"]
+		sub = "Section %d of %d complete  ·  %s" % [GameState.current_section_index + 1,
+			GameState.SECTIONS.size(), sub]
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 56)
+	_tally.add_child(row)
+	var secs := int(stats["time"])
+	var counts: Array = [
+		[secs, "Time", func(v: int): return "%d:%02d" % [v / 60, v % 60]],
+		[stats["loads"], "Loads carried", func(v: int): return str(v)],
+		[stats["foes"], "Foes felled", func(v: int): return str(v)],
+	]
+	for i in counts.size():
+		var cell := _stat(counts[i][2].call(0), counts[i][1])
+		row.add_child(cell)
+		_count_up(cell.get_child(0), counts[i][0], counts[i][2], i * TALLY_STEP + 0.5)
+
+	var crew: Array = stats["crew"]
+	if crew.size() > 1:
+		_tally.add_child(_crew_line(crew))
+	var rated := stats.has("marks")
+	if rated:
+		_tally.add_child(_marks_line(stats))
+
+	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0)
+	_tally.show()
+	_show_banner(title, sub, TALLY_HOLD, true)
+	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
+
+# The section's three marks, each with what earned it (or what it needed)
+func _marks_line(stats: Dictionary) -> Control:
+	var mask: int = stats["marks"]
+	var line := HBoxContainer.new()
+	line.alignment = BoxContainer.ALIGNMENT_CENTER
+	line.add_theme_constant_override("separation", 44)
+	var secs := int(stats["section_time"])
+	var par := int(stats["par"])
+	var details := {
+		GameState.Mark.PACE: "%d:%02d of %d:%02d" % [secs / 60, secs % 60, par / 60, par % 60],
+		GameState.Mark.CLEAN: "all through the section" if mask & GameState.Mark.CLEAN 			else "%d got through" % stats["section_breaches"],
+		GameState.Mark.SOUND: "%d%% sound" % roundi(stats["wall"] * 100.0),
+	}
+	for m: int in GameState.MARKS:
+		var earned := bool(mask & m)
+		var chip := HBoxContainer.new()
+		chip.add_theme_constant_override("separation", 10)
+		var gem := MarkGem.new(earned, 22.0)
+		gem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		chip.add_child(gem)
+		var text := VBoxContainer.new()
+		text.add_theme_constant_override("separation", -2)
+		text.add_child(_crew_label(GameState.MARK_NAMES[m], UiStyle.GOLD if earned else Color(UiStyle.CREAM, 0.5)))
+		var detail := _crew_label(details[m], Color(UiStyle.PARCHMENT_DEEP, 0.85 if earned else 0.5))
+		detail.add_theme_font_size_override("font_size", 15)
+		text.add_child(detail)
+		chip.add_child(text)
+		line.add_child(chip)
+	return line
+
+# Each worker's share, in their colour; the day's best carrier and best shot in gold
+func _crew_line(crew: Array) -> Control:
+	var line := HBoxContainer.new()
+	line.alignment = BoxContainer.ALIGNMENT_CENTER
+	line.add_theme_constant_override("separation", 30)
+	var top_loads: int = crew.map(func(r): return r[1]).max()
+	var top_foes: int = crew.map(func(r): return r[2]).max()
+	for slot in crew.size():
+		var r: Array = crew[slot]
+		var chip := HBoxContainer.new()
+		chip.add_theme_constant_override("separation", 8)
+		var swatch := ColorRect.new()
+		swatch.custom_minimum_size = Vector2(12, 12)
+		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		swatch.color = _slot_colors[slot % _slot_colors.size()]
+		chip.add_child(swatch)
+		var who := "You" if r[0] == multiplayer.get_unique_id() else "Builder %s" % ROMAN[slot % ROMAN.size()]
+		chip.add_child(_crew_label(who, UiStyle.CREAM))
+		chip.add_child(_crew_label("%d loads" % r[1], UiStyle.GOLD if r[1] > 0 and r[1] == top_loads else UiStyle.PARCHMENT_DEEP))
+		chip.add_child(_crew_label("·", UiStyle.PARCHMENT_DEEP))
+		chip.add_child(_crew_label("%d foes" % r[2], UiStyle.GOLD if r[2] > 0 and r[2] == top_foes else UiStyle.PARCHMENT_DEEP))
+		line.add_child(chip)
+	return line
+
+func _crew_label(text: String, color: Color) -> Label:
+	var l := Label.new()
+	l.theme_type_variation = &"Body"
+	l.text = text
+	l.add_theme_color_override("font_color", color)
+	return l
+
+# Tick the number up from zero with a tap per step, then a pop when it lands
+func _count_up(label: Label, target: int, fmt: Callable, delay: float) -> void:
+	var tw := create_tween()
+	tw.tween_interval(delay)
+	tw.tween_callback(Sfx.play.bind("tally"))
+	tw.tween_method(func(v: float): label.text = fmt.call(int(v)), 0.0, float(target), TALLY_COUNT) 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func():
+		label.text = fmt.call(target)
+		label.pivot_offset = label.size * 0.5
+		label.scale = Vector2.ONE * 1.18
+		Sfx.play("tally_land"))
+	tw.tween_property(label, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _stat(value: String, caption: String) -> Control:
 	var v := VBoxContainer.new()
@@ -301,6 +491,7 @@ func set_player_downed(slot: int, downed: bool) -> void:
 func set_player_color(slot: int, color: Color) -> void:
 	if slot >= _cards.size():
 		return
+	_slot_colors[slot] = color
 	(_cards[slot].swatch as ColorRect).color = color
 	# Player-colour spine down the card's left edge — matches the robe and ground ring
 	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat

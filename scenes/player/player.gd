@@ -74,6 +74,12 @@ const SLING_STONE := preload("res://scenes/sling_stone/sling_stone.tscn")
 const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const MAX_DROPPED  := 40      # oldest ground item vanishes past this
 const DROP_JITTER  := 0.25    # so repeated drops don't stack on one spot
+# Dropping a load beside an empty-handed teammate puts it in their hands instead (the
+# long haul at the Dung Gate is a chain of these)
+const HANDOFF_REACH := 2.2
+# Led off by an Ono messenger ("schemes" twist): walk behind him, no control
+const LED_FOLLOW    := 1.3
+const LED_SPEED     := 3.4
 const MARKER_SHADER := preload("res://assets/shaders/ground_marker.gdshader")
 
 # Replicated animation name — owner writes, every peer plays it
@@ -113,6 +119,9 @@ var _buffered := {}   # action → seconds left to act on an early press
 var _work_site: Node3D
 var building_site: Node3D
 var _move_dir := Vector3.ZERO   # last non-zero move input (pad aim falls back to it)
+var _led_by: Node3D             # owner: the messenger we're following to Ono
+var _led_time := 0.0
+var _led_server := false        # server: this worker went with a messenger
 
 # Replicated: the sling is being whirled (owner writes, every peer shows it)
 var whirling := false:
@@ -143,6 +152,7 @@ func _ready() -> void:
 	add_child(_hp_bar)
 	_build_pip()
 	GameState.crew_changed.connect(func(_n): _refresh_pip())
+	GameState.phase_changed.connect(_on_phase_changed)
 
 func _process(delta: float) -> void:
 	_update_beam()
@@ -216,6 +226,9 @@ func _physics_process(delta: float) -> void:
 		_dash_time = 0.0
 		_cancel_charge()
 		return
+	if _led_by != null:
+		_follow_leader(delta)
+		return
 	if _work_site != null:
 		if _wants_to_stop_work():
 			_stop_work()
@@ -239,6 +252,9 @@ static func screen_to_ground(v: Vector2) -> Vector3:
 
 # Remember presses for a moment, so one made during a pickup / throw animation still counts
 func _buffer_input(delta: float) -> void:
+	if InputMode.gameplay_blocked():
+		_buffered.clear()
+		return
 	for action: String in ["interact", "drop", "dash"]:
 		if Input.is_action_just_pressed(action):
 			_buffered[action] = INPUT_BUFFER
@@ -250,8 +266,17 @@ func _buffer_input(delta: float) -> void:
 func _consume(action: String) -> bool:
 	return _buffered.erase(action)
 
+# Stick / keys, zero while a menu is up (the pad is navigating it, not walking)
+func _move_input() -> Vector2:
+	if InputMode.gameplay_blocked():
+		return Vector2.ZERO
+	return Input.get_vector("move_west", "move_east", "move_north", "move_south", STICK_DEADZONE)
+
+func _throw_just_pressed() -> bool:
+	return Input.is_action_just_pressed("throw_charge") and not InputMode.gameplay_blocked()
+
 func _handle_movement(delta: float) -> void:
-	var dir := screen_to_ground(Input.get_vector("move_west", "move_east", "move_north", "move_south", STICK_DEADZONE))
+	var dir := screen_to_ground(_move_input())
 	if dir != Vector3.ZERO:
 		_move_dir = dir.normalized()
 	var on_beam := carried_kind == "beam" or helping_id != 0
@@ -411,6 +436,9 @@ func _focus_target(at: Vector3) -> Node3D:
 	if carrier != null:
 		return carrier
 	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
+	var messenger := _messenger_first(at, site)
+	if messenger != null:
+		return messenger
 	if site != null:
 		return site
 	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
@@ -418,6 +446,19 @@ func _focus_target(at: Vector3) -> Node3D:
 	if item != null and (pile == null or _reach_dist(item, at) <= _reach_dist(pile, at)):
 		return item
 	return pile
+
+## An Ono messenger standing closer than anything else [E] could use (empty hands only).
+## He waits right beside you, so a careless press goes with him — that's the trap.
+func _messenger_first(at: Vector3, site: Node3D) -> Node3D:
+	var m := _nearest_in_reach("messengers", at, func(_m): return true)
+	if m == null:
+		return null
+	var d := _reach_dist(m, at)
+	for other: Node3D in [site, _nearest_in_reach("dropped_items", at, func(_i): return true),
+			_nearest_in_reach("supply_piles", at, func(_p): return true)]:
+		if other != null and _reach_dist(other, at) < d:
+			return null
+	return m
 
 func _update_focus(delta: float) -> void:
 	_focus_poll -= delta
@@ -535,6 +576,7 @@ func _server_interact(at: Vector3) -> void:
 	if not carried_kind.is_empty():
 		var dest := _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
 		if dest != null and dest.deposit(carried_kind, 1):
+			get_tree().call_group("day_director", "note_load", get_multiplayer_authority())
 			_sfx.rpc("deposit_" + carried_kind)
 			_set_carried.rpc("")
 			if dest.can_build():
@@ -552,6 +594,10 @@ func _server_interact(at: Vector3) -> void:
 		return
 	# Everything delivered, waiting for hands
 	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
+	var messenger := _messenger_first(at, site)
+	if messenger != null:
+		messenger.accept(self)
+		return
 	if site != null:
 		if GameState.active_build:
 			_start_work(site)
@@ -590,7 +636,34 @@ func _server_drop(at: Vector3) -> void:
 	if helping_id != 0:
 		_set_helping.rpc(0)
 	elif not carried_kind.is_empty():
-		_drop_carried(at)
+		var mate := _free_hands_near(at)
+		if mate != null:
+			_hand_over(mate)
+		else:
+			_drop_carried(at)
+
+# Server: the nearest teammate who could take our load straight from our hands
+func _free_hands_near(at: Vector3) -> Node3D:
+	if carried_kind == "beam":
+		return null   # beams are shared by taking the other end, not passed
+	var best: Node3D = null
+	var best_d := HANDOFF_REACH
+	for p in get_tree().get_nodes_in_group("players"):
+		if p == self or p.downed or not p.carried_kind.is_empty() or p.helping_id != 0 				or p.building_site != null or p.is_led():
+			continue
+		var d := at.distance_to(p.global_position)
+		if d < best_d:
+			best_d = d
+			best = p
+	return best
+
+func _hand_over(mate: Node3D) -> void:
+	var kind := carried_kind
+	_set_carried.rpc("")
+	mate._set_carried.rpc(kind)
+	_sfx.rpc("pickup")
+	_action.rpc("halfslash")
+	mate._tell("Caught it")
 
 # Server: put the load on the ground where it stays until someone picks it up
 func _drop_carried(at: Vector3) -> void:
@@ -637,14 +710,18 @@ func _sfx(event: String) -> void:
 func _handle_attack(delta: float) -> void:
 	if not _charging:
 		# A click on HUD buttons / the Esc menu isn't a throw
-		if Input.is_action_just_pressed("throw_charge") and _sling_cd <= 0.0 and get_viewport().gui_get_hovered_control() == null:
+		if _throw_just_pressed() and _sling_cd <= 0.0 and get_viewport().gui_get_hovered_control() == null:
 			_charging = true
 			_charge = 0.0
 			whirling = true
 		return
+	if InputMode.gameplay_blocked():
+		_cancel_charge()   # opened the menu mid wind-up
+		return
 	_charge = minf(1.0, _charge + delta / SLING_CHARGE_TIME)
 	_update_aim(_pad_aim_point() if InputMode.using_pad else _cursor_on_ground())
-	if not Input.is_action_pressed("throw_charge"):
+	# Toggle mode (accessibility): a second press throws; otherwise letting go does
+	if (_throw_just_pressed() if Settings.toggle_charge else not Input.is_action_pressed("throw_charge")):
 		release_throw()
 
 # Right stick picks the direction; left alone, the throw goes the way we're walking /
@@ -772,7 +849,24 @@ func _throw_stone(target_path: NodePath, land: Vector3, damage: float) -> void:
 	var stone := SLING_STONE.instantiate()
 	get_tree().current_scene.add_child(stone)
 	stone.global_position = global_position + Vector3(0, SLING_RELEASE_Y, 0)
+	stone.shooter = get_multiplayer_authority()
 	stone.init(target, land, damage)
+
+# Owner: the day's work is done — throw both arms up. A beat late, so the server's
+# revive / down-tools messages (sent alongside the phase) land first.
+func _on_phase_changed(phase: GameState.Phase) -> void:
+	if phase != GameState.Phase.DUSK or not is_multiplayer_authority():
+		return
+	await get_tree().create_timer(0.25).timeout
+	if not is_instance_valid(self) or downed or GameState.phase != GameState.Phase.DUSK:
+		return
+	_cancel_charge()
+	if _work_site != null:
+		_stop_work()
+	_facing = "down"   # toward the camera
+	_play_action("cheer")
+	_sprite.squash(Vector2(0.9, 1.12))
+	InputMode.rumble(0.3, 0.2, 0.12)
 
 # ── Damage / Downed (server) ───────────────────────────────
 
@@ -874,9 +968,8 @@ func _set_working(site_path: NodePath) -> void:
 # Owner: walking off, dashing, dropping or reaching for the sling ends the work
 func _wants_to_stop_work() -> bool:
 	_consume("interact")   # already working — a repeat press does nothing
-	var move := Input.get_vector("move_west", "move_east", "move_north", "move_south", STICK_DEADZONE)
-	return move.length() > 0.35 or _buffered.has("dash") or _buffered.has("drop") \
-		or Input.is_action_just_pressed("throw_charge") or _is_busy
+	return _move_input().length() > 0.35 or _buffered.has("dash") or _buffered.has("drop") \
+		or _throw_just_pressed() or _is_busy
 
 func _stop_work() -> void:
 	_work_site = null
@@ -893,6 +986,58 @@ func _on_strike() -> void:
 	DustFx.puff(self, Vector3(at.x, 0.9, at.z), 5, 0.35)
 	if is_multiplayer_authority():
 		InputMode.rumble(0.15, 0.0, 0.05)
+
+# ── Led off to Ono ("schemes" twist) ────────────────────────
+
+func is_led() -> bool:
+	return _led_server
+
+## Server: a messenger leads this worker away for `seconds`
+func lead_away(messenger: Node3D, seconds: float) -> void:
+	_led_server = true
+	if building_site != null:
+		building_site.work().remove_builder(self)
+		stop_building_from_server()
+	_set_led.rpc_id(get_multiplayer_authority(), messenger.get_path(), seconds)
+
+## Server: the messenger let go (time up, or the day ended)
+func release_from_lead() -> void:
+	if not _led_server:
+		return
+	_led_server = false
+	_set_led.rpc_id(get_multiplayer_authority(), NodePath(), 0.0)
+
+@rpc("any_peer", "call_local", "reliable")
+func _set_led(path: NodePath, seconds: float) -> void:
+	if multiplayer.get_remote_sender_id() != 1 or not is_multiplayer_authority():
+		return
+	var was_led := _led_by != null
+	_led_by = get_node_or_null(path) as Node3D if not path.is_empty() else null
+	_led_time = seconds
+	_cancel_charge()
+	_dash_time = 0.0
+	if _led_by != null:
+		_toast("Going down to Ono…")
+	elif was_led:
+		_toast("Why should the work stop? Back to the wall!")
+		anim = "idle_" + _facing
+
+# Owner: walk behind the messenger; no input until he lets go
+func _follow_leader(delta: float) -> void:
+	_led_time -= delta
+	if not is_instance_valid(_led_by) or _led_time <= -1.0:
+		_led_by = null   # the server's release is on its way; don't wait on it
+		return
+	var to := _led_by.global_position - global_position
+	to.y = 0.0
+	var target := Vector3.ZERO
+	if to.length() > LED_FOLLOW:
+		target = to.normalized() * LED_SPEED
+	velocity = velocity.move_toward(target, ACCEL * delta)
+	move_and_slide()
+	global_position.x = clampf(global_position.x, PLAY_AREA.position.x, PLAY_AREA.end.x)
+	global_position.z = clampf(global_position.z, PLAY_AREA.position.y, PLAY_AREA.end.y)
+	_update_anim()
 
 # ── Late join (server → one peer) ──────────────────────────
 

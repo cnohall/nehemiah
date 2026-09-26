@@ -567,6 +567,14 @@ static func _stone_material() -> StandardMaterial3D:
 		_stone_mat.roughness = 0.92
 	return _stone_mat
 
+## Every peer, at dusk: today's finished wall takes a bow
+func celebrate() -> void:
+	if stage == Stage.EMPTY:
+		return
+	_bounce()
+	_dust_puff()
+	Sfx.play("build", global_position + _center)
+
 # Stage raised: pop up from slightly squashed, cartoon-style
 func _bounce() -> void:
 	if _juice_tween:

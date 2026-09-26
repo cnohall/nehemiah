@@ -10,6 +10,8 @@ extends RefCounted
 #   art   — texture path; until it exists the drawn backdrop stands in
 #   sky   — "night" | "dawn" | "day" | "dusk"   (drawn backdrop)
 #   built — 0–1, how much of the wall stands     (drawn backdrop)
+#   map   — section index: the circuit map instead of a backdrop (CircuitMap), sections
+#           before it standing; "inspect": true for the night ride, every stretch broken
 #
 # Scripture: NWT (2013 revision). TODO: check every `verse` against jw.org before release.
 
@@ -43,7 +45,7 @@ const BEATS := {
 		  "ref": "Nehemiah 2:4-8", "sky": "day", "built": 0.0 },
 		{ "eyebrow": "Jerusalem · By night", "title": "The inspection",
 		  "text": "Telling no one, he rides out in the dark and inspects the broken walls and the burned gates.",
-		  "ref": "Nehemiah 2:12-15", "sky": "night", "built": 0.0 },
+		  "ref": "Nehemiah 2:12-15", "map": 0, "inspect": true },
 		{ "eyebrow": "Jerusalem · 445 B.C.E.", "title": "Let us build",
 		  "text": "He tells the people how the hand of his God has been with him.",
 		  "verse": "“Let us get up and build.”",
@@ -92,8 +94,7 @@ static func slides_for_day(day: int) -> Array:
 		"title": section["name"],
 		"text": SECTION_LINES[i],
 		"ref": "Nehemiah %s" % section["ref"].trim_prefix("Neh. "),
-		"sky": "dawn",
-		"built": i / float(GameState.SECTIONS.size()),
+		"map": i,
 	})
 	return slides
 
