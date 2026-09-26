@@ -5,9 +5,9 @@ extends SceneTree
 # (not headless — it needs the GPU). Re-run whenever the world art changes.
 
 const OUT        := "res://assets/ui/menu_bg.jpg"
-const FOCUS      := Vector3(-12.0, 0.0, 3.0)   # gate lands right of centre, title sits over open ground
+const FOCUS      := Vector3(-7.0, 0.0, 5.5)    # crew and gate land right of centre, title sits over open ground
 const CAM_OFFSET := Vector3(20.0, 20.0, 20.0)
-const CAM_SIZE   := 30.0
+const CAM_SIZE   := 17.0
 const SETTLE     := 3.0                         # seconds for dust puffs / shadows to settle
 
 var _frame := 0
@@ -45,8 +45,31 @@ func _stage_scene() -> void:
 		w.is_target = false
 		w.stage = w.Stage.MORTARED
 		w.set_process(false)
-	for l in _main.find_children("*", "Label3D", true, false):
-		l.hide()
+	var tags := root.get_node_or_null("WorldTags")
+	if tags:
+		tags.hide()
+	_pose_crew()
 	var cam: Camera3D = _main.get_node("Camera3D")
 	cam.size = CAM_SIZE
 	cam.global_position = FOCUS + CAM_OFFSET
+
+# The four trades at work by the gate, so the title shows who you'll play
+func _pose_crew() -> void:
+	var proto: PackedScene = load("res://scenes/player/player.tscn")
+	var poses := [
+		[Vector3(-0.6, 0.1, 1.45), "build_up", ""],
+		[Vector3(2.8, 0.1, 5.2), "walk_down", "water"],
+		[Vector3(-2.6, 0.1, 5.4), "walk_right", "wood"],
+		[Vector3(2.4, 0.1, 2.0), "idle_down", ""],
+	]
+	for i in poses.size():
+		var p := proto.instantiate()
+		p.name = str(200 + i)
+		p.set_multiplayer_authority(1)
+		_main.get_node("Players").add_child(p)
+		p.set_physics_process(false)
+		p.global_position = poses[i][0]
+		p.set_slot(i, _main.PLAYER_COLORS[i])
+		p.carried_kind = poses[i][2]
+		p._rebuild_carry_prop()
+		p.anim = poses[i][1]

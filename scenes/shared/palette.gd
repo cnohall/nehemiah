@@ -24,9 +24,18 @@ const PLASTER := [Color(0.86, 0.80, 0.69), Color(0.82, 0.74, 0.61), Color(0.78, 
 # Doors: weathered blue-green (the Levant favourite), faded indigo, bare cedar
 const DOORS := [Color(0.24, 0.38, 0.38), Color(0.26, 0.29, 0.40), Color(0.40, 0.28, 0.17),
 	Color(0.33, 0.37, 0.26)]
-const PAVING    := Color(0.77, 0.71, 0.59)
-const LIMESTONE := Color(0.78, 0.71, 0.58)
+const PAVING    := Color(0.80, 0.76, 0.68)
+const LIMESTONE := Color(0.78, 0.75, 0.68)
+# Dressed wall stone: cool grey-lavender limestone, the one cool mass in a warm scene,
+# so the wall leads. Per-block value jitter does the rest.
+const WALL_STONE := Color(0.76, 0.75, 0.79)
+# The dark behind the joints — rough courses read as separate stones
+const STONE_JOINT := Color(0.30, 0.28, 0.31)
+# Foliage: olive and fig kept a touch fresher than dry scrub so trees read as life
+const LEAF := Color(0.40, 0.56, 0.24)
 
 # ── Crew (player slots) — strong enough to pick out at a glance, still dyes ──
-const CREW := [Color(0.88, 0.64, 0.24), Color(0.50, 0.64, 0.28), Color(0.80, 0.36, 0.24),
-	Color(0.36, 0.50, 0.74)]
+# One per trade (CharacterRig.worker_look): builder indigo, water carrier madder,
+# carpenter weld green, supervisor saffron
+const CREW := [Color(0.24, 0.42, 0.80), Color(0.80, 0.28, 0.20), Color(0.46, 0.62, 0.26),
+	Color(0.90, 0.66, 0.22)]

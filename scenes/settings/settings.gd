@@ -42,6 +42,19 @@ func _ready() -> void:
 			AudioServer.set_bus_send(bus, "Master")
 	apply()
 	_booted = true
+	get_tree().root.size_changed.connect(_fit_ui)
+	_fit_ui()
+
+# canvas_items stretch shrinks the UI with the window: at 1280×800 (Steam Deck) body
+# text came out ~11 px. Below ~0.85 of the 1080p layout, scale the 2D back up so text
+# stays readable; the 3D view is unaffected.
+const UI_MIN_SCALE := 0.85
+const UI_MAX_BOOST := 1.35
+
+func _fit_ui() -> void:
+	var win := get_tree().root
+	var s := minf(win.size.x / 1920.0, win.size.y / 1080.0)
+	win.content_scale_factor = clampf(UI_MIN_SCALE / s, 1.0, UI_MAX_BOOST) if s > 0.0 else 1.0
 
 func apply() -> void:
 	# Embedded/headless runs have no real window to resize

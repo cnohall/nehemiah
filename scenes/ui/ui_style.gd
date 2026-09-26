@@ -43,20 +43,7 @@ static func tracked(base: Font, spacing: int) -> FontVariation:
 
 const WORLD_FONT := preload("res://assets/fonts/Spectral/Spectral-Bold.ttf")
 
-## Floating in-world text (site needs, pile names, toasts): bold cream on a heavy ink
-## rim, rasterised at 2x so glyphs stay crisp at gameplay zoom. `size` is the old
-## 1x font size; the result is ~20% larger on screen.
-static func world_label(l: Label3D, size := 40) -> Label3D:
-	l.font = WORLD_FONT
-	l.font_size = size * 2
-	l.pixel_size = 0.006
-	l.outline_size = 44
-	l.modulate = Color.WHITE   # tonemapping greys cream down; white lands on cream
-	l.outline_modulate = DUSK
-	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	l.no_depth_test = true
-	l.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	return l
+## World tags (WorldTag) — bold Spectral for counts
 
 # ── Stylebox helpers ───────────────────────────────────────
 
@@ -88,6 +75,23 @@ static func shadowed(s: StyleBoxFlat, size: int, alpha: float, offset_y := 3.0) 
 static func plaque(pad := Vector2(22, 14), alpha := 0.94) -> StyleBoxFlat:
 	var s := bordered(box(Color(PARCHMENT, alpha), pad, 3), Color(RULE, 0.55), 1, 3)
 	return shadowed(s, 10, 0.22)
+
+## Inlaid frame drawn over a plaque's paper, under its content: a hairline rule a few
+## px inside the edge, a small gold stud at each corner and one centred on the top.
+## Call once per panel; redraws with it.
+static func ornament(panel: Control, inset := 5.0, accent := GOLD) -> void:
+	panel.draw.connect(func():
+		var r := Rect2(Vector2.ONE * inset, panel.size - Vector2.ONE * inset * 2.0)
+		panel.draw_rect(r, Color(RULE, 0.5), false, 1.0)
+		for c: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
+			_stud(panel, c, 3.5, accent)
+		_stud(panel, Vector2(r.get_center().x, r.position.y), 4.5, accent))
+
+static func _stud(ci: CanvasItem, c: Vector2, s: float, color: Color) -> void:
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0)]),
+		Color(PARCHMENT, 1.0))
+	var inner := s - 1.2
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -inner), c + Vector2(inner, 0), c + Vector2(0, inner), c + Vector2(-inner, 0)]), color)
 
 static func theme_card() -> StyleBoxFlat:
 	return plaque(Vector2(14, 10), 0.92)
@@ -125,7 +129,7 @@ static func _labels(t: Theme) -> void:
 	_label(t, "Heading",  tracked(CINZEL_BOLD, 3),   30,  INK)
 	_label(t, "Numeral",  CINZEL_BOLD,               34,  INK)
 	_label(t, "Eyebrow",  tracked(CINZEL_BOLD, 3),   15,  INK_SOFT)
-	_label(t, "Caption",  SPECTRAL_ITALIC,           16,  INK_SOFT)
+	_label(t, "Caption",  SPECTRAL_ITALIC,           17,  INK_SOFT.darkened(0.22))   # italic runs thin: a notch darker
 	_label(t, "Body",     SPECTRAL,                  17,  INK_SOFT)
 	_label(t, "Verse",    SPECTRAL_ITALIC,           17,  INK_SOFT)
 

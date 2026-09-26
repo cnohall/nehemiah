@@ -1,7 +1,7 @@
 extends SceneTree
 
 # UI screenshots: title menu, then the in-game gather phase, pause menu and a working day.
-#   Godot --path . --script res://tools/ui_shots.gd -- --nostory <out_dir> [--pad]
+#   Godot --path . --script res://tools/ui_shots.gd -- --nostory <out_dir> [--pad] [--size=WxH]
 # `--pad` pretends a gamepad is in use (button labels, focus rings).
 
 var _out := ""
@@ -27,12 +27,16 @@ const STEPS := [
 ]
 
 func _initialize() -> void:
+	var res := Vector2i(1920, 1080)
 	for a in OS.get_cmdline_user_args():
 		if a == "--pad":
 			_pad = true
+		elif a.begins_with("--size="):
+			var wh := a.trim_prefix("--size=").split("x")
+			res = Vector2i(int(wh[0]), int(wh[1]))
 		elif not a.begins_with("--"):
 			_out = a
-	root.size = Vector2i(1920, 1080)
+	root.size = res
 	var menu: Node = load("res://scenes/ui/main_menu.tscn").instantiate()
 	root.add_child(menu)
 	current_scene = menu

@@ -36,6 +36,7 @@ const REVIVE_HEALTH   := 0.5
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 # Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
 const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
+const CARRY_FRONT_SCALE := 0.8   # a load hugged at the chest reads a little smaller than overhead
 const CARRY_HEIGHT    := 2.4      # just above the head of the ~2.2 m chibi figure
 const CARRY_SCALE     := 1.35     # loads read bigger overhead than on the ground (Overcooked)
 const PIP_Y           := 3.2      # player-colour marker above the head (multiplayer)
@@ -70,7 +71,7 @@ const PAD_ASSIST_DEG  := 35.0
 const SCREEN_RIGHT := Vector3(1, 0, -1) * 0.70710678
 const SCREEN_DOWN  := Vector3(1, 0, 1) * 0.70710678
 
-const _DEFAULT_ROBE := Color(0.93, 0.66, 0.22)   # until Main assigns a slot
+const _DEFAULT_ROBE := Palette.CREW[0]   # until Main assigns a slot
 const SLING_STONE := preload("res://scenes/sling_stone/sling_stone.tscn")
 const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const MAX_DROPPED  := 40      # oldest ground item vanishes past this
@@ -101,6 +102,7 @@ var _is_busy := false
 var _sling_cd := 0.0
 var _down_timer := 0.0
 var _carry_prop: Node3D
+var _carry_front: Node3D   # the load at the chest, parented to the rig's carry anchor
 var _charging := false
 var _charge := 0.0
 var _aim_point := Vector3.ZERO
@@ -165,7 +167,7 @@ func _process(delta: float) -> void:
 	if carried_kind == "beam" or helping_id != 0:
 		_sprite.hold = "beam"
 	else:
-		_sprite.hold = "" if carried_kind.is_empty() else "overhead"
+		_sprite.hold = "" if carried_kind.is_empty() else "front"
 	if whirling:
 		_update_whirl(delta)
 	if downed:
@@ -186,6 +188,7 @@ func set_slot(slot: int, c: Color) -> void:
 	_sprite.set_look(CharacterRig.worker_look(slot, c))
 	_sprite.set_ring_color(c)
 	_refresh_pip()
+	_rebuild_carry_prop()   # a new rig means a new chest anchor
 
 # Small diamond in the player's colour over the head — who's who in a busy crew.
 # Only with company; pulses while downed so teammates see who needs help.
@@ -489,13 +492,15 @@ func _update_focus(delta: float) -> void:
 	# Walls are long — ring the spot on the wall nearest us, not its centre
 	var spot := target.global_position
 	var size := 1.5
+	var lift := 0.05
 	if target.has_method("approach_point"):
 		spot = target.approach_point(global_position, 0.0)
 	elif target.is_in_group("supply_piles"):
 		size = 2.6
+		lift = 0.1   # over the pile's flagstone pad
 	elif target.is_in_group("dropped_items"):
 		size = 1.1
-	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + 0.05, spot.z)
+	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + lift, spot.z)
 	_focus_ring.mesh.size = Vector2(size, size)
 
 func _build_focus_ring() -> void:
@@ -627,9 +632,12 @@ func _why_not_needed(at: Vector3) -> String:
 			return "Hands full — deliver it, or {drop} to drop"
 		return "Bring it to a wall"
 	var need: String = wall.next_need()
-	if need.is_empty():
-		return "This wall is finished"
-	return "Needs %s first" % need
+	if not need.is_empty():
+		return "Needs %s first" % need
+	if wall.can_build():
+		# Every load for this stage is in; it only wants working before the next material
+		return "Build this stage first — {drop} to drop, then {interact} to work"
+	return "This wall is finished"
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_drop(at: Vector3) -> void:
@@ -1088,10 +1096,9 @@ func _feedback(text: String) -> void:
 
 # Short floating line above the head (local only)
 func _toast(text: String) -> void:
-	var l := Label3D.new()
 	# "{interact}" → "[E]" or "[A]", whichever device this player is using
-	l.text = text.format({ "interact": "[%s]" % InputMode.key("interact"), "drop": "[%s]" % InputMode.key("drop") })
-	UiStyle.world_label(l, 34)
+	var l := WorldTag.make(WorldTag.Kind.TOAST,
+		text.format({ "interact": "[%s]" % InputMode.key("interact"), "drop": "[%s]" % InputMode.key("drop") }))
 	l.position = Vector3(0, HP_BAR_Y + 0.3, 0)
 	add_child(l)
 	var tw := l.create_tween()
@@ -1169,10 +1176,22 @@ func _update_whirl(delta: float) -> void:
 func _rebuild_carry_prop() -> void:
 	for c in _carry_prop.get_children():
 		c.queue_free()
+	if is_instance_valid(_carry_front):
+		_carry_front.queue_free()
+	_carry_front = null
 	if not carried_kind.is_empty() and carried_kind != "beam":
 		var prop := DroppedItem.build_prop(carried_kind)
-		prop.scale = Vector3.ONE * CARRY_SCALE
-		_carry_prop.add_child(prop)
+		# Hugged at the chest (the rig's anchor turns and bobs with the body); the rig is
+		# scaled, so undo that to keep the load its usual size
+		var anchor := _sprite.carry_anchor()
+		if anchor != null:
+			prop.scale = Vector3.ONE * CARRY_SCALE * CARRY_FRONT_SCALE / _sprite.scale.x
+			prop.position = Vector3(0, -0.04, 0)
+			anchor.add_child(prop)
+			_carry_front = prop
+		else:
+			prop.scale = Vector3.ONE * CARRY_SCALE
+			_carry_prop.add_child(prop)
 
 # ── Helpers ────────────────────────────────────────────────
 

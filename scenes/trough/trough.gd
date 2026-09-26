@@ -37,7 +37,7 @@ var _water_layer: MeshInstance3D
 var _paste: MeshInstance3D
 var _paddle: Node3D
 var _bar: HealthBar
-var _label: Label3D
+var _label: WorldTag
 
 func _ready() -> void:
 	_build_visuals()
@@ -171,8 +171,7 @@ func _build_visuals() -> void:
 	_bar = HealthBar.new(0.9, 0.09)
 	_bar.position = Vector3(0, 1.5, 0)
 	add_child(_bar)
-	_label = Label3D.new()
-	UiStyle.world_label(_label, 36)
+	_label = WorldTag.make(WorldTag.Kind.SITE)
 	_label.position = Vector3(0, 1.8, 0)
 	_label.visible = false
 	add_child(_label)

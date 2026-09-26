@@ -38,14 +38,14 @@ var _timer := 0.0
 var _waited := 0.0
 var _facing := "down"
 var _exit := Vector3.ZERO
-var _label: Label3D
+var _label: WorldTag
 
 @onready var _figure: CharacterRig = $Figure
 
 func _ready() -> void:
 	_figure.setup({
 		"skin": Color(0.66, 0.46, 0.32), "robe": ROBE, "trim": ROBE.darkened(0.45),
-		"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.86, 0.78, 0.56),
+		"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.86, 0.78, 0.56), "tool": false,
 		"band": Color(0.80, 0.62, 0.26), "beard": "short", "hair": Color(0.12, 0.09, 0.07),
 		"outline": Color(0.20, 0.12, 0.24),
 	})
@@ -63,9 +63,7 @@ func _ready() -> void:
 	scroll.position = Vector3(0.38, 1.25, 0.25)
 	scroll.rotation.z = PI / 2.4
 	add_child(scroll)
-	_label = Label3D.new()
-	_label.text = "Come down to the plain of Ono"
-	UiStyle.world_label(_label, 30)
+	_label = WorldTag.make(WorldTag.Kind.NOTE, "Come down to the plain of Ono")
 	_label.position.y = 3.0
 	add_child(_label)
 	GameState.phase_changed.connect(_on_phase_changed)

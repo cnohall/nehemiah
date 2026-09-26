@@ -24,16 +24,17 @@ const STEP_FRAMES  := [1, 5]   # footfalls in the 8-frame walk / run cycles
 const STRIKE_FRAME := 4        # downstroke of the build loop
 const TURN_RATE    := 16.0     # rad/s-ish smoothing toward the facing direction
 const BASE_SCALE   := 1.3
+const BEVEL_SCALE  := 1.3      # chamfer as a multiple of each part's authored bevel
 # Building: turn a three-quarter view toward the camera so the mallet arm isn't
 # hidden behind the body when the wall is "up" screen (the usual case)
 const BUILD_TURN   := -0.65
 
 # Rig dimensions (metres, before scale). Feet at y = 0.
-const HIP_Y      := 0.34
-const SHOULDER_Y := 0.92
-const NECK_Y     := 1.0
+const HIP_Y      := 0.36
+const SHOULDER_Y := 0.86
+const NECK_Y     := 0.98
 const HEAD_R     := 0.34
-const ARM_X      := 0.25
+const ARM_X      := 0.4
 
 # Screen directions of the "<anim>_<dir>" suffixes (iso camera looks down -x -z)
 const DIR_VEC := {
@@ -44,11 +45,16 @@ const DIR_VEC := {
 }
 
 const OUTLINE_PLAYER := Color(0.17, 0.11, 0.07)
-const SKIN := [Color(0.74, 0.52, 0.35), Color(0.80, 0.60, 0.42), Color(0.62, 0.42, 0.28), Color(0.55, 0.37, 0.25)]
-const HAIR_DARK := Color(0.20, 0.13, 0.09)
-const HAIR_GREY := Color(0.70, 0.68, 0.64)
-const LINEN     := Color(0.96, 0.92, 0.82)
+const OUTLINE_MIN_PART := 0.07
+const SKIN := [Color(0.86, 0.58, 0.38), Color(0.90, 0.66, 0.46), Color(0.72, 0.48, 0.31), Color(0.64, 0.42, 0.27)]
+const HAIR_DARK := Color(0.30, 0.18, 0.11)
+const HAIR_GREY := Color(0.72, 0.70, 0.66)
+const LINEN     := Color(0.89, 0.83, 0.70)
 const LEATHER   := Color(0.46, 0.30, 0.18)
+const SANDAL    := Color(0.40, 0.25, 0.15)
+const WOOD_LIGHT := Color(0.66, 0.46, 0.27)
+const HAIR_BLACK := Color(0.16, 0.11, 0.08)
+const HAIR_GINGER := Color(0.66, 0.40, 0.18)
 const BAND      := Color(0.24, 0.16, 0.11)
 
 signal footstep
@@ -59,7 +65,8 @@ signal animation_finished
 var animation := ""
 var frame := 0
 var speed_scale := 1.0
-## What the hands hold: "" (free), "overhead" (a load on the head), "beam" (arms forward)
+## What the hands hold: "" (free), "front" (a load hugged to the chest), "overhead"
+## (a load on the head), "beam" (arms forward)
 var hold := ""
 
 var _base := ""          # animation without the direction suffix
@@ -92,6 +99,8 @@ var _leg_r: Node3D
 var _tool: Node3D        # mallet, only while building
 var _spear: Node3D
 var _cape: Node3D
+var _carry_anchor: Node3D   # chest-front point where a carried load rides
+var _belt_tool: Node3D      # the builder's hammer hung at the hip between strokes
 
 static var _meshes: Dictionary = {}
 static var _part_mat: ShaderMaterial
@@ -99,29 +108,48 @@ static var _outlines: Dictionary = {}
 
 # ── Looks ──────────────────────────────────────────────────
 
-## A worker: robe dyed in the player's colour, cream head-wrap; face varies per slot
-## so the crew reads as four people, not one sprite in four tunics.
+const TRADES := ["Builder", "Water carrier", "Carpenter", "Overseer"]
+
+## A worker, one trade per player slot (the crew of Neh. 4 — builders, burden-bearers,
+## craftsmen, and one giving directions). The slot colour is the dye each trade wears:
+##   0 builder     — linen tunic, head-band, basket of stones on the back
+##   1 water carrier — striped scarf, curls, sash and a satchel
+##   2 carpenter   — dyed tunic, leather apron, planks bundled on the back
+##   3 supervisor  — long robe, open vest, head-cloth, a scroll at the belt
 static func worker_look(slot: int, color: Color) -> Dictionary:
-	var faces := [
-		{"beard": "full",  "hair": HAIR_DARK},
-		{"beard": "short", "hair": HAIR_DARK},
-		{"beard": "long",  "hair": HAIR_DARK},
-		{"beard": "full",  "hair": HAIR_GREY},
-	]
-	var f: Dictionary = faces[slot % faces.size()]
-	return {
-		# Dye, not paint: pull the UI colour a little toward undyed wool
-		"skin": SKIN[slot % SKIN.size()], "robe": color.lerp(Color(0.55, 0.44, 0.33), 0.18),
-		"trim": color.darkened(0.4),
-		"sash": LEATHER, "hat": "wrap", "hat_color": LINEN, "band": BAND,
-		"beard": f["beard"], "hair": f["hair"], "outline": OUTLINE_PLAYER,
+	# Dye, not paint: pull the UI colour a little toward undyed wool
+	var dye := color.lerp(Color(0.55, 0.44, 0.33), 0.1)
+	var look := {
+		"robe": LINEN, "trim": LINEN.darkened(0.12), "sash": LEATHER, "band": BAND,
+		"outline": OUTLINE_PLAYER, "no_outline": true, "tool": true, "hat": "band", "hat_color": dye,
 	}
+	match slot % 4:
+		0:
+			look.merge({"skin": SKIN[0], "hair": HAIR_DARK, "beard": "full", "hair_style": "short",
+				"strap": true, "basket": true, "basket_stones": true, "trim": LINEN.darkened(0.1),
+				"tool_always": true}, true)
+		1:
+			look.merge({"skin": SKIN[2], "hair": HAIR_BLACK, "beard": "short", "hair_style": "curly",
+				"hat": "scarf", "hat_color": Color(0.95, 0.92, 0.85), "stripe": dye,
+				"sash": dye, "sash_tails": true, "trim": dye.darkened(0.1), "satchel": LEATHER.lightened(0.05)}, true)
+		2:
+			look.merge({"skin": SKIN[1], "hair": HAIR_GINGER, "beard": "full", "hair_style": "bushy",
+				"tails": false, "robe": dye.lerp(Color(0.55, 0.50, 0.36), 0.35), "trim": dye.darkened(0.3),
+				"hat_color": dye.darkened(0.15), "apron": Color(0.62, 0.44, 0.28), "planks": true,
+				"bracers": true, "brow": HAIR_GINGER.darkened(0.2)}, true)
+		3:
+			look.merge({"skin": SKIN[0], "hair": HAIR_GREY, "beard": "long", "hat": "wrap",
+				"hat_color": Color(0.96, 0.94, 0.89), "band": dye, "robe": Color(0.93, 0.90, 0.83),
+				"vest": dye, "long_robe": true, "scroll": Color(0.90, 0.82, 0.62),
+				"trim": dye.darkened(0.2), "brow": Color(0.62, 0.60, 0.56)}, true)
+	return look
 
 ## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type
 static func enemy_look(kind: String) -> Dictionary:
 	var base := {
 		"skin": Color(0.60, 0.40, 0.27), "trim": Color(0.12, 0.09, 0.08), "hair": Color(0.10, 0.08, 0.07),
 		"band": Color(0.10, 0.08, 0.07), "brows": true, "outline": Color(0.36, 0.07, 0.05),
+		"bare_arms": false,
 	}
 	match kind:
 		"brute":
@@ -154,6 +182,8 @@ func set_look(look: Dictionary) -> void:
 	_tool = null
 	_spear = null
 	_cape = null
+	_carry_anchor = null
+	_belt_tool = null
 	_build(look)
 	_apply_pose()
 
@@ -357,8 +387,17 @@ func _apply_pose() -> void:
 			"beam":
 				al = Vector3(-1.35, 0, 0.1)
 				ar = Vector3(-1.35, 0, -0.1)
+			"front":
+				# Hugging the load to the chest, elbows out
+				var bob := sin(ph) * 0.05 if _base != "idle" else 0.0
+				al = Vector3(-0.95 + bob, 0, -0.45)
+				ar = Vector3(-0.95 - bob, 0, 0.45)
 	if _spear != null and _base in ["idle", "walk"]:
 		ar = Vector3(-0.45, 0, -0.3)   # hand on the shaft
+	# In the swing the hammer head leads forward off the hand
+	_tool_visible()
+	if _tool != null:
+		_tool.rotation.x = -1.35
 	_body.position.y = body_y
 	_body.rotation.x = body_rx
 	_body.scale = Vector3(_squash.x, _squash.y, _squash.x)
@@ -377,6 +416,12 @@ func _apply_pose() -> void:
 func _tool_visible() -> void:
 	if _tool != null:
 		_tool.visible = _base == "build"
+	if _belt_tool != null:
+		_belt_tool.visible = _base != "build"
+
+## Chest-front point a carried load hangs from (follows the body's turn and bob)
+func carry_anchor() -> Node3D:
+	return _carry_anchor
 
 func _set_flash(v: float) -> void:
 	if not _instance_uniforms:
@@ -399,96 +444,286 @@ func _build(look: Dictionary) -> void:
 		om.shader = OUTLINE_SHADER
 		om.set_shader_parameter("outline_color", oc)
 		_outlines[oc] = om
-	_outline_mat = _outlines[oc]
+	# Workers go without: clean shapes read softer; enemies keep the oxblood rim as a threat cue
+	_outline_mat = null if look.get("no_outline", false) else _outlines[oc]
 
 	var skin: Color = look["skin"]
 	var robe: Color = look["robe"]
 	var trim: Color = look["trim"]
+	var hair: Color = look["hair"]
 
 	_body = _pivot(self, Vector3.ZERO)
-	# Legs + sandals
-	_leg_l = _pivot(_body, Vector3(0.11, HIP_Y, 0))
-	_leg_r = _pivot(_body, Vector3(-0.11, HIP_Y, 0))
+	var sandal: Color = look.get("sandal", SANDAL)
+	var long_robe: bool = look.get("long_robe", false)
+	var belt: Color = look["sash"]
+
+	# ── Legs: bare shins, chunky sandals — sole, foot, a row of toes, two straps
+	_leg_l = _pivot(_body, Vector3(0.13, HIP_Y, 0))
+	_leg_r = _pivot(_body, Vector3(-0.13, HIP_Y, 0))
 	for leg in [_leg_l, _leg_r]:
-		_part(leg, _capsule(0.075, 0.36), skin, Vector3(0, -0.16, 0))
-		_part(leg, _box(Vector3(0.14, 0.07, 0.22)), LEATHER.darkened(0.2), Vector3(0, -0.31, 0.04))
+		_part(leg, _bbox(Vector3(0.15, 0.32, 0.15), 0.035), skin, Vector3(0, -0.16, 0))
+		_part(leg, _bbox(Vector3(0.2, 0.05, 0.31), 0.016), sandal.darkened(0.15), Vector3(0, -HIP_Y + 0.025, 0.045))
+		_part(leg, _bbox(Vector3(0.16, 0.07, 0.22), 0.028), skin, Vector3(0, -HIP_Y + 0.085, 0.035))
+		for tx: float in [-0.052, 0.0, 0.052]:
+			_part(leg, _bbox(Vector3(0.046, 0.046, 0.05), 0.012), skin.darkened(0.04), Vector3(tx, -HIP_Y + 0.072, 0.168))
+		_part(leg, _bbox(Vector3(0.172, 0.04, 0.07), 0.012), sandal, Vector3(0, -HIP_Y + 0.11, 0.085))
+		_part(leg, _bbox(Vector3(0.165, 0.045, 0.165), 0.012), sandal, Vector3(0, -HIP_Y + 0.16, 0))
 
+	# ── Tunic: broad chest, skirt to the knee (the ankle on a long robe), a hem band
 	_torso = _pivot(_body, Vector3(0, HIP_Y, 0))
-	# Robe: flared cone, hem band, sash
-	_part(_torso, _cyl(0.2, 0.31, 0.72), robe, Vector3(0, 0.25, 0))
-	_part(_torso, _cyl(0.305, 0.315, 0.07), trim, Vector3(0, -0.07, 0))
-	_part(_torso, _cyl(0.245, 0.26, 0.09), look["sash"], Vector3(0, 0.3, 0))
+	_part(_torso, _bbox(Vector3(0.6, 0.38, 0.42), 0.07), robe, Vector3(0, 0.39, 0))
+	if long_robe:
+		_part(_torso, _bbox(Vector3(0.64, 0.48, 0.46), 0.07), robe, Vector3(0, -0.02, 0))
+		_part(_torso, _bbox(Vector3(0.655, 0.07, 0.475), 0.02), trim, Vector3(0, -0.23, 0))
+	else:
+		_part(_torso, _bbox(Vector3(0.63, 0.34, 0.46), 0.07), robe, Vector3(0, 0.07, 0))
+		_part(_torso, _bbox(Vector3(0.645, 0.07, 0.475), 0.02), trim, Vector3(0, -0.07, 0))
+		# A fold down the front of the skirt
+		_part(_torso, _bbox(Vector3(0.05, 0.28, 0.02), 0.01), robe.darkened(0.08), Vector3(-0.1, 0.06, 0.23))
+	# Wide belt, a knot of leather and a brass buckle at the front
+	_part(_torso, _bbox(Vector3(0.645, 0.12, 0.475), 0.03), belt, Vector3(0, 0.23, 0))
+	_part(_torso, _bbox(Vector3(0.14, 0.13, 0.05), 0.02), belt.darkened(0.28), Vector3(0.02, 0.23, 0.245))
+	_part(_torso, _bbox(Vector3(0.07, 0.06, 0.02), 0.008), Color(0.76, 0.62, 0.36), Vector3(0.02, 0.23, 0.272))
+	if look.get("sash_tails", false):
+		_part(_torso, _bbox(Vector3(0.1, 0.3, 0.04), 0.015), belt, Vector3(-0.17, 0.06, 0.245), Vector3(0, 0, 0.12))
+		_part(_torso, _bbox(Vector3(0.09, 0.24, 0.04), 0.015), belt.darkened(0.1), Vector3(-0.07, 0.08, 0.25), Vector3(0, 0, -0.1))
+	if look.has("vest"):
+		# Open vest: coloured over the chest with the tunic showing down the front
+		var v: Color = look["vest"]
+		for sx: float in [-1.0, 1.0]:
+			_part(_torso, _bbox(Vector3(0.22, 0.46, 0.44), 0.05), v, Vector3(0.2 * sx, 0.4, 0))
+		_part(_torso, _bbox(Vector3(0.6, 0.44, 0.1), 0.04), v, Vector3(0, 0.4, -0.18))
+		for sx: float in [-1.0, 1.0]:
+			_part(_torso, _bbox(Vector3(0.03, 0.46, 0.02), 0.008), v.darkened(0.3), Vector3(0.09 * sx, 0.4, 0.225))
+	if look.has("apron"):
+		var a: Color = look["apron"]
+		_part(_torso, _bbox(Vector3(0.44, 0.58, 0.04), 0.015), a, Vector3(0, 0.14, 0.245))
+		_part(_torso, _bbox(Vector3(0.2, 0.13, 0.03), 0.01), a.darkened(0.2), Vector3(0.09, 0.04, 0.27))
+		_part(_torso, _bbox(Vector3(0.04, 0.16, 0.04), 0.01), WOOD_LIGHT, Vector3(0.05, 0.12, 0.28), Vector3(0, 0, 0.2))
+		_part(_torso, _bbox(Vector3(0.04, 0.14, 0.04), 0.01), Color(0.6, 0.6, 0.62), Vector3(0.14, 0.12, 0.28), Vector3(0, 0, -0.2))
+	if look.get("strap", false):
+		_part(_torso, _bbox(Vector3(0.09, 0.66, 0.44), 0.02), LEATHER, Vector3(0, 0.42, 0), Vector3(0, 0, 0.62))
+	if look.has("satchel"):
+		var sc: Color = look["satchel"]
+		_part(_torso, _bbox(Vector3(0.09, 0.66, 0.44), 0.02), sc.darkened(0.1), Vector3(0, 0.42, 0), Vector3(0, 0, -0.62))
+		_part(_torso, _bbox(Vector3(0.15, 0.26, 0.26), 0.05), sc, Vector3(-0.38, 0.08, 0.05))
+		_part(_torso, _bbox(Vector3(0.16, 0.11, 0.27), 0.03), sc.darkened(0.2), Vector3(-0.385, 0.18, 0.05))
+		_part(_torso, _bbox(Vector3(0.03, 0.05, 0.04), 0.008), Color(0.76, 0.62, 0.36), Vector3(-0.465, 0.14, 0.05))
+	if look.has("scroll"):
+		var sc2 := _pivot(_torso, Vector3(0.36, 0.17, 0.1))
+		sc2.rotation = Vector3(0.2, 0, 0.35)
+		_part(sc2, _cyl(0.065, 0.065, 0.4), look["scroll"], Vector3.ZERO)
+		_part(sc2, _cyl(0.07, 0.07, 0.05), BAND, Vector3.ZERO)
 	if look.has("armour"):
-		_part(_torso, _cyl(0.235, 0.27, 0.36), look["armour"], Vector3(0, 0.44, 0))
+		_part(_torso, _bbox(Vector3(0.63, 0.4, 0.45), 0.06), look["armour"], Vector3(0, 0.4, 0))
+		_part(_torso, _bbox(Vector3(0.645, 0.05, 0.465), 0.015), look["armour"].darkened(0.25), Vector3(0, 0.3, 0))
 	if look.has("cape"):
-		_cape = _pivot(_torso, Vector3(0, SHOULDER_Y - HIP_Y + 0.02, -0.14))
-		_part(_cape, _box(Vector3(0.5, 0.78, 0.05)), look["cape"], Vector3(0, -0.38, -0.04))
+		_cape = _pivot(_torso, Vector3(0, SHOULDER_Y - HIP_Y + 0.02, -0.2))
+		_part(_cape, _bbox(Vector3(0.58, 0.8, 0.06), 0.02), look["cape"], Vector3(0, -0.39, -0.04))
+	# Basket on the back, riding above the shoulders: wicker bands, a rim, stones heaped in it
+	if look.get("basket", false):
+		var wicker := Color(0.78, 0.58, 0.3)
+		# Square on the back, riding high so the rim and stones show over both shoulders
+		var bk := _pivot(_torso, Vector3(0.0, 0.66, -0.37))
+		bk.rotation = Vector3(-0.14, 0, 0)
+		_part(bk, _bbox(Vector3(0.7, 0.5, 0.32), 0.06), wicker, Vector3.ZERO)
+		for y: float in [-0.14, 0.0, 0.14]:
+			_part(bk, _bbox(Vector3(0.715, 0.04, 0.335), 0.012), wicker.darkened(0.16), Vector3(0, y, 0))
+		for x: float in [-0.24, 0.0, 0.24]:
+			_part(bk, _bbox(Vector3(0.035, 0.46, 0.335), 0.01), wicker.darkened(0.08), Vector3(x, 0, 0))
+		_part(bk, _bbox(Vector3(0.75, 0.08, 0.37), 0.025), wicker.darkened(0.3), Vector3(0, 0.26, 0))
+		if look.get("basket_stones", false):
+			for st: Array in [[Vector3(-0.24, 0.31, 0.02), 0.3, 0.19], [Vector3(0.0, 0.34, -0.04), -0.4, 0.21],
+					[Vector3(0.24, 0.31, 0.04), 0.9, 0.18], [Vector3(-0.1, 0.38, 0.07), 0.2, 0.15], [Vector3(0.14, 0.38, -0.05), 0.5, 0.15]]:
+				_part(bk, _bbox(Vector3(st[2], st[2] * 0.85, st[2]), 0.035), Palette.WALL_STONE.darkened(0.08 + st[1] * 0.04),
+					st[0], Vector3(0.25, st[1], 0.15))
+		for sx: float in [-1.0, 1.0]:
+			_part(_torso, _bbox(Vector3(0.09, 0.08, 0.5), 0.02), LEATHER, Vector3(0.17 * sx, SHOULDER_Y - HIP_Y + 0.02, -0.05))
+	if look.get("planks", false):
+		var pb := _pivot(_torso, Vector3(0, 0.5, -0.3))
+		pb.rotation = Vector3(0.12, 0, 0.45)
+		for pk: Array in [[-0.1, 0.0, 0.0], [0.03, 0.06, 0.04], [0.15, -0.04, -0.03]]:
+			_part(pb, _bbox(Vector3(0.14, 1.05, 0.06), 0.015), WOOD_LIGHT.darkened(0.04 + pk[2]),
+				Vector3(pk[0], pk[1], -absf(pk[2]) * 2.0))
+		_part(pb, _bbox(Vector3(0.44, 0.06, 0.12), 0.015), BAND.lightened(0.2), Vector3(0.02, -0.05, -0.02))
+		for sx: float in [-1.0, 1.0]:
+			_part(_torso, _bbox(Vector3(0.07, 0.07, 0.46), 0.02), LEATHER, Vector3(0.15 * sx, SHOULDER_Y - HIP_Y + 0.02, -0.04))
+	# Where a load rides when carried in front, at the chest
+	_carry_anchor = _pivot(_torso, Vector3(0, 0.4, 0.42))
 
-	# Arms (sleeve + hand), pivot at the shoulder
+	# ── Arms: short sleeve, bare forearm, big blocky hand; pivot at the shoulder
 	_arm_l = _pivot(_torso, Vector3(ARM_X, SHOULDER_Y - HIP_Y, 0))
 	_arm_r = _pivot(_torso, Vector3(-ARM_X, SHOULDER_Y - HIP_Y, 0))
 	var hands: Array[Node3D] = []
+	var sleeve: Color = look.get("vest", robe) if look.has("vest") and not long_robe else robe
+	var forearm: Color = skin if look.get("bare_arms", true) else robe
 	for arm in [_arm_l, _arm_r]:
-		_part(arm, _capsule(0.085, 0.42), robe, Vector3(0, -0.17, 0))
-		var hand := _pivot(arm, Vector3(0, -0.4, 0))
-		_part(hand, _sphere(0.09), skin, Vector3.ZERO)
+		_part(arm, _bbox(Vector3(0.22, 0.25, 0.22), 0.05), sleeve, Vector3(0, -0.07, 0))
+		_part(arm, _bbox(Vector3(0.23, 0.05, 0.23), 0.015), sleeve.darkened(0.1), Vector3(0, -0.19, 0))
+		_part(arm, _bbox(Vector3(0.16, 0.22, 0.16), 0.04), forearm, Vector3(0, -0.28, 0))
+		if look.get("bracers", false):
+			_part(arm, _bbox(Vector3(0.175, 0.1, 0.175), 0.02), LEATHER, Vector3(0, -0.31, 0))
+		var hand := _pivot(arm, Vector3(0, -0.43, 0))
+		_part(hand, _bbox(Vector3(0.18, 0.17, 0.18), 0.05), skin, Vector3.ZERO)
+		_part(hand, _bbox(Vector3(0.06, 0.08, 0.07), 0.02), skin.darkened(0.05), Vector3(0, 0.02, 0.1))
 		hands.append(hand)
 
-	# Head
+	# ── Head: a big chamfered block — the camera's main read
 	_head = _pivot(_torso, Vector3(0, NECK_Y - HIP_Y, 0))
-	var hc := Vector3(0, HEAD_R * 0.9, 0)
-	_part(_head, _sphere(HEAD_R), skin, hc)
-	var eye := _sphere(0.042)
-	for sx in [-1.0, 1.0]:
-		_part(_head, eye, Color(0.10, 0.07, 0.05), hc + Vector3(0.12 * sx, 0.03, HEAD_R * 0.9))
-		if look.get("brows", false):
-			var brow := _part(_head, _box(Vector3(0.13, 0.035, 0.04)), look["hair"],
-				hc + Vector3(0.12 * sx, 0.1, HEAD_R * 0.88))
-			brow.rotation.z = -0.45 * sx
-	_part(_head, _sphere(0.055), skin.darkened(0.12), hc + Vector3(0, -0.04, HEAD_R * 0.97))
-	match look.get("beard", ""):
-		"full":
-			_part(_head, _sphere(0.25), look["hair"], hc + Vector3(0, -0.2, 0.13), Vector3.ZERO, Vector3(1.05, 0.85, 0.75))
-		"long":
-			_part(_head, _sphere(0.22), look["hair"], hc + Vector3(0, -0.26, 0.15), Vector3.ZERO, Vector3(0.9, 1.25, 0.7))
-		"short":
-			_part(_head, _sphere(0.23), look["hair"], hc + Vector3(0, -0.17, 0.1), Vector3.ZERO, Vector3(1.0, 0.6, 0.75))
+	var hw := 0.64
+	var hh := 0.6
+	var hd := 0.58
+	var hc := Vector3(0, hh * 0.5 - 0.02, 0.02)
+	var front := hc.z + hd * 0.5
+	_part(_head, _bbox(Vector3(hw, hh, hd), 0.09), skin, hc)
+	for sx: float in [-1.0, 1.0]:
+		_part(_head, _bbox(Vector3(0.08, 0.15, 0.11), 0.025), skin.darkened(0.07), hc + Vector3((hw * 0.5 + 0.02) * sx, -0.02, 0.02))
+	var hat: String = look.get("hat", "band")
+	_hair(look.get("hair_style", "short"), hair, hc, hw, hh, hd, hat)
+	# Face: dark eyes with a catch-light, heavy brows, a big wedge of a nose
+	for sx: float in [-1.0, 1.0]:
+		_part(_head, _bbox(Vector3(0.08, 0.115, 0.03), 0.02), Color(0.1, 0.06, 0.04), hc + Vector3(0.125 * sx, 0.0, front + 0.005))
+		_part(_head, _bbox(Vector3(0.028, 0.028, 0.02), 0.006), Color(1, 0.97, 0.9), hc + Vector3(0.125 * sx + 0.02, 0.03, front + 0.02))
+		var brow := _part(_head, _bbox(Vector3(0.2, 0.075, 0.07), 0.02), look.get("brow", hair),
+			hc + Vector3(0.13 * sx, 0.1, front + 0.01))
+		# Inner ends low: determined on the crew, scowling on enemies
+		brow.rotation.z = (0.42 if look.get("brows", false) else 0.22) * sx
+	_part(_head, _bbox(Vector3(0.14, 0.16, 0.13), 0.04), skin.darkened(0.05), hc + Vector3(0, -0.07, front + 0.045))
+	# Beard: a block round the jaw down onto the chest, cheek lobes up to the ears,
+	# sideburns into the hair, clumps along the jaw, the moustache as a bar under the nose
+	var bl: String = look.get("beard", "")
+	var bc: Color = look.get("beard_color", hair)
+	if not bl.is_empty():
+		var bh: float = {"full": 0.36, "long": 0.46, "short": 0.25}.get(bl, 0.3)
+		_part(_head, _bbox(Vector3(hw + 0.03, bh, 0.28), 0.06), bc, hc + Vector3(0, -0.1 - bh * 0.5, front - 0.11))
+		for sx: float in [-1.0, 1.0]:
+			_part(_head, _bbox(Vector3(0.11, 0.3, hd * 0.72), 0.03), bc, hc + Vector3((hw * 0.5 - 0.03) * sx, -0.13, 0.03))
+			_part(_head, _bbox(Vector3(0.08, 0.26, 0.2), 0.02), bc, hc + Vector3((hw * 0.5 + 0.005) * sx, 0.03, 0.02))
+			_part(_head, _bbox(Vector3(0.18, 0.14, 0.2), 0.04), bc.darkened(0.06), hc + Vector3(0.17 * sx, -0.1 - bh + 0.04, front - 0.1), Vector3(0, 0, 0.3 * sx))
+		if bl != "short":
+			_part(_head, _bbox(Vector3(hw * (0.45 if bl == "long" else 0.55), 0.14, 0.22), 0.04), bc.darkened(0.04),
+				hc + Vector3(0, -0.1 - bh - 0.03, front - 0.1))
+		_part(_head, _bbox(Vector3(0.36, 0.085, 0.09), 0.025), bc.darkened(0.1), hc + Vector3(0, -0.17, front + 0.03))
+		_part(_head, _bbox(Vector3(0.1, 0.03, 0.02), 0.008), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.225, front + 0.035))
+	else:
+		_part(_head, _bbox(Vector3(0.12, 0.035, 0.02), 0.008), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.19, front + 0.005))
 
-	var hat: Color = look.get("hat_color", LINEN)
-	match look.get("hat", "wrap"):
+	var hat_c: Color = look.get("hat_color", LINEN)
+	match hat:
+		"band", "scarf":
+			# Cloth band tied round the brow, hair showing above; a scarf is deeper,
+			# striped, with long tails
+			var scarf := hat == "scarf"
+			var bh2 := 0.17 if scarf else 0.12
+			var by := hh * 0.5 - (0.11 if scarf else 0.1)
+			_part(_head, _bbox(Vector3(hw + 0.06, bh2, hd + 0.06), 0.03), hat_c, hc + Vector3(0, by, 0))
+			if scarf:
+				for dy: float in [-0.045, 0.045]:
+					_part(_head, _bbox(Vector3(hw + 0.075, 0.03, hd + 0.075), 0.01), look["stripe"], hc + Vector3(0, by + dy, 0))
+			_part(_head, _bbox(Vector3(0.14, 0.14, 0.1), 0.035), hat_c.darkened(0.1), hc + Vector3(0.12, by, -hd * 0.5 - 0.05))
+			if look.get("tails", true):
+				var tl := 0.36 if scarf else 0.26
+				for t: Array in [[0.1, 0.4], [-0.02, -0.25]]:
+					var tail := _part(_head, _bbox(Vector3(0.11, tl, 0.04), 0.012), hat_c.darkened(0.05),
+						hc + Vector3(0.12 + t[0], by - tl * 0.5 - 0.03, -hd * 0.5 - 0.1), Vector3(0.5, 0, t[1]))
+					if scarf:
+						_part(tail, _bbox(Vector3(0.115, 0.03, 0.045), 0.008), look["stripe"], Vector3(0, -tl * 0.25, 0))
 		"wrap":
-			# Keffiyeh-style: cap over the crown, cord band, cloth falling behind
-			_part(_head, _sphere(HEAD_R * 1.08), hat, hc + Vector3(0, 0.1, -0.05), Vector3.ZERO, Vector3(1, 0.78, 1))
-			_part(_head, _torus(HEAD_R * 0.86, HEAD_R * 1.1), look["band"], hc + Vector3(0, 0.14, -0.02), Vector3(-0.2, 0, 0))
-			_part(_head, _box(Vector3(0.5, 0.5, 0.1)), hat, hc + Vector3(0, -0.2, -0.26), Vector3(0.15, 0, 0))
+			# Head-cloth over the crown, coloured band, cloth falling behind to the shoulders
+			_part(_head, _bbox(Vector3(hw + 0.1, 0.3, hd + 0.1), 0.08), hat_c, hc + Vector3(0, hh * 0.5 + 0.02, -0.01))
+			# Folds of the wound cloth: raised bands slanting round the crown
+			for k in 3:
+				var f := _part(_head, _bbox(Vector3(hw + 0.12, 0.06, hd + 0.12), 0.02), hat_c.darkened(0.07 + k * 0.02),
+					hc + Vector3(0, hh * 0.5 + 0.06 + k * 0.07, -0.01 - k * 0.02))
+				f.rotation.z = 0.12 - k * 0.1
+				f.scale = Vector3.ONE * (1.0 - k * 0.1)
+			_part(_head, _bbox(Vector3(hw + 0.12, 0.1, hd + 0.12), 0.03), look["band"], hc + Vector3(0, hh * 0.5 - 0.1, -0.01))
+			_part(_head, _bbox(Vector3(hw + 0.08, 0.6, 0.12), 0.04), hat_c.darkened(0.04), hc + Vector3(0, -0.12, -hd * 0.5 - 0.04), Vector3(0.12, 0, 0))
+			for sx: float in [-1.0, 1.0]:
+				_part(_head, _bbox(Vector3(0.08, 0.46, hd * 0.7), 0.03), hat_c.darkened(0.02), hc + Vector3((hw * 0.5 + 0.05) * sx, -0.06, -0.08))
 		"hood":
-			_part(_head, _sphere(HEAD_R * 1.12), hat, hc + Vector3(0, 0.06, -0.08), Vector3.ZERO, Vector3(1, 0.9, 1))
-			_part(_head, _box(Vector3(0.58, 0.55, 0.12)), hat, hc + Vector3(0, -0.25, -0.24), Vector3(0.12, 0, 0))
+			_part(_head, _bbox(Vector3(hw + 0.12, hh * 0.55, hd + 0.1), 0.1), hat_c, hc + Vector3(0, hh * 0.3, -0.04))
+			for sx: float in [-1.0, 1.0]:
+				_part(_head, _bbox(Vector3(0.08, hh * 0.8, hd * 0.9), 0.03), hat_c, hc + Vector3((hw * 0.5 + 0.05) * sx, -0.05, -0.05))
+			_part(_head, _bbox(Vector3(hw + 0.1, 0.55, 0.12), 0.04), hat_c, hc + Vector3(0, -0.2, -hd * 0.5 - 0.02), Vector3(0.12, 0, 0))
 		"helmet":
-			_part(_head, _cyl(0.0, HEAD_R * 1.08, 0.42), hat, hc + Vector3(0, 0.32, -0.02))
-			_part(_head, _cyl(HEAD_R * 1.1, HEAD_R * 1.1, 0.08), hat.darkened(0.25), hc + Vector3(0, 0.12, -0.02))
+			_part(_head, _cyl(0.0, hw * 0.62, 0.42), hat_c, hc + Vector3(0, hh * 0.5 + 0.18, -0.02))
+			_part(_head, _bbox(Vector3(hw + 0.1, 0.09, hd + 0.1), 0.03), hat_c.darkened(0.25), hc + Vector3(0, hh * 0.5 - 0.04, -0.01))
 
 	# Weapons
 	match look.get("weapon", ""):
 		"spear":
-			_spear = _pivot(_torso, Vector3(-ARM_X - 0.1, 0.28, 0.12))
-			_part(_spear, _cyl(0.028, 0.028, 2.2), Color(0.42, 0.28, 0.16), Vector3(0, 0.55, 0))
-			_part(_spear, _cyl(0.0, 0.065, 0.24), Color(0.62, 0.60, 0.56), Vector3(0, 1.76, 0))
+			_spear = _pivot(_torso, Vector3(-ARM_X - 0.08, 0.28, 0.12))
+			_part(_spear, _bbox(Vector3(0.07, 2.2, 0.07), 0.015), Color(0.42, 0.28, 0.16), Vector3(0, 0.55, 0))
+			_part(_spear, _cyl(0.0, 0.08, 0.28), Color(0.62, 0.60, 0.56), Vector3(0, 1.78, 0))
 		"dagger":
 			var d := _pivot(hands[1], Vector3(0, -0.05, 0.05))
-			_part(d, _box(Vector3(0.05, 0.34, 0.03)), Color(0.72, 0.70, 0.66), Vector3(0, -0.2, 0))
-			_part(d, _box(Vector3(0.16, 0.04, 0.05)), Color(0.55, 0.42, 0.22), Vector3(0, -0.02, 0))
+			_part(d, _bbox(Vector3(0.06, 0.34, 0.03), 0.01), Color(0.72, 0.70, 0.66), Vector3(0, -0.2, 0))
+			_part(d, _bbox(Vector3(0.17, 0.05, 0.06), 0.015), Color(0.55, 0.42, 0.22), Vector3(0, -0.02, 0))
 	if look.has("shield"):
 		var sh := _pivot(_torso, Vector3(ARM_X + 0.1, 0.42, 0.2))
 		sh.rotation.y = 0.35
-		_part(sh, _box(Vector3(0.52, 0.72, 0.07)), look["shield"], Vector3.ZERO)
-		_part(sh, _box(Vector3(0.14, 0.14, 0.1)), Color(0.74, 0.54, 0.26), Vector3(0, 0, 0.04))
-	# Worker's mallet — shown only while building
-	if look.get("hat", "wrap") == "wrap":
-		_tool = _pivot(hands[1], Vector3(0, -0.04, 0.02))
-		_part(_tool, _cyl(0.03, 0.03, 0.56), Color(0.50, 0.34, 0.20), Vector3(0, -0.24, 0))
-		_part(_tool, _box(Vector3(0.36, 0.2, 0.2)), Color(0.62, 0.46, 0.30), Vector3(0, -0.52, 0))
+		_part(sh, _bbox(Vector3(0.56, 0.76, 0.08), 0.03), look["shield"], Vector3.ZERO)
+		_part(sh, _bbox(Vector3(0.15, 0.15, 0.1), 0.03), Color(0.74, 0.54, 0.26), Vector3(0, 0, 0.04))
+	# Worker's hammer: a squared stone head on a stout handle
+	if look.get("tool", false):
+		_tool = _pivot(hands[1], Vector3(0, -0.02, 0.02))
+		_part(_tool, _bbox(Vector3(0.07, 0.56, 0.07), 0.018), Color(0.50, 0.34, 0.20), Vector3(0, -0.24, 0))
+		_part(_tool, _bbox(Vector3(0.09, 0.08, 0.09), 0.02), LEATHER, Vector3(0, -0.06, 0))
+		_part(_tool, _bbox(Vector3(0.36, 0.22, 0.22), 0.05), Color(0.58, 0.57, 0.58), Vector3(0, -0.54, 0))
+		if look.get("tool_always", false):
+			# Between strokes it hangs from the belt at the hip, head up
+			_belt_tool = _pivot(_torso, Vector3(-0.36, 0.2, 0.08))
+			_belt_tool.rotation = Vector3(0.15, 0, -0.12)
+			_part(_belt_tool, _bbox(Vector3(0.06, 0.42, 0.06), 0.015), Color(0.50, 0.34, 0.20), Vector3(0, -0.08, 0))
+			_part(_belt_tool, _bbox(Vector3(0.28, 0.17, 0.17), 0.04), Color(0.58, 0.57, 0.58), Vector3(0, 0.15, 0))
 		_tool_visible()
+
+# Hair by style: a cap over the crown and down the back, chunky locks on top
+func _hair(style: String, hair: Color, hc: Vector3, hw: float, hh: float, hd: float, hat: String) -> void:
+	if hat == "wrap" or hat == "hood" or hat == "helmet":
+		# Only the back shows under the cloth
+		_part(_head, _bbox(Vector3(hw + 0.02, hh * 0.5, 0.14), 0.05), hair, hc + Vector3(0, -0.02, -hd * 0.5 + 0.05))
+		return
+	_part(_head, _bbox(Vector3(hw + 0.04, 0.16, hd + 0.04), 0.05), hair, hc + Vector3(0, hh * 0.5 + 0.01, -0.01))
+	_part(_head, _bbox(Vector3(hw + 0.04, hh * 0.78, 0.16), 0.05), hair, hc + Vector3(0, 0.04, -hd * 0.5 + 0.03))
+	var crown := hc + Vector3(0, hh * 0.5 + 0.09, 0)
+	match style:
+		"curly":
+			# Tight curls: a cap of small blocks, spilling over the band and down the back
+			var i := 0
+			for x: float in [-0.24, -0.08, 0.08, 0.24]:
+				for z: float in [-0.22, -0.06, 0.1, 0.24]:
+					var j := hash(i) % 7 / 7.0
+					_part(_head, _bbox(Vector3(0.15, 0.13, 0.15), 0.035), hair.lightened(j * 0.12),
+						crown + Vector3(x, j * 0.05 - 0.02, z), Vector3(j, j * 2.0, 0))
+					i += 1
+			for x: float in [-0.25, -0.08, 0.08, 0.25]:
+				for y: float in [-0.25, -0.42]:
+					_part(_head, _bbox(Vector3(0.15, 0.15, 0.14), 0.035), hair.lightened(0.04 if y < -0.3 else 0.0), crown + Vector3(x, y, -hd * 0.5 - 0.04))
+		"bushy":
+			# Thick mane: big uneven locks, lighter on top, falling to the shoulders
+			_locks(hair, crown, 0.23, 0.2)
+			_part(_head, _bbox(Vector3(hw + 0.12, 0.4, 0.2), 0.06), hair, crown + Vector3(0, -0.48, -hd * 0.5))
+			for sx: float in [-1.0, 1.0]:
+				_part(_head, _bbox(Vector3(0.12, 0.38, 0.32), 0.04), hair, crown + Vector3((hw * 0.5 + 0.04) * sx, -0.36, -0.1))
+		_:
+			# Short and thick: a crop of uneven locks, a fringe of blocks above the band
+			_locks(hair, crown, 0.2, 0.19)
+			for x: float in [-0.2, 0.0, 0.2]:
+				_part(_head, _bbox(Vector3(0.2, 0.1, 0.1), 0.03), hair.lightened(0.03), hc + Vector3(x, hh * 0.5 + 0.02, hd * 0.5 - 0.02), Vector3(0.3, 0, x))
+
+# A 3×3 crop of chunky locks over the crown: each tipped and raised a little differently,
+# so from the iso camera it reads as hair rather than a lid of tiles
+func _locks(hair: Color, crown: Vector3, size: float, step: float) -> void:
+	var i := 0
+	for x: float in [-step, 0.0, step]:
+		for z: float in [-step, 0.0, step]:
+			var j := float(hash(i * 7 + 3) % 11) / 11.0
+			var k := float(hash(i * 13 + 5) % 7) / 7.0
+			_part(_head, _bbox(Vector3(size, size * 0.8, size), 0.04), hair.lightened(0.02 + j * 0.1).darkened(k * 0.06),
+				crown + Vector3(x + (k - 0.5) * 0.04, j * 0.06 - 0.02, z), Vector3((j - 0.5) * 0.7, j * 1.6, (k - 0.5) * 0.7))
+			i += 1
 
 func _pivot(parent: Node3D, pos: Vector3) -> Node3D:
 	var n := Node3D.new()
@@ -500,7 +735,10 @@ func _part(parent: Node3D, mesh: Mesh, color: Color, pos: Vector3, rot := Vector
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = _part_mat if _instance_uniforms else _web_mat(color)
-	mi.material_overlay = _outline_mat
+	# Outline shells on tiny parts (eyes, mouth, buckles) read as dirt specks
+	var ab := mesh.get_aabb().size
+	if _outline_mat != null and minf(ab.x, minf(ab.y, ab.z)) >= OUTLINE_MIN_PART:
+		mi.material_overlay = _outline_mat
 	mi.position = pos
 	mi.rotation = rot
 	mi.scale = scl
@@ -557,6 +795,12 @@ static func _box(size: Vector3) -> Mesh:
 		var m := BoxMesh.new()
 		m.size = size
 		return m)
+
+# Chamfered block, flat-shaded: the chunky low-poly look (Chunky)
+static func _bbox(size: Vector3, bevel: float) -> Mesh:
+	return _cached("bb%s%.3f" % [size, bevel], func():
+		var m := minf(size.x, minf(size.y, size.z))
+		return Chunky.bevel_box(size, minf(bevel * BEVEL_SCALE, m * 0.3)))
 
 static func _torus(inner: float, outer: float) -> Mesh:
 	return _cached("t%.3f,%.3f" % [inner, outer], func():
