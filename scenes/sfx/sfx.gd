@@ -44,6 +44,8 @@ var _defs := {
 	"breach":         [_n("impactBell_heavy_%03d", 0, 5), -4.0, 0.7, 0.75],
 	# Off-screen trouble (HUD pointer): the breach bell, higher and lighter
 	"alert":          [_n("impactBell_heavy_%03d", 0, 5), -10.0, 1.25, 1.3],
+	# Ram's horn (Neh. 4:20), synthesized in-house — heard across the whole site
+	"horn":           [_n("horn_%03d", 0, 3), -3.0, 0.97, 1.03],
 	# Dusk tally: a light tap as each number starts counting, a wooden knock as it lands
 	"tally":          [_n("impactGeneric_light_%03d", 0, 5), -10.0, 1.3, 1.45],
 	"tally_land":     [_n("impactWood_medium_%03d", 0, 5), -7.0, 1.05, 1.2],

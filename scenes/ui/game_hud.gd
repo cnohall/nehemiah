@@ -31,6 +31,7 @@ const CONTROLS := [
 	["drop", "Drop"],
 	["dash", "Dash"],
 	["throw", "Sling — charge, then throw"],
+	["horn", "Horn — call the crew"],   # only in sections with the horn
 	["pause", "Menu"],
 ]
 
@@ -64,6 +65,7 @@ var _pause_begin: Button     # host, while gathering: start from the menu (gamep
 var _gather_hint: Label
 var _pad_lost_note: Label   # pause menu line shown after the pad in use disconnects
 var _tally: VBoxContainer
+var _horn_row: Control
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 
@@ -254,7 +256,7 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			# First day of a section that brings something new: say what
 			if first_day:
 				for twist: String in GameState.new_twists():
-					sub += "\n" + GameState.TWIST_INTRO.get(twist, "")
+					sub += "\n" + GameState.TWIST_INTRO.get(twist, "").format({"horn": "[%s]" % InputMode.key("horn")})
 			_show_banner("Day %d" % GameState.current_day, sub)
 		GameState.Phase.WON:
 			_show_end(true)
@@ -537,6 +539,8 @@ func _build_controls_hint() -> void:
 		what.add_theme_font_size_override("font_size", 15)
 		what.text = row[1]
 		hb.add_child(what)
+		if row[0] == "horn":
+			_horn_row = hb
 	_controls = panel
 	_refresh_controls()
 	InputMode.changed.connect(func(_pad: bool):
@@ -547,6 +551,8 @@ func _build_controls_hint() -> void:
 func _refresh_controls() -> void:
 	if _controls == null:
 		return
+	if _horn_row != null:
+		_horn_row.visible = GameState.has_twist("horn")
 	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1
 	var want := (early and not GameState.is_over()) or pause_menu.visible
 	if want == _controls.visible:

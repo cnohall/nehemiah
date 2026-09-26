@@ -26,7 +26,7 @@ const KEY_ROWS := [
 	["move_north", "Move up"], ["move_west", "Move left"],
 	["move_south", "Move down"], ["move_east", "Move right"],
 	["interact", "Pick up · deliver · build"], ["drop", "Drop"],
-	["dash", "Dash"], ["throw_charge", "Sling"],
+	["dash", "Dash"], ["throw_charge", "Sling"], ["horn", "Horn"],
 ]
 
 var _rumble_on: Button

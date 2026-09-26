@@ -18,7 +18,7 @@ var toggle_charge := false   # sling: press to start, press again to throw (inst
 var bindings := {}
 
 const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
-	"interact", "drop", "dash", "throw_charge"]
+	"interact", "drop", "dash", "throw_charge", "horn"]
 
 func _ready() -> void:
 	var cfg := ConfigFile.new()

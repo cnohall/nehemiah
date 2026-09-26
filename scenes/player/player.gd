@@ -241,6 +241,8 @@ func _physics_process(delta: float) -> void:
 	if not _is_busy:
 		_handle_interact()
 		_handle_attack(delta)
+		if _consume("horn") and GameState.has_twist("horn"):
+			_server_horn.rpc_id(1, global_position)
 	_update_anim()
 
 # ── Movement ───────────────────────────────────────────────
@@ -255,7 +257,7 @@ func _buffer_input(delta: float) -> void:
 	if InputMode.gameplay_blocked():
 		_buffered.clear()
 		return
-	for action: String in ["interact", "drop", "dash"]:
+	for action: String in ["interact", "drop", "dash", "horn"]:
 		if Input.is_action_just_pressed(action):
 			_buffered[action] = INPUT_BUFFER
 		elif _buffered.has(action):
@@ -986,6 +988,18 @@ func _on_strike() -> void:
 	DustFx.puff(self, Vector3(at.x, 0.9, at.z), 5, 0.35)
 	if is_multiplayer_authority():
 		InputMode.rumble(0.15, 0.0, 0.05)
+
+# ── Horn ("horn" twist) ────────────────────────────────────
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_horn(at: Vector3) -> void:
+	if not _from_owner() or downed or is_led():
+		return
+	var horn := get_tree().get_first_node_in_group("horn")
+	if horn != null and horn.request(self, at):
+		_action.rpc("halfslash")
+	else:
+		_tell("The horn was just sounded")
 
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 

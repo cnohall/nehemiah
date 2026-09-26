@@ -68,7 +68,33 @@ func _process(delta: float) -> bool:
 			_mate._set_carried.rpc("")
 			_main.get_node("Players").remove_child(_mate)
 			_mate.queue_free()
-			_state = "wait_messenger" if gs.has_twist("schemes") else "done"
+			_state = "horn" if gs.has_twist("horn") else ("wait_messenger" if gs.has_twist("schemes") else "done")
+		"horn":
+			if _player._is_busy:
+				return false   # still in the hand-off swing
+			_press("horn")
+			_mark = _t
+			_state = "horn_check"
+		"horn_check":
+			if _t - _mark > 0.6:
+				var horn: Node3D = _main.get_node("Horn")
+				_check(horn.get_child_count() == 1, "horn raised a standard")
+				_check(_pings("Horn") == 1, "horn pointer registered")
+				_press("horn")   # again at once: cooldown
+				_state = "horn_cooldown"
+				_mark = _t
+		"horn_cooldown":
+			if _t - _mark > 0.6:
+				_check(_main.get_node("Horn").get_child_count() == 1, "second blast refused (cooldown)")
+				root.get_texture().get_image().save_png(_out + "/horn.png")
+				_state = "surge"
+		"surge":
+			if _pings("Surge") > 0:
+				_check(true, "surge warned at %.1f s into the work" % (_t - _mark))
+				_state = "wait_messenger" if gs.has_twist("schemes") else "done"
+			elif _t - _mark > 30.0:
+				_fail("no surge warning within 30 s")
+				return _finish()
 		"wait_messenger":
 			var ms: Array = _main.get_node("Visitors").get_children()
 			if _frame % 60 == 0:
@@ -106,7 +132,11 @@ func _finish() -> bool:
 	quit(0 if _fails == 0 else 1)
 	return true
 
-func _press() -> void:
-	Input.action_press("interact")
+func _pings(text: String) -> int:
+	var alerts = _main.get_tree().get_first_node_in_group("offscreen_alerts")
+	return alerts._pings.filter(func(p): return p[2] == text).size()
+
+func _press(action := "interact") -> void:
+	Input.action_press(action)
 	await create_timer(0.05).timeout
-	Input.action_release("interact")
+	Input.action_release(action)

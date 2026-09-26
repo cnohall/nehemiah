@@ -9,7 +9,7 @@ signal pad_lost                   # the pad in use was unplugged / ran out of ba
 
 const STICK_WAKE := 0.4   # stick travel that counts as "picked up the pad" (ignores drift)
 # Presses that also drive the player — held over from a menu, they must not leak into play
-const GAMEPLAY := ["interact", "drop", "dash", "throw_charge"]
+const GAMEPLAY := ["interact", "drop", "dash", "throw_charge", "horn"]
 
 enum Pad { XBOX, SONY, NINTENDO }
 

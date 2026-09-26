@@ -19,8 +19,10 @@ const FONT_SIZE    := 13
 
 var _wall_alerted := {}   # wall instance id → msec of its last ring
 var _was_downed := {}     # player instance id → bool
+var _pings: Array = []    # [world pos, colour, text, msec until] — horn calls, surges
 
 func _ready() -> void:
+	add_to_group("offscreen_alerts")
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
@@ -57,6 +59,15 @@ func _draw() -> void:
 		if not was:
 			Sfx.play("alert")
 		_pointer(at, p.slot_color, "Help", pulse)
+	_pings = _pings.filter(func(pg): return pg[3] > now)
+	for pg: Array in _pings:
+		var at := cam.unproject_position(pg[0])
+		if not rect.has_point(at):
+			_pointer(at, pg[1], pg[2], pulse)
+
+## A one-off place to point at for `seconds` while it's off-screen (horn call, surge)
+func ping(at: Vector3, color: Color, text: String, seconds: float) -> void:
+	_pings.append([at, color, text, Time.get_ticks_msec() + int(seconds * 1000.0)])
 
 # Disc pinned to the screen edge, arrow pointing at the off-screen target
 func _pointer(target: Vector2, color: Color, text: String, pulse: float) -> void:

@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/trough/trough.tscn" id="11_trough"]
 [ext_resource type="Script" path="res://scenes/section_terrain/section_terrain.gd" id="12_terrain"]
 [ext_resource type="Script" path="res://scenes/day_light/day_light.gd" id="13_daylight"]
+[ext_resource type="Script" path="res://scenes/horn/horn.gd" id="14_horn"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 geometry/parsed_geometry_type = 1
@@ -280,6 +281,9 @@ script = ExtResource("12_terrain")
 
 [node name="DayLight" type="Node" parent="."]
 script = ExtResource("13_daylight")
+
+[node name="Horn" type="Node3D" parent="."]
+script = ExtResource("14_horn")
 
 [node name="Visitors" type="Node3D" parent="."]
 
