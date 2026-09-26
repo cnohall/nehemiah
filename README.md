@@ -2,9 +2,19 @@
 
 A co-op game for 2–4 players. You and your friends rebuild the walls of Jerusalem in 52 days (Nehemiah 6:15) — carrying wood, stone and mortar, building the wall, and fighting off the enemies who try to stop you.
 
-## How to play it on your computer (Windows)
+## How to play it on your computer (Windows) — easy way
 
-You only need to do steps 1–3 once.
+1. Go to https://github.com/cnohall/nehemiah/releases
+2. Under the newest version, click **Nehemiah-windows.zip** to download it.
+3. Right-click the downloaded file → **Extract All**.
+4. Open the new folder and double-click **Nehemiah.exe**.
+   - If a blue box says "Windows protected your PC": click **More info** → **Run anyway**. (It says that because the game is new and unsigned — it's safe.)
+
+When Chris says there's a new version, just do the same steps again.
+
+## The other way (newest changes, a bit more work)
+
+Use this only if Chris asks you to try something that isn't in a download yet. You only need to do steps 1–3 once.
 
 1. **Get Godot** (the program the game is made with)
    - Go to https://godotengine.org/download/archive/ and download **Godot 4.7.2** (Windows, "Standard" version — not ".NET").
