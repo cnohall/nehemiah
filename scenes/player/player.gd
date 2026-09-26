@@ -492,13 +492,15 @@ func _update_focus(delta: float) -> void:
 	# Walls are long — ring the spot on the wall nearest us, not its centre
 	var spot := target.global_position
 	var size := 1.5
+	var lift := 0.05
 	if target.has_method("approach_point"):
 		spot = target.approach_point(global_position, 0.0)
 	elif target.is_in_group("supply_piles"):
 		size = 2.6
+		lift = 0.1   # over the pile's flagstone pad
 	elif target.is_in_group("dropped_items"):
 		size = 1.1
-	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + 0.05, spot.z)
+	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + lift, spot.z)
 	_focus_ring.mesh.size = Vector2(size, size)
 
 func _build_focus_ring() -> void:

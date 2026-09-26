@@ -21,6 +21,7 @@ var count: int = 999:
 var _rubble_stones: Array[Node3D] = []
 
 @onready var _visual:     Node3D  = $Visual
+const PAD_COLOR := Color(0.80, 0.76, 0.68)   # worn limestone flags
 var count_label: WorldTag
 
 const COLORS := {
@@ -51,6 +52,7 @@ func _ready() -> void:
 		GameState.section_changed.connect(_refresh_active.unbind(1))
 		_refresh_active()
 		return
+	_build_pad(rng)
 	match kind:
 		"stone":
 			_build_pallet(rng)
@@ -286,6 +288,37 @@ func _build_mortar(rng: RandomNumberGenerator) -> void:
 		jar.radial_segments = 12
 		var a := PI * 0.75 + i * 0.9 + rng.randf() * 0.3
 		_add(jar, Color(0.74, 0.40, 0.24), Vector3(cos(a) * 0.95, 0.35, sin(a) * 0.85), Vector3.ZERO)
+
+# Flagstones laid round the station, ragged at the edge — the yard's work spots were
+# paved, and it seats the pile in the ground rather than on bare sand
+func _build_pad(rng: RandomNumberGenerator) -> void:
+	var xf: Array[Transform3D] = []
+	var cols: Array[Color] = []
+	const STEP := 0.62
+	for gz in range(-3, 4):
+		for gx in range(-3, 4):
+			var c := Vector2(gx * STEP + (STEP * 0.5 if gz % 2 != 0 else 0.0), gz * STEP)
+			c += Vector2(rng.randf_range(-0.06, 0.06), rng.randf_range(-0.06, 0.06))
+			var r := c.length()
+			if r > 2.05 or (r > 1.4 and rng.randf() < (r - 1.4) / 0.7):
+				continue
+			var s := Vector3(STEP * rng.randf_range(0.78, 0.92), 0.07, STEP * rng.randf_range(0.78, 0.92))
+			xf.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.12, 0.12)).scaled(s), Vector3(c.x, 0.12, c.y)))
+			var v := rng.randf_range(-0.06, 0.04)
+			cols.append(Color(PAD_COLOR.r + v, PAD_COLOR.g + v, PAD_COLOR.b + v * 0.8))
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = Chunky.unit_block()
+	mm.instance_count = xf.size()
+	for i in xf.size():
+		mm.set_instance_transform(i, xf[i])
+		mm.set_instance_color(i, cols[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = Chunky.material(0.05, false, 0.3)
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_visual.add_child(mmi)
 
 func _box(size: Vector3) -> Mesh:
 	return Chunky.bevel_box(size, minf(0.04, minf(size.x, minf(size.y, size.z)) * 0.3))

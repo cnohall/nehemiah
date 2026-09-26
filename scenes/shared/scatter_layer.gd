@@ -68,6 +68,8 @@ func _ready() -> void:
 	# Added later: kept after everything seeded above so the city layout doesn't shift
 	_build_stone_clusters()
 	_build_tuft_pairs()
+	_build_meadows()
+	_build_rock_clusters()
 	_flush()
 
 # ── Ground cover ──────────────────────────────────────────────
@@ -95,6 +97,43 @@ func _build_tufts() -> void:
 	for i in 70:
 		var at := Vector3(_rng.randf_range(-22.0, 22.0), 0.1, _rng.randf_range(-6.0, -1.6) if _rng.randf() < 0.6 else _rng.randf_range(1.6, 3.0))
 		_tuft(at)
+
+## Shared with ground.gdshader meadow_mask() — keep the two in step
+static func meadow(x: float, z: float) -> float:
+	return sin(x * 0.21 + z * 0.13) * sin(z * 0.17 - x * 0.07) \
+		+ 0.45 * sin(x * 0.43 + 1.7) * sin(z * 0.39 + 0.4)
+
+const WORK_RECT := Rect2(-14.0, -2.5, 28.0, 15.5)   # matches ground.gdshader work_rect
+
+# Grass thick on the green ground the shader lays under it, bushes at the heart
+func _build_meadows() -> void:
+	var z := -HALF_Z
+	while z < 14.0:
+		var x := -HALF_X
+		while x < HALF_X:
+			var p := Vector2(x + _rng.randf_range(-0.4, 0.4), z + _rng.randf_range(-0.4, 0.4))
+			x += 1.1
+			var m := meadow(p.x, p.y)
+			if m < 0.62 or WORK_RECT.grow(1.5).has_point(p) or _blocked(p) or _on_street(p, 1.0):
+				continue
+			_tuft(Vector3(p.x, 0.1, p.y))
+			if m > 0.85 and _rng.randf() < 0.12:
+				_bush(Vector3(p.x, 0.0, p.y))
+		z += 1.1
+
+# Weathered limestone breaking the surface in twos and threes, pebbles round them
+func _build_rock_clusters() -> void:
+	for p in _free_points(60, true, false):
+		if WORK_RECT.grow(1.0).has_point(p):
+			continue
+		var c := Vector3(p.x, 0.0, p.y)
+		for j in _rng.randi_range(2, 3):
+			var s := Vector3(_rng.randf_range(0.5, 1.0), _rng.randf_range(0.3, 0.6), _rng.randf_range(0.45, 0.9))
+			var at := c + Vector3(_rng.randf_range(-0.6, 0.6), s.y * 0.25, _rng.randf_range(-0.6, 0.6))
+			_add("boulder", Transform3D(_yaw().scaled(s), at), _vary(ROCK_COLOR, 0.05).lightened(0.06))
+		for j in 5:
+			var s2 := Vector3.ONE * _rng.randf_range(0.8, 1.5)
+			_add("pebble", Transform3D(_yaw().scaled(s2), c + Vector3(_rng.randf_range(-1.1, 1.1), 0.04, _rng.randf_range(-1.1, 1.1))), _vary(ROCK_COLOR, 0.06))
 
 # Grass grows in little colonies: pairs and threes rather than lone tufts
 func _build_tuft_pairs() -> void:
