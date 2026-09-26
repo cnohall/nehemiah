@@ -423,21 +423,26 @@ func _cistern(c: Vector3) -> void:
 	# Cloth in two panels meeting in a low ridge, scalloped valance all round
 	for sz: float in [-1.0, 1.0]:
 		_add("block", Transform3D(Basis(Vector3.RIGHT, sz * 0.16) * Basis.from_scale(Vector3(3.4, 0.07, 1.62)), c + Vector3(0, 2.52, sz * 0.78)), Palette.INDIGO)
-	_valance(c + Vector3(0, 2.36, 0), 3.4, 3.1, Palette.INDIGO.darkened(0.12))
+	_valance(c + Vector3(0, 2.39, 0), 3.4, 3.1, Palette.INDIGO.darkened(0.12), tan(0.16))
 	for i in 3:
 		_jar(c + Vector3(1.9 + (i % 2) * 0.45, 0.0, -0.6 + i * 0.55), _rng.randf_range(1.0, 1.3))
 
-# Scalloped cloth edge: tabs hanging off each side of a w×d canopy
-func _valance(c: Vector3, w: float, d: float, cloth: Color) -> void:
+# Scalloped cloth edge hanging from a w×d ridged canopy: `c.y` is the eave height; on the
+# gable ends the tabs climb with the roof (`slope` per metre in toward the ridge) so they
+# hang from the cloth, not from the air under it
+func _valance(c: Vector3, w: float, d: float, cloth: Color, slope := 0.0) -> void:
 	for side: float in [-1.0, 1.0]:
 		var n := int(w / 0.34)
 		for i in n:
 			var x := -w * 0.5 + (i + 0.5) * w / n
-			_add("block", Transform3D(Basis.from_scale(Vector3(w / n - 0.05, 0.26 if i % 2 == 0 else 0.2, 0.04)), c + Vector3(x, 0, side * d * 0.5)), cloth)
+			var h := 0.26 if i % 2 == 0 else 0.2
+			_add("block", Transform3D(Basis.from_scale(Vector3(w / n - 0.05, h, 0.04)), c + Vector3(x, 0.02 - h * 0.5, side * d * 0.5)), cloth)
 		var m := int(d / 0.34)
 		for i in m:
 			var z := -d * 0.5 + (i + 0.5) * d / m
-			_add("block", Transform3D(Basis.from_scale(Vector3(0.04, 0.26 if i % 2 == 0 else 0.2, d / m - 0.05)), c + Vector3(side * w * 0.5, 0, z)), cloth)
+			var h := 0.26 if i % 2 == 0 else 0.2
+			var top := (d * 0.5 - absf(z)) * slope
+			_add("block", Transform3D(Basis.from_scale(Vector3(0.04, h, d / m - 0.05)), c + Vector3(side * w * 0.5, top + 0.02 - h * 0.5, z)), cloth)
 
 # Clay water jar: round belly, narrow neck, a lip
 func _jar(at: Vector3, sc: float) -> void:
@@ -455,9 +460,13 @@ func _cart(c: Vector3, yaw: float) -> void:
 		# Wheel: a thick disc on its side, hub in the middle
 		_add("drum", Transform3D(b * Basis(Vector3.RIGHT, PI / 2) * Basis.from_scale(Vector3(0.95, 0.12, 0.95)), c + b * Vector3(0, 0.48, sz * 0.72)), BEAM_COLOR.darkened(0.15))
 		_add("drum", Transform3D(b * Basis(Vector3.RIGHT, PI / 2) * Basis.from_scale(Vector3(0.25, 0.2, 0.25)), c + b * Vector3(0, 0.48, sz * 0.8)), BEAM_COLOR.darkened(0.35))
-	# Shafts resting on the ground
-	for sz: float in [-0.35, 0.35]:
-		_add("timber", Transform3D(b * Basis(Vector3.FORWARD, -0.32) * Basis.from_scale(Vector3(1.5, 0.08, 0.08)), c + b * Vector3(1.55, 0.35, sz)), _vary(BEAM_COLOR, 0.04))
+	# Shafts: from under the front of the bed down to the ground, where the ox would stand
+	for sz: float in [-0.42, 0.42]:
+		var from := c + b * Vector3(0.7, 0.55, sz)
+		var to := c + b * Vector3(2.35, 0.06, sz * 0.8)
+		var dir := (to - from).normalized()
+		var rot := Basis(Quaternion(Vector3.RIGHT, dir))
+		_add("timber", Transform3D(rot.scaled_local(Vector3(from.distance_to(to), 0.09, 0.09)), (from + to) * 0.5), _vary(BEAM_COLOR, 0.04))
 	for i in 5:
 		var s := Vector3(_rng.randf_range(0.45, 0.6), 0.32, _rng.randf_range(0.35, 0.45))
 		_add("block", Transform3D(b * Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)) * Basis.from_scale(s),

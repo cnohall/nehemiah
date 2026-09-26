@@ -96,6 +96,7 @@ var _tool: Node3D        # mallet, only while building
 var _spear: Node3D
 var _cape: Node3D
 var _carry_anchor: Node3D   # chest-front point where a carried load rides
+var _belt_tool: Node3D      # the builder's hammer hung at the hip between strokes
 
 static var _meshes: Dictionary = {}
 static var _part_mat: ShaderMaterial
@@ -177,6 +178,7 @@ func set_look(look: Dictionary) -> void:
 	_spear = null
 	_cape = null
 	_carry_anchor = null
+	_belt_tool = null
 	_build(look)
 	_apply_pose()
 
@@ -387,10 +389,10 @@ func _apply_pose() -> void:
 				ar = Vector3(-0.95 - bob, 0, 0.45)
 	if _spear != null and _base in ["idle", "walk"]:
 		ar = Vector3(-0.45, 0, -0.3)   # hand on the shaft
-	# The hammer rests in the hand, head up and forward, whenever it isn't swinging
+	# In the swing the hammer head leads forward off the hand
 	_tool_visible()
 	if _tool != null:
-		_tool.rotation.x = -1.35 if _base == "build" else -2.75
+		_tool.rotation.x = -1.35
 	_body.position.y = body_y
 	_body.rotation.x = body_rx
 	_body.scale = Vector3(_squash.x, _squash.y, _squash.x)
@@ -408,7 +410,9 @@ func _apply_pose() -> void:
 
 func _tool_visible() -> void:
 	if _tool != null:
-		_tool.visible = _base == "build" or (_look.get("tool_always", false) and hold.is_empty() and _base != "collapse")
+		_tool.visible = _base == "build"
+	if _belt_tool != null:
+		_belt_tool.visible = _base != "build"
 
 ## Chest-front point a carried load hangs from (follows the body's turn and bob)
 func carry_anchor() -> Node3D:
@@ -510,18 +514,18 @@ func _build(look: Dictionary) -> void:
 	# Basket on the back, riding above the shoulders: wicker bands, a rim, stones heaped in it
 	if look.get("basket", false):
 		var wicker := Color(0.78, 0.58, 0.3)
-		# Slung off-centre so its rim and stones show over one shoulder from the front
-		var bk := _pivot(_torso, Vector3(0.2, 0.64, -0.36))
-		bk.rotation = Vector3(-0.15, 0.1, -0.22)
-		_part(bk, _bbox(Vector3(0.62, 0.5, 0.32), 0.06), wicker, Vector3.ZERO)
+		# Square on the back, riding high so the rim and stones show over both shoulders
+		var bk := _pivot(_torso, Vector3(0.0, 0.66, -0.37))
+		bk.rotation = Vector3(-0.14, 0, 0)
+		_part(bk, _bbox(Vector3(0.7, 0.5, 0.32), 0.06), wicker, Vector3.ZERO)
 		for y: float in [-0.14, 0.0, 0.14]:
-			_part(bk, _bbox(Vector3(0.635, 0.04, 0.335), 0.012), wicker.darkened(0.16), Vector3(0, y, 0))
-		for x: float in [-0.2, 0.0, 0.2]:
+			_part(bk, _bbox(Vector3(0.715, 0.04, 0.335), 0.012), wicker.darkened(0.16), Vector3(0, y, 0))
+		for x: float in [-0.24, 0.0, 0.24]:
 			_part(bk, _bbox(Vector3(0.035, 0.46, 0.335), 0.01), wicker.darkened(0.08), Vector3(x, 0, 0))
-		_part(bk, _bbox(Vector3(0.67, 0.08, 0.37), 0.025), wicker.darkened(0.3), Vector3(0, 0.26, 0))
+		_part(bk, _bbox(Vector3(0.75, 0.08, 0.37), 0.025), wicker.darkened(0.3), Vector3(0, 0.26, 0))
 		if look.get("basket_stones", false):
-			for st: Array in [[Vector3(-0.17, 0.31, 0.02), 0.3, 0.19], [Vector3(0.05, 0.34, -0.04), -0.4, 0.21],
-					[Vector3(0.2, 0.3, 0.04), 0.9, 0.17], [Vector3(-0.02, 0.37, 0.07), 0.2, 0.15]]:
+			for st: Array in [[Vector3(-0.24, 0.31, 0.02), 0.3, 0.19], [Vector3(0.0, 0.34, -0.04), -0.4, 0.21],
+					[Vector3(0.24, 0.31, 0.04), 0.9, 0.18], [Vector3(-0.1, 0.38, 0.07), 0.2, 0.15], [Vector3(0.14, 0.38, -0.05), 0.5, 0.15]]:
 				_part(bk, _bbox(Vector3(st[2], st[2] * 0.85, st[2]), 0.035), Palette.WALL_STONE.darkened(0.08 + st[1] * 0.04),
 					st[0], Vector3(0.25, st[1], 0.15))
 		for sx: float in [-1.0, 1.0]:
@@ -658,6 +662,12 @@ func _build(look: Dictionary) -> void:
 		_part(_tool, _bbox(Vector3(0.07, 0.56, 0.07), 0.018), Color(0.50, 0.34, 0.20), Vector3(0, -0.24, 0))
 		_part(_tool, _bbox(Vector3(0.09, 0.08, 0.09), 0.02), LEATHER, Vector3(0, -0.06, 0))
 		_part(_tool, _bbox(Vector3(0.36, 0.22, 0.22), 0.05), Color(0.58, 0.57, 0.58), Vector3(0, -0.54, 0))
+		if look.get("tool_always", false):
+			# Between strokes it hangs from the belt at the hip, head up
+			_belt_tool = _pivot(_torso, Vector3(-0.36, 0.2, 0.08))
+			_belt_tool.rotation = Vector3(0.15, 0, -0.12)
+			_part(_belt_tool, _bbox(Vector3(0.06, 0.42, 0.06), 0.015), Color(0.50, 0.34, 0.20), Vector3(0, -0.08, 0))
+			_part(_belt_tool, _bbox(Vector3(0.28, 0.17, 0.17), 0.04), Color(0.58, 0.57, 0.58), Vector3(0, 0.15, 0))
 		_tool_visible()
 
 # Hair by style: a cap over the crown and down the back, chunky locks on top
