@@ -16,6 +16,7 @@ const TORCH_ENERGY    := 2.6
 const LAMP_ENERGY     := 1.3
 const LAMP_RANGE      := 4.5
 const LAMP_COLOR      := Color(1.0, 0.78, 0.52)
+const LAMP_POLL       := 0.5   # once night has settled, how often to hand out lamps
 
 @onready var _sun: DirectionalLight3D = get_parent().get_node("Sun")
 @onready var _env: Environment = get_parent().get_node("WorldEnvironment").environment
@@ -23,6 +24,7 @@ const LAMP_COLOR      := Color(1.0, 0.78, 0.52)
 var darkness := 0.0
 var _target := 0.0
 var _day := {}   # daylight values to return to
+var _lamp_poll := 0.0
 
 func _ready() -> void:
 	_day = {
@@ -41,7 +43,9 @@ func _retarget() -> void:
 
 func _process(delta: float) -> void:
 	if is_equal_approx(darkness, _target):
-		if darkness > 0.0:
+		_lamp_poll -= delta
+		if darkness > 0.0 and _lamp_poll <= 0.0:
+			_lamp_poll = LAMP_POLL
 			_update_lamps()   # late joiners and respawned workers get a lamp too
 		return
 	var rate := 1.0 / (FALL_TIME if _target > darkness else LIFT_TIME)

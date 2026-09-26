@@ -1,4 +1,4 @@
-extends "res://scenes/shared/scatter_layer.gd"
+extends ScatterLayer
 
 # Landmarks around the work site, one set per section (GDD §6.1 "layout per section"):
 # the sheepfold at the Sheep Gate, fish stalls, burned ruins, the Pool of Shelah, the

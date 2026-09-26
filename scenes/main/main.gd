@@ -83,7 +83,7 @@ func _process(delta: float) -> void:
 		_refresh_hud()
 
 func _follow_local_player(delta: float) -> void:
-	var local_player: Node3D = players_root.get_node_or_null(str(multiplayer.get_unique_id()))
+	var local_player := Player.local
 	if local_player == null:
 		return
 	var vel: Vector3 = local_player.velocity

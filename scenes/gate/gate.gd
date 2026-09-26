@@ -267,21 +267,9 @@ func _update_label() -> void:
 	_label.text = "\n".join(lines)
 
 func _local_player_near() -> bool:
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority():
-			return distance_to_point(p.global_position) < LABEL_RANGE
-	return false
+	return Player.local != null and distance_to_point(Player.local.global_position) < LABEL_RANGE
 
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	for prop: NodePath in [^".:pending", ^".:finished", ^".:is_target", ^"Work:progress"]:
-		cfg.add_property(prop)
-		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_interval = 0.1
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:pending", ^".:finished", ^".:is_target", ^"Work:progress"])

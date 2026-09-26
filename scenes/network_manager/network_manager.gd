@@ -169,6 +169,21 @@ func is_peer_ready(id: int) -> bool:
 func gate_sync(sync: MultiplayerSynchronizer) -> void:
 	sync.add_visibility_filter(is_peer_ready)
 
+## Server → clients replication of `props` on `owner`, as a gated "Sync" child
+func add_sync(owner: Node, props: Array[NodePath],
+		mode := SceneReplicationConfig.REPLICATION_MODE_ALWAYS, interval := 0.1) -> MultiplayerSynchronizer:
+	var cfg := SceneReplicationConfig.new()
+	for prop in props:
+		cfg.add_property(prop)
+		cfg.property_set_replication_mode(prop, mode)
+	var sync := MultiplayerSynchronizer.new()
+	sync.name = "Sync"
+	sync.replication_interval = interval
+	sync.replication_config = cfg
+	gate_sync(sync)
+	owner.add_child(sync)
+	return sync
+
 # ── Signals ────────────────────────────────────────────────
 
 func _on_peer_connected(id: int) -> void:

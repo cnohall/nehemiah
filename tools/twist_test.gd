@@ -100,7 +100,7 @@ func _process(delta: float) -> bool:
 			if _frame % 60 == 0:
 				print("  t=%.0f visitors: %s player %s downed=%s" % [_t, ms.map(func(m): return "%s st=%d" % [m.global_position, m.state]), _player.global_position, _player.downed])
 			if not ms.is_empty() and ms[0].state == 1:   # WAITING beside us
-				_check(_player._focus_target(_player.global_position) == ms[0], "messenger takes the [E] focus")
+				_check(_player._interact_choice(_player.global_position)[1] == ms[0], "messenger takes the [E] focus")
 				root.get_texture().get_image().save_png(_out + "/messenger.png")
 				_press()
 				_mark = _t

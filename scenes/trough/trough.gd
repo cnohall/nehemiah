@@ -146,10 +146,7 @@ func _update_label() -> void:
 		_label.text = "Trough  ·  Lime %d/1  Water %d/1" % [int(has_lime), int(has_water)]
 
 func _local_player_near() -> bool:
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority():
-			return distance_to_point(p.global_position) < LABEL_RANGE
-	return false
+	return Player.local != null and distance_to_point(Player.local.global_position) < LABEL_RANGE
 
 # ── Visuals ────────────────────────────────────────────────
 
@@ -196,13 +193,4 @@ func _box(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	for prop: NodePath in [^".:has_lime", ^".:has_water", ^".:mix_left", ^".:mortar_ready"]:
-		cfg.add_property(prop)
-		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_interval = 0.1
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:has_lime", ^".:has_water", ^".:mix_left", ^".:mortar_ready"])

@@ -96,14 +96,7 @@ func restock() -> void:
 		count = rubble_stock
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	cfg.add_property(^".:count")
-	cfg.property_set_replication_mode(^".:count", SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:count"], SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE, 0.0)
 
 # ── Visuals ────────────────────────────────────────────────
 

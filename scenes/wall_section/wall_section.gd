@@ -335,16 +335,7 @@ func _degrade() -> void:
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	for prop: NodePath in [^".:stage", ^".:pending", ^".:health", ^".:is_target", ^"Work:progress"]:
-		cfg.add_property(prop)
-		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_interval = 0.1
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:stage", ^".:pending", ^".:health", ^".:is_target", ^"Work:progress"])
 
 # ── Visuals ────────────────────────────────────────────────
 
@@ -472,8 +463,14 @@ func _add_merlons() -> void:
 	_add_multimesh(transforms, colors)
 
 # Timber scaffold marking the wall's full height: rough poles, X-braces, putlogs
-# with short plank runs, and a ladder on the city side (Neh. 4:17 builders at work)
+# with short plank runs, and a ladder on the city side (Neh. 4:17 builders at work).
+# Batched: one MultiMesh for the poles, one for the planks.
 func _add_scaffold(rng: RandomNumberGenerator) -> void:
+	var poles: Array[Transform3D] = []
+	var pole_colors: Array[Color] = []
+	var pole := func(a: Vector3, b: Vector3, radius: float, color: Color) -> void:
+		poles.append(_pole_transform(a, b, radius))
+		pole_colors.append(color)
 	var h := _size.y + 0.35
 	var bays := maxi(1, roundi(_size.x / 1.5))
 	var x0 := _center.x - _size.x * 0.5
@@ -488,61 +485,52 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 			var x := x0 + bay * i
 			var foot := Vector3(x + rng.randf_range(-0.05, 0.05), 0.0, z)
 			var head := Vector3(x + rng.randf_range(-0.08, 0.08), h + rng.randf_range(-0.1, 0.15), z + side * 0.04)
-			_add_pole(foot, head, 0.055, WOOD_COLOR.darkened(rng.randf_range(0.0, 0.15)))
+			pole.call(foot, head, 0.055, WOOD_COLOR.darkened(rng.randf_range(0.0, 0.15)))
 			feet.append(foot)
 			heads.append(head)
 		# Ledger lashed along the top, X-brace in alternate bays
 		var ly := h - 0.12
-		_add_pole(Vector3(x0 - 0.15, ly, z), Vector3(x0 + _size.x + 0.15, ly, z), 0.035, WOOD_COLOR.darkened(0.1))
+		pole.call(Vector3(x0 - 0.15, ly, z), Vector3(x0 + _size.x + 0.15, ly, z), 0.035, WOOD_COLOR.darkened(0.1))
 		for i in bays:
 			if (i + int(side > 0.0)) % 2 == 0:
 				var a := feet[i] + Vector3(0, 0.15, 0)
 				var b := Vector3(heads[i + 1].x, ly, z)
-				_add_pole(a, b, 0.03, WOOD_COLOR.darkened(0.18))
+				pole.call(a, b, 0.03, WOOD_COLOR.darkened(0.18))
 		if side > 0.0:
 			tops = heads
 	# Putlogs across the wall with short, slightly skewed plank runs on top
 	for i in bays + 1:
 		var x := tops[i].x
-		_add_pole(Vector3(x, h - 0.08, _center.z - off - 0.1), Vector3(x, h - 0.08, _center.z + off + 0.1),
+		pole.call(Vector3(x, h - 0.08, _center.z - off - 0.1), Vector3(x, h - 0.08, _center.z + off + 0.1),
 			0.03, WOOD_COLOR.darkened(0.1))
+	var planks: Array[Transform3D] = []
+	var plank_colors: Array[Color] = []
 	for i in bays:
 		if rng.randf() < 0.75:
-			_add_box(Vector3(bay * rng.randf_range(0.7, 0.95), 0.04, 0.28),
-				Vector3(x0 + bay * (i + 0.5), h - 0.03, _center.z + rng.randf_range(-0.2, 0.2)),
-				WOOD_COLOR.lightened(rng.randf_range(0.06, 0.16)))
-			_visual.get_child(-1).rotation.y = rng.randf_range(-0.06, 0.06)
+			var s := Vector3(bay * rng.randf_range(0.7, 0.95), 0.04, 0.28)
+			var pos := Vector3(x0 + bay * (i + 0.5), h - 0.03, _center.z + rng.randf_range(-0.2, 0.2))
+			plank_colors.append(WOOD_COLOR.lightened(rng.randf_range(0.06, 0.16)))
+			planks.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.06, 0.06)).scaled_local(s), pos))
 	# Ladder leaning on the city side
 	var lx := x0 + bay * (rng.randi_range(0, bays - 1) + 0.5)
 	var base_z := _center.z + off + 0.75
 	var top_z := _center.z + off + 0.05
 	for dx: float in [-0.2, 0.2]:
-		_add_pole(Vector3(lx + dx, 0.0, base_z), Vector3(lx + dx, h + 0.1, top_z), 0.03, WOOD_COLOR.lightened(0.05))
+		pole.call(Vector3(lx + dx, 0.0, base_z), Vector3(lx + dx, h + 0.1, top_z), 0.03, WOOD_COLOR.lightened(0.05))
 	var rungs := int(h / 0.32)
 	for r in range(1, rungs + 1):
 		var t := float(r) / (rungs + 1)
 		var y := (h + 0.1) * t
 		var z := lerpf(base_z, top_z, t)
-		_add_pole(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
+		pole.call(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
+	_add_multimesh(poles, pole_colors, _pole_mesh(), _wood_material())
+	_add_multimesh(planks, plank_colors, _unit_box(), _wood_material())
 
-# Round-ish timber between two points (6-sided, so it catches light like a pole)
-func _add_pole(a: Vector3, b: Vector3, radius: float, color: Color) -> void:
-	var mi := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = radius * 0.85
-	mesh.bottom_radius = radius
-	mesh.height = a.distance_to(b)
-	mesh.radial_segments = 6
-	mesh.rings = 1
-	mi.mesh = mesh
+# Round-ish timber between two points: the unit pole mesh stretched to length and radius
+static func _pole_transform(a: Vector3, b: Vector3, radius: float) -> Transform3D:
 	var dir := (b - a).normalized()
-	mi.basis = Basis(Quaternion(Vector3.UP, dir)) if absf(dir.dot(Vector3.UP)) < 0.999 else Basis()
-	mi.position = (a + b) * 0.5
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.roughness = 0.95
-	mi.material_override = mat
-	_visual.add_child(mi)
+	var rot := Basis(Quaternion(Vector3.UP, dir)) if absf(dir.dot(Vector3.UP)) < 0.999 else Basis()
+	return Transform3D(rot.scaled_local(Vector3(radius, a.distance_to(b), radius)), (a + b) * 0.5)
 
 func _add_box(size: Vector3, pos: Vector3, color: Color) -> StandardMaterial3D:
 	var mi := MeshInstance3D.new()
@@ -557,19 +545,51 @@ func _add_box(size: Vector3, pos: Vector3, color: Color) -> StandardMaterial3D:
 	_visual.add_child(mi)
 	return mat
 
-func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color]) -> void:
+func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color],
+		mesh: Mesh = null, mat: Material = null) -> void:
+	if transforms.is_empty():
+		return
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
-	mm.mesh = BoxMesh.new()
+	mm.mesh = mesh if mesh != null else _unit_box()
 	mm.instance_count = transforms.size()
 	for i in transforms.size():
 		mm.set_instance_transform(i, transforms[i])
 		mm.set_instance_color(i, colors[i])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.material_override = _stone_material()
+	mmi.material_override = mat if mat != null else _stone_material()
 	_visual.add_child(mmi)
+
+# Shared by every section on every peer
+static var _box_mesh: BoxMesh
+static var _pole: CylinderMesh
+static var _wood_mat: StandardMaterial3D
+
+static func _unit_box() -> BoxMesh:
+	if _box_mesh == null:
+		_box_mesh = BoxMesh.new()
+	return _box_mesh
+
+# 6-sided, so it catches light like a pole; tapers a little toward the top
+static func _pole_mesh() -> CylinderMesh:
+	if _pole == null:
+		_pole = CylinderMesh.new()
+		_pole.top_radius = 0.85
+		_pole.bottom_radius = 1.0
+		_pole.height = 1.0
+		_pole.radial_segments = 6
+		_pole.rings = 1
+	return _pole
+
+static func _wood_material() -> StandardMaterial3D:
+	if _wood_mat == null:
+		_wood_mat = StandardMaterial3D.new()
+		_wood_mat.vertex_color_use_as_albedo = true
+		_wood_mat.vertex_color_is_srgb = true   # WOOD_COLOR is sRGB
+		_wood_mat.roughness = 0.95
+	return _wood_mat
 
 static var _stone_mat: StandardMaterial3D
 
@@ -683,7 +703,4 @@ func _update_label() -> void:
 	_label.text = "\n".join(lines)
 
 func _local_player_near() -> bool:
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority():
-			return distance_to_point(p.global_position) < LABEL_RANGE
-	return false
+	return Player.local != null and distance_to_point(Player.local.global_position) < LABEL_RANGE

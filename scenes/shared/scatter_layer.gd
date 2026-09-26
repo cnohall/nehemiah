@@ -1,3 +1,4 @@
+class_name ScatterLayer
 extends Node3D
 
 # Procedural set dressing. Deterministic (fixed seed) so every peer builds the same.

@@ -1,3 +1,4 @@
+class_name Player
 extends CharacterBody3D
 
 # Owning peer drives movement + animation (replicated via MultiplayerSynchronizer).
@@ -133,8 +134,13 @@ var whirling := false:
 
 @onready var _sprite: CharacterRig = $Figure
 
+## This peer's own worker, or null before it spawns
+static var local: Player
+
 func _ready() -> void:
 	add_to_group("players")
+	if is_multiplayer_authority():
+		local = self
 	# Server-owned (host) player: don't replicate to a client still loading the
 	# game scene — its copy of this node doesn't exist yet
 	$MultiplayerSynchronizer.add_visibility_filter(func(id: int) -> bool:
@@ -170,6 +176,10 @@ func _process(delta: float) -> void:
 			_set_downed.rpc(false)
 	else:
 		_hp_bar.show_health(health / MAX_HEALTH)
+
+func _exit_tree() -> void:
+	if local == self:
+		local = null
 
 func set_slot(slot: int, c: Color) -> void:
 	slot_color = c
@@ -424,43 +434,44 @@ func _dash_fx() -> void:
 
 # ── Interaction focus (owner, local only) ──────────────────
 
-# Mirrors _server_interact's priorities from replicated state, so the ring shows
-# exactly what [E] will act on — Overcooked's counter highlight.
-func _focus_target(at: Vector3) -> Node3D:
+## What [E] acts on from `at`, in priority order: [Act, target]. The one rule for both
+## the focus ring (owner, from replicated state — Overcooked's counter highlight) and
+## _server_interact, so the ring always shows exactly what the press will do.
+enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE }
+
+func _interact_choice(at: Vector3) -> Array:
+	# Helping a fallen teammate comes first
 	for p in get_tree().get_nodes_in_group("players"):
 		if p != self and p.downed and at.distance_to(p.global_position) < REVIVE_REACH:
-			return p
+			return [Act.REVIVE, p]
 	if helping_id != 0:
-		return null
+		return [Act.LET_GO, null]
+	# Nearest valid thing wins — sections and gate pillars overlap in reach.
+	# Null target = nothing here wants the load.
 	if not carried_kind.is_empty():
-		return _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
+		return [Act.DELIVER, _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))]
 	var carrier := _carrier_needing_help(at)
 	if carrier != null:
-		return carrier
+		return [Act.HELP, carrier]
+	# Everything delivered, waiting for hands
 	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
-	var messenger := _messenger_first(at, site)
-	if messenger != null:
-		return messenger
-	if site != null:
-		return site
 	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
 	var pile := _nearest_in_reach("supply_piles", at, func(_p): return true)
+	# An Ono messenger standing closer than anything else goes first. He waits right
+	# beside you, so a careless press goes with him — that's the trap.
+	var messenger := _nearest_in_reach("messengers", at, func(_m): return true)
+	if messenger != null:
+		var d := _reach_dist(messenger, at)
+		if [site, item, pile].all(func(o): return o == null or _reach_dist(o, at) >= d):
+			return [Act.MESSENGER, messenger]
+	if site != null:
+		return [Act.WORK, site]
+	# Whichever is closer: something lying on the ground, or a stockpile
 	if item != null and (pile == null or _reach_dist(item, at) <= _reach_dist(pile, at)):
-		return item
-	return pile
-
-## An Ono messenger standing closer than anything else [E] could use (empty hands only).
-## He waits right beside you, so a careless press goes with him — that's the trap.
-func _messenger_first(at: Vector3, site: Node3D) -> Node3D:
-	var m := _nearest_in_reach("messengers", at, func(_m): return true)
-	if m == null:
-		return null
-	var d := _reach_dist(m, at)
-	for other: Node3D in [site, _nearest_in_reach("dropped_items", at, func(_i): return true),
-			_nearest_in_reach("supply_piles", at, func(_p): return true)]:
-		if other != null and _reach_dist(other, at) < d:
-			return null
-	return m
+		return [Act.TAKE_ITEM, item]
+	if pile != null:
+		return [Act.TAKE_PILE, pile]
+	return [Act.NONE, null]
 
 func _update_focus(delta: float) -> void:
 	_focus_poll -= delta
@@ -471,7 +482,7 @@ func _update_focus(delta: float) -> void:
 		_build_focus_ring()
 	var target: Node3D = null
 	if not downed and not GameState.is_over():
-		target = _focus_target(global_position)
+		target = _interact_choice(global_position)[1]
 	_focus_ring.visible = target != null
 	if target == null:
 		return
@@ -557,67 +568,56 @@ func _handle_interact() -> void:
 func _server_interact(at: Vector3) -> void:
 	if not _from_owner() or downed:
 		return
-	# Helping a fallen teammate comes first
-	for p in get_tree().get_nodes_in_group("players"):
-		if p != self and p.downed and at.distance_to(p.global_position) < REVIVE_REACH:
-			p._set_downed.rpc(false)
+	var choice := _interact_choice(at)
+	var target: Node3D = choice[1]
+	match choice[0]:
+		Act.REVIVE:
+			target._set_downed.rpc(false)
 			_action.rpc("halfslash")
-			return
-	if helping_id != 0:
-		_set_helping.rpc(0)
-		_tell("Let go of the beam")
-		return
-	if carried_kind.is_empty():
-		var carrier := _carrier_needing_help(at)
-		if carrier != null:
-			_set_helping.rpc(carrier.get_multiplayer_authority())
+		Act.LET_GO:
+			_set_helping.rpc(0)
+			_tell("Let go of the beam")
+		Act.HELP:
+			_set_helping.rpc(target.get_multiplayer_authority())
 			_sfx.rpc("pickup")
 			_tell("Holding the other end — {interact} to let go")
-			return
-	# Nearest valid thing wins — sections and gate pillars overlap in reach
-	if not carried_kind.is_empty():
-		var dest := _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
-		if dest != null and dest.deposit(carried_kind, 1):
-			get_tree().call_group("day_director", "note_load", get_multiplayer_authority())
-			_sfx.rpc("deposit_" + carried_kind)
-			_set_carried.rpc("")
-			if dest.can_build():
-				# Last load for this stage: the one who brought it sets straight to work
-				# (hands-on building), or it goes up at once (old rule)
-				if GameState.active_build:
-					_start_work(dest)
-				elif dest.try_build():
-					_action.rpc("halfslash")
-					_tell("Stage built!")
-				return
-			_action.rpc("halfslash")
-			return
+		Act.DELIVER:
+			_deliver(target, at)
+		Act.MESSENGER:
+			target.accept(self)
+		Act.WORK:
+			if GameState.active_build:
+				_start_work(target)
+			elif target.try_build():
+				_action.rpc("halfslash")
+		Act.TAKE_ITEM:
+			var kind: String = target.kind
+			if target.take():
+				_sfx.rpc("pickup")
+				_set_carried.rpc(kind)
+		Act.TAKE_PILE:
+			if target.request_pickup():
+				_sfx.rpc("pickup")
+				_set_carried.rpc(target.kind)
+
+# Server: hand the carried load to `dest` (null = nothing near wants it)
+func _deliver(dest: Node3D, at: Vector3) -> void:
+	if dest == null or not dest.deposit(carried_kind, 1):
 		_tell(_why_not_needed(at))
 		return
-	# Everything delivered, waiting for hands
-	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
-	var messenger := _messenger_first(at, site)
-	if messenger != null:
-		messenger.accept(self)
-		return
-	if site != null:
+	get_tree().call_group("day_director", "note_load", get_multiplayer_authority())
+	_sfx.rpc("deposit_" + carried_kind)
+	_set_carried.rpc("")
+	if dest.can_build():
+		# Last load for this stage: the one who brought it sets straight to work
+		# (hands-on building), or it goes up at once (old rule)
 		if GameState.active_build:
-			_start_work(site)
-		elif site.try_build():
+			_start_work(dest)
+		elif dest.try_build():
 			_action.rpc("halfslash")
+			_tell("Stage built!")
 		return
-	# Whichever is closer: something lying on the ground, or a stockpile
-	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
-	var pile := _nearest_in_reach("supply_piles", at, func(_p): return true)
-	if item != null and (pile == null or _reach_dist(item, at) <= _reach_dist(pile, at)):
-		var kind: String = item.kind
-		if item.take():
-			_sfx.rpc("pickup")
-			_set_carried.rpc(kind)
-		return
-	if pile != null and pile.request_pickup():
-		_sfx.rpc("pickup")
-		_set_carried.rpc(pile.kind)
+	_action.rpc("halfslash")
 
 # Server: explain a refused delivery (the carried material isn't wanted here)
 func _why_not_needed(at: Vector3) -> String:

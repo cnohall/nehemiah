@@ -147,10 +147,8 @@ func _process(_delta: float) -> void:
 	if cam == null:
 		return
 	var at := cam.global_position
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority():
-			at = p.global_position + Vector3.UP * 2.0
-			break
+	if Player.local != null:
+		at = Player.local.global_position + Vector3.UP * 2.0
 	_listener.global_transform = Transform3D(cam.global_basis, at)
 	if not _listener.is_current():
 		_listener.make_current()

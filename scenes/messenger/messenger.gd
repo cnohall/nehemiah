@@ -179,7 +179,4 @@ func _exit_tree() -> void:
 		_release()
 
 func _local_player_near() -> bool:
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority() and p.global_position.distance_to(global_position) < LABEL_RANGE:
-			return true
-	return false
+	return Player.local != null and Player.local.global_position.distance_to(global_position) < LABEL_RANGE

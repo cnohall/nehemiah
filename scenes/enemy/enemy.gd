@@ -21,6 +21,7 @@ const ATTACK_CD         := 1.6
 const STAGGER_TIME      := 0.3    # a sling hit knocks the wind out briefly
 const HITSTOP_TIME      := 0.09   # sprite holds its frame on a hit
 const REPATH_INTERVAL   := 0.3
+const SCAN_INTERVAL     := 0.2    # how often to look around for a new worker / wall
 const STUCK_WINDOW      := 0.6    # seconds of no progress before bashing a wall
 const STUCK_DIST        := 0.35
 const BREACH_Z          := 13.5   # past this line the enemy is inside the city
@@ -78,6 +79,7 @@ var _wrecker := false
 var _goal: Vector3
 var _attack_timer := 0.0
 var _repath_timer := 0.0
+var _scan_timer := randf() * SCAN_INTERVAL   # staggered so a wave doesn't all scan on one frame
 var _stuck_timer := 0.0
 var _stuck_origin: Vector3
 var _facing := "down"
@@ -122,7 +124,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if _busy:
 		return
-	_pick_target()
+	_pick_target(delta)
 	if _try_attack_player() or _try_attack_wall():
 		return
 	_move(delta)
@@ -131,12 +133,20 @@ func _physics_process(delta: float) -> void:
 
 # ── Targeting ──────────────────────────────────────────────
 
-func _pick_target() -> void:
-	_pick_wall()
+# Current targets are re-checked every tick; new ones are only scanned for every
+# SCAN_INTERVAL (the group sweeps are the costly part with a full wave)
+func _pick_target(delta: float) -> void:
+	_scan_timer -= delta
+	var scan := _scan_timer <= 0.0
+	if scan:
+		_scan_timer = SCAN_INTERVAL
+	_pick_wall(scan)
 	if is_instance_valid(_target_player) and not _target_player.downed \
 			and _dist_flat(_target_player) < LEASH_RANGE:
 		return
 	_target_player = null
+	if not scan:
+		return
 	var best := AGGRO_RANGE
 	for p in get_tree().get_nodes_in_group("players"):
 		if p.downed:
@@ -148,7 +158,7 @@ func _pick_target() -> void:
 
 # Wreckers lock onto the nearest built wall. Once it's knocked down to bare
 # foundation they pour through the breach instead.
-func _pick_wall() -> void:
+func _pick_wall(scan: bool) -> void:
 	if not _wrecker:
 		return
 	if is_instance_valid(_target_wall):
@@ -156,6 +166,8 @@ func _pick_wall() -> void:
 			return
 		_target_wall = null
 		_wrecker = false
+		return
+	if not scan:
 		return
 	var best := INF
 	for section in get_tree().get_nodes_in_group("wall_sections"):
