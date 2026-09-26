@@ -7,7 +7,7 @@
 
 [sub_resource type="Gradient" id="Gradient_band"]
 offsets = PackedFloat32Array(0, 0.28, 0.72, 1)
-colors = PackedColorArray(0.105, 0.068, 0.044, 0, 0.105, 0.068, 0.044, 0.74, 0.105, 0.068, 0.044, 0.74, 0.105, 0.068, 0.044, 0)
+colors = PackedColorArray(0.959, 0.932, 0.883, 0, 0.959, 0.932, 0.883, 0.92, 0.959, 0.932, 0.883, 0.92, 0.959, 0.932, 0.883, 0)
 
 [sub_resource type="GradientTexture2D" id="Tex_band"]
 gradient = SubResource("Gradient_band")
@@ -17,7 +17,7 @@ fill_to = Vector2(1, 0)
 
 [sub_resource type="Gradient" id="Gradient_rule_l"]
 offsets = PackedFloat32Array(0, 1)
-colors = PackedColorArray(0.877, 0.684, 0.339, 0, 0.877, 0.684, 0.339, 1)
+colors = PackedColorArray(0.825, 0.516, 0.145, 0, 0.825, 0.516, 0.145, 1)
 
 [sub_resource type="GradientTexture2D" id="Tex_rule_l"]
 gradient = SubResource("Gradient_rule_l")
@@ -27,7 +27,7 @@ fill_to = Vector2(1, 0)
 
 [sub_resource type="Gradient" id="Gradient_rule_r"]
 offsets = PackedFloat32Array(0, 1)
-colors = PackedColorArray(0.877, 0.684, 0.339, 1, 0.877, 0.684, 0.339, 0)
+colors = PackedColorArray(0.825, 0.516, 0.145, 1, 0.825, 0.516, 0.145, 0)
 
 [sub_resource type="GradientTexture2D" id="Tex_rule_r"]
 gradient = SubResource("Gradient_rule_r")
@@ -37,7 +37,7 @@ fill_to = Vector2(1, 0)
 
 [sub_resource type="Gradient" id="Gradient_gold"]
 offsets = PackedFloat32Array(0, 0.5, 1)
-colors = PackedColorArray(0.877, 0.684, 0.339, 0, 0.877, 0.684, 0.339, 0.9, 0.877, 0.684, 0.339, 0)
+colors = PackedColorArray(0.825, 0.516, 0.145, 0, 0.825, 0.516, 0.145, 0.9, 0.825, 0.516, 0.145, 0)
 
 [sub_resource type="GradientTexture2D" id="Tex_gold"]
 gradient = SubResource("Gradient_gold")
@@ -295,7 +295,7 @@ expand_mode = 1
 [node name="Title" type="Label" parent="Root/Banner/VBox/TitleRow"]
 layout_mode = 2
 theme_type_variation = &"Heading"
-theme_override_colors/font_color = Color(0.982, 0.966, 0.933, 1)
+theme_override_colors/font_color = Color(0.138, 0.094, 0.057, 1)
 theme_override_font_sizes/font_size = 50
 text = "Day 1"
 
@@ -310,7 +310,7 @@ expand_mode = 1
 [node name="Sub" type="Label" parent="Root/Banner/VBox"]
 layout_mode = 2
 theme_type_variation = &"Caption"
-theme_override_colors/font_color = Color(0.899, 0.851, 0.779, 1)
+theme_override_colors/font_color = Color(0.391, 0.318, 0.257, 1)
 theme_override_font_sizes/font_size = 20
 text = "A new stretch: Sheep Gate · Neh. 3:1"
 horizontal_alignment = 1
@@ -331,7 +331,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.105, 0.068, 0.044, 0.86)
+color = Color(0.959, 0.932, 0.883, 0.94)
 
 [node name="Center" type="CenterContainer" parent="Root/EndScreen"]
 layout_mode = 1
@@ -349,7 +349,7 @@ theme_override_constants/separation = 14
 [node name="Eyebrow" type="Label" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
 theme_type_variation = &"Eyebrow"
-theme_override_colors/font_color = Color(0.877, 0.684, 0.339, 1)
+theme_override_colors/font_color = Color(0.676, 0.313, 0.124, 1)
 theme_override_font_sizes/font_size = 16
 text = "Day 52 of 52"
 horizontal_alignment = 1
@@ -357,7 +357,7 @@ horizontal_alignment = 1
 [node name="Title" type="Label" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
 theme_type_variation = &"Display"
-theme_override_colors/font_color = Color(0.982, 0.966, 0.933, 1)
+theme_override_colors/font_color = Color(0.138, 0.094, 0.057, 1)
 theme_override_font_sizes/font_size = 68
 text = "The wall is finished"
 horizontal_alignment = 1
@@ -373,7 +373,7 @@ expand_mode = 1
 [node name="Message" type="Label" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
 theme_type_variation = &"Verse"
-theme_override_colors/font_color = Color(0.899, 0.851, 0.779, 1)
+theme_override_colors/font_color = Color(0.391, 0.318, 0.257, 1)
 theme_override_font_sizes/font_size = 22
 text = "“So the wall was completed on the 25th day of Elul, in 52 days.”"
 horizontal_alignment = 1
@@ -382,7 +382,7 @@ autowrap_mode = 3
 [node name="Ref" type="Label" parent="Root/EndScreen/Center/VBox"]
 layout_mode = 2
 theme_type_variation = &"Eyebrow"
-theme_override_colors/font_color = Color(0.877, 0.684, 0.339, 1)
+theme_override_colors/font_color = Color(0.676, 0.313, 0.124, 1)
 text = "Nehemiah 6:15"
 horizontal_alignment = 1
 
@@ -425,7 +425,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.105, 0.068, 0.044, 0.45)
+color = Color(0.959, 0.932, 0.883, 0.45)
 
 [node name="Center" type="CenterContainer" parent="Root/PauseMenu"]
 layout_mode = 1

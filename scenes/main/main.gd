@@ -22,7 +22,7 @@ const DUSK_SUN_COLOR   := Color(1.0, 0.74, 0.5)
 const DUSK_SUN_ENERGY  := 1.45
 const LIGHT_FADE       := 1.6
 # Player ring / HUD colours by join order: amber, olive, terracotta, sky
-const PLAYER_COLORS := [Color(0.93, 0.66, 0.22), Color(0.52, 0.70, 0.28), Color(0.86, 0.38, 0.26), Color(0.38, 0.62, 0.86)]
+const PLAYER_COLORS := Palette.CREW
 
 @onready var players_root: Node3D           = $Players
 @onready var enemies_root: Node3D           = $Enemies

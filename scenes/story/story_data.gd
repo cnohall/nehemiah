@@ -88,7 +88,8 @@ static func slides_for_day(day: int) -> Array:
 	var section: Dictionary = GameState.SECTIONS[i]
 	if section["days"][0] != day:
 		return []
-	var slides: Array = BEATS.get(i, []).duplicate()
+	# A replay goes straight to the section's own card — the story beats belong to the campaign
+	var slides: Array = [] if GameState.is_replay() else BEATS.get(i, []).duplicate()
 	slides.append({
 		"eyebrow": "Section %s of %s · Day %d" % [ROMAN[i], ROMAN[GameState.SECTIONS.size() - 1], day],
 		"title": section["name"],

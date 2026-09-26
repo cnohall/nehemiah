@@ -92,6 +92,14 @@ var crew_size: int = 1
 # peer_id → { "role": String }
 var players: Dictionary = {}
 var section_marks: Array = _no_marks()
+# Replay: the host picked one section from the map (SectionPicker) — the run plays just
+# that section and ends when it stands. -1 = the full campaign. Set by the menu before
+# hosting, synced to clients; reset() leaves it alone (it outlives the game scene).
+var replay_section := -1
+# Menu only: reopen the section picker on this section when back from a replay
+var picker_return := -1
+# The last section rated beat this player's saved best (end screen says so)
+var rating_improved := false
 # Started mid-campaign with `--day=N`: sections are only partly played, so no bests saved
 var _debug_start := false
 
@@ -155,6 +163,16 @@ func best_marks(section_index: int) -> int:
 		return -1
 	return cfg.get_value("marks", str(section_index), -1)
 
+func is_replay() -> bool:
+	return replay_section >= 0
+
+## Picked on the map: the first section is always open; each next one once the one
+## before it has been finished (any marks). Debug builds: `-- --unlock-all`.
+func is_unlocked(section_index: int) -> bool:
+	if section_index == 0 or best_marks(section_index) >= 0 or best_marks(section_index - 1) >= 0:
+		return true
+	return OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args()
+
 func is_over() -> bool:
 	return phase == Phase.WON or phase == Phase.LOST
 
@@ -193,6 +211,12 @@ func reset() -> void:
 	section_marks = _no_marks()
 	_debug_start = false
 
+## Server: a replay starts on its section's first day
+func apply_replay() -> void:
+	if is_replay():
+		var day: int = SECTIONS[replay_section]["days"][0]
+		_apply(day, replay_section, phase, breaches, targets_done, targets_total)
+
 ## Debug builds: `-- --day=N` on the command line starts the campaign at day N
 ## (e.g. 8 for brutes, 20 for raiders). Server only, before day 1 begins.
 func apply_debug_start_day() -> void:
@@ -207,6 +231,7 @@ func apply_debug_start_day() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
+	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size)
 	for i in section_marks.size():
@@ -226,6 +251,10 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
+func _sync_replay(section_index: int) -> void:
+	replay_section = section_index
+
+@rpc("authority", "call_remote", "reliable")
 func _sync_marks(section_index: int, mask: int) -> void:
 	_apply_marks(section_index, mask)
 
@@ -233,7 +262,8 @@ func _apply_marks(section_index: int, mask: int) -> void:
 	section_marks[section_index] = mask
 	# Every peer keeps its own best (more marks wins; finishing at all counts too)
 	var best := best_marks(section_index)
-	if not _debug_start and (best < 0 or mark_count(mask) > mark_count(best)):
+	rating_improved = best < 0 or mark_count(mask) > mark_count(best)
+	if not _debug_start and rating_improved:
 		var cfg := ConfigFile.new()
 		cfg.load(PROGRESS_PATH)
 		cfg.set_value("marks", str(section_index), mask)

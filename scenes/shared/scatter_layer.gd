@@ -30,22 +30,17 @@ const ROCK_COLOR   := Color(0.62, 0.58, 0.50)
 const BUSH_COLOR   := Color(0.36, 0.42, 0.22)
 const OLIVE_LEAF   := Color(0.38, 0.44, 0.28)
 const OLIVE_TRUNK  := Color(0.36, 0.30, 0.24)
-const STONE_COLOR  := Color(0.80, 0.71, 0.56)
-# Whitewash and bare limestone — lighter than the ground so the city reads as built
-const HOUSE_COLORS := [Color(0.92, 0.88, 0.80), Color(0.90, 0.83, 0.71), Color(0.88, 0.77, 0.62),
-	Color(0.91, 0.86, 0.78)]
-# Painted doors (blue-green is the old Levant favourite) and plain wood
-const DOOR_COLORS  := [Color(0.16, 0.44, 0.48), Color(0.20, 0.32, 0.56), Color(0.46, 0.29, 0.16),
-	Color(0.30, 0.44, 0.26)]
+const STONE_COLOR  := Palette.LIMESTONE
+# Palette.gd holds the shared world colours — plaster, dyes, doors
+const HOUSE_COLORS := Palette.PLASTER
+const DOOR_COLORS  := Palette.DOORS
 # Rugs and cloth drying on the flat roofs — the colour you see from above
-const CLOTH_COLORS := [Color(0.80, 0.30, 0.18), Color(0.95, 0.66, 0.18), Color(0.25, 0.33, 0.64),
-	Color(0.50, 0.60, 0.22), Color(0.66, 0.24, 0.30)]
-const PAVING_COLOR := Color(0.84, 0.77, 0.64)
+const CLOTH_COLORS := Palette.DYES
+const PAVING_COLOR := Palette.PAVING
 const TENT_COLOR   := Color(0.20, 0.15, 0.12)   # black goat-hair
 const CLAY_COLOR   := Color(0.60, 0.38, 0.24)
 const OPENING      := Color(0.18, 0.13, 0.09)
-const AWNINGS      := [Color(0.80, 0.32, 0.18), Color(0.93, 0.64, 0.20),
-	Color(0.26, 0.34, 0.62), Color(0.50, 0.58, 0.24)]
+const AWNINGS      := [Palette.MADDER, Palette.SAFFRON, Palette.INDIGO, Palette.WELD, Palette.UNDYED]
 
 var _rng := RandomNumberGenerator.new()
 # Instances collected by kind, flushed into one MultiMesh each at the end

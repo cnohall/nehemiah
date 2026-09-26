@@ -215,8 +215,8 @@ static func _panels(t: Theme) -> void:
 	var modal := bordered(box(PARCHMENT, Vector2(44, 38), 4), Color(RULE, 0.6), 1, 4)
 	t.set_stylebox("panel", "Modal", shadowed(modal, 36, 0.4, 10.0))
 
-	t.set_stylebox("panel", "TooltipPanel", bordered(box(Color(DUSK, 0.94), Vector2(10, 6)), Color(GOLD, 0.4), 1))
-	t.set_color("font_color", "TooltipLabel", CREAM)
+	t.set_stylebox("panel", "TooltipPanel", shadowed(bordered(box(PARCHMENT, Vector2(10, 6)), Color(RULE, 0.8), 1), 6, 0.2, 2.0))
+	t.set_color("font_color", "TooltipLabel", INK)
 	t.set_font("font", "TooltipLabel", SPECTRAL)
 	t.set_font_size("font_size", "TooltipLabel", 15)
 

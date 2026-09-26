@@ -68,6 +68,7 @@ func _ready() -> void:
 ## Server: open the session — the crew gathers until the host calls begin()
 func start() -> void:
 	GameState.reset()
+	GameState.apply_replay()
 	GameState.apply_debug_start_day()
 
 ## Server: host is ready — day 1 starts
@@ -88,8 +89,13 @@ func _process(delta: float) -> void:
 			_section_time += delta
 		GameState.Phase.DUSK:
 			_timer -= delta
-			if _timer <= 0.0 and GameState.advance_day():
-				_begin_day()
+			if _timer <= 0.0:
+				# A replay is one section: it ends when that section stands
+				var pos := GameState.day_in_section(GameState.current_day)
+				if GameState.is_replay() and pos.x == pos.y - 1:
+					GameState.set_phase(GameState.Phase.WON)
+				elif GameState.advance_day():
+					_begin_day()
 
 # ── Day flow ───────────────────────────────────────────────
 

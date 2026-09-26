@@ -27,4 +27,4 @@ static func draw_gem(ci: CanvasItem, c: Vector2, r: float, is_lit: bool) -> void
 		ci.draw_polyline(pts, UiStyle.AMBER.darkened(0.3), maxf(1.0, r * 0.14), true)
 	else:
 		pts.append(pts[0])
-		ci.draw_polyline(pts, Color(UiStyle.CREAM, 0.35), maxf(1.0, r * 0.12), true)
+		ci.draw_polyline(pts, Color(UiStyle.INK_MUTED, 0.7), maxf(1.0, r * 0.12), true)

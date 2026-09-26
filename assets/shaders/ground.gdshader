@@ -4,17 +4,17 @@ render_mode diffuse_lambert, specular_disabled, cull_back;
 uniform float scale     : hint_range(0.01, 0.2)  = 0.042;
 uniform float roughness : hint_range(0.0,  1.0)  = 0.97;
 
-// Warm Judean earth (sRGB). Mid-value ochre so the pale limestone wall, the
+// Judean earth (sRGB). Warm ochre, mid-value so the pale limestone wall, the
 // stations and the workers all stand out against it.
-uniform vec3 col_sand_bright : source_color = vec3(0.880, 0.720, 0.470);  // sunlit sand
-uniform vec3 col_sand_mid    : source_color = vec3(0.820, 0.620, 0.380);  // base earth
-uniform vec3 col_sand_dark   : source_color = vec3(0.720, 0.510, 0.320);  // darker drifts
-uniform vec3 col_dirt        : source_color = vec3(0.640, 0.400, 0.260);  // red-brown soil
-uniform vec3 col_trodden     : source_color = vec3(0.900, 0.790, 0.620);  // packed, pale path
+uniform vec3 col_sand_bright : source_color = vec3(0.860, 0.700, 0.460);  // sunlit sand
+uniform vec3 col_sand_mid    : source_color = vec3(0.790, 0.600, 0.370);  // base earth
+uniform vec3 col_sand_dark   : source_color = vec3(0.680, 0.490, 0.310);  // darker drifts
+uniform vec3 col_dirt        : source_color = vec3(0.600, 0.390, 0.250);  // red-brown soil
+uniform vec3 col_trodden     : source_color = vec3(0.870, 0.770, 0.600);  // packed, pale path
 // Dirt track from the gate out toward the enemy camp (matches ScatterLayer.GATE_X)
 uniform float gate_x = -4.0;
-uniform vec3 col_scrub       : source_color = vec3(0.520, 0.570, 0.290);  // dry olive scrub
-uniform vec3 col_scrub_lit   : source_color = vec3(0.620, 0.650, 0.340);
+uniform vec3 col_scrub       : source_color = vec3(0.460, 0.520, 0.260);  // dry olive scrub
+uniform vec3 col_scrub_lit   : source_color = vec3(0.560, 0.610, 0.310);
 // Per-section look (SectionTerrain): where the supply yard is trodden, how much scrub
 // grows (+ = greener, e.g. the King's Garden), an overall cast (ash at the Dung Gate)
 // and how far the ground outside falls away into shade (the valleys)

@@ -9,6 +9,8 @@ const SETTLE_TIME  := 2.4
 
 var _rig: Node2D
 var _drift_t := 0.0
+var _picker: SectionPicker
+var _sections_btn: Button
 
 @onready var backdrop:      TextureRect = $Backdrop
 @onready var column:        Control  = $Content/Column
@@ -32,6 +34,18 @@ func _ready() -> void:
 	# Credits sit over bright sand — give them a soft parchment backing
 	$Credits.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.PARCHMENT, 0.82), Vector2(12, 6), 3))
 	host_btn.pressed.connect(_on_host)
+	# Replay map: an entry under Host, and the picker over everything
+	_sections_btn = join_btn.duplicate()
+	_sections_btn.name = "SectionsButton"
+	_sections_btn.text = "Choose a Section"
+	menu.add_child(_sections_btn)
+	menu.move_child(_sections_btn, host_btn.get_index() + 1)
+	_sections_btn.pressed.connect(_open_picker)
+	_picker = SectionPicker.new()
+	add_child(_picker)
+	move_child(_picker, fade.get_index())
+	_picker.chosen.connect(_on_section_chosen)
+	_picker.closed.connect(_sections_btn.grab_focus)
 	join_btn.pressed.connect(_on_join)
 	settings_btn.pressed.connect(_on_settings)
 	quit_btn.pressed.connect(get_tree().quit)
@@ -48,6 +62,11 @@ func _ready() -> void:
 	join_panel.hide()
 	_show_default_status()
 	_intro()
+	# Back from a replay: straight to the map, on the stretch just played
+	GameState.replay_section = -1
+	if GameState.picker_return >= 0:
+		_picker.open(GameState.picker_return)
+		GameState.picker_return = -1
 
 func _unhandled_input(event: InputEvent) -> void:
 	if join_panel.visible and event.is_action_pressed("ui_cancel"):
@@ -110,7 +129,26 @@ func _show_default_status() -> void:
 # ── Host ───────────────────────────────────────────────────
 
 func _on_host() -> void:
+	GameState.replay_section = -1
+	_host()
+
+# Opens on the furthest stretch this player may build
+func _open_picker() -> void:
+	var last := 0
+	for i in GameState.SECTIONS.size():
+		if GameState.is_unlocked(i):
+			last = i
+	_picker.open(last)
+
+## Host a game of just one section (the others' marks don't change)
+func _on_section_chosen(section_index: int) -> void:
+	GameState.replay_section = section_index
+	GameState.picker_return = section_index
+	_host()
+
+func _host() -> void:
 	host_btn.disabled = true
+	_sections_btn.disabled = true
 	if _use_steam():
 		net_status.text = "Creating Steam lobby…"
 		NetworkManager.host_steam()
@@ -119,6 +157,7 @@ func _on_host() -> void:
 
 func _on_host_failed(reason: String) -> void:
 	host_btn.disabled = false
+	_sections_btn.disabled = false
 	net_status.text = reason
 
 func _on_lobby_created() -> void:

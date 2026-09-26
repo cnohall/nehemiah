@@ -65,6 +65,7 @@ var _pause_begin: Button     # host, while gathering: start from the menu (gamep
 var _gather_hint: Label
 var _pad_lost_note: Label   # pause menu line shown after the pad in use disconnects
 var _tally: VBoxContainer
+var _last_tally := {}   # the latest dusk numbers (a replay's end screen shows its marks)
 var _horn_row: Control
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
@@ -312,15 +313,46 @@ func _show_end(won: bool) -> void:
 	stats.add_child(_stat(str(GameState.breaches), "Breaches"))
 	if sections_done > 0:
 		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
+	if GameState.is_replay():
+		_replay_end(won, vb, stats)
 	end_screen.show()
 	UiFx.fade_in(end_screen, 0.9)
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
 	vb.get_node("Buttons/MenuButton").grab_focus()
 
+# A replay is one section: name it, show its three marks, and head back to the map
+func _replay_end(won: bool, vb: Control, stats: Control) -> void:
+	var i := GameState.replay_section
+	var sec: Dictionary = GameState.SECTIONS[i]
+	vb.get_node("Eyebrow").text = "Section %d of %d  ·  %s" % [i + 1, GameState.SECTIONS.size(), sec["ref"]]
+	if won:
+		vb.get_node("Title").text = "The %s stands" % sec["name"]
+		var got := GameState.mark_count(GameState.section_marks[i])
+		vb.get_node("Message").text = ("A new best for this stretch — %d of 3 marks." if GameState.rating_improved 			else "%d of 3 marks. Your best here stays as it was.") % got
+	else:
+		vb.get_node("Message").text = "Too many enemies reached the inner city. Try the stretch again."
+	vb.get_node("Ref").hide()
+	for c in stats.get_children():
+		c.queue_free()
+	if won and _last_tally.has("marks"):
+		var secs := int(_last_tally["section_time"])
+		stats.add_child(_stat("%d:%02d" % [secs / 60, secs % 60], "Time"))
+		stats.add_child(_stat(str(_last_tally["section_breaches"]), "Breaches"))
+		var marks := _marks_line(_last_tally)
+		vb.add_child(marks)
+		vb.move_child(marks, stats.get_index() + 1)
+	else:
+		var built: int = GameState.current_day - GameState.SECTIONS[i]["days"][0]
+		stats.add_child(_stat("%d / %d" % [built, sec["days"].size()], "Days built"))
+		stats.add_child(_stat(str(GameState.breaches), "Breaches"))
+	if GameState.picker_return >= 0:
+		vb.get_node("Buttons/MenuButton").text = "Back to the map"
+
 # ── Dusk tally ─────────────────────────────────────────────
 
 ## The day's numbers (DayDirector.day_tallied): what the crew did, then who did what
 func show_tally(stats: Dictionary) -> void:
+	_last_tally = stats
 	await get_tree().create_timer(TALLY_DELAY, true, false, true).timeout
 	if GameState.phase != GameState.Phase.DUSK:
 		return
@@ -395,15 +427,15 @@ func _marks_line(stats: Dictionary) -> Control:
 		chip.add_child(gem)
 		var text := VBoxContainer.new()
 		text.add_theme_constant_override("separation", -2)
-		text.add_child(_crew_label(GameState.MARK_NAMES[m], UiStyle.GOLD if earned else Color(UiStyle.CREAM, 0.5)))
-		var detail := _crew_label(details[m], Color(UiStyle.PARCHMENT_DEEP, 0.85 if earned else 0.5))
+		text.add_child(_crew_label(GameState.MARK_NAMES[m], UiStyle.TERRACOTTA if earned else UiStyle.INK_MUTED))
+		var detail := _crew_label(details[m], UiStyle.INK_SOFT if earned else Color(UiStyle.INK_MUTED, 0.8))
 		detail.add_theme_font_size_override("font_size", 15)
 		text.add_child(detail)
 		chip.add_child(text)
 		line.add_child(chip)
 	return line
 
-# Each worker's share, in their colour; the day's best carrier and best shot in gold
+# Each worker's share, in their colour; the day's best carrier and best shot in terracotta
 func _crew_line(crew: Array) -> Control:
 	var line := HBoxContainer.new()
 	line.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -420,10 +452,10 @@ func _crew_line(crew: Array) -> Control:
 		swatch.color = _slot_colors[slot % _slot_colors.size()]
 		chip.add_child(swatch)
 		var who := "You" if r[0] == multiplayer.get_unique_id() else "Builder %s" % ROMAN[slot % ROMAN.size()]
-		chip.add_child(_crew_label(who, UiStyle.CREAM))
-		chip.add_child(_crew_label("%d loads" % r[1], UiStyle.GOLD if r[1] > 0 and r[1] == top_loads else UiStyle.PARCHMENT_DEEP))
-		chip.add_child(_crew_label("·", UiStyle.PARCHMENT_DEEP))
-		chip.add_child(_crew_label("%d foes" % r[2], UiStyle.GOLD if r[2] > 0 and r[2] == top_foes else UiStyle.PARCHMENT_DEEP))
+		chip.add_child(_crew_label(who, UiStyle.INK))
+		chip.add_child(_crew_label("%d loads" % r[1], UiStyle.TERRACOTTA if r[1] > 0 and r[1] == top_loads else UiStyle.INK_SOFT))
+		chip.add_child(_crew_label("·", UiStyle.INK_MUTED))
+		chip.add_child(_crew_label("%d foes" % r[2], UiStyle.TERRACOTTA if r[2] > 0 and r[2] == top_foes else UiStyle.INK_SOFT))
 		line.add_child(chip)
 	return line
 
@@ -454,12 +486,12 @@ func _stat(value: String, caption: String) -> Control:
 	n.theme_type_variation = &"Numeral"
 	n.text = value
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	n.add_theme_color_override("font_color", UiStyle.CREAM)
+	n.add_theme_color_override("font_color", UiStyle.INK)
 	var l := Label.new()
 	l.theme_type_variation = &"Eyebrow"
 	l.text = caption
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_color_override("font_color", UiStyle.GOLD)
+	l.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
 	v.add_child(n)
 	v.add_child(l)
 	return v
