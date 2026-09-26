@@ -25,6 +25,12 @@ const SOLO_WORK_MULT := 0.75
 # "beams" twist (Neh. 3:3 "they laid its beams"): framing takes long beams, carried in
 # pairs, instead of loose timber
 const BEAM_COST_BY_CREW    := [1, 2, 2]
+# "thick" twist (Broad Wall, Neh. 3:8): plain stretches built double-thick — deeper, more
+# stone and mortar, longer work, and room for one more pair of hands
+const THICK_DEPTH          := 1.3
+const THICK_EXTRA          := { Stage.STACKED: { "stone": 2 }, Stage.MORTARED: { "mortar": 1 } }
+const THICK_WORK_MULT      := 1.3
+const THIN_MAX_DEPTH       := 1.0    # only plain walls thicken, not towers or pillars
 const MAX_HEALTH           := 150.0
 const DEGRADE_HEALTH_RATIO := 0.5
 const LABEL_RANGE          := 6.0
@@ -131,7 +137,28 @@ func _ready() -> void:
 		GameState.crew_changed.connect(_update_label.unbind(1))
 		GameState.crew_changed.connect(_prime_work.unbind(1))
 		_prime_work()
+		if _size.z < THIN_MAX_DEPTH:
+			_col.shape = _col.shape.duplicate()   # the depth changes per section, per wall
+			_base_depth = _size.z
+			GameState.section_changed.connect(_apply_thickness.unbind(1))
+			_apply_thickness(false)
 	_update_visuals()
+
+var _base_depth := 0.0
+
+## Plain stretch: double-thick where the section calls for it
+func _apply_thickness(redraw := true) -> void:
+	var depth := THICK_DEPTH if GameState.has_twist("thick") else _base_depth
+	if is_equal_approx(depth, _size.z):
+		return
+	_size.z = depth
+	(_col.shape as BoxShape3D).size.z = depth
+	_prime_work()
+	if redraw:
+		_update_visuals()
+
+func is_thick() -> bool:
+	return _base_depth > 0.0 and GameState.has_twist("thick")
 
 func _process(delta: float) -> void:
 	_label_poll -= delta
@@ -171,6 +198,9 @@ func cost_for(target_stage: int) -> Dictionary:
 	if GameState.active_build:
 		for kind: String in cost:
 			cost[kind] = maxi(1, cost[kind] - ACTIVE_BUILD_DISCOUNT)
+	if is_thick():
+		for kind: String in THICK_EXTRA.get(target_stage, {}):
+			cost[kind] += THICK_EXTRA[target_stage][kind]
 	return cost
 
 ## BuildWork: the site that holds this progress
@@ -219,7 +249,7 @@ func _prime_work() -> void:
 		return
 	var next := stage + 1
 	if next <= Stage.MORTARED:
-		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0)
+		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) 			* (THICK_WORK_MULT if is_thick() else 1.0)
 
 # Returns how much of the next stage's required material is pending (0.0–1.0)
 func get_build_progress() -> float:

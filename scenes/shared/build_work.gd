@@ -41,7 +41,8 @@ func add_builder(p: Node3D) -> bool:
 		return false
 	if p in _builders:
 		return true
-	if _builders.size() >= MAX_HANDS:
+	var hands := MAX_HANDS + (1 if get_parent().has_method("is_thick") and get_parent().is_thick() else 0)
+	if _builders.size() >= hands:
 		return false
 	_builders.append(p)
 	return true

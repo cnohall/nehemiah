@@ -173,4 +173,5 @@ Borrow Overcooked's **structure and readability**, not its tone.
    - **East Gate** `schemes`: up to 4 messengers a day (6:4), one at a time. He walks up and waits beside a worker; when he's nearer than anything else, [E] goes with him — led off ~7 s, then walk back. Ignored 12 s, he leaves
    - **Miphkad Gate**: doors + beams + salvage + mixing + schemes, pressure ×1.3; on the win the enemy withdraws (6:16)
    - ✅ **Valley Gate** `horn`: [R] / LB sounds the horn (8 s shared cooldown): everyone hears it (synth ram's horn), a standard in the caller's colour + ground ring stands 9 s, off-screen pointer "Horn" for the others. The enemy comes in **surges**: a "Surge" pointer + bell 3.5 s ahead, then a pack of 3 + day/12 from one spot every ~24 s, over a trickle thinned ×1.8. Also in the finale
-   - Still open: double-thick sections (4), night on the finale?, per-section terrain *shape* (heights). Watch solo pacing on surge days
+   - ✅ **Broad Wall** `thick`: plain stretches 1.3 m deep (collision too), +2 stone / +1 mortar per stage, work ×1.3, 4 hands per site instead of 3
+   - Still open: night on the finale?, per-section terrain *shape* (heights). Watch solo pacing on surge days
