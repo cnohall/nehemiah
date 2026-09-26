@@ -27,10 +27,10 @@ const MAIN_HALF_W := 2.5
 const CROSS_Z     := Vector2(22.0, 25.5)            # cross street z-range
 const WELL_POS    := Vector3(1.6, 0.0, 23.75)
 
-const ROCK_COLOR   := Color(0.62, 0.58, 0.50)
-const BUSH_COLOR   := Color(0.36, 0.42, 0.22)
-const OLIVE_LEAF   := Color(0.38, 0.44, 0.28)
-const OLIVE_TRUNK  := Color(0.36, 0.30, 0.24)
+const ROCK_COLOR   := Color(0.66, 0.63, 0.57)
+const BUSH_COLOR   := Color(0.40, 0.50, 0.22)
+const OLIVE_LEAF   := Palette.LEAF
+const OLIVE_TRUNK  := Color(0.42, 0.30, 0.20)
 const STONE_COLOR  := Palette.LIMESTONE
 # Palette.gd holds the shared world colours — plaster, dyes, doors
 const HOUSE_COLORS := Palette.PLASTER
@@ -111,12 +111,16 @@ func _build_groves() -> void:
 func _olive(at: Vector3) -> void:
 	var h := _rng.randf_range(1.2, 1.8)
 	var lean := Basis.from_euler(Vector3(_rng.randf_range(-0.2, 0.2), 0, _rng.randf_range(-0.2, 0.2)))
-	_add("trunk", Transform3D(lean.scaled(Vector3(1, h, 1)), at + Vector3(0, h * 0.5, 0)), _vary(OLIVE_TRUNK, 0.04))
+	_add("trunk", Transform3D(lean.scaled(Vector3(1.3, h, 1.3)), at + Vector3(0, h * 0.5, 0)), _vary(OLIVE_TRUNK, 0.04))
 	var top := at + lean * Vector3(0, h * 0.5, 0) + Vector3(0, h * 0.5, 0)
-	for i in 5:
-		var off := Vector3(_rng.randf_range(-0.9, 0.9), _rng.randf_range(0.0, 0.7), _rng.randf_range(-0.9, 0.9))
-		var s := Vector3(_rng.randf_range(0.9, 1.4), _rng.randf_range(0.6, 0.9), _rng.randf_range(0.9, 1.4))
-		_add("leaf", Transform3D(_yaw().scaled(s), top + off + Vector3(0, 0.5, 0)), _vary(OLIVE_LEAF, 0.05))
+	# Chunky canopy: a ring of big faceted clumps and one on top, lighter where the sun hits
+	var leaf := _vary(OLIVE_LEAF, 0.04)
+	for i in 4:
+		var a := i * TAU / 4.0 + _rng.randf_range(-0.4, 0.4)
+		var off := Vector3(cos(a) * 0.75, _rng.randf_range(0.0, 0.3), sin(a) * 0.75)
+		var s := Vector3(_rng.randf_range(1.2, 1.5), _rng.randf_range(0.85, 1.05), _rng.randf_range(1.2, 1.5))
+		_add("leaf", Transform3D(_yaw().scaled(s), top + off + Vector3(0, 0.45, 0)), leaf.darkened(0.06))
+	_add("leaf", Transform3D(_yaw().scaled(Vector3(1.5, 1.1, 1.5)), top + Vector3(0, 1.05, 0)), leaf.lightened(0.05))
 
 # Limestone breaking through the soil, well clear of the enemy approach
 func _build_outcrops() -> void:
@@ -260,17 +264,27 @@ func _add(kind: String, xf: Transform3D, color: Color) -> void:
 
 func _flush() -> void:
 	for kind: String in _batches:
-		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1])
+		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
 		# Ground-hugging bits: shadows cost more than they add
 		if kind in ["pebble", "patch", "slab"]:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
 
+# Chunky look: bevelled blocks, faceted foliage and rock
+func _material_for(kind: String) -> Material:
+	match kind:
+		"block", "opening": return Chunky.material(0.06)
+		"slab":             return Chunky.material(0.1, false, 0.28)
+		"bush", "leaf":     return Chunky.material(0.0, true, 0.0)
+		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
+	return Chunky.material(0.0, false, 0.0)
+
 func _mesh_for(kind: String) -> Mesh:
 	match kind:
+		"block", "slab", "opening": return Chunky.unit_block()
 		"pebble":  return _sphere(0.13, 0.10, 5, 2)
-		"bush":    return _sphere(0.42, 0.62, 7, 4)
-		"leaf":    return _sphere(0.6, 1.0, 8, 5)
+		"bush":    return _sphere(0.42, 0.62, 6, 3)
+		"leaf":    return _sphere(0.6, 1.0, 7, 4)
 		"boulder": return _sphere(0.6, 0.9, 6, 3)
 		"jar":     return _sphere(0.22, 0.5, 8, 4)
 		"trunk":   return _cylinder(0.12, 0.2, 1.0, 7)
@@ -329,7 +343,7 @@ func _cylinder(top: float, bottom: float, height: float, segments: int) -> Cylin
 	m.radial_segments = segments
 	return m
 
-func _multimesh(mesh: Mesh, xf: Array[Transform3D], colors: Array[Color]) -> MultiMeshInstance3D:
+func _multimesh(mesh: Mesh, xf: Array[Transform3D], colors: Array[Color], mat: Material = null) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
@@ -338,11 +352,8 @@ func _multimesh(mesh: Mesh, xf: Array[Transform3D], colors: Array[Color]) -> Mul
 	for i in xf.size():
 		mm.set_instance_transform(i, xf[i])
 		mm.set_instance_color(i, colors[i])
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true   # palette constants are authored in sRGB
-	mat.roughness = 1.0
-	mat.metallic_specular = 0.1
+	if mat == null:
+		mat = Chunky.material(0.0, false, 0.0)
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.material_override = mat

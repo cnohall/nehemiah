@@ -24,8 +24,12 @@ const PLASTER := [Color(0.86, 0.80, 0.69), Color(0.82, 0.74, 0.61), Color(0.78, 
 # Doors: weathered blue-green (the Levant favourite), faded indigo, bare cedar
 const DOORS := [Color(0.24, 0.38, 0.38), Color(0.26, 0.29, 0.40), Color(0.40, 0.28, 0.17),
 	Color(0.33, 0.37, 0.26)]
-const PAVING    := Color(0.77, 0.71, 0.59)
-const LIMESTONE := Color(0.78, 0.71, 0.58)
+const PAVING    := Color(0.76, 0.72, 0.64)
+const LIMESTONE := Color(0.78, 0.75, 0.68)
+# Dressed wall stone: the palest, coolest thing in the scene, so the wall leads
+const WALL_STONE := Color(0.84, 0.82, 0.77)
+# Foliage: olive and fig kept a touch fresher than dry scrub so trees read as life
+const LEAF := Color(0.40, 0.56, 0.24)
 
 # ── Crew (player slots) — strong enough to pick out at a glance, still dyes ──
 const CREW := [Color(0.88, 0.64, 0.24), Color(0.50, 0.64, 0.28), Color(0.80, 0.36, 0.24),

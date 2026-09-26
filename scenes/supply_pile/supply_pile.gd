@@ -24,7 +24,7 @@ var _rubble_stones: Array[Node3D] = []
 @onready var count_label: Label3D = $CountLabel
 
 const COLORS := {
-	"stone":  Color(0.68, 0.60, 0.48),
+	"stone":  Color(0.72, 0.70, 0.65),   # dressed limestone, a shade under the wall (sits in the sun)
 	"wood":   Color(0.50, 0.33, 0.17),
 	"mortar": Color(0.86, 0.80, 0.66),
 	"beam":   Color(0.46, 0.31, 0.17),
@@ -141,6 +141,14 @@ func _build_pallet(rng: RandomNumberGenerator) -> void:
 			Vector3(rng.randf_range(-0.04, 0.04), 0.14, -0.8 + i * 0.4), Vector3(0, rng.randf_range(-0.03, 0.03), 0))
 	for x: float in [-0.75, 0.0, 0.75]:
 		_add(_box(Vector3(0.14, 0.1, 2.0)), TIMBER.darkened(0.25), Vector3(x, 0.06, 0), Vector3.ZERO)
+	# Low crate sides: two boards a side, corner posts
+	for side: float in [-1.0, 1.0]:
+		for k in 2:
+			var y := 0.27 + k * 0.17
+			_add(_box(Vector3(1.95, 0.15, 0.08)), TIMBER.darkened(0.05 * k), Vector3(0, y, side * 0.98), Vector3.ZERO)
+			_add(_box(Vector3(0.08, 0.15, 1.9)), TIMBER.darkened(0.05 * k), Vector3(side * 0.97, y, 0), Vector3.ZERO)
+		for side2: float in [-1.0, 1.0]:
+			_add(_box(Vector3(0.13, 0.46, 0.13)), TIMBER.darkened(0.3), Vector3(side * 0.97, 0.33, side2 * 0.98), Vector3.ZERO)
 
 # Wood: two sleeper beams on a patch of bark chips
 func _build_sleepers(rng: RandomNumberGenerator) -> void:
@@ -274,10 +282,8 @@ func _build_mortar(rng: RandomNumberGenerator) -> void:
 		var a := PI * 0.75 + i * 0.9 + rng.randf() * 0.3
 		_add(jar, Color(0.74, 0.40, 0.24), Vector3(cos(a) * 0.95, 0.35, sin(a) * 0.85), Vector3.ZERO)
 
-func _box(size: Vector3) -> BoxMesh:
-	var b := BoxMesh.new()
-	b.size = size
-	return b
+func _box(size: Vector3) -> Mesh:
+	return Chunky.bevel_box(size, minf(0.04, minf(size.x, minf(size.y, size.z)) * 0.3))
 
 func _add(mesh: Mesh, color: Color, pos: Vector3, rot: Vector3) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()

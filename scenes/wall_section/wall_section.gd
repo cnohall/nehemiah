@@ -39,14 +39,15 @@ const LABEL_POLL           := 0.2
 const COURSE_H     := 0.5    # stone course height
 const MERLON_W     := 0.7
 const MERLON_H     := 0.45
-const GAP_ROUGH    := 0.07   # joint width before mortar
-const GAP_MORTARED := 0.03
+const GAP_ROUGH    := 0.045   # joint width before mortar
+const GAP_MORTARED := 0.012
 
-const STONE_COLOR  := Color(0.80, 0.74, 0.63)   # Jerusalem limestone — paler than the ground so the wall leads
-const MORTAR_COLOR := Color(0.62, 0.56, 0.46)
+const STONE_COLOR  := Palette.WALL_STONE   # Jerusalem limestone — pale and cool against the ochre ground so the wall leads
+const MORTAR_COLOR := Color(0.66, 0.63, 0.57)
 const EARTH_COLOR  := Color(0.55, 0.45, 0.30)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)   # today's work — amber footing
-const WOOD_COLOR   := Color(0.48, 0.32, 0.17)
+const WOOD_COLOR   := Color(0.52, 0.34, 0.18)
+const TIMBER_WIDTH := 2.6   # squared scaffold timber, as a multiple of the old pole radius
 
 
 @export var stage: Stage = Stage.EMPTY:
@@ -425,15 +426,15 @@ func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void
 				blen *= 0.5  # stagger joints
 			first = false
 			blen = minf(blen, x0 + _size.x - x)
-			var depth := _size.z + rng.randf_range(-0.05, 0.05)
+			var depth := _size.z + rng.randf_range(-0.06, 0.08)
 			var s := Vector3(blen - gap, row_h - gap, depth)
 			var pos := Vector3(x + blen * 0.5, y0 + row_h * (r + 0.5), _center.z)
 			transforms.append(Transform3D(Basis.from_scale(s), pos))
 			# Value jitter + a warm/cool drift per block; the odd weathered stone reused from rubble
-			var v := rng.randf_range(-0.07, 0.06)
-			if rng.randf() < 0.08:
-				v -= 0.12
-			var w := rng.randf_range(-0.025, 0.025)
+			var v := rng.randf_range(-0.08, 0.05)
+			if rng.randf() < 0.1:
+				v -= 0.1
+			var w := rng.randf_range(-0.02, 0.03)
 			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.2 - w))
 			x += blen
 	_add_multimesh(transforms, colors)
@@ -523,14 +524,15 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 		var y := (h + 0.1) * t
 		var z := lerpf(base_z, top_z, t)
 		pole.call(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
-	_add_multimesh(poles, pole_colors, _pole_mesh(), _wood_material())
-	_add_multimesh(planks, plank_colors, _unit_box(), _wood_material())
+	_add_multimesh(poles, pole_colors, Chunky.unit_block(), Chunky.material(0.02, false, 0.3))
+	_add_multimesh(planks, plank_colors, Chunky.unit_block(), Chunky.material(0.015))
 
-# Round-ish timber between two points: the unit pole mesh stretched to length and radius
+# Squared timber between two points: the unit block stretched to length, chunky section
 static func _pole_transform(a: Vector3, b: Vector3, radius: float) -> Transform3D:
 	var dir := (b - a).normalized()
 	var rot := Basis(Quaternion(Vector3.UP, dir)) if absf(dir.dot(Vector3.UP)) < 0.999 else Basis()
-	return Transform3D(rot.scaled_local(Vector3(radius, a.distance_to(b), radius)), (a + b) * 0.5)
+	var w := radius * TIMBER_WIDTH
+	return Transform3D(rot.scaled_local(Vector3(w, a.distance_to(b), w)), (a + b) * 0.5)
 
 func _add_box(size: Vector3, pos: Vector3, color: Color) -> StandardMaterial3D:
 	var mi := MeshInstance3D.new()
@@ -552,70 +554,15 @@ func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color],
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
-	mm.mesh = mesh if mesh != null else _unit_box()
+	mm.mesh = mesh if mesh != null else Chunky.unit_block()
 	mm.instance_count = transforms.size()
 	for i in transforms.size():
 		mm.set_instance_transform(i, transforms[i])
 		mm.set_instance_color(i, colors[i])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.material_override = mat if mat != null else _stone_material()
+	mmi.material_override = mat if mat != null else Chunky.material(0.07)
 	_visual.add_child(mmi)
-
-# Shared by every section on every peer
-static var _box_mesh: BoxMesh
-static var _pole: CylinderMesh
-static var _wood_mat: StandardMaterial3D
-
-static func _unit_box() -> BoxMesh:
-	if _box_mesh == null:
-		_box_mesh = BoxMesh.new()
-	return _box_mesh
-
-# 6-sided, so it catches light like a pole; tapers a little toward the top
-static func _pole_mesh() -> CylinderMesh:
-	if _pole == null:
-		_pole = CylinderMesh.new()
-		_pole.top_radius = 0.85
-		_pole.bottom_radius = 1.0
-		_pole.height = 1.0
-		_pole.radial_segments = 6
-		_pole.rings = 1
-	return _pole
-
-static func _wood_material() -> StandardMaterial3D:
-	if _wood_mat == null:
-		_wood_mat = StandardMaterial3D.new()
-		_wood_mat.vertex_color_use_as_albedo = true
-		_wood_mat.vertex_color_is_srgb = true   # WOOD_COLOR is sRGB
-		_wood_mat.roughness = 0.95
-	return _wood_mat
-
-static var _stone_mat: StandardMaterial3D
-
-static func _stone_material() -> StandardMaterial3D:
-	if _stone_mat == null:
-		var noise := FastNoiseLite.new()
-		noise.frequency = 0.08
-		noise.fractal_octaves = 4
-		var tex := NoiseTexture2D.new()
-		tex.noise = noise
-		tex.seamless = true
-		tex.width = 256
-		tex.height = 256
-		var grad := Gradient.new()
-		grad.set_color(0, Color(0.80, 0.80, 0.80))
-		grad.set_color(1, Color(1.0, 1.0, 1.0))
-		tex.color_ramp = grad
-		_stone_mat = StandardMaterial3D.new()
-		_stone_mat.vertex_color_use_as_albedo = true
-		_stone_mat.vertex_color_is_srgb = true   # STONE_COLOR etc. are sRGB
-		_stone_mat.albedo_texture = tex
-		_stone_mat.uv1_triplanar = true
-		_stone_mat.uv1_world_triplanar = true
-		_stone_mat.uv1_scale = Vector3.ONE * 0.6
-		_stone_mat.roughness = 0.92
-	return _stone_mat
 
 ## Every peer, at dusk: today's finished wall takes a bow
 func celebrate() -> void:

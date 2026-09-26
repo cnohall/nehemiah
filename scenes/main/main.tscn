@@ -91,15 +91,21 @@ code = "shader_type canvas_item;
 uniform float vignette_strength = 0.22;
 uniform vec3 tint = vec3(0.30, 0.24, 0.20);
 uniform float focus_center = 0.52;   // screen-y of the sharp band
-uniform float focus_half = 0.34;     // half-height of the sharp band
-uniform float blur_ramp = 0.28;
-uniform float max_lod = 0.7;
+uniform float focus_half = 0.3;     // half-height of the sharp band
+uniform float blur_ramp = 0.3;
+uniform float max_lod = 1.4;
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
 
 void fragment() {
 	float off = abs(SCREEN_UV.y - focus_center);
 	float lod = smoothstep(focus_half, focus_half + blur_ramp, off) * max_lod;
-	vec3 col = textureLod(screen_tex, SCREEN_UV, lod).rgb;
+	// Five taps a mip-texel apart smooth out the blocky look of a bare high mip
+	vec2 d = SCREEN_PIXEL_SIZE * exp2(lod) * 0.7;
+	vec3 col = textureLod(screen_tex, SCREEN_UV, lod).rgb * 0.36;
+	col += textureLod(screen_tex, SCREEN_UV + vec2(d.x, d.y), lod).rgb * 0.16;
+	col += textureLod(screen_tex, SCREEN_UV + vec2(-d.x, d.y), lod).rgb * 0.16;
+	col += textureLod(screen_tex, SCREEN_UV + vec2(d.x, -d.y), lod).rgb * 0.16;
+	col += textureLod(screen_tex, SCREEN_UV + vec2(-d.x, -d.y), lod).rgb * 0.16;
 	vec2 uv = SCREEN_UV - 0.5;
 	uv.x *= SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;
 	float v = smoothstep(0.35, 0.95, length(uv) * 1.1);

@@ -5,7 +5,7 @@ extends Node3D
 # Server spawns it into Main/Items; ItemSpawner replicates it with its kind.
 
 const COLORS := {
-	"stone":  Color(0.63, 0.59, 0.53),   # a shade darker than the sand so a load reads
+	"stone":  Color(0.74, 0.72, 0.68),   # dressed limestone, cool against the sand so a load reads
 	"wood":   Color(0.50, 0.33, 0.17),
 	"mortar": Color(0.52, 0.38, 0.22),   # the reed basket; the mortar itself is MORTAR_FILL
 	"beam":   Color(0.46, 0.31, 0.17),
@@ -70,9 +70,7 @@ static func build_prop(material_kind: String) -> Node3D:
 				log_mesh.height = 0.9
 				_add_mesh(root, log_mesh, mat, Vector3(0, 0, z), Vector3(0, 0, PI / 2))
 		"stone":
-			var block := BoxMesh.new()
-			block.size = Vector3(0.45, 0.28, 0.32)
-			_add_mesh(root, block, mat, Vector3.ZERO, Vector3(0, 0.4, 0))
+			_add_mesh(root, Chunky.bevel_box(Vector3(0.45, 0.28, 0.32), 0.05), mat, Vector3.ZERO, Vector3(0, 0.4, 0))
 		"beam":
 			# Squared timber, long axis on local X (carriers lay it between their shoulders)
 			var beam := BoxMesh.new()

@@ -45,7 +45,7 @@ var _label: Label3D
 func _ready() -> void:
 	_figure.setup({
 		"skin": Color(0.66, 0.46, 0.32), "robe": ROBE, "trim": ROBE.darkened(0.45),
-		"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.86, 0.78, 0.56),
+		"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.86, 0.78, 0.56), "tool": false,
 		"band": Color(0.80, 0.62, 0.26), "beard": "short", "hair": Color(0.12, 0.09, 0.07),
 		"outline": Color(0.20, 0.12, 0.24),
 	})
