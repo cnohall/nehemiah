@@ -182,6 +182,8 @@ func _olive(at: Vector3) -> void:
 		var off := Vector3(cos(a) * 0.75, _rng.randf_range(0.0, 0.3), sin(a) * 0.75)
 		var s := Vector3(_rng.randf_range(1.2, 1.5), _rng.randf_range(0.85, 1.05), _rng.randf_range(1.2, 1.5))
 		_add("leaf", Transform3D(_yaw().scaled(s), top + off + Vector3(0, 0.45, 0)), leaf.darkened(0.06))
+		# A smaller lump bulging out of each clump, so the crown reads lumpy
+		_add("leaf", Transform3D(Basis.from_scale(s * 0.55), top + off * 1.45 + Vector3(0, 0.75, 0)), leaf.lightened(0.02))
 	_add("leaf", Transform3D(_yaw().scaled(Vector3(1.5, 1.1, 1.5)), top + Vector3(0, 1.05, 0)), leaf.lightened(0.05))
 
 # Limestone breaking through the soil, well clear of the enemy approach
@@ -511,7 +513,8 @@ func _material_for(kind: String) -> Material:
 		"chip":             return Chunky.material(0.03, false, 0.3)
 		"timber":           return Chunky.wood_material(0.025)
 		"slab":             return Chunky.material(0.1, false, 0.28)
-		"bush", "leaf", "blade": return Chunky.material(0.0, true, 0.0)
+		"bush", "leaf":     return Chunky.foliage_material()
+		"blade":            return Chunky.material(0.0, true, 0.0)
 		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
 	return Chunky.material(0.0, false, 0.0)
 
@@ -520,8 +523,8 @@ func _mesh_for(kind: String) -> Mesh:
 		"block", "slab", "opening", "chip", "timber": return Chunky.unit_block()
 		"pebble":  return _sphere(0.13, 0.10, 5, 2)
 		"blade":   return _cylinder(0.0, 0.075, 1.0, 3)
-		"bush":    return _sphere(0.42, 0.62, 6, 3)
-		"leaf":    return _sphere(0.6, 1.0, 7, 4)
+		"bush":    return _sphere(0.42, 0.62, 12, 6)
+		"leaf":    return _sphere(0.6, 1.0, 14, 7)
 		"boulder": return _sphere(0.6, 0.9, 6, 3)
 		"jar":     return _sphere(0.22, 0.5, 8, 4)
 		"trunk":   return _cylinder(0.12, 0.2, 1.0, 7)

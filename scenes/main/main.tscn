@@ -130,7 +130,7 @@ attributes = SubResource("CamAttr_1")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.9545, 0.2287, -0.1916, 0, 0.6425, 0.7665, 0.2983, -0.7316, 0.6132, 0, 10, 0)
-light_color = Color(1, 0.92, 0.8, 1)
+light_color = Color(1, 0.94, 0.85, 1)
 light_energy = 1.7
 shadow_enabled = true
 shadow_blur = 0.8

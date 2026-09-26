@@ -22,6 +22,16 @@ static func unit_block() -> ArrayMesh:
 static func wood_material(bevel := 0.025) -> ShaderMaterial:
 	return material(bevel, false, 0.3, 0.22)
 
+## Foliage: smooth, lumpy, strongly lit from above (bright crowns, dark undersides)
+static func foliage_material() -> ShaderMaterial:
+	if not _mats.has("foliage"):
+		var m := material(0.0, false, 0.0).duplicate() as ShaderMaterial
+		m.set_shader_parameter("top_light", 0.3)
+		m.set_shader_parameter("grain", 0.14)
+		m.set_shader_parameter("ground_ao", 0.0)
+		_mats["foliage"] = m
+	return _mats["foliage"]
+
 ## Material for multimesh / vertex-coloured chunky geometry.
 ##   bevel: world-space chamfer width (0 = leave the mesh as authored)
 ##   facets: flat-shade each triangle (foliage, boulders)

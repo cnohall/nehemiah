@@ -125,9 +125,11 @@ void fragment() {
 				if (d < best) { best = d; bh = h; }
 			}
 		}
+		// Ragged edges: grit isn't round
+		best += (vnoise(gp * 3.0 + float(k) * 5.0) - 0.5) * 0.16;
 		float r = k == 0 ? 0.17 : 0.2;
 		float dotm = (1.0 - smoothstep(r * 0.6, r, best)) * step(0.45, bh);
-		float sgn = bh > 0.82 ? 0.09 : -0.13;
+		float sgn = bh > 0.82 ? 0.07 : (k == 0 ? -0.08 : -0.11);
 		col *= 1.0 + dotm * sgn * (1.0 - scrub * 0.6);
 	}
 
