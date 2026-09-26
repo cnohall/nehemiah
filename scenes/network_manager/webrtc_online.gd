@@ -34,6 +34,12 @@ var _join_code := ""
 var _ice: Array = []
 var _rtc: WebRTCMultiplayerPeer
 var _deadline := 0.0
+# Timeouts run on a clock that skips long frames: the first entry into a level can
+# freeze a browser tab for seconds (shader compiles), and that mustn't eat the
+# join window while the handshake itself is fine
+var _clock := 0.0
+var _last_tick := 0
+const MAX_STEP := 0.25
 
 static func available() -> bool:
 	if OS.has_feature("web"):
@@ -87,10 +93,14 @@ func _start(as_host: bool, code: String) -> void:
 		_fail("Could not reach the online server.")
 		return
 	_state = CONNECTING
+	_last_tick = Time.get_ticks_msec()
 	_deadline = _now() + CONNECT_TIMEOUT
 	set_process(true)
 
 func _process(_delta: float) -> void:
+	var tick := Time.get_ticks_msec()
+	_clock += minf((tick - _last_tick) / 1000.0, MAX_STEP)
+	_last_tick = tick
 	if _ws == null:
 		return
 	_ws.poll()
@@ -194,4 +204,4 @@ func _fail(reason: String) -> void:
 	failed.emit(reason)
 
 func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0
+	return _clock
