@@ -99,7 +99,7 @@ var pending: Dictionary = _empty_pending():
 var _size: Vector3
 var _center: Vector3
 var _visual: Node3D
-var _label: Label3D
+var _label: WorldTag
 var _foundation_mat: StandardMaterial3D
 var _label_poll := 0.0
 var _juice_tween: Tween
@@ -626,8 +626,7 @@ func _dust_puff() -> void:
 # ── Label ──────────────────────────────────────────────────
 
 func _build_label() -> void:
-	_label = Label3D.new()
-	UiStyle.world_label(_label, 40)
+	_label = WorldTag.make(WorldTag.Kind.SITE)
 	_label.position = Vector3(_center.x, _size.y + 1.0, _center.z)
 	_label.visible = false
 	add_child(_label)

@@ -70,7 +70,7 @@ const PAD_ASSIST_DEG  := 35.0
 const SCREEN_RIGHT := Vector3(1, 0, -1) * 0.70710678
 const SCREEN_DOWN  := Vector3(1, 0, 1) * 0.70710678
 
-const _DEFAULT_ROBE := Color(0.93, 0.66, 0.22)   # until Main assigns a slot
+const _DEFAULT_ROBE := Palette.CREW[0]   # until Main assigns a slot
 const SLING_STONE := preload("res://scenes/sling_stone/sling_stone.tscn")
 const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const MAX_DROPPED  := 40      # oldest ground item vanishes past this
@@ -1088,10 +1088,9 @@ func _feedback(text: String) -> void:
 
 # Short floating line above the head (local only)
 func _toast(text: String) -> void:
-	var l := Label3D.new()
 	# "{interact}" → "[E]" or "[A]", whichever device this player is using
-	l.text = text.format({ "interact": "[%s]" % InputMode.key("interact"), "drop": "[%s]" % InputMode.key("drop") })
-	UiStyle.world_label(l, 34)
+	var l := WorldTag.make(WorldTag.Kind.TOAST,
+		text.format({ "interact": "[%s]" % InputMode.key("interact"), "drop": "[%s]" % InputMode.key("drop") }))
 	l.position = Vector3(0, HP_BAR_Y + 0.3, 0)
 	add_child(l)
 	var tw := l.create_tween()

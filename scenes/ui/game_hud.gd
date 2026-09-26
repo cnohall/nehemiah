@@ -71,6 +71,8 @@ var _tally_band: CanvasItem   # second layer of the band: numbers stay legible o
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 
 func _ready() -> void:
+	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
+		UiStyle.ornament(p)
 	_build_player_cards()
 	_build_controls_hint()
 	# Under the banner and menus, over the world-facing plaques
@@ -451,7 +453,7 @@ func _crew_line(crew: Array) -> Control:
 		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		swatch.color = _slot_colors[slot % _slot_colors.size()]
 		chip.add_child(swatch)
-		var who := "You" if r[0] == multiplayer.get_unique_id() else "Builder %s" % ROMAN[slot % ROMAN.size()]
+		var who: String = "You" if r[0] == multiplayer.get_unique_id() else CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
 		chip.add_child(_crew_label(who, UiStyle.INK))
 		chip.add_child(_crew_label("%d loads" % r[1], UiStyle.TERRACOTTA if r[1] > 0 and r[1] == top_loads else UiStyle.INK_SOFT))
 		chip.add_child(_crew_label("·", UiStyle.INK_MUTED))
@@ -506,7 +508,8 @@ func set_player_present(slot: int, present: bool, is_local: bool) -> void:
 		return
 	var card: Dictionary = _cards[slot]
 	card.root.visible = present
-	card.name.text = "You" if is_local else "Builder %s" % ROMAN[slot]
+	card.name.text = CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
+	card.who.text = "You" if is_local else "Crew %s" % ROMAN[slot]
 
 func set_player_health(slot: int, frac: float) -> void:
 	if slot >= _cards.size():
@@ -521,16 +524,17 @@ func set_player_downed(slot: int, downed: bool) -> void:
 	if slot >= _cards.size():
 		return
 	_cards[slot].carry.visible = downed
+	_cards[slot].portrait.downed = downed
 
 func set_player_color(slot: int, color: Color) -> void:
 	if slot >= _cards.size():
 		return
 	_slot_colors[slot] = color
-	(_cards[slot].swatch as ColorRect).color = color
-	# Player-colour spine down the card's left edge — matches the robe and ground ring
+	(_cards[slot].portrait as CrewPortrait).set_worker(slot, color)
 	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat
-	card.border_color = color
-	card.border_width_left = 6
+	card.content_margin_left = 10
+	card.content_margin_top = 8
+	card.content_margin_bottom = 9
 	(_cards[slot].root as PanelContainer).add_theme_stylebox_override("panel", card)
 
 # ── Controls hint ──────────────────────────────────────────
@@ -539,6 +543,7 @@ func _build_controls_hint() -> void:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(16, 12), 0.9))
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiStyle.ornament(panel, 4.0)
 	$Root.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
@@ -603,21 +608,30 @@ func _build_player_cards() -> void:
 	for slot in MAX_SLOTS:
 		var root := PanelContainer.new()
 		root.theme_type_variation = &"Card"
-		root.custom_minimum_size = Vector2(190, 0)
+		root.custom_minimum_size = Vector2(236, 0)
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		root.visible = false
+		UiStyle.ornament(root, 4.0)
+		var hb := HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 10)
+		root.add_child(hb)
+		var portrait := CrewPortrait.new()
+		portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hb.add_child(portrait)
 		var vb := VBoxContainer.new()
-		vb.add_theme_constant_override("separation", 6)
-		root.add_child(vb)
+		vb.add_theme_constant_override("separation", 3)
+		vb.alignment = BoxContainer.ALIGNMENT_CENTER
+		vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hb.add_child(vb)
+		var who := Label.new()
+		who.theme_type_variation = &"Eyebrow"
+		who.add_theme_font_size_override("font_size", 12)
+		vb.add_child(who)
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		vb.add_child(top)
-		var swatch := ColorRect.new()
-		swatch.custom_minimum_size = Vector2(14, 14)
-		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		top.add_child(swatch)
 		var name_lbl := Label.new()
-		name_lbl.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 2))
+		name_lbl.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 1))
 		name_lbl.add_theme_font_size_override("font_size", 17)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(name_lbl)
@@ -639,7 +653,7 @@ func _build_player_cards() -> void:
 		bar.add_theme_stylebox_override("fill", fill)
 		vb.add_child(bar)
 		players_row.add_child(root)
-		_cards.append({ root = root, swatch = swatch, name = name_lbl,
+		_cards.append({ root = root, portrait = portrait, name = name_lbl, who = who,
 			carry = carry, bar = bar, fill = fill })
 
 # ── Steam invite ───────────────────────────────────────────

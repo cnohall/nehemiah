@@ -21,7 +21,7 @@ var count: int = 999:
 var _rubble_stones: Array[Node3D] = []
 
 @onready var _visual:     Node3D  = $Visual
-@onready var count_label: Label3D = $CountLabel
+var count_label: WorldTag
 
 const COLORS := {
 	"stone":  Color(0.72, 0.70, 0.65),   # dressed limestone, a shade under the wall (sits in the sun)
@@ -33,7 +33,12 @@ const COLORS := {
 }
 
 func _ready() -> void:
-	UiStyle.world_label(count_label, 36)
+	# The scene's Label3D marks where the tag goes
+	var anchor: Node3D = $CountLabel
+	count_label = WorldTag.make(WorldTag.Kind.STATION)
+	count_label.position = anchor.position
+	add_child(count_label)
+	anchor.free()
 	count_label.text = kind.capitalize() + ("s" if kind == "beam" else "")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(kind) + hash(name)

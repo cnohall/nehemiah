@@ -38,7 +38,7 @@ var _timer := 0.0
 var _waited := 0.0
 var _facing := "down"
 var _exit := Vector3.ZERO
-var _label: Label3D
+var _label: WorldTag
 
 @onready var _figure: CharacterRig = $Figure
 
@@ -63,9 +63,7 @@ func _ready() -> void:
 	scroll.position = Vector3(0.38, 1.25, 0.25)
 	scroll.rotation.z = PI / 2.4
 	add_child(scroll)
-	_label = Label3D.new()
-	_label.text = "Come down to the plain of Ono"
-	UiStyle.world_label(_label, 30)
+	_label = WorldTag.make(WorldTag.Kind.NOTE, "Come down to the plain of Ono")
 	_label.position.y = 3.0
 	add_child(_label)
 	GameState.phase_changed.connect(_on_phase_changed)

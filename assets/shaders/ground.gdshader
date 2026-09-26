@@ -75,8 +75,10 @@ void fragment() {
 	float wall_band = 1.0 - smoothstep(2.5, 5.0, abs(world_xz.y) + edge_noise);
 	wall_band *= 1.0 - smoothstep(22.0, 26.0, abs(world_xz.x));
 	float yard = 1.0 - smoothstep(5.0, 9.0, length(world_xz - yard_center) + edge_noise);
-	float street = (1.0 - smoothstep(2.0, 3.5, abs(world_xz.x) + edge_noise))
+	float street = (1.0 - smoothstep(2.6, 4.0, abs(world_xz.x - gate_x) + edge_noise))
 		* smoothstep(9.0, 13.0, world_xz.y);
+	// Cross street in the city (ScatterLayer.CROSS_Z)
+	street = max(street, (1.0 - smoothstep(2.2, 3.4, abs(world_xz.y - 23.75) + edge_noise)) * step(12.0, world_xz.y));
 	// The track: straight through the yard to the gate, then winding north
 	float track_x = world_xz.y < -1.5
 		? gate_x - 3.0 * sin(world_xz.y * 0.09) - (world_xz.y + 1.5) * 0.12
@@ -89,21 +91,22 @@ void fragment() {
 	// Patches of dry scrub off the beaten track — the hills weren't bare sand
 	float scrub = smoothstep(0.56 - scrub_bias, 0.66 - scrub_bias, fbm(p * 1.6 + vec2(11.3, 4.1)) + (mid - 0.5) * 0.25);
 	scrub *= 1.0 - trodden;
+	scrub *= 1.0 - smoothstep(12.0, 15.0, world_xz.y);   // city ground is swept earth
 	scrub *= 1.0 - (1.0 - smoothstep(6.0, 9.0, abs(world_xz.y))) * (1.0 - smoothstep(24.0, 28.0, abs(world_xz.x)));
 	vec3 scrub_col = mix(col_scrub, col_scrub_lit, smoothstep(0.35, 0.75, detail));
-	col = mix(col, scrub_col, scrub * 0.85);
+	col = mix(col, scrub_col, scrub * 0.45);
 
 	col = mix(col, section_tint, tint_amount * (0.7 + 0.6 * (mid - 0.5)));
 	// Falling away outside the wall: darker and a touch cooler with distance
 	float fall = smoothstep(-4.0, -30.0, world_xz.y) * outside_shade;
 	col = mix(col, col * vec3(0.72, 0.74, 0.86), fall);
 
-	// Micro grain — subtle brightness flicker for sandy texture
-	col *= 0.90 + 0.10 * micro;
+	// Wind ripples: faint bands bent by the noise, strongest on open sand
+	float rip = sin(dot(world_xz, vec2(0.62, 0.78)) * 5.5 + mid * 9.0 + detail * 3.0);
+	col *= 1.0 + rip * 0.022 * (1.0 - trodden) * (1.0 - scrub);
 
-	// Pebble speckle
-	float peb = step(0.965, hash2(floor(world_xz * 9.0)));
-	col = mix(col, col_sand_dark * 0.85, peb * 0.5);
+	// Micro grain — soft sandy texture (no hard speckle: real pebbles are geometry)
+	col *= 0.93 + 0.07 * micro;
 
 	ALBEDO    = col;
 	ROUGHNESS = roughness;

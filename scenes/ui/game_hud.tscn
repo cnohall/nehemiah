@@ -46,6 +46,7 @@ height = 2
 fill_to = Vector2(1, 0)
 
 [node name="GameHUD" type="CanvasLayer"]
+layer = 2
 script = ExtResource("1_script")
 
 [node name="Root" type="Control" parent="."]

@@ -392,9 +392,9 @@ func _low_house(c: Vector3, w: float, d: float) -> void:
 	var tint := _vary(HOUSE_COLORS[_rng.randi() % HOUSE_COLORS.size()], 0.02)
 	_solid(c, Vector3(w, h, d), tint)
 	_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.15, 0.22, d + 0.15)), c + Vector3(0, h + 0.1, 0)), tint.darkened(0.06))
+	_dress_walls(c, w, h, d)
 	# Door toward the wall — "in front of his own house"
-	_add("opening", Transform3D(Basis.from_scale(Vector3(0.8, 1.3, 0.06)), c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), 0.65, -d * 0.5 - 0.02)),
-		DOOR_COLORS[_rng.randi() % DOOR_COLORS.size()])
+	_door(c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), 0, -d * 0.5), -1.0)
 	if _rng.randf() < 0.6:
 		var rug := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), h + 0.22, 0)
 		_add("block", Transform3D(_yaw_small() * Basis.from_scale(Vector3(minf(w * 0.5, 1.8), 0.04, 1.2)), rug), CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])

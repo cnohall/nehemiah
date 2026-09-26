@@ -51,7 +51,7 @@ var _doors: Node3D
 var _infill: Node3D
 var _door_body: StaticBody3D
 var _footing: MeshInstance3D
-var _label: Label3D
+var _label: WorldTag
 var _label_poll := 0.0
 var _work: BuildWork
 
@@ -249,8 +249,7 @@ func _box_mesh(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 # ── Label ──────────────────────────────────────────────────
 
 func _build_label() -> void:
-	_label = Label3D.new()
-	UiStyle.world_label(_label, 40)
+	_label = WorldTag.make(WorldTag.Kind.SITE)
 	_label.position = Vector3(0, 3.4, 0)
 	_label.visible = false
 	add_child(_label)
