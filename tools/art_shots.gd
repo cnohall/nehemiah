@@ -13,7 +13,7 @@ var _players: Array = []
 # [camera focus (x, z), ortho size, hud?, name]
 const SHOTS := [
 	[Vector2(6.0, 3.0), 11.0, false, "close"],
-	[Vector2(3.0, 4.0), 22.0, true, "gameplay"],
+	[Vector2(3.0, 4.0), 18.0, true, "gameplay"],
 	[Vector2(-2.0, 12.0), 16.0, false, "city"],
 	[Vector2(-17.0, 6.0), 12.0, false, "campw"],
 	[Vector2(17.0, 5.0), 12.0, false, "campe"],

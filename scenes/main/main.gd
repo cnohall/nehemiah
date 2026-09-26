@@ -4,7 +4,7 @@ const PLAYER_SCENE := preload("res://scenes/player/player.tscn")
 const HUD_SCENE    := preload("res://scenes/ui/game_hud.tscn")
 const CAM_OFFSET   := Vector3(20.0, 20.0, 20.0)
 const CAM_SMOOTH   := 6.0
-const CAM_SIZE     := 22.0
+const CAM_SIZE     := 18.0   # closer than true "strategy" framing: the crew reads as characters
 # Camera leads a little into the direction of travel so you see where you're going
 const LOOK_AHEAD      := 0.3    # seconds of velocity
 const LOOK_AHEAD_MAX  := 2.5    # metres
@@ -17,7 +17,7 @@ const HUD_INTERVAL := 0.1
 # Dusk: the last stone lands in slow motion, the light turns gold, the camera leans in
 const DUSK_SLOWMO      := 0.3    # time scale…
 const DUSK_SLOWMO_TIME := 0.5    # …for this many real seconds
-const DUSK_CAM_SIZE    := 19.0
+const DUSK_CAM_SIZE    := 15.5
 const DUSK_SUN_COLOR   := Color(1.0, 0.74, 0.5)
 const DUSK_SUN_ENERGY  := 1.45
 const LIGHT_FADE       := 1.6

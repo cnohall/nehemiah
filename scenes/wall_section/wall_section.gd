@@ -39,15 +39,15 @@ const LABEL_POLL           := 0.2
 const COURSE_H     := 0.5    # stone course height
 const MERLON_W     := 0.7
 const MERLON_H     := 0.45
-const GAP_ROUGH    := 0.045   # joint width before mortar
+const GAP_ROUGH    := 0.06    # joint width before mortar
 const GAP_MORTARED := 0.012
 
 const STONE_COLOR  := Palette.WALL_STONE   # Jerusalem limestone — pale and cool against the ochre ground so the wall leads
-const MORTAR_COLOR := Color(0.66, 0.63, 0.57)
+const MORTAR_COLOR := Color(0.62, 0.60, 0.60)
 const EARTH_COLOR  := Color(0.55, 0.45, 0.30)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)   # today's work — amber footing
 const WOOD_COLOR   := Color(0.52, 0.34, 0.18)
-const TIMBER_WIDTH := 2.6   # squared scaffold timber, as a multiple of the old pole radius
+const TIMBER_WIDTH := 3.4   # squared scaffold timber, as a multiple of the old pole radius
 
 
 @export var stage: Stage = Stage.EMPTY:
@@ -394,9 +394,13 @@ func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
 		Stage.EMPTY:
 			_add_ruin(rng)  # broken footing, walkable
 		Stage.FRAMED:
+			_add_box(Vector3(_size.x - 0.1, minf(COURSE_H, _size.y) - 0.04, _size.z - 0.14),
+				Vector3(_center.x, 0.12 + minf(COURSE_H, _size.y) * 0.5, _center.z), Palette.STONE_JOINT)
 			_add_courses(rng, minf(COURSE_H, _size.y), GAP_ROUGH)
 			_add_scaffold(rng)
 		Stage.STACKED:
+			_add_box(Vector3(_size.x - 0.1, _size.y - 0.04, _size.z - 0.14),
+				_center, Palette.STONE_JOINT)
 			_add_courses(rng, _size.y, GAP_ROUGH)
 		Stage.MORTARED:
 			_add_box(Vector3(_size.x - 0.12, _size.y - 0.05, _size.z - 0.12),
@@ -431,11 +435,11 @@ func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void
 			var pos := Vector3(x + blen * 0.5, y0 + row_h * (r + 0.5), _center.z)
 			transforms.append(Transform3D(Basis.from_scale(s), pos))
 			# Value jitter + a warm/cool drift per block; the odd weathered stone reused from rubble
-			var v := rng.randf_range(-0.08, 0.05)
-			if rng.randf() < 0.1:
-				v -= 0.1
-			var w := rng.randf_range(-0.02, 0.03)
-			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.2 - w))
+			var v := rng.randf_range(-0.11, 0.06)
+			if rng.randf() < 0.12:
+				v -= 0.12
+			var w := rng.randf_range(-0.025, 0.03)
+			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v - w * 0.5))
 			x += blen
 	_add_multimesh(transforms, colors)
 
@@ -535,7 +539,7 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 	var plank_colors: Array[Color] = []
 	for i in bays:
 		if rng.randf() < 0.75:
-			var s := Vector3(bay * rng.randf_range(0.7, 0.95), 0.04, 0.28)
+			var s := Vector3(bay * rng.randf_range(0.7, 0.95), 0.07, 0.34)
 			var pos := Vector3(x0 + bay * (i + 0.5), h - 0.03, _center.z + rng.randf_range(-0.2, 0.2))
 			plank_colors.append(WOOD_COLOR.lightened(rng.randf_range(0.06, 0.16)))
 			planks.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.06, 0.06)).scaled_local(s), pos))
@@ -551,8 +555,8 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 		var y := (h + 0.1) * t
 		var z := lerpf(base_z, top_z, t)
 		pole.call(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
-	_add_multimesh(poles, pole_colors, Chunky.unit_block(), Chunky.material(0.02, false, 0.3))
-	_add_multimesh(planks, plank_colors, Chunky.unit_block(), Chunky.material(0.015))
+	_add_multimesh(poles, pole_colors, Chunky.unit_block(), Chunky.wood_material(0.03))
+	_add_multimesh(planks, plank_colors, Chunky.unit_block(), Chunky.wood_material(0.015))
 
 # Squared timber between two points: the unit block stretched to length, chunky section
 static func _pole_transform(a: Vector3, b: Vector3, radius: float) -> Transform3D:

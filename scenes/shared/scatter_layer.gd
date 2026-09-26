@@ -29,7 +29,7 @@ const WELL_POS    := Vector3(1.6, 0.0, 23.75)
 
 const ROCK_COLOR   := Color(0.66, 0.63, 0.57)
 const BUSH_COLOR   := Color(0.40, 0.50, 0.22)
-const TUFT_COLOR   := Color(0.50, 0.60, 0.25)
+const TUFT_COLOR   := Color(0.46, 0.62, 0.22)
 const OLIVE_LEAF   := Palette.LEAF
 const OLIVE_TRUNK  := Color(0.42, 0.30, 0.20)
 const STONE_COLOR  := Palette.LIMESTONE
@@ -65,6 +65,9 @@ func _ready() -> void:
 	_build_streets()
 	_build_city()
 	_build_work_camp()
+	# Added later: kept after everything seeded above so the city layout doesn't shift
+	_build_stone_clusters()
+	_build_tuft_pairs()
 	_flush()
 
 # ── Ground cover ──────────────────────────────────────────────
@@ -93,6 +96,12 @@ func _build_tufts() -> void:
 		var at := Vector3(_rng.randf_range(-22.0, 22.0), 0.1, _rng.randf_range(-6.0, -1.6) if _rng.randf() < 0.6 else _rng.randf_range(1.6, 3.0))
 		_tuft(at)
 
+# Grass grows in little colonies: pairs and threes rather than lone tufts
+func _build_tuft_pairs() -> void:
+	for p in _free_points(200, true, false):
+		for j in _rng.randi_range(2, 3):
+			_tuft(Vector3(p.x + _rng.randf_range(-0.55, 0.55), 0.1, p.y + _rng.randf_range(-0.55, 0.55)))
+
 func _tuft(at: Vector3) -> void:
 	var base := _vary(TUFT_COLOR, 0.05)
 	var n := _rng.randi_range(7, 11)
@@ -111,6 +120,23 @@ func _build_grit() -> void:
 			continue
 		var s := Vector3(_rng.randf_range(0.7, 1.6), _rng.randf_range(0.5, 1.1), _rng.randf_range(0.7, 1.6))
 		_add("pebble", Transform3D(_yaw().scaled(s), Vector3(p.x, 0.1, p.y)), _vary(ROCK_COLOR, 0.07))
+
+# Little heaps of broken limestone, a few chunky stones each — the mockup's rubble
+# texture, mostly toward the wall and around the yard
+func _build_stone_clusters() -> void:
+	var spots: Array[Vector2] = _free_points(140, true, false)
+	for i in 110:
+		spots.append(Vector2(_rng.randf_range(-24.0, 24.0), _rng.randf_range(-9.0, 12.0)))
+	for p in spots:
+		if absf(p.y) < 1.3 or _blocked(p):
+			continue
+		var base := _vary(Palette.WALL_STONE, 0.06).darkened(_rng.randf_range(0.0, 0.12))
+		for j in _rng.randi_range(2, 5):
+			var sz := _rng.randf_range(0.14, 0.32)
+			var s := Vector3(sz * _rng.randf_range(0.9, 1.5), sz * _rng.randf_range(0.6, 1.0), sz * _rng.randf_range(0.9, 1.4))
+			var off := Vector3(_rng.randf_range(-0.35, 0.35), s.y * 0.45, _rng.randf_range(-0.35, 0.35))
+			var tilt := Basis.from_euler(Vector3(_rng.randf_range(-0.25, 0.25), _rng.randf() * TAU, _rng.randf_range(-0.25, 0.25)))
+			_add("chip", Transform3D(tilt.scaled(s), Vector3(p.x, 0.0, p.y) + off), base.lightened(_rng.randf_range(0.0, 0.08)))
 
 func _build_bushes() -> void:
 	# Each bush = 3 overlapping blobs so the silhouette isn't a single ball
@@ -327,33 +353,36 @@ func _dress_walls(c: Vector3, w: float, h: float, d: float) -> void:
 	var n := maxi(2, floori(w / 0.8))
 	for i in n:
 		var x := -w * 0.5 + w / n * (i + 0.5)
-		_add("block", Transform3D(Basis.from_scale(Vector3(0.14, 0.14, 0.3)), c + Vector3(x, y, d * 0.5 + 0.08)), _vary(BEAM_COLOR, 0.04))
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.14, 0.14, 0.3)), c + Vector3(x, y, d * 0.5 + 0.08)), _vary(BEAM_COLOR, 0.04))
 	n = maxi(2, floori(d / 0.8))
 	for i in n:
 		var z := -d * 0.5 + d / n * (i + 0.5)
-		_add("block", Transform3D(Basis.from_scale(Vector3(0.3, 0.14, 0.14)), c + Vector3(w * 0.5 + 0.08, y, z)), _vary(BEAM_COLOR, 0.04))
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.3, 0.14, 0.14)), c + Vector3(w * 0.5 + 0.08, y, z)), _vary(BEAM_COLOR, 0.04))
 
 # Door in a wall face (z = face side): dark recess, painted leaf, timber lintel, stone step
 func _door(at: Vector3, face: float) -> void:
 	_add("opening", Transform3D(Basis.from_scale(Vector3(1.0, 1.6, 0.08)), at + Vector3(0, 0.8 + 0.2, face * 0.02)), OPENING)
 	_add("opening", Transform3D(Basis.from_scale(Vector3(0.78, 1.42, 0.08)), at + Vector3(0, 0.71 + 0.2, face * 0.05)),
 		DOOR_COLORS[_rng.randi() % DOOR_COLORS.size()])
-	_add("block", Transform3D(Basis.from_scale(Vector3(1.35, 0.18, 0.24)), at + Vector3(0, 1.72 + 0.2, face * 0.08)), _vary(BEAM_COLOR, 0.03))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(1.35, 0.18, 0.24)), at + Vector3(0, 1.72 + 0.2, face * 0.08)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(1.2, 0.14, 0.45)), at + Vector3(0, 0.07, face * 0.22)), _vary(FOOTING, 0.03))
 
 # Small window on the +x face: opening, lintel, sill
 func _window(at: Vector3) -> void:
 	_add("opening", Transform3D(Basis.from_scale(Vector3(0.08, 0.5, 0.5)), at + Vector3(0.02, 0, 0)), OPENING)
-	_add("block", Transform3D(Basis.from_scale(Vector3(0.16, 0.12, 0.78)), at + Vector3(0.06, 0.33, 0)), _vary(BEAM_COLOR, 0.03))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(0.16, 0.12, 0.78)), at + Vector3(0.06, 0.33, 0)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.16, 0.07, 0.66)), at + Vector3(0.06, -0.3, 0)), _vary(FOOTING, 0.03))
 
 # Cloth canopy on two front poles, sloping back toward the wall it leans on
 func _canopy(at: Vector3, w: float, d: float, face: float, cloth: Color) -> void:
 	for sx: float in [-1.0, 1.0]:
-		_add("block", Transform3D(Basis.from_scale(Vector3(0.1, 2.0, 0.1)), at + Vector3(sx * w * 0.45, 1.0, face * d * 0.35)), _vary(BEAM_COLOR, 0.04))
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.1, 2.0, 0.1)), at + Vector3(sx * w * 0.45, 1.0, face * d * 0.35)), _vary(BEAM_COLOR, 0.04))
 	_add("block", Transform3D(Basis(Vector3.RIGHT, face * 0.22) * Basis.from_scale(Vector3(w + 0.1, 0.06, d)), at + Vector3(0, 2.0, 0)), cloth)
 	# Scalloped front edge, a shade darker
-	_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.1, 0.2, 0.05)), at + Vector3(0, 1.84, face * d * 0.5)), cloth.darkened(0.15))
+	var n := int(w / 0.3)
+	for i in n:
+		var x := -w * 0.5 + (i + 0.5) * w / n
+		_add("block", Transform3D(Basis.from_scale(Vector3(w / n - 0.04, 0.24 if i % 2 == 0 else 0.17, 0.05)), at + Vector3(x, 1.84, face * d * 0.5)), cloth.darkened(0.12))
 
 # ── Work camp ─────────────────────────────────────────────────
 # The builders' camp at the edges of the yard (Neh. 4:22 "let each man lodge inside
@@ -368,32 +397,65 @@ func _build_work_camp() -> void:
 
 # Stone-lined basin of water under an indigo canopy, jars waiting beside it
 func _cistern(c: Vector3) -> void:
-	for side: Vector3 in [Vector3(0, 0, -1.0), Vector3(0, 0, 1.0)]:
-		_add("block", Transform3D(Basis.from_scale(Vector3(2.4, 0.5, 0.35)), c + side + Vector3(0, 0.25, 0)), _vary(STONE_COLOR, 0.04))
-	for side: Vector3 in [Vector3(-1.05, 0, 0), Vector3(1.05, 0, 0)]:
-		_add("block", Transform3D(Basis.from_scale(Vector3(0.35, 0.5, 1.7)), c + side + Vector3(0, 0.25, 0)), _vary(STONE_COLOR, 0.04))
-	_add("block", Transform3D(Basis.from_scale(Vector3(1.8, 0.06, 1.7)), c + Vector3(0, 0.38, 0)), WATER_COLOR)
+	# Rim of separate cut blocks, two courses, joints staggered
+	for course in 2:
+		var y := 0.14 + course * 0.26
+		for side: float in [-1.0, 1.0]:
+			var x := -1.25 + (0.3 if course == 1 else 0.0)
+			while x < 1.2:
+				var l := minf(_rng.randf_range(0.5, 0.75), 1.25 - x)
+				_add("block", Transform3D(Basis.from_scale(Vector3(l - 0.04, 0.24, 0.36)), c + Vector3(x + l * 0.5, y, side * 1.0)), _vary(Palette.WALL_STONE, 0.07))
+				x += l
+			var z := -0.82 + (0.25 if course == 0 else 0.0)
+			while z < 0.8:
+				var l2 := minf(_rng.randf_range(0.5, 0.7), 0.82 - z)
+				_add("block", Transform3D(Basis.from_scale(Vector3(0.36, 0.24, l2 - 0.04)), c + Vector3(side * 1.07, y, z + l2 * 0.5)), _vary(Palette.WALL_STONE, 0.07))
+				z += l2
+	_add("block", Transform3D(Basis.from_scale(Vector3(1.8, 0.06, 1.7)), c + Vector3(0, 0.44, 0)), WATER_COLOR)
+	# Light on the water: a few pale streaks
+	for i in 4:
+		_add("slab", Transform3D(Basis(Vector3.UP, 0.5).scaled(Vector3(_rng.randf_range(0.3, 0.6), 0.01, 0.05)), c + Vector3(_rng.randf_range(-0.6, 0.6), 0.475, _rng.randf_range(-0.6, 0.6))), WATER_COLOR.lightened(0.45))
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			_add("block", Transform3D(Basis.from_scale(Vector3(0.14, 2.4, 0.14)), c + Vector3(sx * 1.5, 1.2, sz * 1.35)), _vary(BEAM_COLOR, 0.04))
-	_add("block", Transform3D(Basis(Vector3.RIGHT, 0.1) * Basis.from_scale(Vector3(3.4, 0.07, 3.1)), c + Vector3(0, 2.42, 0)), Palette.INDIGO)
+			_add("timber", Transform3D(Basis.from_scale(Vector3(0.16, 2.4, 0.16)), c + Vector3(sx * 1.5, 1.2, sz * 1.35)), _vary(BEAM_COLOR, 0.04))
+	# Cloth in two panels meeting in a low ridge, scalloped valance all round
 	for sz: float in [-1.0, 1.0]:
-		_add("block", Transform3D(Basis.from_scale(Vector3(3.4, 0.24, 0.06)), c + Vector3(0, 2.28 - sz * 0.15, sz * 1.54)), Palette.INDIGO.darkened(0.15))
+		_add("block", Transform3D(Basis(Vector3.RIGHT, sz * 0.16) * Basis.from_scale(Vector3(3.4, 0.07, 1.62)), c + Vector3(0, 2.52, sz * 0.78)), Palette.INDIGO)
+	_valance(c + Vector3(0, 2.36, 0), 3.4, 3.1, Palette.INDIGO.darkened(0.12))
 	for i in 3:
-		_add("jar", Transform3D(Basis.from_scale(Vector3.ONE * _rng.randf_range(1.1, 1.4)), c + Vector3(1.9 + (i % 2) * 0.45, 0.3, -0.6 + i * 0.55)), _vary(CLAY_COLOR, 0.05))
+		_jar(c + Vector3(1.9 + (i % 2) * 0.45, 0.0, -0.6 + i * 0.55), _rng.randf_range(1.0, 1.3))
+
+# Scalloped cloth edge: tabs hanging off each side of a w×d canopy
+func _valance(c: Vector3, w: float, d: float, cloth: Color) -> void:
+	for side: float in [-1.0, 1.0]:
+		var n := int(w / 0.34)
+		for i in n:
+			var x := -w * 0.5 + (i + 0.5) * w / n
+			_add("block", Transform3D(Basis.from_scale(Vector3(w / n - 0.05, 0.26 if i % 2 == 0 else 0.2, 0.04)), c + Vector3(x, 0, side * d * 0.5)), cloth)
+		var m := int(d / 0.34)
+		for i in m:
+			var z := -d * 0.5 + (i + 0.5) * d / m
+			_add("block", Transform3D(Basis.from_scale(Vector3(0.04, 0.26 if i % 2 == 0 else 0.2, d / m - 0.05)), c + Vector3(side * w * 0.5, 0, z)), cloth)
+
+# Clay water jar: round belly, narrow neck, a lip
+func _jar(at: Vector3, sc: float) -> void:
+	var col := _vary(CLAY_COLOR, 0.05)
+	_add("jar", Transform3D(Basis.from_scale(Vector3(1.25, 1.1, 1.25) * sc), at + Vector3(0, 0.28 * sc, 0)), col)
+	_add("drum", Transform3D(Basis.from_scale(Vector3(0.2, 0.2, 0.2) * sc), at + Vector3(0, 0.6 * sc, 0)), col.darkened(0.05))
+	_add("drum", Transform3D(Basis.from_scale(Vector3(0.3, 0.06, 0.3) * sc), at + Vector3(0, 0.71 * sc, 0)), col.lightened(0.08))
 
 # Two-wheeled cart loaded with cut stone
 func _cart(c: Vector3, yaw: float) -> void:
 	var b := Basis(Vector3.UP, yaw)
-	_add("block", Transform3D(b * Basis.from_scale(Vector3(1.9, 0.14, 1.2)), c + b * Vector3(0, 0.62, 0)), _vary(BEAM_COLOR, 0.04).lightened(0.08))
+	_add("timber", Transform3D(b * Basis.from_scale(Vector3(1.9, 0.14, 1.2)), c + b * Vector3(0, 0.62, 0)), _vary(BEAM_COLOR, 0.04).lightened(0.08))
 	for sz: float in [-1.0, 1.0]:
-		_add("block", Transform3D(b * Basis.from_scale(Vector3(1.9, 0.3, 0.08)), c + b * Vector3(0, 0.82, sz * 0.58)), _vary(BEAM_COLOR, 0.04))
+		_add("timber", Transform3D(b * Basis.from_scale(Vector3(1.9, 0.3, 0.08)), c + b * Vector3(0, 0.82, sz * 0.58)), _vary(BEAM_COLOR, 0.04))
 		# Wheel: a thick disc on its side, hub in the middle
 		_add("drum", Transform3D(b * Basis(Vector3.RIGHT, PI / 2) * Basis.from_scale(Vector3(0.95, 0.12, 0.95)), c + b * Vector3(0, 0.48, sz * 0.72)), BEAM_COLOR.darkened(0.15))
 		_add("drum", Transform3D(b * Basis(Vector3.RIGHT, PI / 2) * Basis.from_scale(Vector3(0.25, 0.2, 0.25)), c + b * Vector3(0, 0.48, sz * 0.8)), BEAM_COLOR.darkened(0.35))
 	# Shafts resting on the ground
 	for sz: float in [-0.35, 0.35]:
-		_add("block", Transform3D(b * Basis(Vector3.FORWARD, -0.32) * Basis.from_scale(Vector3(1.5, 0.08, 0.08)), c + b * Vector3(1.55, 0.35, sz)), _vary(BEAM_COLOR, 0.04))
+		_add("timber", Transform3D(b * Basis(Vector3.FORWARD, -0.32) * Basis.from_scale(Vector3(1.5, 0.08, 0.08)), c + b * Vector3(1.55, 0.35, sz)), _vary(BEAM_COLOR, 0.04))
 	for i in 5:
 		var s := Vector3(_rng.randf_range(0.45, 0.6), 0.32, _rng.randf_range(0.35, 0.45))
 		_add("block", Transform3D(b * Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)) * Basis.from_scale(s),
@@ -401,10 +463,10 @@ func _cart(c: Vector3, yaw: float) -> void:
 
 # Carpenter's bench: trestle top, a plank being worked, shavings, a stack of boards
 func _bench(c: Vector3) -> void:
-	_add("block", Transform3D(Basis.from_scale(Vector3(2.0, 0.14, 0.8)), c + Vector3(0, 0.82, 0)), _vary(BEAM_COLOR, 0.03).lightened(0.12))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(2.0, 0.14, 0.8)), c + Vector3(0, 0.82, 0)), _vary(BEAM_COLOR, 0.03).lightened(0.12))
 	for sx: float in [-0.8, 0.8]:
 		for sz: float in [-0.3, 0.3]:
-			_add("block", Transform3D(Basis.from_scale(Vector3(0.12, 0.8, 0.12)), c + Vector3(sx, 0.4, sz)), _vary(BEAM_COLOR, 0.04))
+			_add("timber", Transform3D(Basis.from_scale(Vector3(0.12, 0.8, 0.12)), c + Vector3(sx, 0.4, sz)), _vary(BEAM_COLOR, 0.04))
 	_add("block", Transform3D(Basis(Vector3.UP, 0.15) * Basis.from_scale(Vector3(1.6, 0.07, 0.3)), c + Vector3(0.1, 0.93, 0.05)), Color(0.74, 0.54, 0.32))
 	for i in 14:
 		_add("pebble", Transform3D(_yaw().scaled(Vector3(0.9, 0.3, 0.5)), c + Vector3(_rng.randf_range(-1.2, 1.2), 0.1, _rng.randf_range(-0.9, 0.9))), Color(0.86, 0.68, 0.42))
@@ -413,8 +475,8 @@ func _bench(c: Vector3) -> void:
 
 # Standard on a pole: indigo cloth with a pale tower worked on it
 func _banner(at: Vector3) -> void:
-	_add("block", Transform3D(Basis.from_scale(Vector3(0.14, 4.4, 0.14)), at + Vector3(0, 2.2, 0)), _vary(BEAM_COLOR, 0.03))
-	_add("block", Transform3D(Basis.from_scale(Vector3(0.1, 0.1, 1.2)), at + Vector3(0.06, 4.25, 0.55)), _vary(BEAM_COLOR, 0.03))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(0.14, 4.4, 0.14)), at + Vector3(0, 2.2, 0)), _vary(BEAM_COLOR, 0.03))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(0.1, 0.1, 1.2)), at + Vector3(0.06, 4.25, 0.55)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.05, 1.8, 1.05)), at + Vector3(0.08, 3.25, 0.58)), Palette.INDIGO)
 	# Swallow-tail: two short points at the foot
 	for dz: float in [-0.27, 0.27]:
@@ -438,7 +500,7 @@ func _flush() -> void:
 	for kind: String in _batches:
 		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
 		# Ground-hugging bits: shadows cost more than they add
-		if kind in ["pebble", "patch", "slab", "blade", "bed"]:
+		if kind in ["pebble", "patch", "slab", "blade", "bed", "chip"]:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
 
@@ -446,6 +508,8 @@ func _flush() -> void:
 func _material_for(kind: String) -> Material:
 	match kind:
 		"block", "opening": return Chunky.material(0.06)
+		"chip":             return Chunky.material(0.03, false, 0.3)
+		"timber":           return Chunky.wood_material(0.025)
 		"slab":             return Chunky.material(0.1, false, 0.28)
 		"bush", "leaf", "blade": return Chunky.material(0.0, true, 0.0)
 		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
@@ -453,7 +517,7 @@ func _material_for(kind: String) -> Material:
 
 func _mesh_for(kind: String) -> Mesh:
 	match kind:
-		"block", "slab", "opening": return Chunky.unit_block()
+		"block", "slab", "opening", "chip", "timber": return Chunky.unit_block()
 		"pebble":  return _sphere(0.13, 0.10, 5, 2)
 		"blade":   return _cylinder(0.0, 0.075, 1.0, 3)
 		"bush":    return _sphere(0.42, 0.62, 6, 3)

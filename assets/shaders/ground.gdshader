@@ -6,9 +6,9 @@ uniform float roughness : hint_range(0.0,  1.0)  = 0.97;
 
 // Judean earth (sRGB). Warm ochre, mid-value so the pale limestone wall, the
 // stations and the workers all stand out against it.
-uniform vec3 col_sand_bright : source_color = vec3(0.860, 0.700, 0.460);  // sunlit sand
-uniform vec3 col_sand_mid    : source_color = vec3(0.790, 0.600, 0.370);  // base earth
-uniform vec3 col_sand_dark   : source_color = vec3(0.680, 0.490, 0.310);  // darker drifts
+uniform vec3 col_sand_bright : source_color = vec3(0.875, 0.745, 0.530);  // sunlit sand
+uniform vec3 col_sand_mid    : source_color = vec3(0.805, 0.655, 0.445);  // base earth
+uniform vec3 col_sand_dark   : source_color = vec3(0.705, 0.550, 0.370);  // darker drifts
 uniform vec3 col_dirt        : source_color = vec3(0.600, 0.390, 0.250);  // red-brown soil
 uniform vec3 col_trodden     : source_color = vec3(0.870, 0.770, 0.600);  // packed, pale path
 // Dirt track from the gate out toward the enemy camp (matches ScatterLayer.GATE_X)
@@ -105,8 +105,31 @@ void fragment() {
 	float rip = sin(dot(world_xz, vec2(0.62, 0.78)) * 5.5 + mid * 9.0 + detail * 3.0);
 	col *= 1.0 + rip * 0.022 * (1.0 - trodden) * (1.0 - scrub);
 
-	// Micro grain — soft sandy texture (no hard speckle: real pebbles are geometry)
+	// Micro grain — soft sandy texture
 	col *= 0.93 + 0.07 * micro;
+
+	// Painted grit: soft dots, a few per cell, some darker (grit, shade) some lighter
+	// (sun-caught grains). Two scales so it doesn't read as a grid.
+	for (int k = 0; k < 2; k++) {
+		float sc = k == 0 ? 1.8 : 4.2;
+		vec2 gp = world_xz * sc;
+		vec2 gi = floor(gp);
+		float best = 9.0;
+		float bh = 0.0;
+		for (int y = -1; y <= 1; y++) {
+			for (int x = -1; x <= 1; x++) {
+				vec2 c = gi + vec2(float(x), float(y));
+				float h = hash2(c + float(k) * 17.0);
+				vec2 pt = c + vec2(hash2(c + 3.1), hash2(c + 7.7));
+				float d = length(gp - pt);
+				if (d < best) { best = d; bh = h; }
+			}
+		}
+		float r = k == 0 ? 0.17 : 0.2;
+		float dotm = (1.0 - smoothstep(r * 0.6, r, best)) * step(0.45, bh);
+		float sgn = bh > 0.82 ? 0.09 : -0.13;
+		col *= 1.0 + dotm * sgn * (1.0 - scrub * 0.6);
+	}
 
 	ALBEDO    = col;
 	ROUGHNESS = roughness;

@@ -18,11 +18,15 @@ static func unit_block() -> ArrayMesh:
 		_unit = bevel_box(Vector3.ONE, UNIT_BEVEL)
 	return _unit
 
+## Timber: chunky block with grain streaks along its length
+static func wood_material(bevel := 0.025) -> ShaderMaterial:
+	return material(bevel, false, 0.3, 0.22)
+
 ## Material for multimesh / vertex-coloured chunky geometry.
 ##   bevel: world-space chamfer width (0 = leave the mesh as authored)
 ##   facets: flat-shade each triangle (foliage, boulders)
-static func material(bevel := 0.06, facets := false, edge_light := 0.22) -> ShaderMaterial:
-	var key := "%.3f|%s|%.2f" % [bevel, facets, edge_light]
+static func material(bevel := 0.06, facets := false, edge_light := 0.22, streaks := 0.0) -> ShaderMaterial:
+	var key := "%.3f|%s|%.2f|%.2f" % [bevel, facets, edge_light, streaks]
 	if not _mats.has(key):
 		var m := ShaderMaterial.new()
 		m.shader = SHADER
@@ -30,6 +34,7 @@ static func material(bevel := 0.06, facets := false, edge_light := 0.22) -> Shad
 		m.set_shader_parameter("unit_inset", UNIT_BEVEL if bevel > 0.0 else 0.0)
 		m.set_shader_parameter("facets", facets)
 		m.set_shader_parameter("edge_light", edge_light)
+		m.set_shader_parameter("streaks", streaks)
 		_mats[key] = m
 	return _mats[key]
 
@@ -84,6 +89,70 @@ static func bevel_box(size: Vector3, bevel: float) -> ArrayMesh:
 					Vector3(sx * i.x, sy * i.y, sz * h.z)]
 				_tri(st, pts[0], pts[1], pts[2], n)
 	return st.commit()
+
+## A box with rounded edges and corners (radius r) and smooth normals — the soft,
+## toy-figure look for characters. Rounding segments are spaced by angle so the curve
+## is even; flat faces stay a single quad strip.
+static func round_box(size: Vector3, r: float, seg := 3) -> ArrayMesh:
+	var h := size * 0.5
+	r = minf(r, minf(h.x, minf(h.y, h.z)) * 0.98)
+	var inner := h - Vector3.ONE * r
+	# Per-axis sample coordinates on the flat cube, far side to near side
+	var coords: Array[PackedFloat32Array] = []
+	for axis in 3:
+		var c := PackedFloat32Array()
+		for j in range(seg, -1, -1):
+			c.append(-inner[axis] - r * tan(PI * 0.25 * j / seg))
+		for j in range(0, seg + 1):
+			c.append(inner[axis] + r * tan(PI * 0.25 * j / seg))
+		coords.append(c)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for axis in 3:
+		for s: float in [-1.0, 1.0]:
+			var u := (axis + 1) % 3
+			var v := (axis + 2) % 3
+			var cu: PackedFloat32Array = coords[u]
+			var cv: PackedFloat32Array = coords[v]
+			var face_n := Vector3.ZERO
+			face_n[axis] = s
+			for a in cu.size() - 1:
+				for b in cv.size() - 1:
+					var q: Array[Vector3] = []
+					for k: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1)]:
+						var p := Vector3.ZERO
+						p[axis] = s * h[axis]
+						p[u] = cu[a + k.x]
+						p[v] = cv[b + k.y]
+						q.append(p)
+					var pts: Array[Vector3] = []
+					var ns: Array[Vector3] = []
+					for p in q:
+						var c := p.clamp(-inner, inner)
+						var d := p - c
+						var n := d.normalized() if d.length() > 0.00001 else face_n
+						pts.append(c + n * r)
+						ns.append(n)
+					_stri(st, pts[0], pts[1], pts[2], ns[0], ns[1], ns[2], face_n)
+					_stri(st, pts[0], pts[2], pts[3], ns[0], ns[2], ns[3], face_n)
+	st.index()
+	return st.commit()
+
+static func _stri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3,
+		na: Vector3, nb: Vector3, nc: Vector3, face_n: Vector3) -> void:
+	if (b - a).cross(c - a).dot(face_n) > 0.0:
+		var t := b
+		b = c
+		c = t
+		var tn := nb
+		nb = nc
+		nc = tn
+	st.set_normal(na)
+	st.add_vertex(a)
+	st.set_normal(nb)
+	st.add_vertex(b)
+	st.set_normal(nc)
+	st.add_vertex(c)
 
 static func _quad(st: SurfaceTool, p: Array[Vector3], n: Vector3) -> void:
 	_tri(st, p[0], p[1], p[2], n)

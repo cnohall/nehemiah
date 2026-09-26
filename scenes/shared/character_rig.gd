@@ -21,6 +21,7 @@ const STEP_FRAMES  := [1, 5]   # footfalls in the 8-frame walk / run cycles
 const STRIKE_FRAME := 4        # downstroke of the build loop
 const TURN_RATE    := 16.0     # rad/s-ish smoothing toward the facing direction
 const BASE_SCALE   := 1.3
+const ROUNDING     := 2.0      # corner radius as a multiple of each part's authored bevel
 # Building: turn a three-quarter view toward the camera so the mallet arm isn't
 # hidden behind the body when the wall is "up" screen (the usual case)
 const BUILD_TURN   := -0.65
@@ -516,11 +517,11 @@ func _build(look: Dictionary) -> void:
 	# Head: a big rounded block — the camera's main read
 	_head = _pivot(_torso, Vector3(0, NECK_Y - HIP_Y, 0))
 	var hc := Vector3(0, HEAD_R * 0.78, 0.01)
-	var hw := 0.66   # head width / height / depth — wider than tall reads friendlier
-	var hh := 0.52
-	var hd := 0.56
+	var hw := 0.66   # head width / height / depth — a soft, nearly round block
+	var hh := 0.58
+	var hd := 0.58
 	var front := hc.z + hd * 0.5
-	_part(_head, _bbox(Vector3(hw, hh, hd), 0.13), skin, hc)
+	_part(_head, _bbox(Vector3(hw, hh, hd), 0.12), skin, hc)
 	# Ears
 	for sx: float in [-1.0, 1.0]:
 		_part(_head, _bbox(Vector3(0.06, 0.12, 0.1), 0.02), skin.darkened(0.06), hc + Vector3((hw * 0.5 + 0.01) * sx, 0.0, 0.02))
@@ -528,19 +529,25 @@ func _build(look: Dictionary) -> void:
 	_hair(look.get("hair_style", "short"), hair, hc, hw, hh, hd, hat)
 	# Face: eyes with a catch-light, brows, nose
 	for sx: float in [-1.0, 1.0]:
-		_part(_head, _bbox(Vector3(0.075, 0.1, 0.04), 0.015), Color(0.09, 0.06, 0.04), hc + Vector3(0.125 * sx, 0.04, front))
-		_part(_head, _bbox(Vector3(0.028, 0.028, 0.02), 0.005), Color(1, 0.97, 0.9), hc + Vector3(0.125 * sx + 0.017, 0.067, front + 0.02))
-		var brow := _part(_head, _bbox(Vector3(0.16, 0.055, 0.05), 0.016), look.get("brow", hair),
-			hc + Vector3(0.125 * sx, 0.125, front + 0.005))
-		brow.rotation.z = (-0.35 if look.get("brows", false) else -0.16) * sx
-	_part(_head, _bbox(Vector3(0.1, 0.1, 0.08), 0.03), skin.darkened(0.08), hc + Vector3(0, -0.035, front + 0.02))
+		# White of the eye, a big dark iris looking slightly inward, a catch-light
+		_part(_head, _bbox(Vector3(0.115, 0.13, 0.04), 0.02), Color(0.97, 0.94, 0.88), hc + Vector3(0.13 * sx, 0.03, front - 0.005))
+		_part(_head, _bbox(Vector3(0.078, 0.105, 0.04), 0.018), Color(0.12, 0.07, 0.04), hc + Vector3(0.13 * sx - 0.012 * sx, 0.025, front + 0.01))
+		_part(_head, _bbox(Vector3(0.03, 0.03, 0.02), 0.006), Color(1, 0.97, 0.9), hc + Vector3(0.13 * sx + 0.005, 0.05, front + 0.03))
+		var brow := _part(_head, _bbox(Vector3(0.17, 0.06, 0.06), 0.02), look.get("brow", hair),
+			hc + Vector3(0.13 * sx, 0.13, front + 0.005))
+		# Inner ends low: determined on the crew, scowling on enemies
+		brow.rotation.z = (0.42 if look.get("brows", false) else 0.14) * sx
+	_part(_head, _bbox(Vector3(0.12, 0.13, 0.1), 0.045), skin.darkened(0.06), hc + Vector3(0, -0.05, front + 0.025))
 	# Beard: a block round the jaw, sideburns up to the hair, moustache over the lip
 	var bl: String = look.get("beard", "")
 	var bc: Color = look.get("beard_color", hair)
 	if not bl.is_empty():
 		var bh: float = {"full": 0.22, "long": 0.3, "short": 0.15}.get(bl, 0.2)
 		var bw: float = hw + (0.05 if bl != "short" else 0.02)
-		_part(_head, _bbox(Vector3(bw, bh, 0.24), 0.07), bc, hc + Vector3(0, -0.1 - bh * 0.5, front - 0.07))
+		_part(_head, _bbox(Vector3(bw, bh + 0.06, 0.3), 0.1), bc, hc + Vector3(0, -0.1 - bh * 0.5, front - 0.1))
+		# Cheeks: the beard climbs the jaw in two soft lobes
+		for sx: float in [-1.0, 1.0]:
+			_part(_head, _bbox(Vector3(0.2, 0.22, 0.22), 0.09), bc, hc + Vector3(0.22 * sx, -0.1, front - 0.1))
 		if bl == "long":
 			# Tapering to a point below the chin
 			_part(_head, _bbox(Vector3(bw * 0.6, 0.16, 0.2), 0.06), bc, hc + Vector3(0, -0.09 - bh - 0.04, front - 0.1))
@@ -548,9 +555,12 @@ func _build(look: Dictionary) -> void:
 			_part(_head, _bbox(Vector3(bw * 0.8, 0.1, 0.2), 0.04), bc.darkened(0.05), hc + Vector3(0, -0.09 - bh + 0.01, front - 0.05))
 		for sx: float in [-1.0, 1.0]:
 			_part(_head, _bbox(Vector3(0.08, 0.26, 0.26), 0.03), bc, hc + Vector3((hw * 0.5 + 0.005) * sx, -0.06, 0.1))
-		_part(_head, _bbox(Vector3(0.3, 0.07, 0.06), 0.02), bc.darkened(0.08), hc + Vector3(0, -0.11, front + 0.01))
+		# Moustache in two curled halves
+		for sx: float in [-1.0, 1.0]:
+			var m := _part(_head, _bbox(Vector3(0.17, 0.075, 0.08), 0.035), bc.darkened(0.08), hc + Vector3(0.075 * sx, -0.125, front + 0.01))
+			m.rotation.z = -0.25 * sx
 		# Mouth: a dark slit between moustache and beard
-		_part(_head, _bbox(Vector3(0.12, 0.025, 0.02), 0.005), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.155, front + 0.012))
+		_part(_head, _bbox(Vector3(0.1, 0.03, 0.02), 0.008), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.175, front + 0.012))
 
 	var hat_c: Color = look.get("hat_color", LINEN)
 	match hat:
@@ -558,8 +568,9 @@ func _build(look: Dictionary) -> void:
 			# Cloth band tied round the head; a scarf is wider, striped, with long tails
 			var scarf := hat == "scarf"
 			var bh2 := 0.17 if scarf else 0.13
-			var by := hh * 0.5 - (0.08 if scarf else 0.06)
-			_part(_head, _bbox(Vector3(hw + 0.07, bh2, hd + 0.07), 0.035), hat_c, hc + Vector3(0, by, 0))
+			# Round the brow line, under the hair dome (a band on the crown reads as a lid)
+			var by := hh * 0.5 - (0.1 if scarf else 0.08)
+			_part(_head, _bbox(Vector3(hw + 0.1, bh2, hd + 0.1), 0.05), hat_c, hc + Vector3(0, by, 0))
 			if scarf:
 				for dy: float in [-0.045, 0.045]:
 					_part(_head, _bbox(Vector3(hw + 0.08, 0.03, hd + 0.08), 0.01), look["stripe"], hc + Vector3(0, by + dy, 0))
@@ -573,7 +584,7 @@ func _build(look: Dictionary) -> void:
 						_part(tail, _bbox(Vector3(0.115, 0.03, 0.045), 0.008), look["stripe"], Vector3(0, -tl * 0.25, 0))
 		"wrap":
 			# Head-cloth over the crown, coloured band, cloth falling behind to the shoulders
-			_part(_head, _bbox(Vector3(hw + 0.1, 0.26, hd + 0.1), 0.1), hat_c, hc + Vector3(0, hh * 0.5 - 0.01, -0.01))
+			_part(_head, _sphere(0.5), hat_c, hc + Vector3(0, hh * 0.5 - 0.06, -0.02), Vector3.ZERO, Vector3(hw + 0.16, 0.46, hd + 0.14))
 			_part(_head, _bbox(Vector3(hw + 0.12, 0.08, hd + 0.12), 0.025), look["band"], hc + Vector3(0, hh * 0.5 - 0.12, -0.01))
 			_part(_head, _bbox(Vector3(hw + 0.08, 0.56, 0.12), 0.04), hat_c.darkened(0.04), hc + Vector3(0, -0.12, -hd * 0.5 - 0.03), Vector3(0.12, 0, 0))
 			for sx: float in [-1.0, 1.0]:
@@ -615,9 +626,10 @@ func _hair(style: String, hair: Color, hc: Vector3, hw: float, hh: float, hd: fl
 		# Only the back shows under the cloth
 		_part(_head, _bbox(Vector3(hw + 0.02, hh * 0.5, 0.14), 0.05), hair, hc + Vector3(0, -0.02, -hd * 0.5 + 0.05))
 		return
-	_part(_head, _bbox(Vector3(hw + 0.03, 0.12, hd + 0.02), 0.05), hair, hc + Vector3(0, hh * 0.5 - 0.01, -0.02))
-	_part(_head, _bbox(Vector3(hw + 0.04, hh * 0.72, 0.16), 0.05), hair, hc + Vector3(0, 0.06, -hd * 0.5 + 0.05))
-	var crown := hc + Vector3(0, hh * 0.5, 0)
+	# A domed mass over the crown and down the back, not a lid
+	_part(_head, _sphere(0.5), hair, hc + Vector3(0, hh * 0.5, -0.02), Vector3.ZERO, Vector3(hw + 0.12, 0.38, hd + 0.1))
+	_part(_head, _bbox(Vector3(hw + 0.05, hh * 0.8, 0.24), 0.1), hair, hc + Vector3(0, 0.03, -hd * 0.5 + 0.06))
+	var crown := hc + Vector3(0, hh * 0.5 + 0.05, 0)
 	match style:
 		"curly":
 			# Tight curls: a cap of small blocks, spilling over the band and behind
@@ -706,8 +718,12 @@ static func _box(size: Vector3) -> Mesh:
 		m.size = size
 		return m)
 
+# Soft rounded block: the authored bevel sets the corner radius, pushed rounder so
+# figures read as toys rather than voxels
 static func _bbox(size: Vector3, bevel: float) -> Mesh:
-	return _cached("bb%s%.3f" % [size, bevel], func(): return Chunky.bevel_box(size, bevel))
+	return _cached("bb%s%.3f" % [size, bevel], func():
+		var m := minf(size.x, minf(size.y, size.z))
+		return Chunky.round_box(size, minf(bevel * ROUNDING, m * 0.48), 2 if m < 0.08 else 3))
 
 static func _torus(inner: float, outer: float) -> Mesh:
 	return _cached("t%.3f,%.3f" % [inner, outer], func():

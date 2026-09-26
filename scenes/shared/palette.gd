@@ -26,8 +26,11 @@ const DOORS := [Color(0.24, 0.38, 0.38), Color(0.26, 0.29, 0.40), Color(0.40, 0.
 	Color(0.33, 0.37, 0.26)]
 const PAVING    := Color(0.80, 0.76, 0.68)
 const LIMESTONE := Color(0.78, 0.75, 0.68)
-# Dressed wall stone: the palest, coolest thing in the scene, so the wall leads
-const WALL_STONE := Color(0.84, 0.82, 0.77)
+# Dressed wall stone: cool grey-lavender limestone, the one cool mass in a warm scene,
+# so the wall leads. Per-block value jitter does the rest.
+const WALL_STONE := Color(0.76, 0.75, 0.79)
+# The dark behind the joints — rough courses read as separate stones
+const STONE_JOINT := Color(0.30, 0.28, 0.31)
 # Foliage: olive and fig kept a touch fresher than dry scrub so trees read as life
 const LEAF := Color(0.40, 0.56, 0.24)
 

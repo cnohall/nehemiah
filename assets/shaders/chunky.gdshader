@@ -14,10 +14,17 @@ uniform bool facets = false;
 uniform float edge_light = 0.22;
 uniform float top_light = 0.07;
 uniform float grain = 0.06;
+// Wood: grain streaks running along the block's local Y (timbers are stretched on Y)
+uniform float streaks = 0.0;
+// Contact darkening toward the ground — grounds blocks without relying on SSAO alone
+uniform float ground_ao = 0.28;
+uniform float ground_ao_height = 0.55;
 
 varying float v_edge;
 varying vec3 v_wnormal;
 varying vec3 v_wpos;
+varying vec3 v_lpos;
+varying vec3 v_scale;
 
 vec3 to_linear(vec3 c) {
 	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
@@ -48,6 +55,9 @@ void vertex() {
 		vec3 is_in = step(abs(VERTEX), vec3(0.5 - unit_inset * 0.5));
 		VERTEX = mix(VERTEX, sign(VERTEX) * (0.5 - inset), is_in);
 	}
+	vec3 sc2 = vec3(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[1].xyz), length(MODEL_MATRIX[2].xyz));
+	v_lpos = VERTEX * sc2;
+	v_scale = sc2;
 	v_wnormal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	v_wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
@@ -58,6 +68,17 @@ void fragment() {
 	c *= 1.0 - grain + n * grain * 2.0;
 	c *= 1.0 + top_light * smoothstep(0.6, 0.9, v_wnormal.y);
 	c *= 1.0 + edge_light * v_edge;
+	if (streaks > 0.0) {
+		// Grain runs along the longest axis of the timber
+		vec3 f = vec3(1.0);
+		if (v_scale.y >= v_scale.x && v_scale.y >= v_scale.z) f.y = 0.07;
+		else if (v_scale.x >= v_scale.z) f.x = 0.07;
+		else f.z = 0.07;
+		float g = vnoise(v_lpos * f * 22.0);
+		g = g * 0.7 + vnoise(v_lpos * f * 60.0 + 7.0) * 0.3;
+		c *= 1.0 - streaks + g * streaks * 1.6;
+	}
+	c *= mix(1.0 - ground_ao, 1.0, smoothstep(0.0, ground_ao_height, v_wpos.y));
 	ALBEDO = c;
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.2;
