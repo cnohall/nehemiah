@@ -20,6 +20,6 @@ void fragment() {
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
 	// Wide soft terminator: lit side flat, shadow side a clear second tone
-	float t = smoothstep(-0.1, 0.35, ndl);
-	DIFFUSE_LIGHT += mix(0.18, 1.0, t) * ATTENUATION * LIGHT_COLOR / PI;
+	float t = smoothstep(-0.05, 0.3, ndl);
+	DIFFUSE_LIGHT += mix(0.08, 1.0, t) * ATTENUATION * LIGHT_COLOR / PI;
 }
