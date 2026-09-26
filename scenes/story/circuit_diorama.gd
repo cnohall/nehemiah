@@ -53,11 +53,12 @@ const EARTH_HIGH := Color(0.88, 0.71, 0.46)
 const ROCK       := Color(0.62, 0.49, 0.37)
 const FAR_HILLS  := Color(0.74, 0.60, 0.44)
 const VALLEY     := Color(0.43, 0.49, 0.25)
-const STONE      := Color(0.97, 0.93, 0.85)   # the wall: the brightest thing on the land
-const STONE_DARK := Color(0.82, 0.75, 0.63)
+const STONE      := Color(0.88, 0.87, 0.90)   # the wall: cool grey limestone, as in the game (Palette.WALL_STONE)
+const STONE_DARK := Color(0.72, 0.71, 0.76)
 const RUBBLE     := Color(0.60, 0.50, 0.39)
 const CHAR       := Color(0.20, 0.16, 0.13)   # "its gates have been burned with fire" (Neh. 1:3)
 const HOUSE      := Color(0.90, 0.86, 0.78)
+const LIME       := Color(0.97, 0.93, 0.85)   # fresh whitewash
 const MUDBRICK   := Color(0.80, 0.65, 0.47)
 const OLIVE_TREE := Color(0.47, 0.53, 0.33)   # silvery olive green
 const CYPRESS    := Color(0.20, 0.30, 0.16)
@@ -149,11 +150,12 @@ func set_glow(i: int, amount: float) -> void:
 func set_night(on: bool) -> void:
 	_night = on
 	# Day: warm sun, cool blue-violet shade (the art direction's hue contrast)
-	_sun.light_color = Color(0.55, 0.62, 0.95) if on else Color(1.0, 0.82, 0.6)
-	_sun.light_energy = 0.3 if on else 1.55
-	_env.ambient_light_color = Color(0.22, 0.26, 0.42) if on else Color(0.56, 0.60, 0.80)
-	_env.ambient_light_energy = 0.4 if on else 0.6
-	_env.fog_light_color = Color(0.09, 0.10, 0.16) if on else Color(0.80, 0.67, 0.52)
+	# Night: a warm moonlit brown, not blue — the torch still carries the scene
+	_sun.light_color = Color(0.80, 0.76, 0.92) if on else Color(1.0, 0.84, 0.64)
+	_sun.light_energy = 0.42 if on else 1.55
+	_env.ambient_light_color = Color(0.42, 0.33, 0.30) if on else Color(0.62, 0.60, 0.72)
+	_env.ambient_light_energy = 0.42 if on else 0.6
+	_env.fog_light_color = Color(0.13, 0.09, 0.07) if on else Color(0.80, 0.67, 0.52)
 	_env.background_color = _env.fog_light_color
 	if not on:
 		set_torch(-1.0)
@@ -497,7 +499,7 @@ func _build_city() -> void:
 			if rng.randf() < 0.15:
 				s.y = rng.randf_range(1.05, 1.45)          # an upper room
 			var yaw := deg_to_rad(8.0) + (PI * 0.5 if rng.randf() < 0.5 else 0.0) + rng.randf_range(-0.06, 0.06)
-			var col := HOUSE.lerp(MUDBRICK, 0.8) if rng.randf() < 0.18 else HOUSE.lerp(STONE, rng.randf() * 0.6)
+			var col := HOUSE.lerp(MUDBRICK, 0.8) if rng.randf() < 0.18 else HOUSE.lerp(LIME, rng.randf() * 0.6)
 			houses.add(p + Vector3(0, s.y * 0.5 - 0.2, 0), s + Vector3(0, 0.2, 0), yaw, col, Vector2.ZERO)
 			if rng.randf() < 0.25:
 				# A lower wing off one side — L-shaped houses round a yard
@@ -598,35 +600,39 @@ func _mesh(verts: PackedVector3Array, cols: PackedColorArray, uv2: Variant, mat:
 	mi.material_override = mat
 	return mi
 
-# Flat-shaded boxes batched into one mesh (vertex colour + UV2 carried through)
+# Bevelled boxes batched into one mesh (vertex colour + UV2 carried through) — the same
+# hand-cut block as the game world (Chunky): the unit block's chamfer is re-inset per box
+# so every edge gets the same world-width lit chamfer however the box is stretched.
 class _Boxes:
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var cols := PackedColorArray()
 	var uv2 := PackedVector2Array()
+	var bevel := 0.1
+	static var _unit_v: PackedVector3Array
+	static var _unit_n: PackedVector3Array
 
 	func add(center: Vector3, size: Vector3, yaw: float, col: Color, extra: Vector2) -> void:
+		if _unit_v.is_empty():
+			var arr := Chunky.unit_block().surface_get_arrays(0)
+			_unit_v = arr[Mesh.ARRAY_VERTEX]
+			_unit_n = arr[Mesh.ARRAY_NORMAL]
 		var basis := Basis(Vector3.UP, yaw)
-		var h := size * 0.5
-		# +x −x +y −y +z −z faces (corners listed anticlockwise from outside; emitted clockwise)
-		var faces := [
-			[Vector3(1, 0, 0), [Vector3(1, -1, -1), Vector3(1, 1, -1), Vector3(1, 1, 1), Vector3(1, -1, 1)]],
-			[Vector3(-1, 0, 0), [Vector3(-1, -1, 1), Vector3(-1, 1, 1), Vector3(-1, 1, -1), Vector3(-1, -1, -1)]],
-			[Vector3(0, 1, 0), [Vector3(-1, 1, -1), Vector3(-1, 1, 1), Vector3(1, 1, 1), Vector3(1, 1, -1)]],
-			[Vector3(0, -1, 0), [Vector3(-1, -1, 1), Vector3(-1, -1, -1), Vector3(1, -1, -1), Vector3(1, -1, 1)]],
-			[Vector3(0, 0, 1), [Vector3(1, -1, 1), Vector3(1, 1, 1), Vector3(-1, 1, 1), Vector3(-1, -1, 1)]],
-			[Vector3(0, 0, -1), [Vector3(-1, -1, -1), Vector3(-1, 1, -1), Vector3(1, 1, -1), Vector3(1, -1, -1)]],
-		]
-		for f: Array in faces:
-			var nrm: Vector3 = basis * (f[0] as Vector3)
-			var c: Array = f[1]
-			# Sides a touch darker than tops — reads as form even in flat light
-			var shade := col if (f[0] as Vector3).y > 0.5 else col.darkened(0.06)
-			for idx: int in [0, 2, 1, 0, 3, 2]:
-				verts.append(center + basis * ((c[idx] as Vector3) * h))
-				norms.append(nrm)
-				cols.append(shade)
-				uv2.append(extra)
+		var inset := Vector3(minf(bevel / size.x, 0.3), minf(bevel / size.y, 0.3), minf(bevel / size.z, 0.3))
+		var lim := 0.5 - Chunky.UNIT_BEVEL * 0.5
+		for k in _unit_v.size():
+			var v := _unit_v[k]
+			var n := _unit_n[k]
+			for a in 3:
+				if absf(v[a]) < lim:
+					v[a] = signf(v[a]) * (0.5 - inset[a])
+			verts.append(center + basis * (v * size))
+			norms.append(basis * n)
+			# Tops lit, sides a touch darker, chamfers catching the light: form in flat light
+			var an := n.abs()
+			var edge := maxf(an.x, maxf(an.y, an.z)) < 0.9
+			cols.append(col.lightened(0.1) if edge else (col if n.y > 0.5 else col.darkened(0.07)))
+			uv2.append(extra)
 
 	func add_prim(mesh: PrimitiveMesh, xf: Transform3D, col: Color) -> void:
 		var arr := mesh.get_mesh_arrays()

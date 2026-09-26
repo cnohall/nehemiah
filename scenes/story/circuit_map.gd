@@ -47,6 +47,7 @@ var _overlay: Control
 var _edge: GradientTexture2D
 var _plaque := _make_plaque(false)
 var _plaque_here := _make_plaque(true)
+var _foe_plaque := _make_foe_plaque()
 
 func _ready() -> void:
 	_container = SubViewportContainer.new()
@@ -81,17 +82,27 @@ func _ready() -> void:
 	resized.connect(_layout)
 	_layout()
 
+# Dark chip, as the in-game world tags (WorldTag): cream text on walnut, a gold rim
+# on the current stretch
 func _make_plaque(here: bool) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
-	sb.set_corner_radius_all(3)
+	sb.set_corner_radius_all(6)
 	sb.anti_aliasing = true
+	sb.bg_color = WorldTag.BG
+	sb.set_border_width_all(1)
+	sb.border_width_top = 2
+	sb.border_color = UiStyle.GOLD if here else WorldTag.BG_EDGE
 	if here:
 		sb.set_border_width_all(2)
-		sb.border_color = UiStyle.TERRACOTTA
-	else:
-		sb.set_border_width_all(1)
-		sb.border_width_bottom = 2
-		sb.border_color = Color(UiStyle.RULE, 0.8)
+	sb.shadow_color = Color(0.08, 0.05, 0.02, 0.35)
+	sb.shadow_size = 4
+	sb.shadow_offset = Vector2(0, 2)
+	return sb
+
+func _make_foe_plaque() -> StyleBoxFlat:
+	var sb := _make_plaque(false)
+	sb.bg_color = Color(0.36, 0.09, 0.07, 0.92)
+	sb.border_color = Color(0.93, 0.50, 0.38, 0.4)
 	return sb
 
 func _layout() -> void:
@@ -211,25 +222,41 @@ func _draw_overlay() -> void:
 			tl = Vector2(anchor.x - box.x * 0.5, anchor.y if out.y > 0 else anchor.y - box.y)
 		else:
 			tl = Vector2(anchor.x if out.x >= 0 else anchor.x - box.x, anchor.y - box.y * 0.5)
-		var alpha := 0.78 if locked else 0.94
-		o.draw_line(p, anchor, Color(UiStyle.INK_SOFT, alpha * 0.8), 1.5, true)
-		o.draw_circle(p, 3.0, UiStyle.TERRACOTTA if here else Color(UiStyle.PARCHMENT, alpha))
+		var alpha := 0.62 if locked else 0.94
+		o.draw_line(p, anchor, Color(WorldTag.BG, alpha * 0.8), 2.0, true)
+		o.draw_circle(p, 3.5, UiStyle.GOLD if here else Color(WorldTag.BG, alpha))
 		var sb := _plaque_here if here else _plaque
-		sb.bg_color = Color(UiStyle.PARCHMENT, alpha)
+		sb.bg_color = Color(WorldTag.BG, alpha)
 		o.draw_style_box(sb, Rect2(tl, box))
-		var text_col: Color = UiStyle.TERRACOTTA_DEEP if here else (UiStyle.INK if done else (UiStyle.INK_MUTED if locked else UiStyle.INK_SOFT))
+		var text_col: Color = Color(1.0, 0.86, 0.55) if here else (WorldTag.TEXT if done else (Color(WorldTag.TEXT_DIM, 0.6) if locked else WorldTag.TEXT_DIM))
 		o.draw_string(font, tl + Vector2(pad.x, pad.y + fs * 0.8), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, text_col)
 		if gems:
 			for k in GameState.MARKS.size():
 				MarkGem.draw_gem(o, tl + Vector2(pad.x + tw + gr * 1.6 + k * gr * 2.2, box.y * 0.5), gr, bool(mask & GameState.MARKS[k]))
 
-	# The three who stand against the work, watching from their lands
-	var small := int(unit * 0.02)
+	# The three who stand against the work, watching from their lands: oxblood chips
+	# with a pennant, so the threat reads at a glance
+	var small := int(unit * 0.021)
+	var tiny := int(unit * 0.016)
 	for foe: Array in FOES:
 		var fp := _project(_diorama.unit_to_world(foe[2]))
-		var who := "%s · %s" % [foe[0], foe[1]]
-		var w := UiStyle.SPECTRAL_ITALIC.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
-		o.draw_string_outline(UiStyle.SPECTRAL_ITALIC, fp - Vector2(w * 0.5, 0), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small,
-			4, Color(UiStyle.PARCHMENT, 0.85))
-		o.draw_string(UiStyle.SPECTRAL_ITALIC, fp - Vector2(w * 0.5, 0), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small,
-			UiStyle.TERRACOTTA_DEEP)
+		var who: String = foe[0]
+		var land: String = foe[1]
+		var nf := UiStyle.CINZEL_BOLD
+		var lf := UiStyle.SPECTRAL_ITALIC
+		var nw := nf.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
+		var lw := lf.get_string_size(land, HORIZONTAL_ALIGNMENT_LEFT, -1, tiny).x
+		var flag := small * 0.9
+		var pad := Vector2(small * 0.5, small * 0.3)
+		var box := Vector2(flag + nw + lw + small * 0.5 + pad.x * 2.0, small + pad.y * 2.0)
+		var tl := fp - box * 0.5
+		o.draw_style_box(_foe_plaque, Rect2(tl, box))
+		# Pennant: a pole and a swallow-tailed flag
+		var fx := tl + Vector2(pad.x, pad.y)
+		o.draw_line(fx + Vector2(flag * 0.15, 0), fx + Vector2(flag * 0.15, small), WorldTag.TEXT_DIM, 1.5, true)
+		o.draw_colored_polygon(PackedVector2Array([fx + Vector2(flag * 0.2, 0), fx + Vector2(flag * 0.85, small * 0.12),
+			fx + Vector2(flag * 0.62, small * 0.3), fx + Vector2(flag * 0.85, small * 0.48), fx + Vector2(flag * 0.2, small * 0.55)]),
+			Color(0.93, 0.36, 0.26))
+		var base := tl.y + pad.y + small * 0.8
+		o.draw_string(nf, Vector2(fx.x + flag, base), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small, WorldTag.TEXT)
+		o.draw_string(lf, Vector2(fx.x + flag + nw + small * 0.4, base), land, HORIZONTAL_ALIGNMENT_LEFT, -1, tiny, WorldTag.TEXT_DIM)
