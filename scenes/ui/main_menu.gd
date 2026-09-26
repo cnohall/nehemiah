@@ -33,6 +33,10 @@ func _ready() -> void:
 	Sfx.play_music("calm")  # back from a finished game, the music may be off
 	# Credits sit over bright sand — give them a soft parchment backing
 	$Credits.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.PARCHMENT, 0.82), Vector2(12, 6), 3))
+	# Hug the text: a right-aligned label keeps its box, so size it to one line
+	$Credits.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	$Credits.size = $Credits.get_combined_minimum_size()
+	$Credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 32)
 	host_btn.pressed.connect(_on_host)
 	# Replay map: an entry under Host, and the picker over everything
 	_sections_btn = join_btn.duplicate()

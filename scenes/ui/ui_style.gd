@@ -129,7 +129,7 @@ static func _labels(t: Theme) -> void:
 	_label(t, "Heading",  tracked(CINZEL_BOLD, 3),   30,  INK)
 	_label(t, "Numeral",  CINZEL_BOLD,               34,  INK)
 	_label(t, "Eyebrow",  tracked(CINZEL_BOLD, 3),   15,  INK_SOFT)
-	_label(t, "Caption",  SPECTRAL_ITALIC,           16,  INK_SOFT)
+	_label(t, "Caption",  SPECTRAL_ITALIC,           17,  INK_SOFT.darkened(0.22))   # italic runs thin: a notch darker
 	_label(t, "Body",     SPECTRAL,                  17,  INK_SOFT)
 	_label(t, "Verse",    SPECTRAL_ITALIC,           17,  INK_SOFT)
 

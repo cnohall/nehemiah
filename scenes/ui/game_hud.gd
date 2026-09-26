@@ -139,6 +139,8 @@ func _open_pause() -> void:
 	UiFx.fade_in(pause_menu, 0.16)
 	_refresh_controls()
 	_pause_begin.visible = multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER
+	# The menu carries "Begin the work" now; don't show the gather banner's copy behind it
+	gather.modulate.a = 0.0
 	# One primary action at a time
 	$Root/PauseMenu/Center/Modal/VBox/Resume.theme_type_variation = 			$Root/PauseMenu/Center/Modal/VBox/Settings.theme_type_variation if _pause_begin.visible else &"PrimaryButton"
 	(_pause_begin if _pause_begin.visible else $Root/PauseMenu/Center/Modal/VBox/Resume).grab_focus()
@@ -188,6 +190,7 @@ func _refresh_gather_hint() -> void:
 
 func _close_pause() -> void:
 	pause_menu.hide()
+	gather.modulate.a = 1.0
 	settings.hide()
 	_pad_lost_note.hide()
 	InputMode.set_menu_open(false)

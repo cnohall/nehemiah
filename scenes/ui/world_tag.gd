@@ -23,6 +23,7 @@ const TEXT_DIM := Color(0.86, 0.78, 0.66)
 const DONE     := Color(0.66, 0.78, 0.40)
 const PIP_OFF  := Color(1.0, 0.95, 0.85, 0.22)
 const POINTER  := Vector2(16, 9)
+const EDGE_MARGIN := 10.0
 
 static var _layer: CanvasLayer
 static var _fonts: Dictionary = {}
@@ -89,7 +90,13 @@ func _process(_delta: float) -> void:
 	p = xf.affine_inverse() * p
 	var sz := _root.get_combined_minimum_size()
 	_root.size = sz
-	_root.position = (p - Vector2(sz.x * 0.5, sz.y + screen_lift)).round()
+	var want := p - Vector2(sz.x * 0.5, sz.y + screen_lift)
+	# Keep the tag on screen: slide it in from the edge, pointer hidden while it's off its mark
+	var area := vp.get_visible_rect().size
+	var at := want.clamp(Vector2(EDGE_MARGIN, EDGE_MARGIN), area - sz - Vector2(EDGE_MARGIN, EDGE_MARGIN))
+	_root.position = at.round()
+	if _pointer != null:
+		_pointer.modulate.a = 1.0 if at.is_equal_approx(want) else 0.0
 	_root.modulate = modulate
 
 # ── Building ───────────────────────────────────────────────
@@ -161,7 +168,8 @@ func _segment(seg: String) -> Control:
 	if words.size() == 1 and first in MATERIALS:
 		var row := _hbox(6)
 		row.add_child(TagIcon.make(first, 22))
-		row.add_child(_label(seg, "medium", 17, TEXT))
+		# Small caps, like the material names on a site's needs
+		row.add_child(_label(seg, "caps", 14, TEXT))
 		return row
 	# "Wall 80%" — condition bar
 	if words.size() == 2 and first == "wall" and words[1].ends_with("%"):
