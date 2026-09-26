@@ -133,7 +133,9 @@ static func _kind_of(joy_name: String) -> Pad:
 func key_label(action: String) -> String:
 	var e := Settings.primary_event(action)
 	if e is InputEventKey:
-		var k := DisplayServer.keyboard_get_label_from_physical(e.physical_keycode)
+		# Web and headless can't map layouts (and log an error per call) — assume QWERTY
+		var k := (DisplayServer.keyboard_get_label_from_physical(e.physical_keycode)
+			if not (OS.has_feature("web") or DisplayServer.get_name() == "headless") else KEY_NONE)
 		var s := OS.get_keycode_string(k if k != KEY_NONE else e.physical_keycode)
 		return "Esc" if s == "Escape" else s
 	if e is InputEventMouseButton:

@@ -79,6 +79,8 @@ func _ready() -> void:
 	$Root.move_child(alerts, banner.get_index())
 	if NetworkManager.in_steam_lobby():
 		_build_invite_panel()
+	elif NetworkManager.in_online_room():
+		_build_room_panel()
 	breach_pips.count = GameState.MAX_BREACHES
 	day_of.text = "of %d" % GameState.TOTAL_DAYS
 	_last_breaches = GameState.breaches
@@ -695,6 +697,46 @@ func _build_invite_panel() -> void:
 		DisplayServer.clipboard_set(NetworkManager.lobby_code())
 		copy.text = "Copied")
 	hb.add_child(copy)
+
+## Room code (and, in a browser, an invite link) for online rooms
+func _build_room_panel() -> void:
+	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"Card"
+	$Root.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 10)
+	panel.add_child(hb)
+	var lbl := Label.new()
+	lbl.theme_type_variation = &"Eyebrow"
+	lbl.text = "Room"
+	lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(lbl)
+	var code := Label.new()
+	code.theme_type_variation = &"Numeral"
+	code.text = NetworkManager.room_code()
+	code.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(code)
+	var link := NetworkManager.invite_link()
+	var copy := Button.new()
+	copy.theme_type_variation = &"PrimaryButton" if link.is_empty() else &"GhostButton"
+	copy.text = "Copy code"
+	copy.focus_mode = Control.FOCUS_NONE
+	copy.pressed.connect(func():
+		DisplayServer.clipboard_set(NetworkManager.room_code())
+		copy.text = "Copied")
+	hb.add_child(copy)
+	if not link.is_empty():
+		var share := Button.new()
+		share.theme_type_variation = &"PrimaryButton"
+		share.text = "Copy invite link"
+		share.focus_mode = Control.FOCUS_NONE
+		share.pressed.connect(func():
+			DisplayServer.clipboard_set(link)
+			share.text = "Link copied")
+		hb.add_child(share)
 
 func _fill_friend_list(list: VBoxContainer, scroll: ScrollContainer) -> void:
 	for c in list.get_children():

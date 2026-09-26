@@ -16,6 +16,7 @@ var toggle_charge := false   # sling: press to start, press again to throw (inst
 # Keyboard / mouse rebinds: action → {"key": physical keycode} or {"mouse": button index}.
 # Only an action's primary key / mouse event is rebindable; pad remaps go through Steam Input.
 var bindings := {}
+var _booted := false   # apply() has run once (the boot-time apply)
 
 const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
 	"interact", "drop", "dash", "throw_charge", "horn"]
@@ -40,12 +41,15 @@ func _ready() -> void:
 			AudioServer.set_bus_name(bus, bus_name)
 			AudioServer.set_bus_send(bus, "Master")
 	apply()
+	_booted = true
 
 func apply() -> void:
 	# Embedded/headless runs have no real window to resize
 	if DisplayServer.get_name() != "headless":
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
-			else DisplayServer.WINDOW_MODE_WINDOWED)
+		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+		# Browsers only allow fullscreen from a click, so never touch it at boot there
+		if DisplayServer.window_get_mode() != mode and not (OS.has_feature("web") and fullscreen and not _booted):
+			DisplayServer.window_set_mode(mode)
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync
 			else DisplayServer.VSYNC_DISABLED)
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(volume, 0.0001)))

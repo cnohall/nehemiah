@@ -17,3 +17,6 @@ Thumbs.db
 # Export output
 build/
 eos_credentials.cfg
+
+# Online server deps
+server/node_modules/

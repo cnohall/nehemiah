@@ -13,6 +13,9 @@ extends Node3D
 # sees most, so it stays light and bright.
 
 const PART_SHADER    := preload("res://assets/shaders/toon_part.gdshader")
+const PART_SHADER_WEB := preload("res://assets/shaders/toon_part_web.gdshader")
+# Instance uniforms render black on WebGL — the web build uses per-rig materials
+static var _instance_uniforms := not OS.has_feature("web")
 const OUTLINE_SHADER := preload("res://assets/shaders/toon_outline.gdshader")
 const MARKER_SHADER  := preload("res://assets/shaders/ground_marker.gdshader")
 const FLASH_TIME   := 0.16
@@ -76,6 +79,7 @@ var _parts: Array[GeometryInstance3D] = []
 var _outline_mat: ShaderMaterial
 var _marker_mat: ShaderMaterial
 var _look: Dictionary = {}
+var _web_mats: Dictionary = {}   # colour → this rig's material (web build only)
 
 # Pivots
 var _body: Node3D        # feet pivot — squash, bob, collapse
@@ -146,6 +150,7 @@ func set_look(look: Dictionary) -> void:
 	for c in get_children():
 		c.free()
 	_parts.clear()
+	_web_mats.clear()
 	_tool = null
 	_spear = null
 	_cape = null
@@ -374,6 +379,10 @@ func _tool_visible() -> void:
 		_tool.visible = _base == "build"
 
 func _set_flash(v: float) -> void:
+	if not _instance_uniforms:
+		for m: ShaderMaterial in _web_mats.values():
+			m.set_shader_parameter("flash", v)
+		return
 	for p in _parts:
 		p.set_instance_shader_parameter("flash", v)
 
@@ -490,15 +499,24 @@ func _pivot(parent: Node3D, pos: Vector3) -> Node3D:
 func _part(parent: Node3D, mesh: Mesh, color: Color, pos: Vector3, rot := Vector3.ZERO, scl := Vector3.ONE) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
-	mi.material_override = _part_mat
+	mi.material_override = _part_mat if _instance_uniforms else _web_mat(color)
 	mi.material_overlay = _outline_mat
 	mi.position = pos
 	mi.rotation = rot
 	mi.scale = scl
 	parent.add_child(mi)
-	mi.set_instance_shader_parameter("part_color", color)
+	if _instance_uniforms:
+		mi.set_instance_shader_parameter("part_color", color)
 	_parts.append(mi)
 	return mi
+
+func _web_mat(color: Color) -> ShaderMaterial:
+	if not _web_mats.has(color):
+		var m := ShaderMaterial.new()
+		m.shader = PART_SHADER_WEB
+		m.set_shader_parameter("part_color", color)
+		_web_mats[color] = m
+	return _web_mats[color]
 
 # Shared meshes, keyed by size — every rig in the game reuses the same few
 static func _cached(key: String, make: Callable) -> Mesh:

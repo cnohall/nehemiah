@@ -7,6 +7,8 @@ const PUSH_IN_ZOOM := 1.08
 const REST_ZOOM    := 1.035  # margin must cover DRIFT_PX at the edges
 const SETTLE_TIME  := 2.4
 
+enum Net { STEAM, ONLINE, LAN }
+
 var _rig: Node2D
 var _drift_t := 0.0
 var _picker: SectionPicker
@@ -49,6 +51,8 @@ func _ready() -> void:
 	join_btn.pressed.connect(_on_join)
 	settings_btn.pressed.connect(_on_settings)
 	quit_btn.pressed.connect(get_tree().quit)
+	# A browser tab can't quit itself
+	quit_btn.visible = not OS.has_feature("web")
 	connect_btn.pressed.connect(_on_connect)
 	back_btn.pressed.connect(_on_back)
 	address_input.text_submitted.connect(func(_t): _on_connect())
@@ -60,11 +64,18 @@ func _ready() -> void:
 	for b: Button in menu.get_children():
 		b.mouse_entered.connect(b.grab_focus)
 	join_panel.hide()
+	_setup_join_copy()
 	_show_default_status()
 	_intro()
 	# Back from a replay: straight to the map, on the stretch just played
 	GameState.replay_section = -1
-	if GameState.picker_return >= 0:
+	# Opened from an invite link: join that room right away
+	var invite := NetworkManager.take_invite_code() if NetworkManager.online_available() else ""
+	if not invite.is_empty():
+		_open_join()
+		address_input.text = invite
+		_on_connect()
+	elif GameState.picker_return >= 0:
 		_picker.open(GameState.picker_return)
 		GameState.picker_return = -1
 
@@ -114,17 +125,45 @@ func _process(delta: float) -> void:
 
 # ── Network status ─────────────────────────────────────────
 
-# Steam when available; `-- --lan` forces direct IP (e.g. two instances, one PC)
+# Steam when available, else WebRTC room codes (always, in a browser), else direct IP.
+# `-- --lan` forces direct IP (e.g. two instances, one PC); `-- --online` skips Steam.
+func _net_mode() -> Net:
+	var args := OS.get_cmdline_user_args()
+	if args.has("--lan") and not OS.has_feature("web"):
+		return Net.LAN
+	if NetworkManager.steam_available() and not args.has("--online"):
+		return Net.STEAM
+	if NetworkManager.online_available():
+		return Net.ONLINE
+	return Net.LAN
+
 func _use_steam() -> bool:
-	return NetworkManager.steam_available() and not OS.get_cmdline_user_args().has("--lan")
+	return _net_mode() == Net.STEAM
 
 func _show_default_status() -> void:
-	if _use_steam():
-		net_status.text = "Signed in to Steam as %s — invite friends once in game" % NetworkManager.steam_name()
-	elif NetworkManager.steam_available():
-		net_status.text = "LAN mode — share your IP address to play together"
-	else:
-		net_status.text = "Steam unavailable: %s — LAN play only" % NetworkManager.steam_error()
+	match _net_mode():
+		Net.STEAM:
+			net_status.text = "Signed in to Steam as %s — invite friends once in game" % NetworkManager.steam_name()
+		Net.ONLINE:
+			net_status.text = "Host to get a room code — friends join with it" + (
+				" or your invite link" if OS.has_feature("web") else "")
+		_:
+			if NetworkManager.steam_available():
+				net_status.text = "LAN mode — share your IP address to play together"
+			else:
+				net_status.text = "Steam unavailable: %s — LAN play only" % NetworkManager.steam_error()
+
+# Join panel wording follows what the field accepts in this mode
+func _setup_join_copy() -> void:
+	if _net_mode() != Net.ONLINE:
+		return
+	var content := $JoinPanel/Center/Modal/Content
+	content.get_node("FieldLabel").text = "Room code"
+	address_input.placeholder_text = "ABCDE"
+	address_input.max_length = NetworkManager.ROOM_CODE_LEN if OS.has_feature("web") else 0
+	content.get_node("Hint").text = ("Enter the 5-letter room code the host sees in game, or open their invite link."
+		if OS.has_feature("web") else
+		"Enter the host's 5-letter room code — or a Steam lobby code / IP address.")
 
 # ── Host ───────────────────────────────────────────────────
 
@@ -149,13 +188,23 @@ func _on_section_chosen(section_index: int) -> void:
 func _host() -> void:
 	host_btn.disabled = true
 	_sections_btn.disabled = true
-	if _use_steam():
-		net_status.text = "Creating Steam lobby…"
-		NetworkManager.host_steam()
-	else:
-		NetworkManager.host()
+	match _net_mode():
+		Net.STEAM:
+			net_status.text = "Creating Steam lobby…"
+			NetworkManager.host_steam()
+		Net.ONLINE:
+			net_status.text = "Opening a room…"
+			NetworkManager.host_online()
+		_:
+			NetworkManager.host()
 
 func _on_host_failed(reason: String) -> void:
+	# No online server: still let them build — a solo game needs no network
+	if _net_mode() == Net.ONLINE:
+		net_status.text = "%s Starting a solo game…" % reason
+		await get_tree().create_timer(1.6).timeout
+		get_tree().change_scene_to_file(GAME_SCENE)
+		return
 	host_btn.disabled = false
 	_sections_btn.disabled = false
 	net_status.text = reason
@@ -211,12 +260,19 @@ func _fill_friend_games() -> void:
 func _on_connect() -> void:
 	var addr := address_input.text.strip_edges()
 	if addr.is_empty():
-		status_label.text = "Enter an address or lobby code first."
+		status_label.text = ("Enter the room code first." if _net_mode() == Net.ONLINE
+			else "Enter an address or lobby code first.")
 		return
+	NetworkManager.last_error = ""
 	status_label.text = "Connecting…"
 	connect_btn.disabled = true
+	if NetworkManager.is_room_code(addr) and NetworkManager.online_available():
+		status_label.text = "Joining room %s…" % addr.to_upper()
+		NetworkManager.join_online(addr)
+	elif OS.has_feature("web"):
+		_join_failed("Room codes are 5 letters, like KXBQM.")
 	# Steam lobby ids are 64-bit numbers; anything else is treated as an IP/hostname
-	if addr.is_valid_int() and addr.length() > 12:
+	elif addr.is_valid_int() and addr.length() > 12:
 		if not NetworkManager.steam_available():
 			_join_failed("That's a Steam lobby code — start Steam first.")
 			return
@@ -225,6 +281,9 @@ func _on_connect() -> void:
 		NetworkManager.join(addr)
 
 func _on_back() -> void:
+	# Backing out of a join still in flight cancels it
+	if connect_btn.disabled:
+		NetworkManager.disconnect_session()
 	join_panel.hide()
 	status_label.text = ""
 	connect_btn.disabled = false
@@ -234,7 +293,8 @@ func _on_lobby_joined(success: bool) -> void:
 	if success:
 		get_tree().change_scene_to_file(GAME_SCENE)
 	else:
-		_join_failed("Connection failed. Check the address and that the host is running.")
+		_join_failed(NetworkManager.last_error if not NetworkManager.last_error.is_empty()
+			else "Connection failed. Check the address and that the host is running.")
 
 # Panel may be hidden when the join came from a Steam invite, so surface it
 func _join_failed(msg: String) -> void:

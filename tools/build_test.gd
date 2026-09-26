@@ -4,6 +4,8 @@ extends SceneTree
 #   offline:  Godot --path . --script res://tools/build_test.gd -- --nostory <out_dir>
 #   network:  one `--headless ... -- --nostory --host <dir>` process plus one
 #             `... -- --nostory --client <dir>` — the client plays, the host serves
+#   `--online`: network run over WebRTC room codes instead of ENet — start
+#             `node server/server.js` first; the host writes the code to <dir>/room.txt
 #   `--dusk`: keep running after the day's work is done and screenshot the dusk tally
 # Teleports the player between the supply piles and today's first wall, pressing
 # interact like a player would, and prints how long each stage's work took.
@@ -30,6 +32,7 @@ var _stage_at_start: Variant = null
 var _mode := "offline"
 var _retries := 0
 var _dusk := false
+var _online := false
 var _dusk_t := 0.0
 const DUSK_SHOTS := [0.3, 1.2, 2.2, 3.4, 5.0]
 
@@ -39,6 +42,8 @@ func _initialize() -> void:
 			_mode = "host"
 		elif a == "--client":
 			_mode = "client"
+		elif a == "--online":
+			_online = true
 		elif a == "--dusk":
 			_dusk = true
 		elif not a.begins_with("--"):
@@ -56,10 +61,28 @@ func _process(delta: float) -> bool:
 	_frame += 1
 	var nm = root.get_node("NetworkManager")
 	if _frame == 2 and _mode == "host":
-		nm.host()
-		_start_main()
-	elif _frame == 2 and _mode == "client":
+		if _online:
+			DirAccess.remove_absolute(_out.path_join("room.txt"))
+			nm.lobby_created.connect(func():
+				print("room ", nm.room_code())
+				FileAccess.open(_out.path_join("room.txt"), FileAccess.WRITE).store_string(nm.room_code())
+				_start_main())
+			nm.host_failed.connect(func(r): print("FAIL: host ", r); quit(1))
+			nm.host_online()
+		else:
+			nm.host()
+			_start_main()
+	elif _frame == 2 and _mode == "client" and not _online:
 		nm.join("127.0.0.1")
+	elif _mode == "client" and _online and root.multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
+		# Wait for the host's room code, then join once
+		var code := FileAccess.get_file_as_string(_out.path_join("room.txt"))
+		if nm.is_room_code(code) and not nm.has_meta("joining"):
+			nm.set_meta("joining", true)
+			nm.lobby_joined.connect(func(ok): if not ok: print("FAIL: join ", nm.last_error); quit(1))
+			print("joining ", code)
+			nm.join_online(code)
+		return false
 	if _mode == "client" and _main == null:
 		# Status flips to connected a moment before the server hands out our peer id
 		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1:

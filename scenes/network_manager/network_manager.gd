@@ -17,6 +17,12 @@ const STEAM_RESULT_OK         := 1
 const LOBBY_ENTER_SUCCESS     := 1
 const FRIEND_FLAG_IMMEDIATE   := 4
 const PERSONA_OFFLINE         := 0
+# Online room codes: 5 letters, no I/O so they read cleanly off a screen
+const ROOM_CODE_LEN   := 5
+const ROOM_CODE_CHARS := "ABCDEFGHJKLMNPQRSTUVWXYZ"
+const ONLINE_SCRIPT   := "res://scenes/network_manager/webrtc_online.gd"
+# Invite links: <page>?room=CODE joins straight from the menu (web build)
+const ROOM_QUERY      := "room"
 
 signal lobby_created
 signal lobby_joined(success: bool)
@@ -35,6 +41,11 @@ var _steam: Object = null
 var _steam_error := ""
 var _lobby_id := 0
 var _hosting_lobby := false
+# WebRTC room-code helper (webrtc_online.gd), or null where WebRTC is unavailable
+var _online: Node = null
+var _online_joining := false
+# Why the last online host/join failed, for the menu
+var last_error := ""
 
 # Connect once — reconnecting per host()/join() call errors on the second attempt
 func _ready() -> void:
@@ -44,6 +55,7 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_init_steam()
+	_init_online()
 
 # ── ENet (LAN / direct IP, headless tests) ─────────────────
 
@@ -143,13 +155,77 @@ func invite_friend(steam_id: int) -> bool:
 		return false
 	return _steam.inviteUserToLobby(_lobby_id, steam_id)
 
+# ── Online rooms (WebRTC + room codes — browsers and desktop) ─
+
+func online_available() -> bool:
+	return _online != null
+
+func in_online_room() -> bool:
+	return _online != null and not _online.room_code.is_empty()
+
+func room_code() -> String:
+	return _online.room_code if _online else ""
+
+## Page link that joins this room on open ("" outside the web build)
+func invite_link() -> String:
+	return WebPage.url_with(ROOM_QUERY, room_code()) if in_online_room() and WebPage.active() else ""
+
+## Room code from an invite link the page was opened with, once ("" if none)
+func take_invite_code() -> String:
+	var code := WebPage.query(ROOM_QUERY).to_upper()
+	if code.is_empty():
+		return ""
+	WebPage.clear_query(ROOM_QUERY)
+	return code if is_room_code(code) else ""
+
+static func is_room_code(text: String) -> bool:
+	if text.length() != ROOM_CODE_LEN:
+		return false
+	for c in text.to_upper():
+		if not ROOM_CODE_CHARS.contains(c):
+			return false
+	return true
+
+func host_online() -> void:
+	last_error = ""
+	_online_joining = false
+	_online.host()
+
+func join_online(code: String) -> void:
+	last_error = ""
+	_online_joining = true
+	_online.join(code)
+
+func _init_online() -> void:
+	if not preload(ONLINE_SCRIPT).available():
+		return
+	_online = preload(ONLINE_SCRIPT).new()
+	_online.name = "Online"
+	add_child(_online)
+	_online.hosted.connect(func(peer: MultiplayerPeer):
+		multiplayer.multiplayer_peer = peer
+		lobby_created.emit())
+	# lobby_joined(true) fires from connected_to_server once the data channels open
+	_online.joined.connect(func(peer: MultiplayerPeer):
+		multiplayer.multiplayer_peer = peer)
+	_online.failed.connect(func(reason: String):
+		last_error = reason
+		disconnect_session()
+		if _online_joining:
+			lobby_joined.emit(false)
+		else:
+			host_failed.emit(reason))
+
 # ── Session teardown ───────────────────────────────────────
 
 func disconnect_session() -> void:
 	if multiplayer.multiplayer_peer:
 		multiplayer.multiplayer_peer.close()
-	multiplayer.multiplayer_peer = null
+	# Offline peer, not null: a solo game started next still counts as the server
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	_ready_peers.clear()
+	if _online:
+		_online.leave()
 	if _steam and _lobby_id:
 		_steam.leaveLobby(_lobby_id)
 		_steam.clearRichPresence()
