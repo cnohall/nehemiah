@@ -46,7 +46,7 @@ const CONTROLS := [
 @onready var threat:       Control     = $Root/ThreatPlaque
 @onready var breach_count: Label       = $Root/ThreatPlaque/VBox/BreachRow/BreachCount
 @onready var breach_pips:  PipRow      = $Root/ThreatPlaque/VBox/Pips
-@onready var players_row:  HBoxContainer = $Root/Players
+@onready var players_row:  VBoxContainer = $Root/Players   # stacked up the left edge, clear of the centre panels
 @onready var banner:       Control     = $Root/Banner
 @onready var banner_title: Label       = $Root/Banner/VBox/TitleRow/Title
 @onready var banner_sub:   Label       = $Root/Banner/VBox/Sub
@@ -69,12 +69,16 @@ var _last_tally := {}   # the latest dusk numbers (a replay's end screen shows i
 var _horn_row: Control
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
+var _next_line: Label        # day plaque: what to do next, for the local player
+var _next_poll := 0.0
+const NEXT_POLL := 0.25
 
 func _ready() -> void:
 	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
 		UiStyle.ornament(p)
 	_build_player_cards()
 	_build_controls_hint()
+	_build_next_line()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -211,6 +215,57 @@ func refresh_day(day: int) -> void:
 	day_number.text  = str(day)
 	day_section.text = "%s  ·  %s" % [section["name"], section["ref"]]
 	circuit.day = day
+
+# ── Next step ──────────────────────────────────────────────
+
+# One plain line under today's work: where the next load goes, or that it's time to
+# build. New players read this rather than decoding the world tags.
+func _build_next_line() -> void:
+	_next_line = Label.new()
+	_next_line.theme_type_variation = &"Caption"
+	_next_line.add_theme_color_override("font_color", UiStyle.INK)
+	_next_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_next_line.custom_minimum_size.x = 300
+	_next_line.visible = false
+	var vb := $Root/DayPlaque/VBox
+	vb.add_child(_next_line)
+	vb.move_child(_next_line, work_row.get_index() + 1)
+
+func _process(delta: float) -> void:
+	_next_poll -= delta
+	if _next_poll > 0.0 or _next_line == null:
+		return
+	_next_poll = NEXT_POLL
+	var text := _next_text()
+	_next_line.visible = not text.is_empty()
+	_next_line.text = text
+
+func _next_text() -> String:
+	if GameState.phase != GameState.Phase.WORK:
+		return ""
+	var me := Player.local
+	if me == null or not is_instance_valid(me):
+		return ""
+	if me.downed:
+		return "Down — a crewmate can lift you, or wait it out"
+	var site := SiteFocus.site()
+	if site == null:
+		return "The day's stretch is done — keep the wall"
+	var place := "gate" if not site.is_in_group("wall_sections") else "wall"
+	var carry: String = me.carried_kind
+	if not carry.is_empty():
+		if SiteFocus.matches_carry():
+			return "Take the %s to the %s" % [_material_name(carry), place]
+		return "Nothing needs %s now — drop it (%s)" % [_material_name(carry), InputMode.key("drop")]
+	if GameState.active_build and site.can_build():
+		return "Build it up — %s at the %s" % [InputMode.key("interact"), place]
+	var need: String = site.next_need()
+	if need.is_empty():
+		return ""
+	return "Next: bring %s to the %s" % [_material_name(need), place]
+
+static func _material_name(kind: String) -> String:
+	return {"beam": "beams", "rubble": "rubble"}.get(kind, kind)
 
 func _on_progress_changed(_done: int, _total: int) -> void:
 	_refresh_progress()
@@ -529,6 +584,17 @@ func set_player_downed(slot: int, downed: bool) -> void:
 	_cards[slot].carry.visible = downed
 	_cards[slot].portrait.downed = downed
 
+## What the worker has in their arms, as a small icon on their card ("" = nothing)
+func set_player_carry(slot: int, kind: String) -> void:
+	if slot >= _cards.size():
+		return
+	var icon: TagIcon = _cards[slot].load
+	var k := kind.trim_suffix("s") if kind == "beams" else kind
+	icon.visible = not k.is_empty()
+	if icon.visible and icon.kind != k:
+		icon.kind = k
+		icon.queue_redraw()
+
 func set_player_color(slot: int, color: Color) -> void:
 	if slot >= _cards.size():
 		return
@@ -543,40 +609,40 @@ func set_player_color(slot: int, color: Color) -> void:
 # ── Controls hint ──────────────────────────────────────────
 
 func _build_controls_hint() -> void:
+	# Compact, tucked in the bottom-right corner: it used to sit mid-right, over the
+	# wall and its tags. Above the invite panel when there is one.
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(16, 12), 0.9))
+	panel.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(12, 9), 0.88))
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	UiStyle.ornament(panel, 4.0)
 	$Root.add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 18)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	if NetworkManager.in_steam_lobby():
+		panel.offset_bottom -= 72
+		panel.offset_top -= 72
 	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 6)
+	vb.add_theme_constant_override("separation", 3)
 	panel.add_child(vb)
-	var title := Label.new()
-	title.theme_type_variation = &"Eyebrow"
-	title.text = "Controls"
-	vb.add_child(title)
 	var key_box := UiStyle.bordered(UiStyle.box(UiStyle.PARCHMENT_DEEP, Vector2(7, 1), 3), UiStyle.RULE, 1, 2)
 	var keys: Array[Label] = []
 	for row: Array in CONTROLS:
 		var hb := HBoxContainer.new()
-		hb.add_theme_constant_override("separation", 10)
+		hb.add_theme_constant_override("separation", 8)
 		vb.add_child(hb)
 		var key := Label.new()
 		key.text = InputMode.key(row[0])
 		keys.append(key)
 		key.add_theme_font_override("font", UiStyle.CINZEL_SEMI)
-		key.add_theme_font_size_override("font_size", 13)
+		key.add_theme_font_size_override("font_size", 11)
 		key.add_theme_color_override("font_color", UiStyle.INK)
 		key.add_theme_stylebox_override("normal", key_box)
 		key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		key.custom_minimum_size.x = 78
+		key.custom_minimum_size.x = 64
 		hb.add_child(key)
 		var what := Label.new()
 		what.theme_type_variation = &"Body"
-		what.add_theme_font_size_override("font_size", 15)
+		what.add_theme_font_size_override("font_size", 14)
 		what.text = row[1]
 		hb.add_child(what)
 		if row[0] == "horn":
@@ -638,6 +704,10 @@ func _build_player_cards() -> void:
 		name_lbl.add_theme_font_size_override("font_size", 17)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(name_lbl)
+		var load_icon := TagIcon.make("stone", 24)
+		load_icon.visible = false
+		load_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		top.add_child(load_icon)
 		var carry := Label.new()
 		carry.theme_type_variation = &"Caption"
 		carry.add_theme_font_size_override("font_size", 14)
@@ -657,7 +727,7 @@ func _build_player_cards() -> void:
 		vb.add_child(bar)
 		players_row.add_child(root)
 		_cards.append({ root = root, portrait = portrait, name = name_lbl, who = who,
-			carry = carry, bar = bar, fill = fill })
+			carry = carry, bar = bar, fill = fill, load = load_icon })
 
 # ── Steam invite ───────────────────────────────────────────
 

@@ -632,9 +632,12 @@ func _why_not_needed(at: Vector3) -> String:
 			return "Hands full — deliver it, or {drop} to drop"
 		return "Bring it to a wall"
 	var need: String = wall.next_need()
-	if need.is_empty():
-		return "This wall is finished"
-	return "Needs %s first" % need
+	if not need.is_empty():
+		return "Needs %s first" % need
+	if wall.can_build():
+		# Every load for this stage is in; it only wants working before the next material
+		return "Build this stage first — {drop} to drop, then {interact} to work"
+	return "This wall is finished"
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_drop(at: Vector3) -> void:

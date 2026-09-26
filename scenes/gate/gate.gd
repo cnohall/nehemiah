@@ -81,7 +81,11 @@ func _process(delta: float) -> void:
 	if _label_poll > 0.0:
 		return
 	_label_poll = LABEL_POLL
-	_label.visible = _open_for_work() and _work.progress <= 0.0 and (is_target or _local_player_near())
+	var near := _local_player_near()
+	_label.visible = _open_for_work() and _work.progress <= 0.0 and (is_target or near)
+	var focus := SiteFocus.site() == self
+	_label.pulse = focus
+	_label.modulate.a = 1.0 if focus or near else WorldTag.DIM
 
 # ── Build-site interface (server mutates) ──────────────────
 

@@ -24,6 +24,8 @@ const DONE     := Color(0.66, 0.78, 0.40)
 const PIP_OFF  := Color(1.0, 0.95, 0.85, 0.22)
 const POINTER  := Vector2(16, 9)
 const EDGE_MARGIN := 10.0
+const PULSE_AMOUNT := 0.07
+const DIM := 0.5   # alpha for a site tag that isn't where the next delivery goes
 
 static var _layer: CanvasLayer
 static var _fonts: Dictionary = {}
@@ -38,6 +40,8 @@ var text := "":
 var modulate := Color.WHITE
 ## Lift on screen, in px, above the projected point
 var screen_lift := 0.0
+## A gentle breathing scale — the one tag that says "here next"
+var pulse := false
 
 var _root: Control
 var _panel: PanelContainer
@@ -83,11 +87,11 @@ func _process(_delta: float) -> void:
 	_root.visible = show
 	if not show:
 		return
+	# Already in the stretched 2D base space the overlay draws in (canvas_items stretch)
+	# — as OffscreenAlerts uses it. An extra window transform here only cancelled out at
+	# 1920×1080 and threw tags off at every other size.
 	var p := cam.unproject_position(global_position)
-	# Canvas-items stretch: the overlay works in the 2D base resolution
 	var vp := get_viewport()
-	var xf := vp.get_final_transform() if vp is Window else Transform2D.IDENTITY
-	p = xf.affine_inverse() * p
 	var sz := _root.get_combined_minimum_size()
 	_root.size = sz
 	var want := p - Vector2(sz.x * 0.5, sz.y + screen_lift)
@@ -98,6 +102,12 @@ func _process(_delta: float) -> void:
 	if _pointer != null:
 		_pointer.modulate.a = 1.0 if at.is_equal_approx(want) else 0.0
 	_root.modulate = modulate
+	if pulse:
+		var k := 1.0 + PULSE_AMOUNT * (0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.005))
+		_root.pivot_offset = Vector2(sz.x * 0.5, sz.y)
+		_root.scale = Vector2(k, k)
+	elif _root.scale != Vector2.ONE:
+		_root.scale = Vector2.ONE
 
 # ── Building ───────────────────────────────────────────────
 

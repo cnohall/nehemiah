@@ -157,6 +157,7 @@ func _refresh_hud() -> void:
 			hud.set_player_present(slot, true, pl.name == local_name)
 			hud.set_player_health(slot, pl.health / pl.MAX_HEALTH)
 			hud.set_player_downed(slot, pl.downed)
+			hud.set_player_carry(slot, pl.carried_kind)
 		else:
 			hud.set_player_present(slot, false, false)
 

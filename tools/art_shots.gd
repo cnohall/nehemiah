@@ -85,3 +85,6 @@ func _stage() -> void:
 	_players[2].anim = "idle_down"
 	_players[3].anim = "build_up"
 	_main.get_node("/root/GameState").set_crew(4)
+	# Main is paused here: fill the HUD crew row once, as a live session would
+	_main._assign_colors()
+	_main._refresh_hud()

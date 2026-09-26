@@ -168,7 +168,12 @@ func _process(delta: float) -> void:
 	_label_poll = LABEL_POLL
 	var damaged := is_built() and health < MAX_HEALTH
 	var working := _work != null and _work.progress > 0.0   # the bar and rising stones say it all
-	_label.visible = not working and ((is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and _local_player_near()))
+	var near := _local_player_near()
+	_label.visible = not working and ((is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and near))
+	# One site at a time says "here next"; the others step back
+	var focus := SiteFocus.site() == self
+	_label.pulse = focus
+	_label.modulate.a = 1.0 if focus or near else WorldTag.DIM
 	if damaged:
 		_update_label()
 
