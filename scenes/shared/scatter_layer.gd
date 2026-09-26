@@ -316,9 +316,16 @@ func _well(c: Vector3) -> void:
 	_add("timber", Transform3D(Basis.from_scale(Vector3(2.2, 0.13, 0.13)), c + Vector3(0, 1.86, 0)), BEAM_COLOR.lightened(0.05))
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.03, 0.62, 0.03)), c + Vector3(0.15, 1.5, 0)), Color(0.72, 0.62, 0.44))
 	_add("drum", Transform3D(Basis.from_scale(Vector3(0.28, 0.24, 0.28)), c + Vector3(0.15, 1.1, 0)), BEAM_COLOR.darkened(0.1))
-	# Trough for the animals
-	_add("block", Transform3D(Basis.from_scale(Vector3(1.5, 0.38, 0.55)), c + Vector3(1.75, 0.19, 0.45)), Palette.WALL_STONE.darkened(0.08))
-	_add("block", Transform3D(Basis.from_scale(Vector3(1.3, 0.04, 0.38)), c + Vector3(1.75, 0.36, 0.45)), WATER_COLOR)
+	# Trough for the animals: a hollowed stone — floor, two long sides, two ends — with
+	# the water set down inside (not flush with the rim, where the two would flicker)
+	var t := c + Vector3(1.75, 0.0, 0.45)
+	var tc := Palette.WALL_STONE.darkened(0.08)
+	_add("block", Transform3D(Basis.from_scale(Vector3(1.5, 0.2, 0.55)), t + Vector3(0, 0.1, 0)), tc)
+	for sz: float in [-1.0, 1.0]:
+		_add("block", Transform3D(Basis.from_scale(Vector3(1.5, 0.22, 0.1)), t + Vector3(0, 0.3, sz * 0.225)), tc)
+	for sx: float in [-1.0, 1.0]:
+		_add("block", Transform3D(Basis.from_scale(Vector3(0.1, 0.22, 0.35)), t + Vector3(sx * 0.7, 0.3, 0)), tc)
+	_add("block", Transform3D(Basis.from_scale(Vector3(1.3, 0.04, 0.36)), t + Vector3(0, 0.3, 0)), WATER_COLOR)
 
 # Distance inside the street's edge (negative within the last metre)
 func _street_edge(p: Vector2) -> float:
