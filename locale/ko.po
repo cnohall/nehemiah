@@ -854,7 +854,7 @@ msgstr "원수들이 함께 모의하여 예루살렘을 치고 혼란에 빠뜨
 msgid "On the wall"
 msgstr "성벽 위에서"
 
-msgid "Keep Jehovah in mind"
+msgid "Keep Yahweh in mind"
 msgstr "여호와를 기억하라"
 
 msgid "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”"

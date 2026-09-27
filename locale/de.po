@@ -854,7 +854,7 @@ msgstr "Die Feinde verschwören sich, gegen Jerusalem zu kämpfen und Verwirrung
 msgid "On the wall"
 msgstr "Auf der Mauer"
 
-msgid "Keep Jehovah in mind"
+msgid "Keep Yahweh in mind"
 msgstr "Denkt an Jahwe"
 
 msgid "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”"

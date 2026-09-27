@@ -71,7 +71,7 @@ const BEATS := {
 		{ "eyebrow": "Sanballat · Tobiah · Geshem", "title": "The conspiracy",
 		  "text": "The enemies plot together to come and fight against Jerusalem and throw it into confusion.",
 		  "ref": "Nehemiah 4:7, 8", "sky": "night", "built": 0.45 },
-		{ "eyebrow": "On the wall", "title": "Keep Jehovah in mind",
+		{ "eyebrow": "On the wall", "title": "Keep Yahweh in mind",
 		  "verse": "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”",
 		  "ref": "Nehemiah 4:14", "sky": "dawn", "built": 0.45 },
 		{ "eyebrow": "From that day on", "title": "Armed while building",

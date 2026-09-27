@@ -495,7 +495,7 @@ msgid "Joining %s…"
 msgstr ""
 
 #: scenes\story\story_data.gd:74
-msgid "Keep Jehovah in mind"
+msgid "Keep Yahweh in mind"
 msgstr ""
 
 #: scenes\ui\settings_panel.gd:157

@@ -854,7 +854,7 @@ msgstr "Los enemigos conspiran para venir a luchar contra Jerusalén y sembrar l
 msgid "On the wall"
 msgstr "Sobre la muralla"
 
-msgid "Keep Jehovah in mind"
+msgid "Keep Yahweh in mind"
 msgstr "Ten presente a Jehová"
 
 msgid "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”"
