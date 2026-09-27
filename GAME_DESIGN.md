@@ -5,7 +5,7 @@
 
 ## 1. Overview
 
-Cooperative 2–4 player HD-2D isometric action-strategy set in 445 BC Jerusalem. Players embody the workers and guards of Nehemiah's rebuilding effort, racing to reconstruct the city wall in 52 days while repelling Sanballat's and Tobiah's increasingly desperate forces. Tone: urgent and collaborative — think Overcooked meets tower defense, grounded in Biblical history.
+Cooperative 2–4 player HD-2D isometric action-strategy set in 455 BCE Jerusalem. Players embody the workers and guards of Nehemiah's rebuilding effort, racing to reconstruct the city wall in 52 days while repelling Sanballat's and Tobiah's increasingly desperate forces. Tone: urgent and collaborative — think Overcooked meets tower defense, grounded in Biblical history.
 
 **Core loop per day:**
 1. Day begins — enemies spawn in waves
@@ -45,9 +45,9 @@ Just one type of structure so far
 ## 4. Historical Notes
 
 - Wall circuit: Nehemiah 3, clockwise from Sheep Gate
-- 52 days: Nehemiah 6:15 (Elul 25, 445 BC)
+- 52 days: Nehemiah 6:15 (Elul 25, 455 BCE)
 - Enemy leaders: Sanballat the Horonite, Tobiah the Ammonite, Geshem the Arab
-- Persian king: Artaxerxes I (465–424 BC)
+- Persian king: Artaxerxes I; his 20th year (Neh 2:1) = 455 BCE, per Watch Tower chronology (secular dating puts it at 445). Use BCE, not BC
 - Workers armed while building: Nehemiah 4:17 ("trowel in one hand, weapon in the other")
 - Families stationed behind the wall with weapons: Nehemiah 4:13
 
