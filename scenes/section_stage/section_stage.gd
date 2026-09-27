@@ -1,7 +1,8 @@
 extends Node
 
 # Rearranges the shared map for the current section (GDD §6): the supply yard moves so
-# each stretch plays differently (e.g. the long haul at the Dung Gate). Runs on every
+# each stretch plays differently (e.g. the long haul at the Dung Gate); a section may
+# also pin single piles elsewhere ("piles"). Runs on every
 # peer from GameState alone — deterministic, nothing replicated. The DayDirector
 # rebakes navigation at dawn, after this has run.
 # Twist-specific pieces (beam pile, rubble heaps, gate doors / infill) toggle themselves.
@@ -19,6 +20,8 @@ func _ready() -> void:
 
 func _apply() -> void:
 	var yard := GameState.yard_center()
+	var fixed: Dictionary = GameState.get_current_section().get("piles", {})
 	for pile: Node3D in _offsets:
 		var off: Vector2 = _offsets[pile]
-		pile.position = Vector3(yard.x + off.x, pile.position.y, yard.y + off.y)
+		var at: Vector2 = fixed.get(String(pile.name), yard + off)
+		pile.position = Vector3(at.x, pile.position.y, at.y)

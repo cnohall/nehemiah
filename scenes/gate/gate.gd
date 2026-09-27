@@ -20,7 +20,8 @@ const LABEL_POLL   := 0.2
 const DOOR_COLOR   := Color(0.42, 0.29, 0.17)
 const BAR_COLOR    := Color(0.36, 0.30, 0.24)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)
-const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
+const WORK_TIME    := 2.5   # seconds for one worker to hang the doors / wall up the gap
+const SOLO_WORK_MULT := 0.75
 
 @onready var _pillars: Array = [$PillarLeft, $PillarRight]
 
@@ -50,14 +51,23 @@ var _doors: Node3D
 var _infill: Node3D
 var _door_body: StaticBody3D
 var _footing: MeshInstance3D
-var _label: Label3D
+var _label: WorldTag
 var _label_poll := 0.0
+var _work: BuildWork
 
 func _ready() -> void:
 	_lintel = _box_mesh(LINTEL_SIZE, Vector3(0, LINTEL_Y + LINTEL_SIZE.y * 0.5, 0), Color(0.74, 0.65, 0.50))
 	add_child(_lintel)
 	_build_doors()
 	_build_label()
+	_work = BuildWork.new()
+	_work.name = "Work"
+	_work.position = Vector3(0, 3.0, 0)
+	add_child(_work)
+	_work.progress_changed.connect(_on_work_progress.unbind(1))
+	_prime_work()
+	GameState.crew_changed.connect(_prime_work.unbind(1))
+	InputMode.changed.connect(_update_label.unbind(1))
 	add_to_group("build_sites")
 	_build_sync()
 	for p in _pillars:
@@ -71,7 +81,11 @@ func _process(delta: float) -> void:
 	if _label_poll > 0.0:
 		return
 	_label_poll = LABEL_POLL
-	_label.visible = _open_for_work() and (is_target or _local_player_near())
+	var near := _local_player_near()
+	_label.visible = _open_for_work() and _work.progress <= 0.0 and (is_target or near)
+	var focus := SiteFocus.site() == self
+	_label.pulse = focus
+	_label.modulate.a = 1.0 if focus or near else WorldTag.DIM
 
 # ── Build-site interface (server mutates) ──────────────────
 
@@ -103,6 +117,7 @@ func is_complete() -> bool:
 func reset_slot() -> void:
 	pending = 0
 	finished = false
+	_work.reset()
 
 func repair(_fraction: float) -> void:
 	pass
@@ -134,15 +149,43 @@ func _open_for_work() -> bool:
 		and _pillars.all(func(p): return p.is_complete())
 
 func _cost() -> int:
-	return COST_BY_CREW[clampi(GameState.crew_size, 1, COST_BY_CREW.size()) - 1]
+	var cost: int = COST_BY_CREW[clampi(GameState.crew_size, 1, COST_BY_CREW.size()) - 1]
+	return maxi(1, cost - 1) if GameState.active_build else cost
+
+func work() -> BuildWork:
+	return _work
+
+func work_material() -> String:
+	return _material() if not finished else ""
+
+func _on_work_progress() -> void:
+	_refresh()
+
+func _prime_work() -> void:
+	_work.work_time = WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0)
 
 # ── Visuals ────────────────────────────────────────────────
+
+## Every peer, at dusk: the new doors / infill take a bow with the wall
+func celebrate() -> void:
+	if not finished:
+		return
+	var leaf: Node3D = _doors if GameState.has_gate() else _infill
+	leaf.scale = Vector3(1.04, 0.9, 1.04)
+	create_tween().tween_property(leaf, "scale", Vector3.ONE, 0.45) 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	DustFx.puff(self, global_position + Vector3.UP * 0.3, 16, 0.9)
+	Sfx.play("deposit_beam", global_position)
 
 func _refresh() -> void:
 	var gate := GameState.has_gate()
 	_lintel.visible = gate and _pillars.all(func(p): return p.stage == p.Stage.MORTARED)
-	_doors.visible = finished and gate
-	_infill.visible = finished and not gate
+	# While workers are at it the doors / infill go up plank by plank, stone by stone
+	var working := not finished and _work.progress > 0.0
+	_doors.visible = (finished or working) and gate
+	_infill.visible = (finished or working) and not gate
+	var fill := 1.0 if finished else _work.progress
+	BuildWork.reveal(_doors, fill)
+	BuildWork.reveal(_infill, fill)
 	_door_body.get_child(0).set_deferred("disabled", not finished)
 	_footing.visible = _open_for_work() and is_target
 	_update_label()
@@ -210,16 +253,7 @@ func _box_mesh(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 # ── Label ──────────────────────────────────────────────────
 
 func _build_label() -> void:
-	_label = Label3D.new()
-	_label.font = _FONT
-	_label.font_size = 40
-	_label.pixel_size = 0.01
-	Mobile.world_text(_label)
-	_label.outline_size = 10
-	_label.modulate = Color(0.98, 0.95, 0.88)
-	_label.outline_modulate = Color(0.20, 0.14, 0.08)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.no_depth_test = true
+	_label = WorldTag.make(WorldTag.Kind.SITE)
 	_label.position = Vector3(0, 3.4, 0)
 	_label.visible = false
 	add_child(_label)
@@ -228,28 +262,17 @@ func _update_label() -> void:
 	if _label == null:
 		return
 	var lines: PackedStringArray = []
-	if is_target:
-		lines.append("— Today's work —")
-	var what := "Doors" if GameState.has_gate() else "Seal the gap"
-	lines.append("%s  ·  %s %d/%d" % [what, _material().capitalize(), mini(pending, _cost()), _cost()])
+	var what := "Hang the doors" if GameState.has_gate() else "Seal the gap"
+	if GameState.active_build and can_build():
+		lines.append("%s  [%s]" % [what, InputMode.key("interact")])
+	else:
+		lines.append("%s  ·  %s %d/%d" % [what, _material().capitalize(), mini(pending, _cost()), _cost()])
 	_label.text = "\n".join(lines)
 
 func _local_player_near() -> bool:
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority():
-			return distance_to_point(p.global_position) < LABEL_RANGE
-	return false
+	return Player.local != null and distance_to_point(Player.local.global_position) < LABEL_RANGE
 
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	for prop: NodePath in [^".:pending", ^".:finished", ^".:is_target"]:
-		cfg.add_property(prop)
-		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_interval = 0.1
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:pending", ^".:finished", ^".:is_target", ^"Work:progress"])

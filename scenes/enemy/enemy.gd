@@ -19,7 +19,9 @@ const ATTACK_RANGE      := 1.6
 const WALL_REACH        := 1.3    # footprint distance to count as "at the wall"
 const ATTACK_CD         := 1.6
 const STAGGER_TIME      := 0.3    # a sling hit knocks the wind out briefly
+const HITSTOP_TIME      := 0.09   # sprite holds its frame on a hit
 const REPATH_INTERVAL   := 0.3
+const SCAN_INTERVAL     := 0.2    # how often to look around for a new worker / wall
 const STUCK_WINDOW      := 0.6    # seconds of no progress before bashing a wall
 const STUCK_DIST        := 0.35
 const BREACH_Z          := 13.5   # past this line the enemy is inside the city
@@ -28,16 +30,13 @@ const GOAL_X_SPREAD     := 12.0
 const WRECKER_CHANCE    := 0.5    # share of scouts/raiders that go for the wall; brutes always do
 const WALL_STANDOFF     := 0.6    # where a wrecker stands, measured out from the wall face
 
-# One sheet per type (tools/build_enemy_sheets.py) — distinct silhouettes, one dark colour family
-const _TEXTURES := {
-	Type.SCOUT:  preload("res://assets/sprites/enemy_scout.png"),
-	Type.BRUTE:  preload("res://assets/sprites/enemy_brute.png"),
-	Type.RAIDER: preload("res://assets/sprites/enemy_raider.png"),
-}
-# Oxblood rim instead of the players' brown — reads as foe even in a crowd
-const OUTLINE_COLOR := Color(0.36, 0.07, 0.05)
-const _ANIMS   := ["idle", "walk", "thrust", "collapse"]
+# Distinct silhouette per type (CharacterRig.enemy_look), one dark colour family
+const _LOOKS := { Type.SCOUT: "scout", Type.BRUTE: "brute", Type.RAIDER: "raider" }
 const CORPSE_TIME := 0.9
+# Dusk: the day is lost for them — they turn tail and run for the hills
+const FLEE_TIME    := 2.4
+const FLEE_SPEED   := 1.5    # × normal speed
+const FLEE_Z       := -40.0
 
 @export var type: Type = Type.SCOUT
 
@@ -61,6 +60,8 @@ var hits := 0:
 		hits = value
 		if _sprite != null:
 			_sprite.hit_flash()
+			_sprite.hitstop(HITSTOP_TIME)
+			_sprite.squash(Vector2(1.12, 0.9))
 			Sfx.play("enemy_hit", global_position)
 
 # Replicated so clients can draw the health bar
@@ -78,33 +79,39 @@ var _wrecker := false
 var _goal: Vector3
 var _attack_timer := 0.0
 var _repath_timer := 0.0
+var _scan_timer := randf() * SCAN_INTERVAL   # staggered so a wave doesn't all scan on one frame
 var _stuck_timer := 0.0
 var _stuck_origin: Vector3
 var _facing := "down"
 var _busy := false
 var _stagger := 0.0
+var _last_hitter := 0     # server: peer whose stone hit last (credited in the tally)
+var _fleeing := false
 
 @onready var nav: NavigationAgent3D = $NavigationAgent3D
-@onready var _sprite: CharacterSprite = $Sprite3D
+@onready var _sprite: CharacterRig = $Figure
 
 func _ready() -> void:
 	# Server sets it; clients already received it as spawn state
 	if multiplayer.is_server() or health < 0.0:
 		health = HEALTH[type]
 	_bar = HealthBar.new(0.7, 0.08)
-	_bar.position.y = 2.05 * SCALE[type]
+	_bar.position.y = 2.6 * SCALE[type]
 	add_child(_bar)
 	add_to_group("enemies")
-	_sprite.setup(_TEXTURES[type], _ANIMS, Color.WHITE, SCALE[type])
-	_sprite.set_outline_color(OUTLINE_COLOR)
+	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type]), SCALE[type])
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
 	_goal = Vector3(randf_range(-GOAL_X_SPREAD, GOAL_X_SPREAD), 0.0, GOAL_Z)
 	_wrecker = type == Type.BRUTE or randf() < WRECKER_CHANCE
 	_stuck_origin = global_position
+	GameState.phase_changed.connect(_on_phase_changed)
 
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or health <= 0.0:
+		return
+	if _fleeing:
+		_run_away()
 		return
 	if global_position.z > BREACH_Z:
 		GameState.add_breach()
@@ -117,7 +124,7 @@ func _physics_process(delta: float) -> void:
 		return
 	if _busy:
 		return
-	_pick_target()
+	_pick_target(delta)
 	if _try_attack_player() or _try_attack_wall():
 		return
 	_move(delta)
@@ -126,12 +133,20 @@ func _physics_process(delta: float) -> void:
 
 # ── Targeting ──────────────────────────────────────────────
 
-func _pick_target() -> void:
-	_pick_wall()
+# Current targets are re-checked every tick; new ones are only scanned for every
+# SCAN_INTERVAL (the group sweeps are the costly part with a full wave)
+func _pick_target(delta: float) -> void:
+	_scan_timer -= delta
+	var scan := _scan_timer <= 0.0
+	if scan:
+		_scan_timer = SCAN_INTERVAL
+	_pick_wall(scan)
 	if is_instance_valid(_target_player) and not _target_player.downed \
 			and _dist_flat(_target_player) < LEASH_RANGE:
 		return
 	_target_player = null
+	if not scan:
+		return
 	var best := AGGRO_RANGE
 	for p in get_tree().get_nodes_in_group("players"):
 		if p.downed:
@@ -143,7 +158,7 @@ func _pick_target() -> void:
 
 # Wreckers lock onto the nearest built wall. Once it's knocked down to bare
 # foundation they pour through the breach instead.
-func _pick_wall() -> void:
+func _pick_wall(scan: bool) -> void:
 	if not _wrecker:
 		return
 	if is_instance_valid(_target_wall):
@@ -151,6 +166,8 @@ func _pick_wall() -> void:
 			return
 		_target_wall = null
 		_wrecker = false
+		return
+	if not scan:
 		return
 	var best := INF
 	for section in get_tree().get_nodes_in_group("wall_sections"):
@@ -241,7 +258,7 @@ func _try_attack_wall() -> bool:
 
 func _attack(victim: Node3D, at: Vector3) -> void:
 	_attack_timer = ATTACK_CD
-	_facing = LPCFrames.dir_from_velocity(at - global_position, _facing)
+	_facing = CharAnim.dir_from_velocity(at - global_position, _facing)
 	_busy = true
 	anim = "thrust_" + _facing
 	victim.take_damage(DAMAGE[type])
@@ -254,15 +271,17 @@ func _attack(victim: Node3D, at: Vector3) -> void:
 func _update_anim() -> void:
 	var moving := velocity.length_squared() > 0.01
 	if moving:
-		_facing = LPCFrames.dir_from_velocity(velocity, _facing)
+		_facing = CharAnim.dir_from_velocity(velocity, _facing)
 	anim = ("walk" if moving else "idle") + "_" + _facing
 
 # ── Damage (server) ────────────────────────────────────────
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, by := 0) -> void:
 	# Already dead, waiting on queue_free — ignore extra hits so died emits once
-	if health <= 0.0:
+	if health <= 0.0 or _fleeing:
 		return
+	if by != 0:
+		_last_hitter = by
 	health = maxf(health - amount, 0.0)
 	hits += 1
 	_stagger = STAGGER_TIME
@@ -272,6 +291,7 @@ func take_damage(amount: float) -> void:
 # Collapse in place, then free (the spawner despawns it on clients)
 func _die() -> void:
 	died.emit()
+	get_tree().call_group("day_director", "note_foe", _last_hitter)
 	remove_from_group("enemies")
 	$CollisionShape3D.set_deferred("disabled", true)
 	velocity = Vector3.ZERO
@@ -279,3 +299,38 @@ func _die() -> void:
 	await get_tree().create_timer(CORPSE_TIME).timeout
 	if is_instance_valid(self):
 		queue_free()
+
+# ── Rout (dusk) ────────────────────────────────────────────
+
+## Server: stop fighting and run back out the way they came; freed after FLEE_TIME
+func flee() -> void:
+	if _fleeing or health <= 0.0:
+		return
+	_fleeing = true
+	_busy = false
+	remove_from_group("enemies")   # no aim assist, no off-screen pointers
+	nav.target_position = Vector3(global_position.x * 1.4, 0.0, FLEE_Z)
+	get_tree().create_timer(FLEE_TIME).timeout.connect(queue_free)
+
+func _run_away() -> void:
+	var next := nav.get_next_path_position()
+	var step := next - global_position
+	step.y = 0.0
+	if step.length_squared() < 0.01:
+		step = Vector3(0, 0, -1)
+	velocity = step.normalized() * SPEED[type] * FLEE_SPEED
+	move_and_slide()
+	_facing = CharAnim.dir_from_velocity(velocity, _facing)
+	anim = "run_" + _facing
+
+# Every peer: at dusk the bar goes and the figure shrinks away in a puff before it's freed
+func _on_phase_changed(phase: GameState.Phase) -> void:
+	if (phase != GameState.Phase.DUSK and phase != GameState.Phase.WON) or health <= 0.0:
+		return
+	_bar.visible = false
+	_sprite.squash(Vector2(0.85, 1.15))   # startled
+	await get_tree().create_timer(FLEE_TIME - 0.45).timeout
+	if not is_instance_valid(self):
+		return
+	DustFx.puff(self, global_position + Vector3.UP * 0.5, 10, 0.7)
+	create_tween().tween_property(_sprite, "scale", Vector3.ONE * 0.01, 0.35) 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)

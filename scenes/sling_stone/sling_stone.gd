@@ -10,6 +10,7 @@ const MAX_TIME      := 2.0
 const IMPACT_RADIUS := 0.9
 const BODY_HEIGHT   := 0.9    # aim at the torso, not the feet
 
+var shooter := 0            # peer id of the thrower — credited if the stone fells an enemy
 var _target: Node3D = null
 var _land: Vector3
 var _damage: float = 0.0
@@ -47,12 +48,12 @@ func _process(delta: float) -> void:
 func _impact() -> void:
 	if multiplayer.is_server():
 		if _target != null:
-			_target.take_damage(_damage)
+			_target.take_damage(_damage, shooter)
 		else:
 			for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
 				var d := Vector2(enemy.global_position.x - _land.x, enemy.global_position.z - _land.z).length()
 				if d <= IMPACT_RADIUS:
-					enemy.take_damage(_damage)
+					enemy.take_damage(_damage, shooter)
 					break
 	if _target == null:
 		_puff()

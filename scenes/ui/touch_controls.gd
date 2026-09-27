@@ -5,6 +5,11 @@ extends Control
 # so the player script reads touch exactly like the keyboard — except sling aim,
 # which it pulls from `aiming` / `aim_vec` instead of the mouse.
 #
+# Sling: press = wind up, release = throw. Without a drag it auto-targets the nearest
+# enemy; dragging turns it into an aim stick. The stick is centred where the thumb
+# landed (not the button's middle), so an off-centre press doesn't pre-aim, and it
+# only needs a short drag — the button sits in a corner the thumb can't go far past.
+#
 # Left half: floating stick (appears under the thumb). Right corner: button cluster.
 # Enabled on mobile builds, or on desktop with `-- --touch` (mouse emulates one finger).
 # Sizes are dp (see Mobile): every button is at least a 52dp target.
@@ -12,11 +17,14 @@ extends Control
 const STICK_RADIUS := 58.0
 const KNOB_RADIUS  := 26.0
 const STICK_ZONE   := 0.45     # left fraction of the screen that spawns the stick
-const AIM_DEADZONE := 0.25     # sling drag shorter than this = auto-aim
+const AIM_RADIUS   := 44.0     # sling drag that counts as full deflection
+const AIM_DEADZONE := 0.3      # sling drag shorter than this (× AIM_RADIUS) = auto-aim
 const EDGE         := 18.0     # gap from the (safe-area) screen edge
 const IDLE_ALPHA   := 0.62     # resting buttons stay out of the way of the world
 
-## Sling held: player aims from aim_vec (screen-space, length 0..1) instead of the mouse
+## Sling held: player aims from aim_vec (screen-space, length 0..1) instead of the mouse.
+## aim_vec keeps its last value after release (the throw reads it a frame or more
+## later) and is reset on the next press.
 static var aiming := false
 static var aim_vec := Vector2.ZERO
 
@@ -31,6 +39,8 @@ var _buttons := {}
 var _touches := {}             # touch index → "stick" | button name
 var _stick_center := Vector2.ZERO
 var _stick_vec := Vector2.ZERO
+var _aim_origin := Vector2.ZERO
+var _horn := false
 var _move_sent := {}           # move action → last strength sent
 var _safe := Rect2()
 
@@ -56,6 +66,8 @@ func _process(_delta: float) -> void:
 		visible = not blocked
 		if blocked:
 			_release_all()
+	if GameState.has_twist("horn") != _horn:
+		_layout()
 	queue_redraw()
 
 # ── Layout ─────────────────────────────────────────────────
@@ -68,10 +80,14 @@ func _layout() -> void:
 	# an arc the thumb sweeps without re-gripping.
 	_buttons = {
 		sling    = { action = "throw_charge", pos = br - Vector2(50, 54),   r = 46.0, label = "Sling", icon = "sling" },
-		interact = { action = "interact",     pos = br - Vector2(160, 36),  r = 36.0, label = "Carry", icon = "carry" },
+		interact = { action = "interact",     pos = br - Vector2(160, 36),  r = 36.0, label = "Use",   icon = "carry" },
 		dash     = { action = "dash",         pos = br - Vector2(36, 164),  r = 30.0, label = "Dash",  icon = "dash" },
 		drop     = { action = "drop",         pos = br - Vector2(138, 128), r = 26.0, label = "Drop",  icon = "drop" },
 	}
+	# Only on sections whose twist gives the crew a horn
+	_horn = GameState.has_twist("horn")
+	if _horn:
+		_buttons.horn = { action = "horn", pos = br - Vector2(244, 40), r = 30.0, label = "Horn", icon = "horn" }
 
 # Display safe area (notch, rounded corners) mapped into viewport coordinates
 func _safe_rect(vp: Vector2) -> Rect2:
@@ -108,6 +124,7 @@ func _touch_down(index: int, pos: Vector2) -> void:
 			if name == "sling":
 				aiming = true
 				aim_vec = Vector2.ZERO
+				_aim_origin = pos
 			_send(b.action, true)
 			Mobile.haptic()
 			get_viewport().set_input_as_handled()
@@ -127,8 +144,11 @@ func _touch_move(index: int, pos: Vector2) -> void:
 			_stick_vec = ((pos - _stick_center) / STICK_RADIUS).limit_length(1.0)
 			_send_move(_stick_vec)
 		"sling":
-			var v: Vector2 = ((pos - _buttons.sling.pos) / STICK_RADIUS).limit_length(1.0)
-			aim_vec = v if v.length() >= AIM_DEADZONE else Vector2.ZERO
+			var v := ((pos - _aim_origin) / AIM_RADIUS).limit_length(1.0)
+			if v.length() >= AIM_DEADZONE:
+				aim_vec = v
+			elif aim_vec != Vector2.ZERO and v.length() < AIM_DEADZONE * 0.5:
+				aim_vec = Vector2.ZERO   # dragged back home: auto-target again
 
 func _touch_up(index: int) -> void:
 	var role: String = _touches.get(index, "")
@@ -142,19 +162,12 @@ func _touch_up(index: int) -> void:
 		_:
 			_send(_buttons[role].action, false)
 			if role == "sling":
-				# Player reads the aim this frame on release; clear next frame
-				_clear_aim.call_deferred()
-
-func _clear_aim() -> void:
-	if not _touches.values().has("sling"):
-		aiming = false
-		aim_vec = Vector2.ZERO
+				aiming = false   # aim_vec stays for the throw to read
 
 func _release_all() -> void:
 	for index in _touches.keys():
 		_touch_up(index)
 	aiming = false
-	aim_vec = Vector2.ZERO
 
 # Stick → the four iso move actions, as analog strengths (Input.get_vector reads them)
 func _send_move(v: Vector2) -> void:
@@ -186,10 +199,11 @@ func _draw() -> void:
 		var knob := _stick_center + _stick_vec * STICK_RADIUS
 		draw_circle(knob + Vector2(0, 2), KNOB_RADIUS, Color(UiStyle.DUSK, 0.18))
 		draw_circle(knob, KNOB_RADIUS, Color(UiStyle.PARCHMENT, 0.92))
+	_draw_aim_guide()
 	# Sling drag: aim line first, so the button sits over its root
 	if aiming and aim_vec != Vector2.ZERO:
 		var p: Vector2 = _buttons.sling.pos
-		var tip: Vector2 = p + aim_vec * STICK_RADIUS * 1.6
+		var tip: Vector2 = p + aim_vec.normalized() * STICK_RADIUS * 1.6
 		draw_line(p, tip, Color(UiStyle.CREAM, 0.9), 4.0, true)
 		draw_circle(tip, 6.0, UiStyle.CREAM)
 	for name: String in _buttons:
@@ -213,3 +227,23 @@ func _draw() -> void:
 			var w := font.get_string_size(b.label.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 			draw_string(font, b.pos + Vector2(-w * 0.5, glyph * 0.5 + 8.0), b.label.to_upper(),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(ink, 0.9))
+
+# While winding up, a dotted line on the ground from the thrower to the landing ring —
+# the thumb covers the button, so the aim has to read out in the world
+func _draw_aim_guide() -> void:
+	var me := Player.local
+	var cam := get_viewport().get_camera_3d()
+	if not aiming or me == null or not is_instance_valid(me) or cam == null:
+		return
+	var at: Variant = me.aim_preview()
+	if at == null:
+		return
+	var from := cam.unproject_position(me.global_position)
+	var to := cam.unproject_position(at)
+	var span := to - from
+	var n := int(span.length() / 16.0)
+	for i in range(1, n):
+		var k := float(i) / n
+		var a := 0.45 + 0.5 * k   # firms up toward the ring
+		draw_circle(from + span * k, 4.2, Color(UiStyle.DUSK, 0.45 * a))
+		draw_circle(from + span * k, 2.8, Color(UiStyle.CREAM, a))

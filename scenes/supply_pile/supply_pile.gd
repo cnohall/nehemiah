@@ -21,10 +21,11 @@ var count: int = 999:
 var _rubble_stones: Array[Node3D] = []
 
 @onready var _visual:     Node3D  = $Visual
-@onready var count_label: Label3D = $CountLabel
+const PAD_COLOR := Color(0.80, 0.76, 0.68)   # worn limestone flags
+var count_label: WorldTag
 
 const COLORS := {
-	"stone":  Color(0.68, 0.60, 0.48),
+	"stone":  Color(0.72, 0.70, 0.65),   # dressed limestone, a shade under the wall (sits in the sun)
 	"wood":   Color(0.50, 0.33, 0.17),
 	"mortar": Color(0.86, 0.80, 0.66),
 	"beam":   Color(0.46, 0.31, 0.17),
@@ -33,8 +34,13 @@ const COLORS := {
 }
 
 func _ready() -> void:
+	# The scene's Label3D marks where the tag goes
+	var anchor: Node3D = $CountLabel
+	count_label = WorldTag.make(WorldTag.Kind.STATION)
+	count_label.position = anchor.position
+	add_child(count_label)
+	anchor.free()
 	count_label.text = kind.capitalize() + ("s" if kind == "beam" else "")
-	Mobile.world_text(count_label)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(kind) + hash(name)
 	if rubble_stock > 0:
@@ -46,6 +52,7 @@ func _ready() -> void:
 		GameState.section_changed.connect(_refresh_active.unbind(1))
 		_refresh_active()
 		return
+	_build_pad(rng)
 	match kind:
 		"stone":
 			_build_pallet(rng)
@@ -96,14 +103,7 @@ func restock() -> void:
 		count = rubble_stock
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	cfg.add_property(^".:count")
-	cfg.property_set_replication_mode(^".:count", SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:count"], SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE, 0.0)
 
 # ── Visuals ────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ func _show_stock() -> void:
 		count_label.text = "Rubble" if count > 0 else "Picked clean"
 
 const TIMBER := Color(0.46, 0.34, 0.22)
-const REED   := Color(0.66, 0.57, 0.38)
+const REED   := Color(0.58, 0.47, 0.28)
 const LIME   := Color(0.88, 0.86, 0.80)
 
 # Each pile sits on what a work yard would really use — distinct shapes, natural colours
@@ -148,6 +148,14 @@ func _build_pallet(rng: RandomNumberGenerator) -> void:
 			Vector3(rng.randf_range(-0.04, 0.04), 0.14, -0.8 + i * 0.4), Vector3(0, rng.randf_range(-0.03, 0.03), 0))
 	for x: float in [-0.75, 0.0, 0.75]:
 		_add(_box(Vector3(0.14, 0.1, 2.0)), TIMBER.darkened(0.25), Vector3(x, 0.06, 0), Vector3.ZERO)
+	# Low crate sides: two boards a side, corner posts
+	for side: float in [-1.0, 1.0]:
+		for k in 2:
+			var y := 0.27 + k * 0.17
+			_add(_box(Vector3(1.95, 0.15, 0.08)), TIMBER.darkened(0.05 * k), Vector3(0, y, side * 0.98), Vector3.ZERO)
+			_add(_box(Vector3(0.08, 0.15, 1.9)), TIMBER.darkened(0.05 * k), Vector3(side * 0.97, y, 0), Vector3.ZERO)
+		for side2: float in [-1.0, 1.0]:
+			_add(_box(Vector3(0.13, 0.46, 0.13)), TIMBER.darkened(0.3), Vector3(side * 0.97, 0.33, side2 * 0.98), Vector3.ZERO)
 
 # Wood: two sleeper beams on a patch of bark chips
 func _build_sleepers(rng: RandomNumberGenerator) -> void:
@@ -253,24 +261,67 @@ func _build_logs(rng: RandomNumberGenerator) -> void:
 				Vector3(PI / 2, 0, rng.randf_range(-0.05, 0.05)))
 
 func _build_mortar(rng: RandomNumberGenerator) -> void:
-	# Clay jars + a heap of lime
-	var heap := SphereMesh.new()
-	heap.radius = 0.55
-	heap.height = 0.5
-	_add(heap, COLORS["mortar"], Vector3(0.15, 0.0, 0.1), Vector3.ZERO)
-	for i in 3:
+	# Timber tub of grey mortar — reads as "mortar" against the pale ground, where a
+	# white lime heap vanished — with clay water jars beside it
+	var tub := CylinderMesh.new()
+	tub.top_radius = 0.62
+	tub.bottom_radius = 0.54
+	tub.height = 0.38
+	tub.radial_segments = 16
+	_add(tub, TIMBER.darkened(0.1), Vector3(0.1, 0.3, 0.05), Vector3.ZERO)
+	for y: float in [0.2, 0.42]:   # hoops
+		var hoop := CylinderMesh.new()
+		hoop.top_radius = 0.6 if y > 0.3 else 0.57
+		hoop.bottom_radius = hoop.top_radius
+		hoop.height = 0.05
+		hoop.radial_segments = 16
+		_add(hoop, TIMBER.darkened(0.45), Vector3(0.1, y, 0.05), Vector3.ZERO)
+	var fill := SphereMesh.new()
+	fill.radius = 0.56
+	fill.height = 0.26
+	_add(fill, DroppedItem.MORTAR_FILL, Vector3(0.1, 0.49, 0.05), Vector3.ZERO)
+	for i in 2:
 		var jar := CylinderMesh.new()
-		jar.top_radius = 0.14
+		jar.top_radius = 0.13
 		jar.bottom_radius = 0.2
 		jar.height = 0.5
 		jar.radial_segments = 12
-		var a := TAU * i / 3.0 + rng.randf() * 0.4
-		_add(jar, Color(0.66, 0.42, 0.28), Vector3(cos(a) * 0.6 - 0.2, 0.25, sin(a) * 0.55), Vector3.ZERO)
+		var a := PI * 0.75 + i * 0.9 + rng.randf() * 0.3
+		_add(jar, Color(0.74, 0.40, 0.24), Vector3(cos(a) * 0.95, 0.35, sin(a) * 0.85), Vector3.ZERO)
 
-func _box(size: Vector3) -> BoxMesh:
-	var b := BoxMesh.new()
-	b.size = size
-	return b
+# Flagstones laid round the station, ragged at the edge — the yard's work spots were
+# paved, and it seats the pile in the ground rather than on bare sand
+func _build_pad(rng: RandomNumberGenerator) -> void:
+	var xf: Array[Transform3D] = []
+	var cols: Array[Color] = []
+	const STEP := 0.62
+	for gz in range(-3, 4):
+		for gx in range(-3, 4):
+			var c := Vector2(gx * STEP + (STEP * 0.5 if gz % 2 != 0 else 0.0), gz * STEP)
+			c += Vector2(rng.randf_range(-0.06, 0.06), rng.randf_range(-0.06, 0.06))
+			var r := c.length()
+			if r > 2.05 or (r > 1.4 and rng.randf() < (r - 1.4) / 0.7):
+				continue
+			var s := Vector3(STEP * rng.randf_range(0.78, 0.92), 0.07, STEP * rng.randf_range(0.78, 0.92))
+			xf.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.12, 0.12)).scaled(s), Vector3(c.x, 0.12, c.y)))
+			var v := rng.randf_range(-0.06, 0.04)
+			cols.append(Color(PAD_COLOR.r + v, PAD_COLOR.g + v, PAD_COLOR.b + v * 0.8))
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = Chunky.unit_block()
+	mm.instance_count = xf.size()
+	for i in xf.size():
+		mm.set_instance_transform(i, xf[i])
+		mm.set_instance_color(i, cols[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = Chunky.material(0.05, false, 0.3)
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_visual.add_child(mmi)
+
+func _box(size: Vector3) -> Mesh:
+	return Chunky.bevel_box(size, minf(0.04, minf(size.x, minf(size.y, size.z)) * 0.3))
 
 func _add(mesh: Mesh, color: Color, pos: Vector3, rot: Vector3) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()

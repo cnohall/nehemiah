@@ -15,8 +15,6 @@ signal layout_changed
 const MIN_DP_H     := 360.0   # smaller phones get slightly denser UI rather than clipping
 const MAX_DP_H     := 520.0   # tablets: cap so the HUD doesn't shrink to a speck
 const PREVIEW_DP_H := 411.0   # desktop --touch preview ≈ Pixel 9a landscape
-const WORLD_TEXT   := 1.5     # world labels (Label3D) read at arm's length
-const CAMERA_SIZE  := 18.0    # ortho size; desktop uses 24 — phones zoom in a step
 
 ## Window pixels per UI unit (≈ screen density on a phone)
 var ui_scale := 1.0
@@ -85,11 +83,6 @@ func fit_safe(c: Control, pad := 0.0) -> void:
 	c.offset_top = s.y + pad
 	c.offset_right = -(s.z + pad)
 	c.offset_bottom = -(s.w + pad)
-
-## Enlarge a world-space label for the phone camera (no-op on desktop)
-func world_text(l: Label3D) -> void:
-	if enabled():
-		l.pixel_size *= WORLD_TEXT
 
 ## Light tick for on-screen buttons (needs the VIBRATE permission on Android)
 func haptic(ms := 12) -> void:

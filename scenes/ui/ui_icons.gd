@@ -17,6 +17,8 @@ const _PATHS := {
 	carry    = '<rect x="6" y="3.5" width="12" height="9.5" rx="1.2" fill="#FFF"/><path d="M3 16.5h4.5l2 2h5l2-2H21" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 	dash     = '<path d="M5 6l6 6-6 6M12.5 6l6 6-6 6" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 	drop     = '<path d="M12 3.5v11M7 10l5 5 5-5M5 20.5h14" stroke="#FFF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+	# Shofar: a ram's horn curling up from the mouthpiece to a flared bell
+	horn     = '<path d="M4 18.5c3.5 1 8 .2 11-3.3 1.6-1.9 2.5-4.3 2.6-7" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M14.8 6.8 17.6 3l3.4 3.6z" fill="#FFF" stroke="#FFF" stroke-width="1.6" stroke-linejoin="round"/>',
 }
 
 static var _cache := {}

@@ -13,7 +13,6 @@ const WATER      := Color(0.36, 0.48, 0.52)
 const LIME       := Color(0.92, 0.91, 0.86)
 const MORTAR     := Color(0.70, 0.67, 0.60)
 const BAR_COLOR  := Color(0.86, 0.66, 0.30)
-const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 
 ## Kind this counts as while it holds finished mortar (read by Player pickups)
 var kind := "mortar"
@@ -38,7 +37,7 @@ var _water_layer: MeshInstance3D
 var _paste: MeshInstance3D
 var _paddle: Node3D
 var _bar: HealthBar
-var _label: Label3D
+var _label: WorldTag
 
 func _ready() -> void:
 	_build_visuals()
@@ -91,6 +90,13 @@ func try_build() -> bool:
 func is_complete() -> bool:
 	return true
 
+## Mixing runs by itself — there's no hands-on work here (see BuildWork)
+func work() -> BuildWork:
+	return null
+
+func work_material() -> String:
+	return ""
+
 # ── Supply side: hands out the mixed load ──────────────────
 
 func request_pickup() -> bool:
@@ -140,10 +146,7 @@ func _update_label() -> void:
 		_label.text = "Trough  ·  Lime %d/1  Water %d/1" % [int(has_lime), int(has_water)]
 
 func _local_player_near() -> bool:
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority():
-			return distance_to_point(p.global_position) < LABEL_RANGE
-	return false
+	return Player.local != null and distance_to_point(Player.local.global_position) < LABEL_RANGE
 
 # ── Visuals ────────────────────────────────────────────────
 
@@ -168,16 +171,7 @@ func _build_visuals() -> void:
 	_bar = HealthBar.new(0.9, 0.09)
 	_bar.position = Vector3(0, 1.5, 0)
 	add_child(_bar)
-	_label = Label3D.new()
-	_label.font = _FONT
-	_label.font_size = 36
-	_label.pixel_size = 0.01
-	Mobile.world_text(_label)
-	_label.outline_size = 10
-	_label.modulate = Color(0.98, 0.95, 0.88)
-	_label.outline_modulate = Color(0.20, 0.14, 0.08)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.no_depth_test = true
+	_label = WorldTag.make(WorldTag.Kind.SITE)
 	_label.position = Vector3(0, 1.8, 0)
 	_label.visible = false
 	add_child(_label)
@@ -198,13 +192,4 @@ func _box(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	for prop: NodePath in [^".:has_lime", ^".:has_water", ^".:mix_left", ^".:mortar_ready"]:
-		cfg.add_property(prop)
-		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_interval = 0.1
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:has_lime", ^".:has_water", ^".:mix_left", ^".:mortar_ready"])

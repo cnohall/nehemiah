@@ -1,8 +1,16 @@
 extends Control
 
 const GAME_SCENE := "res://scenes/main/main.tscn"
-const DRIFT_PX   := 22.0    # slow backdrop pan, each way
-const DRIFT_TIME := 16.0
+const DRIFT_PX     := 22.0   # slow backdrop pan, each way
+const DRIFT_PERIOD := 64.0   # seconds for a full left-right-left sweep
+const PUSH_IN_ZOOM := 1.08
+const REST_ZOOM    := 1.035  # margin must cover DRIFT_PX at the edges
+const SETTLE_TIME  := 2.4
+
+var _rig: Node2D
+var _drift_t := 0.0
+var _picker: SectionPicker
+var _sections_btn: Button
 # Phone room-code keypad: the code alphabet (no I/O) in QWERTY order
 const KEY_ROWS := ["QWERTYUP", "ASDFGHJKL", "ZXCVBNM"]
 
@@ -34,7 +42,23 @@ func _ready() -> void:
 	Sfx.play_music("calm")  # back from a finished game, the music may be off
 	# Credits sit over bright sand — give them a soft parchment backing
 	$Credits.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.PARCHMENT, 0.82), Vector2(12, 6), 3))
+	# Hug the text: a right-aligned label keeps its box, so size it to one line
+	$Credits.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	$Credits.size = $Credits.get_combined_minimum_size()
+	$Credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 32)
 	host_btn.pressed.connect(_on_host)
+	# Replay map: an entry under Host, and the picker over everything
+	_sections_btn = join_btn.duplicate()
+	_sections_btn.name = "SectionsButton"
+	_sections_btn.text = "Choose a Section"
+	menu.add_child(_sections_btn)
+	menu.move_child(_sections_btn, host_btn.get_index() + 1)
+	_sections_btn.pressed.connect(_open_picker)
+	_picker = SectionPicker.new()
+	add_child(_picker)
+	move_child(_picker, fade.get_index())
+	_picker.chosen.connect(_on_section_chosen)
+	_picker.closed.connect(_sections_btn.grab_focus)
 	join_btn.pressed.connect(_on_join)
 	settings_btn.pressed.connect(_on_settings)
 	quit_btn.pressed.connect(get_tree().quit)
@@ -57,6 +81,11 @@ func _ready() -> void:
 	join_panel.hide()
 	_show_default_status()
 	_intro()
+	# Back from a replay: straight to the map, on the stretch just played
+	GameState.replay_section = -1
+	if GameState.picker_return >= 0:
+		_picker.open(GameState.picker_return)
+		GameState.picker_return = -1
 
 func _unhandled_input(event: InputEvent) -> void:
 	if join_panel.visible and _code_sheet and _code_sheet.visible and event is InputEventKey \
@@ -92,19 +121,33 @@ func _intro() -> void:
 	UiFx.fade_in(verse, 1.0, 1.0)
 	if not _mobile:
 		host_btn.grab_focus()
-	# Backdrop settles from a slight push-in, then drifts
-	backdrop.pivot_offset = backdrop.size * 0.5
-	backdrop.scale = Vector2.ONE * 1.08
-	var settle := create_tween()
-	settle.tween_property(backdrop, "scale", Vector2.ONE * 1.035, 2.4) \
-		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
-	settle.tween_callback(_drift)
+	# Backdrop moves on a Node2D rig: Control positions snap to whole pixels
+	# (gui/common/snap_controls_to_pixels), which turned a ~2px/s drift into
+	# visible one-pixel hops. Node2D transforms stay sub-pixel.
+	_rig = Node2D.new()
+	add_child(_rig)
+	move_child(_rig, backdrop.get_index())
+	backdrop.reparent(_rig, false)
+	backdrop.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	resized.connect(_layout_backdrop)
+	_layout_backdrop()
+	_animate_backdrop(0.0)
 
-func _drift() -> void:
-	var tw := create_tween().set_loops()
-	tw.tween_property(backdrop, "position:x", -DRIFT_PX, DRIFT_TIME).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(backdrop, "position:x", DRIFT_PX, DRIFT_TIME * 2.0).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(backdrop, "position:x", 0.0, DRIFT_TIME).set_trans(Tween.TRANS_SINE)
+func _layout_backdrop() -> void:
+	_rig.position = size * 0.5  # scale about screen centre
+	backdrop.position = -size * 0.5
+	backdrop.size = size
+
+# Push-in settles while one continuous sine drifts — no stops mid-sweep
+func _animate_backdrop(t: float) -> void:
+	var k := minf(t / SETTLE_TIME, 1.0)
+	var settle := 1.0 - pow(1.0 - k, 4.0)  # quart ease-out
+	_rig.scale = Vector2.ONE * lerpf(PUSH_IN_ZOOM, REST_ZOOM, settle)
+	_rig.position.x = size.x * 0.5 - sin(t * TAU / DRIFT_PERIOD) * DRIFT_PX
+
+func _process(delta: float) -> void:
+	_drift_t += delta
+	_animate_backdrop(_drift_t)
 
 # ── Network status ─────────────────────────────────────────
 
@@ -134,7 +177,26 @@ func _show_default_status() -> void:
 # ── Host ───────────────────────────────────────────────────
 
 func _on_host() -> void:
+	GameState.replay_section = -1
+	_host()
+
+# Opens on the furthest stretch this player may build
+func _open_picker() -> void:
+	var last := 0
+	for i in GameState.SECTIONS.size():
+		if GameState.is_unlocked(i):
+			last = i
+	_picker.open(last)
+
+## Host a game of just one section (the others' marks don't change)
+func _on_section_chosen(section_index: int) -> void:
+	GameState.replay_section = section_index
+	GameState.picker_return = section_index
+	_host()
+
+func _host() -> void:
 	host_btn.disabled = true
+	_sections_btn.disabled = true
 	if _use_eos():
 		net_status.text = "Opening a room…"
 		NetworkManager.host_online()
@@ -146,6 +208,7 @@ func _on_host() -> void:
 
 func _on_host_failed(reason: String) -> void:
 	host_btn.disabled = false
+	_sections_btn.disabled = false
 	net_status.text = reason
 
 func _on_lobby_created() -> void:
@@ -167,7 +230,42 @@ func _open_join() -> void:
 		_refresh_slots()
 		UiFx.rise_in(_code_sheet.get_child(0), Vector2(0, 24), 0.32)
 	else:
+		_fill_friend_games()
+
+# Friends already playing: one button each, focused first — no code to type
+func _fill_friend_games() -> void:
+	var content := $JoinPanel/Center/Modal/Content
+	var box: VBoxContainer = content.get_node_or_null("FriendGames")
+	if box == null:
+		box = VBoxContainer.new()
+		box.name = "FriendGames"
+		box.add_theme_constant_override("separation", 8)
+		content.add_child(box)
+		content.move_child(box, content.get_node("FieldGap").get_index())
+	for c in box.get_children():
+		c.queue_free()
+	var games: Array[Dictionary] = []
+	if _use_steam():
+		games = NetworkManager.friend_lobbies()
+	if games.is_empty():
 		address_input.grab_focus()
+		return
+	var head := Label.new()
+	head.theme_type_variation = &"Eyebrow"
+	head.text = "Friends building now"
+	box.add_child(head)
+	var first: Button = null
+	for g: Dictionary in games:
+		var b := Button.new()
+		b.theme_type_variation = &"PrimaryButton" if first == null else &"GhostButton"
+		b.text = "Join %s" % g.name
+		b.pressed.connect(func():
+			status_label.text = "Joining %s…" % g.name
+			NetworkManager.join_steam(g.lobby))
+		box.add_child(b)
+		if first == null:
+			first = b
+	first.grab_focus()
 
 func _on_connect() -> void:
 	var addr := address_input.text.strip_edges()
@@ -233,18 +331,20 @@ func _mobile_layout() -> void:
 	$Content/Column/Eyebrow.add_theme_font_size_override("font_size", 12)
 	$Content/Column/SubRow/Subtitle.add_theme_font_size_override("font_size", 22)
 	$Content/Column/SubRow/Rule.custom_minimum_size.x = 120
-	$Content/Column/MenuGap.custom_minimum_size.y = 22
+	$Content/Column/MenuGap.custom_minimum_size.y = 14
 	$Content/Column/StatusGap.custom_minimum_size.y = 10
 	net_status.custom_minimum_size.x = 300
 	net_status.add_theme_font_size_override("font_size", 13)
 
 	menu.custom_minimum_size.x = 280
-	menu.add_theme_constant_override("separation", 10)
 	host_btn.theme_type_variation = &"PrimaryButton"
 	host_btn.text = "Host a room"
 	join_btn.theme_type_variation = &"GhostButton"
 	join_btn.text = "Join with code"
-	for b: Button in [host_btn, join_btn]:
+	_sections_btn.theme_type_variation = &"GhostButton"
+	_sections_btn.text = "Choose a section"
+	menu.add_theme_constant_override("separation", 8)
+	for b: Button in [host_btn, _sections_btn, join_btn]:
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(Mobile.haptic)

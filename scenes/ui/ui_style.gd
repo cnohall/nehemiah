@@ -41,6 +41,12 @@ static func tracked(base: Font, spacing: int) -> FontVariation:
 	f.spacing_glyph = spacing
 	return f
 
+# ── World labels ───────────────────────────────────────────
+
+const WORLD_FONT := preload("res://assets/fonts/Spectral/Spectral-Bold.ttf")
+
+## World tags (WorldTag) — bold Spectral for counts
+
 # ── Stylebox helpers ───────────────────────────────────────
 
 static func box(bg: Color, pad := Vector2(16, 12), radius := 2) -> StyleBoxFlat:
@@ -71,6 +77,26 @@ static func shadowed(s: StyleBoxFlat, size: int, alpha: float, offset_y := 3.0) 
 static func plaque(pad := Vector2(22, 14), alpha := 0.94) -> StyleBoxFlat:
 	var s := bordered(box(Color(PARCHMENT, alpha), pad, 3), Color(RULE, 0.55), 1, 3)
 	return shadowed(s, 10, 0.22)
+
+## Inlaid frame drawn over a plaque's paper, under its content: a hairline rule a few
+## px inside the edge, a small gold stud at each corner and one centred on the top.
+## Call once per panel; redraws with it.
+static func ornament(panel: Control, inset := 5.0, accent := GOLD) -> void:
+	panel.draw.connect(func():
+		var r := Rect2(Vector2.ONE * inset, panel.size - Vector2.ONE * inset * 2.0)
+		panel.draw_rect(r, Color(RULE, 0.5), false, 1.0)
+		for c: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
+			_stud(panel, c, 3.5, accent)
+		_stud(panel, Vector2(r.get_center().x, r.position.y), 4.5, accent))
+
+static func _stud(ci: CanvasItem, c: Vector2, s: float, color: Color) -> void:
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0)]),
+		Color(PARCHMENT, 1.0))
+	var inner := s - 1.2
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -inner), c + Vector2(inner, 0), c + Vector2(0, inner), c + Vector2(-inner, 0)]), color)
+
+static func theme_card() -> StyleBoxFlat:
+	return plaque(Vector2(14, 10), 0.92)
 
 static func empty(pad := Vector2.ZERO) -> StyleBoxEmpty:
 	var s := StyleBoxEmpty.new()
@@ -105,8 +131,8 @@ static func _labels(t: Theme, m: bool) -> void:
 	_label(t, "Display",  tracked(CINZEL_XBOLD, 6 if m else 10), 76 if m else 124, INK)
 	_label(t, "Heading",  tracked(CINZEL_BOLD, 3),   24 if m else 30,  INK)
 	_label(t, "Numeral",  CINZEL_BOLD,               26 if m else 34,  INK)
-	_label(t, "Eyebrow",  tracked(CINZEL_SEMI, 3 if m else 4), 12 if m else 13, INK_MUTED)
-	_label(t, "Caption",  SPECTRAL_ITALIC,           14 if m else 16,  INK_SOFT)
+	_label(t, "Eyebrow",  tracked(CINZEL_BOLD, 3),   12 if m else 15,  INK_SOFT)
+	_label(t, "Caption",  SPECTRAL_ITALIC,           14 if m else 17,  INK_SOFT.darkened(0.22))   # italic runs thin: a notch darker
 	_label(t, "Body",     SPECTRAL,                  15 if m else 17,  INK_SOFT)
 	_label(t, "Verse",    SPECTRAL_ITALIC,           15 if m else 17,  INK_SOFT)
 
@@ -210,13 +236,13 @@ static func _panels(t: Theme, m: bool) -> void:
 	t.set_type_variation("Plaque", "PanelContainer")
 	t.set_stylebox("panel", "Plaque", pl)
 	t.set_type_variation("Card", "PanelContainer")
-	t.set_stylebox("panel", "Card", plaque(Vector2(10, 7) if m else Vector2(14, 10), 0.92))
+	t.set_stylebox("panel", "Card", plaque(Vector2(10, 7), 0.92) if m else theme_card())
 	t.set_type_variation("Modal", "PanelContainer")
 	var modal := bordered(box(PARCHMENT, Vector2(28, 22) if m else Vector2(44, 38), 6 if m else 4), Color(RULE, 0.6), 1, 4)
 	t.set_stylebox("panel", "Modal", shadowed(modal, 36, 0.4, 10.0))
 
-	t.set_stylebox("panel", "TooltipPanel", bordered(box(Color(DUSK, 0.94), Vector2(10, 6)), Color(GOLD, 0.4), 1))
-	t.set_color("font_color", "TooltipLabel", CREAM)
+	t.set_stylebox("panel", "TooltipPanel", shadowed(bordered(box(PARCHMENT, Vector2(10, 6)), Color(RULE, 0.8), 1), 6, 0.2, 2.0))
+	t.set_color("font_color", "TooltipLabel", INK)
 	t.set_font("font", "TooltipLabel", SPECTRAL)
 	t.set_font_size("font_size", "TooltipLabel", 15)
 
@@ -245,10 +271,19 @@ static func _inputs(t: Theme, m: bool) -> void:
 	t.set_stylebox("background", "ProgressBar", track)
 	t.set_stylebox("fill", "ProgressBar", fill)
 
+	# WorkMeter — engraved amber channel, matches the circuit strip
+	t.set_type_variation("WorkMeter", "ProgressBar")
+	var work_track := bordered(box(Color(DUSK, 0.16), Vector2.ZERO, 3), Color(DUSK, 0.22), 0)
+	work_track.border_width_top = 1
+	var work_fill := bordered(box(AMBER, Vector2.ZERO, 3), Color(GOLD, 0.9), 0)
+	work_fill.border_width_top = 1
+	t.set_stylebox("background", "WorkMeter", work_track)
+	t.set_stylebox("fill", "WorkMeter", work_fill)
+
 	# HSlider — phones: thicker rail, 28dp thumb (the 48dp target comes from row height)
 	var rail_h := 4 if m else 3
-	var rail := box(Color(DUSK, 0.18), Vector2(0, rail_h), 3)
-	var rail_fill := box(TERRACOTTA, Vector2(0, rail_h), 3)
+	var rail := box(Color(DUSK, 0.18), Vector2(0, rail_h), 3 if m else 2)
+	var rail_fill := box(TERRACOTTA, Vector2(0, rail_h), 3 if m else 2)
 	t.set_stylebox("slider", "HSlider", rail)
 	t.set_stylebox("grabber_area", "HSlider", rail_fill)
 	t.set_stylebox("grabber_area_highlight", "HSlider", rail_fill)

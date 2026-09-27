@@ -16,9 +16,21 @@ const MATERIAL_COST_BY_CREW := [
 	{ Stage.FRAMED: { "wood": 3 }, Stage.STACKED: { "stone": 5 }, Stage.MORTARED: { "mortar": 2 } },
 	{ Stage.FRAMED: { "wood": 3 }, Stage.STACKED: { "stone": 6 }, Stage.MORTARED: { "mortar": 2 } },
 ]
+# With hands-on building the labour moves from hauling to working the wall: one load
+# less per stage (never below one), paid back in work time
+const ACTIVE_BUILD_DISCOUNT := 1
+# Seconds of work for one worker to raise each stage (BuildWork); a solo builder is quicker
+const WORK_TIME := { Stage.FRAMED: 2.0, Stage.STACKED: 3.0, Stage.MORTARED: 2.0 }
+const SOLO_WORK_MULT := 0.75
 # "beams" twist (Neh. 3:3 "they laid its beams"): framing takes long beams, carried in
 # pairs, instead of loose timber
 const BEAM_COST_BY_CREW    := [1, 2, 2]
+# "thick" twist (Broad Wall, Neh. 3:8): plain stretches built double-thick — deeper, more
+# stone and mortar, longer work, and room for one more pair of hands
+const THICK_DEPTH          := 1.3
+const THICK_EXTRA          := { Stage.STACKED: { "stone": 2 }, Stage.MORTARED: { "mortar": 1 } }
+const THICK_WORK_MULT      := 1.3
+const THIN_MAX_DEPTH       := 1.0    # only plain walls thicken, not towers or pillars
 const MAX_HEALTH           := 150.0
 const DEGRADE_HEALTH_RATIO := 0.5
 const LABEL_RANGE          := 6.0
@@ -27,16 +39,16 @@ const LABEL_POLL           := 0.2
 const COURSE_H     := 0.5    # stone course height
 const MERLON_W     := 0.7
 const MERLON_H     := 0.45
-const GAP_ROUGH    := 0.07   # joint width before mortar
-const GAP_MORTARED := 0.03
+const GAP_ROUGH    := 0.06    # joint width before mortar
+const GAP_MORTARED := 0.012
 
-const STONE_COLOR  := Color(0.80, 0.74, 0.63)   # Jerusalem limestone — paler than the ground so the wall leads
-const MORTAR_COLOR := Color(0.62, 0.56, 0.46)
+const STONE_COLOR  := Palette.WALL_STONE   # Jerusalem limestone — pale and cool against the ochre ground so the wall leads
+const MORTAR_COLOR := Color(0.62, 0.60, 0.60)
 const EARTH_COLOR  := Color(0.55, 0.45, 0.30)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)   # today's work — amber footing
-const WOOD_COLOR   := Color(0.48, 0.32, 0.17)
+const WOOD_COLOR   := Color(0.52, 0.34, 0.18)
+const TIMBER_WIDTH := 3.4   # squared scaffold timber, as a multiple of the old pole radius
 
-const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 
 @export var stage: Stage = Stage.EMPTY:
 	set(value):
@@ -44,6 +56,9 @@ const _FONT := preload("res://assets/fonts/Spectral/Spectral-SemiBold.ttf")
 			return
 		if is_node_ready() and not decorative:
 			Sfx.play("build" if value > stage else "wall_crumble", global_position)
+			# Felt by whoever is close: a thud when a course goes up, a jolt when one falls
+			if GameState.phase == GameState.Phase.WORK and _local_player_near():
+				get_tree().call_group("camera_rig", "shake", 0.15 if value > stage else 0.45)
 		stage = value
 		if is_node_ready():
 			_update_visuals()
@@ -84,10 +99,14 @@ var pending: Dictionary = _empty_pending():
 var _size: Vector3
 var _center: Vector3
 var _visual: Node3D
-var _label: Label3D
+var _label: WorldTag
 var _foundation_mat: StandardMaterial3D
 var _label_poll := 0.0
 var _juice_tween: Tween
+var _work: BuildWork
+# The next stage going up while workers are at it, revealed block by block
+var _preview: Node3D
+var _preview_skip := 0
 
 @onready var _col: CollisionShape3D = $CollisionShape3D
 
@@ -109,9 +128,38 @@ func _ready() -> void:
 		add_to_group("wall_sections")   # what enemies batter
 		add_to_group("build_sites")     # what workers deliver to (walls + gate doors)
 		GameState.section_changed.connect(_update_label.unbind(1))
+		_work = BuildWork.new()
+		_work.name = "Work"
+		_work.position = Vector3(_center.x, _size.y + 0.9, _center.z)
+		add_child(_work)
+		_work.progress_changed.connect(_on_work_progress)
+		InputMode.changed.connect(_update_label.unbind(1))
 		_build_sync()
 		GameState.crew_changed.connect(_update_label.unbind(1))
+		GameState.crew_changed.connect(_prime_work.unbind(1))
+		_prime_work()
+		if _size.z < THIN_MAX_DEPTH:
+			_col.shape = _col.shape.duplicate()   # the depth changes per section, per wall
+			_base_depth = _size.z
+			GameState.section_changed.connect(_apply_thickness.unbind(1))
+			_apply_thickness(false)
 	_update_visuals()
+
+var _base_depth := 0.0
+
+## Plain stretch: double-thick where the section calls for it
+func _apply_thickness(redraw := true) -> void:
+	var depth := THICK_DEPTH if GameState.has_twist("thick") else _base_depth
+	if is_equal_approx(depth, _size.z):
+		return
+	_size.z = depth
+	(_col.shape as BoxShape3D).size.z = depth
+	_prime_work()
+	if redraw:
+		_update_visuals()
+
+func is_thick() -> bool:
+	return _base_depth > 0.0 and GameState.has_twist("thick")
 
 func _process(delta: float) -> void:
 	_label_poll -= delta
@@ -119,7 +167,13 @@ func _process(delta: float) -> void:
 		return
 	_label_poll = LABEL_POLL
 	var damaged := is_built() and health < MAX_HEALTH
-	_label.visible = (is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and _local_player_near())
+	var working := _work != null and _work.progress > 0.0   # the bar and rising stones say it all
+	var near := _local_player_near()
+	_label.visible = not working and ((is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and near))
+	# One site at a time says "here next"; the others step back
+	var focus := SiteFocus.site() == self
+	_label.pulse = focus
+	_label.modulate.a = 1.0 if focus or near else WorldTag.DIM
 	if damaged:
 		_update_label()
 
@@ -146,7 +200,23 @@ func cost_for(target_stage: int) -> Dictionary:
 	var tier := clampi(GameState.crew_size, 1, MATERIAL_COST_BY_CREW.size()) - 1
 	if target_stage == Stage.FRAMED and GameState.has_twist("beams"):
 		return { "beam": BEAM_COST_BY_CREW[tier] }
-	return MATERIAL_COST_BY_CREW[tier][target_stage]
+	var cost: Dictionary = MATERIAL_COST_BY_CREW[tier][target_stage].duplicate()
+	if GameState.active_build:
+		for kind: String in cost:
+			cost[kind] = maxi(1, cost[kind] - ACTIVE_BUILD_DISCOUNT)
+	if is_thick():
+		for kind: String in THICK_EXTRA.get(target_stage, {}):
+			cost[kind] += THICK_EXTRA[target_stage][kind]
+	return cost
+
+## BuildWork: the site that holds this progress
+func work() -> BuildWork:
+	return _work
+
+## Material being worked into the next stage ("" when finished) — picks the strike sound
+func work_material() -> String:
+	var next := stage + 1
+	return "" if next > Stage.MORTARED else cost_for(next).keys()[0]
 
 ## Material still missing for the next stage ("" when finished)
 func next_need() -> String:
@@ -177,7 +247,15 @@ func try_build() -> bool:
 	for kind in cost:
 		pending[kind] -= cost[kind]
 	stage = next as Stage
+	_prime_work()
 	return true
+
+func _prime_work() -> void:
+	if _work == null:
+		return
+	var next := stage + 1
+	if next <= Stage.MORTARED:
+		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) 			* (THICK_WORK_MULT if is_thick() else 1.0)
 
 # Returns how much of the next stage's required material is pending (0.0–1.0)
 func get_build_progress() -> float:
@@ -214,6 +292,8 @@ func reset_slot() -> void:
 	pending = _empty_pending()
 	health = MAX_HEALTH
 	stage = Stage.EMPTY
+	_work.reset()
+	_prime_work()
 
 ## Overnight repair of part of the damage
 func repair(fraction: float) -> void:
@@ -252,6 +332,8 @@ func _degrade() -> void:
 	pending = _empty_pending()
 	health = MAX_HEALTH * DEGRADE_HEALTH_RATIO
 	stage = (stage - 1) as Stage
+	_work.reset()
+	_prime_work()
 	# Knocked back to bare foundation — slot stays so it can be rebuilt
 	if stage == Stage.EMPTY:
 		destroyed.emit()
@@ -259,40 +341,77 @@ func _degrade() -> void:
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	var cfg := SceneReplicationConfig.new()
-	for prop: NodePath in [^".:stage", ^".:pending", ^".:health", ^".:is_target"]:
-		cfg.add_property(prop)
-		cfg.property_set_replication_mode(prop, SceneReplicationConfig.REPLICATION_MODE_ALWAYS)
-	var sync := MultiplayerSynchronizer.new()
-	sync.name = "Sync"
-	sync.replication_interval = 0.1
-	sync.replication_config = cfg
-	NetworkManager.gate_sync(sync)
-	add_child(sync)
+	NetworkManager.add_sync(self, [^".:stage", ^".:pending", ^".:health", ^".:is_target", ^"Work:progress"])
 
 # ── Visuals ────────────────────────────────────────────────
 
 func _update_visuals() -> void:
 	for c in _visual.get_children():
 		c.queue_free()
+	_clear_preview()
 	_col.set_deferred("disabled", stage == Stage.EMPTY and not decorative)
+	_add_foundation()
+	_build_stage(stage, _visual_rng())
+	_update_label()
+
+# Same seed every time, so a stage's preview lays exactly the blocks it will end up with
+func _visual_rng() -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(global_position.snapped(Vector3.ONE * 0.1))
-	_add_foundation()
-	match stage:
+	return rng
+
+# Every peer: workers' progress → the next stage rises in the order it's built
+func _on_work_progress(value: float) -> void:
+	var next := stage + 1
+	if value <= 0.0 or next > Stage.MORTARED:
+		_clear_preview()
+		return
+	if _preview == null:
+		_preview = Node3D.new()
+		add_child(_preview)
+		var real := _visual
+		_visual = _preview
+		_build_stage(next as Stage, _visual_rng())
+		_visual = real
+		# Pieces already standing in this stage are shown from the start
+		match next:
+			Stage.STACKED:
+				_preview_skip = _first_multimesh_count(_visual)
+			Stage.MORTARED:
+				_preview_skip = 1 + _first_multimesh_count(_preview)   # mortar core + courses
+			_:
+				_preview_skip = 0
+	BuildWork.reveal(_preview, value, _preview_skip)
+
+func _clear_preview() -> void:
+	if _preview != null:
+		_preview.queue_free()
+		_preview = null
+
+static func _first_multimesh_count(root: Node) -> int:
+	for c in root.get_children():
+		if c is MultiMeshInstance3D:
+			return c.multimesh.instance_count
+	return 0
+
+func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
+	match s:
 		Stage.EMPTY:
-			_add_courses(rng, 0.25, GAP_ROUGH * 2.0)  # ruined footing, walkable
+			_add_ruin(rng)  # broken footing, walkable
 		Stage.FRAMED:
+			_add_box(Vector3(_size.x - 0.1, minf(COURSE_H, _size.y) - 0.04, _size.z - 0.14),
+				Vector3(_center.x, 0.12 + minf(COURSE_H, _size.y) * 0.5, _center.z), Palette.STONE_JOINT)
 			_add_courses(rng, minf(COURSE_H, _size.y), GAP_ROUGH)
 			_add_scaffold(rng)
 		Stage.STACKED:
+			_add_box(Vector3(_size.x - 0.1, _size.y - 0.04, _size.z - 0.14),
+				_center, Palette.STONE_JOINT)
 			_add_courses(rng, _size.y, GAP_ROUGH)
 		Stage.MORTARED:
 			_add_box(Vector3(_size.x - 0.12, _size.y - 0.05, _size.z - 0.12),
 				_center, MORTAR_COLOR)
 			_add_courses(rng, _size.y, GAP_MORTARED)
 			_add_merlons()
-	_update_label()
 
 func _add_foundation() -> void:
 	var s := Vector3(_size.x + 0.35, 0.12, _size.z + 0.35)
@@ -316,17 +435,44 @@ func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void
 				blen *= 0.5  # stagger joints
 			first = false
 			blen = minf(blen, x0 + _size.x - x)
-			var depth := _size.z + rng.randf_range(-0.05, 0.05)
+			var depth := _size.z + rng.randf_range(-0.06, 0.08)
 			var s := Vector3(blen - gap, row_h - gap, depth)
 			var pos := Vector3(x + blen * 0.5, y0 + row_h * (r + 0.5), _center.z)
 			transforms.append(Transform3D(Basis.from_scale(s), pos))
 			# Value jitter + a warm/cool drift per block; the odd weathered stone reused from rubble
-			var v := rng.randf_range(-0.07, 0.06)
-			if rng.randf() < 0.08:
+			var v := rng.randf_range(-0.11, 0.06)
+			if rng.randf() < 0.12:
 				v -= 0.12
-			var w := rng.randf_range(-0.025, 0.025)
-			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.2 - w))
+			var w := rng.randf_range(-0.025, 0.03)
+			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v - w * 0.5))
 			x += blen
+	_add_multimesh(transforms, colors)
+
+# What's left of the old wall (Neh. 2:13 "broken down"): the bottom course, stones
+# cracked, sunk and tilted, a few gone, the odd one still standing a course higher
+func _add_ruin(rng: RandomNumberGenerator) -> void:
+	var transforms: Array[Transform3D] = []
+	var colors: Array[Color] = []
+	var x0 := _center.x - _size.x * 0.5
+	var x := x0
+	while x < x0 + _size.x - 0.1:
+		var blen := minf(rng.randf_range(0.6, 1.1), x0 + _size.x - x)
+		if rng.randf() > 0.12:
+			var h := rng.randf_range(0.16, 0.34)
+			var depth := _size.z * rng.randf_range(0.75, 1.0)
+			var s := Vector3(blen - 0.08, h, depth)
+			var b := Basis.from_euler(Vector3(rng.randf_range(-0.08, 0.08), rng.randf_range(-0.1, 0.1), rng.randf_range(-0.1, 0.1)))
+			var pos := Vector3(x + blen * 0.5, 0.12 + h * 0.5 - 0.03, _center.z + rng.randf_range(-0.08, 0.08))
+			transforms.append(Transform3D(b.scaled_local(s), pos))
+			var v := rng.randf_range(-0.12, 0.0)
+			colors.append(Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.1))
+			# A stone from the next course still in place
+			if rng.randf() < 0.18:
+				var s2 := Vector3(blen * rng.randf_range(0.5, 0.8), 0.3, depth * 0.8)
+				transforms.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.12, 0.12)).scaled_local(s2),
+					pos + Vector3(rng.randf_range(-0.1, 0.1), h * 0.5 + 0.15, 0)))
+				colors.append(Color(STONE_COLOR.r - 0.06, STONE_COLOR.g - 0.06, STONE_COLOR.b - 0.07))
+		x += blen
 	_add_multimesh(transforms, colors)
 
 func _add_merlons() -> void:
@@ -354,8 +500,14 @@ func _add_merlons() -> void:
 	_add_multimesh(transforms, colors)
 
 # Timber scaffold marking the wall's full height: rough poles, X-braces, putlogs
-# with short plank runs, and a ladder on the city side (Neh. 4:17 builders at work)
+# with short plank runs, and a ladder on the city side (Neh. 4:17 builders at work).
+# Batched: one MultiMesh for the poles, one for the planks.
 func _add_scaffold(rng: RandomNumberGenerator) -> void:
+	var poles: Array[Transform3D] = []
+	var pole_colors: Array[Color] = []
+	var pole := func(a: Vector3, b: Vector3, radius: float, color: Color) -> void:
+		poles.append(_pole_transform(a, b, radius))
+		pole_colors.append(color)
 	var h := _size.y + 0.35
 	var bays := maxi(1, roundi(_size.x / 1.5))
 	var x0 := _center.x - _size.x * 0.5
@@ -370,61 +522,53 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 			var x := x0 + bay * i
 			var foot := Vector3(x + rng.randf_range(-0.05, 0.05), 0.0, z)
 			var head := Vector3(x + rng.randf_range(-0.08, 0.08), h + rng.randf_range(-0.1, 0.15), z + side * 0.04)
-			_add_pole(foot, head, 0.055, WOOD_COLOR.darkened(rng.randf_range(0.0, 0.15)))
+			pole.call(foot, head, 0.055, WOOD_COLOR.darkened(rng.randf_range(0.0, 0.15)))
 			feet.append(foot)
 			heads.append(head)
 		# Ledger lashed along the top, X-brace in alternate bays
 		var ly := h - 0.12
-		_add_pole(Vector3(x0 - 0.15, ly, z), Vector3(x0 + _size.x + 0.15, ly, z), 0.035, WOOD_COLOR.darkened(0.1))
+		pole.call(Vector3(x0 - 0.15, ly, z), Vector3(x0 + _size.x + 0.15, ly, z), 0.035, WOOD_COLOR.darkened(0.1))
 		for i in bays:
 			if (i + int(side > 0.0)) % 2 == 0:
 				var a := feet[i] + Vector3(0, 0.15, 0)
 				var b := Vector3(heads[i + 1].x, ly, z)
-				_add_pole(a, b, 0.03, WOOD_COLOR.darkened(0.18))
+				pole.call(a, b, 0.03, WOOD_COLOR.darkened(0.18))
 		if side > 0.0:
 			tops = heads
 	# Putlogs across the wall with short, slightly skewed plank runs on top
 	for i in bays + 1:
 		var x := tops[i].x
-		_add_pole(Vector3(x, h - 0.08, _center.z - off - 0.1), Vector3(x, h - 0.08, _center.z + off + 0.1),
+		pole.call(Vector3(x, h - 0.08, _center.z - off - 0.1), Vector3(x, h - 0.08, _center.z + off + 0.1),
 			0.03, WOOD_COLOR.darkened(0.1))
+	var planks: Array[Transform3D] = []
+	var plank_colors: Array[Color] = []
 	for i in bays:
 		if rng.randf() < 0.75:
-			_add_box(Vector3(bay * rng.randf_range(0.7, 0.95), 0.04, 0.28),
-				Vector3(x0 + bay * (i + 0.5), h - 0.03, _center.z + rng.randf_range(-0.2, 0.2)),
-				WOOD_COLOR.lightened(rng.randf_range(0.06, 0.16)))
-			_visual.get_child(-1).rotation.y = rng.randf_range(-0.06, 0.06)
+			var s := Vector3(bay * rng.randf_range(0.7, 0.95), 0.07, 0.34)
+			var pos := Vector3(x0 + bay * (i + 0.5), h - 0.03, _center.z + rng.randf_range(-0.2, 0.2))
+			plank_colors.append(WOOD_COLOR.lightened(rng.randf_range(0.06, 0.16)))
+			planks.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.06, 0.06)).scaled_local(s), pos))
 	# Ladder leaning on the city side
 	var lx := x0 + bay * (rng.randi_range(0, bays - 1) + 0.5)
 	var base_z := _center.z + off + 0.75
 	var top_z := _center.z + off + 0.05
 	for dx: float in [-0.2, 0.2]:
-		_add_pole(Vector3(lx + dx, 0.0, base_z), Vector3(lx + dx, h + 0.1, top_z), 0.03, WOOD_COLOR.lightened(0.05))
+		pole.call(Vector3(lx + dx, 0.0, base_z), Vector3(lx + dx, h + 0.1, top_z), 0.03, WOOD_COLOR.lightened(0.05))
 	var rungs := int(h / 0.32)
 	for r in range(1, rungs + 1):
 		var t := float(r) / (rungs + 1)
 		var y := (h + 0.1) * t
 		var z := lerpf(base_z, top_z, t)
-		_add_pole(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
+		pole.call(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
+	_add_multimesh(poles, pole_colors, Chunky.unit_block(), Chunky.wood_material(0.03))
+	_add_multimesh(planks, plank_colors, Chunky.unit_block(), Chunky.wood_material(0.015))
 
-# Round-ish timber between two points (6-sided, so it catches light like a pole)
-func _add_pole(a: Vector3, b: Vector3, radius: float, color: Color) -> void:
-	var mi := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = radius * 0.85
-	mesh.bottom_radius = radius
-	mesh.height = a.distance_to(b)
-	mesh.radial_segments = 6
-	mesh.rings = 1
-	mi.mesh = mesh
+# Squared timber between two points: the unit block stretched to length, chunky section
+static func _pole_transform(a: Vector3, b: Vector3, radius: float) -> Transform3D:
 	var dir := (b - a).normalized()
-	mi.basis = Basis(Quaternion(Vector3.UP, dir)) if absf(dir.dot(Vector3.UP)) < 0.999 else Basis()
-	mi.position = (a + b) * 0.5
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.roughness = 0.95
-	mi.material_override = mat
-	_visual.add_child(mi)
+	var rot := Basis(Quaternion(Vector3.UP, dir)) if absf(dir.dot(Vector3.UP)) < 0.999 else Basis()
+	var w := radius * TIMBER_WIDTH
+	return Transform3D(rot.scaled_local(Vector3(w, a.distance_to(b), w)), (a + b) * 0.5)
 
 func _add_box(size: Vector3, pos: Vector3, color: Color) -> StandardMaterial3D:
 	var mi := MeshInstance3D.new()
@@ -439,44 +583,30 @@ func _add_box(size: Vector3, pos: Vector3, color: Color) -> StandardMaterial3D:
 	_visual.add_child(mi)
 	return mat
 
-func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color]) -> void:
+func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color],
+		mesh: Mesh = null, mat: Material = null) -> void:
+	if transforms.is_empty():
+		return
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
-	mm.mesh = BoxMesh.new()
+	mm.mesh = mesh if mesh != null else Chunky.unit_block()
 	mm.instance_count = transforms.size()
 	for i in transforms.size():
 		mm.set_instance_transform(i, transforms[i])
 		mm.set_instance_color(i, colors[i])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.material_override = _stone_material()
+	mmi.material_override = mat if mat != null else Chunky.material(0.07)
 	_visual.add_child(mmi)
 
-static var _stone_mat: StandardMaterial3D
-
-static func _stone_material() -> StandardMaterial3D:
-	if _stone_mat == null:
-		var noise := FastNoiseLite.new()
-		noise.frequency = 0.08
-		noise.fractal_octaves = 4
-		var tex := NoiseTexture2D.new()
-		tex.noise = noise
-		tex.seamless = true
-		tex.width = 256
-		tex.height = 256
-		var grad := Gradient.new()
-		grad.set_color(0, Color(0.80, 0.80, 0.80))
-		grad.set_color(1, Color(1.0, 1.0, 1.0))
-		tex.color_ramp = grad
-		_stone_mat = StandardMaterial3D.new()
-		_stone_mat.vertex_color_use_as_albedo = true
-		_stone_mat.albedo_texture = tex
-		_stone_mat.uv1_triplanar = true
-		_stone_mat.uv1_world_triplanar = true
-		_stone_mat.uv1_scale = Vector3.ONE * 0.6
-		_stone_mat.roughness = 0.92
-	return _stone_mat
+## Every peer, at dusk: today's finished wall takes a bow
+func celebrate() -> void:
+	if stage == Stage.EMPTY:
+		return
+	_bounce()
+	_dust_puff()
+	Sfx.play("build", global_position + _center)
 
 # Stage raised: pop up from slightly squashed, cartoon-style
 func _bounce() -> void:
@@ -532,26 +662,18 @@ func _dust_puff() -> void:
 # ── Label ──────────────────────────────────────────────────
 
 func _build_label() -> void:
-	_label = Label3D.new()
-	_label.font = _FONT
-	_label.font_size = 40
-	_label.pixel_size = 0.01
-	Mobile.world_text(_label)
-	_label.outline_size = 10
-	_label.modulate = Color(0.98, 0.95, 0.88)
-	_label.outline_modulate = Color(0.20, 0.14, 0.08)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.no_depth_test = true
+	_label = WorldTag.make(WorldTag.Kind.SITE)
 	_label.position = Vector3(_center.x, _size.y + 1.0, _center.z)
 	_label.visible = false
 	add_child(_label)
 
 func _update_label() -> void:
 	var lines: PackedStringArray = []
-	if is_target and not is_complete():
-		lines.append("— Today's work —")
 	var next := stage + 1
-	if next <= Stage.MORTARED:
+	if GameState.active_build and can_build():
+		# Everything's here — it needs hands, not loads
+		lines.append("Build  [%s]" % InputMode.key("interact"))
+	elif next <= Stage.MORTARED:
 		var cost: Dictionary = cost_for(next)
 		var parts: PackedStringArray = []
 		for kind: String in cost:
@@ -563,7 +685,4 @@ func _update_label() -> void:
 	_label.text = "\n".join(lines)
 
 func _local_player_near() -> bool:
-	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.is_multiplayer_authority():
-			return distance_to_point(p.global_position) < LABEL_RANGE
-	return false
+	return Player.local != null and distance_to_point(Player.local.global_position) < LABEL_RANGE

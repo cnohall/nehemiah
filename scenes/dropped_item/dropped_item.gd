@@ -5,13 +5,14 @@ extends Node3D
 # Server spawns it into Main/Items; ItemSpawner replicates it with its kind.
 
 const COLORS := {
-	"stone":  Color(0.72, 0.68, 0.60),
+	"stone":  Color(0.74, 0.72, 0.68),   # dressed limestone, cool against the sand so a load reads
 	"wood":   Color(0.50, 0.33, 0.17),
-	"mortar": Color(0.86, 0.80, 0.66),
+	"mortar": Color(0.52, 0.38, 0.22),   # the reed basket; the mortar itself is MORTAR_FILL
 	"beam":   Color(0.46, 0.31, 0.17),
 	"lime":   Color(0.90, 0.88, 0.82),
 	"water":  Color(0.66, 0.40, 0.26),   # the clay jar it's carried in
 }
+const MORTAR_FILL := Color(0.66, 0.64, 0.60)
 const MARKER_SHADER := preload("res://assets/shaders/ground_marker.gdshader")
 # Lift so each prop rests on the floor instead of sinking into it
 const REST_Y := { "stone": 0.14, "wood": 0.08, "mortar": 0.13, "beam": 0.11, "lime": 0.14, "water": 0.2 }
@@ -69,9 +70,7 @@ static func build_prop(material_kind: String) -> Node3D:
 				log_mesh.height = 0.9
 				_add_mesh(root, log_mesh, mat, Vector3(0, 0, z), Vector3(0, 0, PI / 2))
 		"stone":
-			var block := BoxMesh.new()
-			block.size = Vector3(0.45, 0.28, 0.32)
-			_add_mesh(root, block, mat, Vector3.ZERO, Vector3(0, 0.4, 0))
+			_add_mesh(root, Chunky.bevel_box(Vector3(0.45, 0.28, 0.32), 0.05), mat, Vector3.ZERO, Vector3(0, 0.4, 0))
 		"beam":
 			# Squared timber, long axis on local X (carriers lay it between their shoulders)
 			var beam := BoxMesh.new()
@@ -109,6 +108,14 @@ static func build_prop(material_kind: String) -> Node3D:
 			basket.bottom_radius = 0.16
 			basket.height = 0.26
 			_add_mesh(root, basket, mat, Vector3.ZERO, Vector3.ZERO)
+			# Heaped grey mortar showing over the rim
+			var heap := SphereMesh.new()
+			heap.radius = 0.2
+			heap.height = 0.16
+			var fill := StandardMaterial3D.new()
+			fill.albedo_color = MORTAR_FILL
+			fill.roughness = 1.0
+			_add_mesh(root, heap, fill, Vector3(0, 0.13, 0), Vector3.ZERO)
 	return root
 
 static func _add_mesh(root: Node3D, mesh: Mesh, mat: Material, pos: Vector3, rot: Vector3) -> void:

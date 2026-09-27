@@ -1,0 +1,2 @@
+# Godot writes LF; pin it so re-imports on Windows (autocrlf) are not flagged as changes
+*.import text eol=lf

@@ -128,6 +128,26 @@ func online_friends() -> Array[Dictionary]:
 		return a.name.naturalnocasecmp_to(b.name) < 0)
 	return out
 
+## Friends currently in a lobby of this game — one click to join from the menu
+func friend_lobbies() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not _steam:
+		return out
+	for i in _steam.getFriendCount(FRIEND_FLAG_IMMEDIATE):
+		var id: int = _steam.getFriendByIndex(i, FRIEND_FLAG_IMMEDIATE)
+		var game: Dictionary = _steam.getFriendGamePlayed(id)
+		var lobby: int = game.get("lobby", 0)
+		if game.get("id", 0) == STEAM_APP_ID and lobby != 0:
+			out.append({ name = _steam.getFriendPersonaName(id), lobby = lobby })
+	return out
+
+## Steam's own invite dialog (works with a gamepad). False when the overlay is off.
+func open_invite_overlay() -> bool:
+	if not (_steam and _lobby_id) or not _steam.isOverlayEnabled():
+		return false
+	_steam.activateGameOverlayInviteDialog(_lobby_id)
+	return true
+
 # Sends a lobby invite via Steam chat; accepting it fires join_requested
 func invite_friend(steam_id: int) -> bool:
 	if not (_steam and _lobby_id):
@@ -215,6 +235,21 @@ func is_peer_ready(id: int) -> bool:
 # the tree so a MultiplayerSpawner never spawns it on a peer that isn't ready.
 func gate_sync(sync: MultiplayerSynchronizer) -> void:
 	sync.add_visibility_filter(is_peer_ready)
+
+## Server → clients replication of `props` on `owner`, as a gated "Sync" child
+func add_sync(owner: Node, props: Array[NodePath],
+		mode := SceneReplicationConfig.REPLICATION_MODE_ALWAYS, interval := 0.1) -> MultiplayerSynchronizer:
+	var cfg := SceneReplicationConfig.new()
+	for prop in props:
+		cfg.add_property(prop)
+		cfg.property_set_replication_mode(prop, mode)
+	var sync := MultiplayerSynchronizer.new()
+	sync.name = "Sync"
+	sync.replication_interval = interval
+	sync.replication_config = cfg
+	gate_sync(sync)
+	owner.add_child(sync)
+	return sync
 
 # ── Signals ────────────────────────────────────────────────
 
