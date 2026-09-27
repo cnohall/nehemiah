@@ -100,6 +100,7 @@ func _ready() -> void:
 	add_child(_bar)
 	add_to_group("enemies")
 	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type]), SCALE[type])
+	GameState.mark_met(_LOOKS[type])
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
 	_goal = Vector3(randf_range(-GOAL_X_SPREAD, GOAL_X_SPREAD), 0.0, GOAL_Z)

@@ -599,11 +599,7 @@ msgstr "음모"
 msgid "Section %s of %s · Days %d–%d"
 msgstr "%s/%s 구간 · %d–%d일차"
 
-msgid "With: %s"
-msgstr "특징: %s"
 
-msgid "The plain work: carry, build, defend"
-msgstr "기본 작업: 나르고, 쌓고, 지키기"
 
 msgid "Build again"
 msgstr "다시 건축"
@@ -930,3 +926,126 @@ msgstr "감사하는 두 큰 찬양대가 성벽 위를 행진합니다. 하나�
 
 msgid "“The joy of Jerusalem was heard even far away.”"
 msgstr "“예루살렘의 기쁨이 멀리까지 들렸습니다.”"
+
+msgid "Friends and Foes"
+msgstr "동지와 적"
+
+msgid "The builders"
+msgstr "건축하는 이들"
+
+msgid "Those against the work"
+msgstr "공사를 막는 자들"
+
+msgid "Governor of Judah · Cupbearer to the king"
+msgstr "유다 총독 · 왕의 술 맡은 관원"
+
+msgid "He asks King Artaxerxes to send him to rebuild the city of his forefathers, inspects the broken walls by night, and works beside the people. When his enemies call him away, he stays at the work."
+msgstr "그는 아닥사스다 왕에게 조상들의 성읍을 다시 세우러 보내 달라고 청하고, 밤에 무너진 성벽을 살핀 뒤 백성과 함께 일합니다. 원수들이 불러내려 해도 그는 일터를 떠나지 않습니다."
+
+msgid "The crew · First player"
+msgstr "일꾼 · 첫째 플레이어"
+
+msgid "The crew · Second player"
+msgstr "일꾼 · 둘째 플레이어"
+
+msgid "The crew · Third player"
+msgstr "일꾼 · 셋째 플레이어"
+
+msgid "The crew · Fourth player"
+msgstr "일꾼 · 넷째 플레이어"
+
+msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt. Every builder kept a sword at his side."
+msgstr "돌을 놓아 성벽을 한 켜씩 쌓아 올립니다. 등에는 돌 바구니, 허리에는 망치를 찼습니다. 건축하는 이마다 허리에 칼을 찼습니다."
+
+msgid "The burden-bearers carried their loads with one hand and held a weapon in the other: water for the mortar, stone and timber for the wall."
+msgstr "짐을 나르는 이들은 한 손으로 일하고 다른 손에는 무기를 잡았습니다. 회반죽에 쓸 물과 성벽에 쓸 돌과 목재를 날랐습니다."
+
+msgid "Lays the beams and hangs the doors of each gate, with their bolts and bars."
+msgstr "들보를 얹고 성문마다 문짝과 빗장과 자물쇠를 답니다."
+
+msgid "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers."
+msgstr "공사는 크고 성벽은 길어 일꾼들이 멀리 흩어져 있습니다. 나팔 소리가 나는 곳으로 모두 모입니다."
+
+msgid "The Horonite · Samaria"
+msgstr "호론 사람 · 사마리아"
+
+msgid "Furious that anyone has come to seek the good of the people. He mocks the builders before the army of Samaria, then plots to attack the city."
+msgstr "누군가 백성의 유익을 구하러 온 것에 몹시 분노합니다. 사마리아 군대 앞에서 건축하는 이들을 조롱하고, 성을 칠 음모를 꾸밉니다."
+
+msgid "The Ammonite · Ammon"
+msgstr "암몬 사람 · 암몬"
+
+msgid "Sanballat's companion, an official from Ammon. He jokes that a fox climbing on the wall would break it down, and sends letters to make Nehemiah afraid."
+msgstr "산발랏의 동료로, 암몬의 관리입니다. 여우 한 마리만 올라가도 성벽이 무너질 거라고 비웃고, 느헤미야를 겁주려고 편지를 보냅니다."
+
+msgid "The Arab · Arabia"
+msgstr "아라비아 사람 · 아라비아"
+
+msgid "He laughs at the work from the start, joins the plot against the city, and with Sanballat invites Nehemiah down to the plain of Ono."
+msgstr "처음부터 공사를 비웃고, 성을 치려는 음모에 가담하며, 산발랏과 함께 느헤미야를 오노 평지로 불러냅니다."
+
+msgid "Sent by Sanballat and Geshem"
+msgstr "산발랏과 게셈이 보낸 자"
+
+msgid "He walks up to a worker with an open letter and an invitation to Ono, and waits. Go with him and you are led away from the wall. Keep working and he gives up."
+msgstr "펼친 편지와 오노로 오라는 초대를 들고 일꾼에게 다가와 기다립니다. 따라가면 성벽에서 멀리 끌려가고, 계속 일하면 그는 포기합니다."
+
+msgid "Messenger"
+msgstr "사자"
+
+msgid "Scout"
+msgstr "정찰병"
+
+msgid "Brute"
+msgstr "거한"
+
+msgid "Raider"
+msgstr "약탈자"
+
+msgid "From the first day"
+msgstr "첫날부터"
+
+msgid "From day 9"
+msgstr "9일째부터"
+
+msgid "From day 21"
+msgstr "21일째부터"
+
+msgid "Light and quick. Some slip through the gaps for the inner city, others turn on the wall. A few sling stones bring one down."
+msgstr "가볍고 빠릅니다. 틈으로 빠져나가 성 안으로 들어가려는 자도 있고, 성벽을 공격하는 자도 있습니다. 물맷돌 몇 개면 쓰러집니다."
+
+msgid "Helmet, shield and spear. Slow, but he hits hard, takes many stones, and always goes for the wall."
+msgstr "투구와 방패와 창. 느리지만 세게 치고, 돌을 많이 맞아야 쓰러지며, 언제나 성벽을 노립니다."
+
+msgid "Hooded and cloaked, with a dagger, and the fastest of them all. Raiders reach a gap before you do."
+msgstr "두건과 망토에 단검을 든, 가장 빠른 자입니다. 약탈자는 당신보다 먼저 틈에 이릅니다."
+
+msgid "Speed"
+msgstr "속도"
+
+msgid "Toughness"
+msgstr "맷집"
+
+msgid "Strength"
+msgstr "힘"
+
+msgid "First met at the %s"
+msgstr "처음 만나는 곳: %s"
+
+msgid "Not yet met"
+msgstr "아직 만나지 못함"
+
+msgid "Keep building. You will meet them on the wall."
+msgstr "계속 건축하십시오. 성벽에서 만나게 될 것입니다."
+
+msgid "↑ ↓   Choose          Esc   Back"
+msgstr "↑ ↓   선택          Esc   뒤로"
+
+msgid "Foes here"
+msgstr "이곳의 적"
+
+msgid "The plain work"
+msgstr "기본 작업"
+
+msgid "Everything the wall has asked of you, all at once."
+msgstr "지금까지 성벽이 요구한 모든 것을 한꺼번에."

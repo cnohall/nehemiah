@@ -113,6 +113,7 @@ var picker_return := -1
 var rating_improved := false
 # Started mid-campaign with `--day=N`: sections are only partly played, so no bests saved
 var _debug_start := false
+var _met := {}             # Friends and Foes: key → true, loaded on first use
 
 # ── Queries ────────────────────────────────────────────────
 
@@ -173,6 +174,41 @@ func best_marks(section_index: int) -> int:
 	if cfg.load(PROGRESS_PATH) != OK:
 		return -1
 	return cfg.get_value("marks", str(section_index), -1)
+
+# Friends and Foes: the section where each foe first shows (enemies by WaveManager's
+# unlock days, the leaders by their story beat, the messenger by the "schemes" twist)
+const MET_AT := { "scout": 0, "brute": 2, "raider": 4, "sanballat": 2, "tobiah": 3, "geshem": 5, "messenger": 10 }
+
+## Friends and Foes (main menu): who this player has met, kept across runs. Enemies and
+## the messenger count on sight, the three leaders when their story beat plays.
+## Debug builds: `-- --unlock-all` shows everyone.
+func has_met(key: String) -> bool:
+	_load_met()
+	return _met.has(key) or (OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args())
+
+## Every peer records its own; not for `--day=N` runs, like the marks
+func mark_met(key: String) -> void:
+	_load_met()
+	if _met.has(key) or _debug_start:
+		return
+	_met[key] = true
+	var cfg := ConfigFile.new()
+	cfg.load(PROGRESS_PATH)
+	cfg.set_value("met", key, true)
+	cfg.save(PROGRESS_PATH)
+
+func _load_met() -> void:
+	if not _met.is_empty():
+		return
+	_met = { "": true }   # loaded, even when nothing has been met yet
+	var cfg := ConfigFile.new()
+	if cfg.load(PROGRESS_PATH) == OK and cfg.has_section("met"):
+		for k: String in cfg.get_section_keys("met"):
+			_met[k] = true
+	# Progress from before this was tracked: a finished section means its foes were met
+	for k: String in MET_AT:
+		if best_marks(MET_AT[k]) >= 0:
+			_met[k] = true
 
 func is_replay() -> bool:
 	return replay_section >= 0

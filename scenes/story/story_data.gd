@@ -10,6 +10,7 @@ extends RefCounted
 #   art   — texture path; until it exists the drawn backdrop stands in
 #   sky   — "night" | "dawn" | "day" | "dusk"   (drawn backdrop)
 #   built — 0–1, how much of the wall stands     (drawn backdrop)
+#   met   — Friends and Foes key this slide introduces (GameState.mark_met)
 #   map   — section index: the circuit map instead of a backdrop (CircuitMap), sections
 #           before it standing; "inspect": true for the night ride, every stretch broken;
 #           "finale": true for the ending, the last stretch rises and the ring closes
@@ -56,19 +57,19 @@ const BEATS := {
 		  "ref": "Nehemiah 2:18", "sky": "dawn", "built": 0.0 },
 	],
 	2: [
-		{ "eyebrow": "Samaria", "title": "Sanballat scoffs",
+		{ "eyebrow": "Samaria", "title": "Sanballat scoffs", "met": "sanballat",
 		  "text": "Sanballat the Horonite hears that the wall is going up. He is furious, and he mocks the Jews before his army.",
 		  "verse": "“Will they revive the stones out of the heaps of rubbish, since they are burned?”",
 		  "ref": "Nehemiah 4:1, 2", "sky": "dusk", "built": 0.15 },
 	],
 	3: [
-		{ "eyebrow": "Beside Sanballat", "title": "Tobiah laughs",
+		{ "eyebrow": "Beside Sanballat", "title": "Tobiah laughs", "met": "tobiah",
 		  "verse": "“What they are building, if a fox climbed up it, he would break down their stone wall.”",
 		  "text": "The work goes on. The wall is joined together up to half its height, for the people have a heart to work.",
 		  "ref": "Nehemiah 4:3, 6", "sky": "dusk", "built": 0.3 },
 	],
 	5: [
-		{ "eyebrow": "Sanballat · Tobiah · Geshem", "title": "The conspiracy",
+		{ "eyebrow": "Sanballat · Tobiah · Geshem", "title": "The conspiracy", "met": "geshem",
 		  "text": "The enemies plot together to come and fight against Jerusalem and throw it into confusion.",
 		  "ref": "Nehemiah 4:7, 8", "sky": "night", "built": 0.45 },
 		{ "eyebrow": "On the wall", "title": "Keep Yahweh in mind",

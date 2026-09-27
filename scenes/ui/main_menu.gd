@@ -10,6 +10,8 @@ const SETTLE_TIME  := 2.4
 var _rig: Node2D
 var _drift_t := 0.0
 var _picker: SectionPicker
+var _folk: FriendsAndFoes
+var _folk_btn: Button
 var _sections_btn: Button
 
 @onready var backdrop:      TextureRect = $Backdrop
@@ -50,6 +52,17 @@ func _ready() -> void:
 	move_child(_picker, fade.get_index())
 	_picker.chosen.connect(_on_section_chosen)
 	_picker.closed.connect(_sections_btn.grab_focus)
+	# Friends and Foes: an entry under the sections, the page over everything
+	_folk_btn = join_btn.duplicate()
+	_folk_btn.name = "FolkButton"
+	_folk_btn.text = "Friends and Foes"
+	menu.add_child(_folk_btn)
+	menu.move_child(_folk_btn, _sections_btn.get_index() + 1)
+	_folk = FriendsAndFoes.new()
+	add_child(_folk)
+	move_child(_folk, fade.get_index())
+	_folk_btn.pressed.connect(_folk.open)
+	_folk.closed.connect(_folk_btn.grab_focus)
 	join_btn.pressed.connect(_on_join)
 	settings_btn.pressed.connect(_on_settings)
 	quit_btn.pressed.connect(get_tree().quit)

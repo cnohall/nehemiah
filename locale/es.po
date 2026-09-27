@@ -599,11 +599,7 @@ msgstr "Intrigas"
 msgid "Section %s of %s · Days %d–%d"
 msgstr "Tramo %s de %s · Días %d–%d"
 
-msgid "With: %s"
-msgstr "Con: %s"
 
-msgid "The plain work: carry, build, defend"
-msgstr "El trabajo de siempre: cargar, construir, defender"
 
 msgid "Build again"
 msgstr "Construir de nuevo"
@@ -935,3 +931,126 @@ msgstr "Dos grandes coros de acción de gracias marchan en procesión sobre la m
 
 msgid "“The joy of Jerusalem was heard even far away.”"
 msgstr "“La alegría de Jerusalén se oía hasta muy lejos.”"
+
+msgid "Friends and Foes"
+msgstr "Amigos y enemigos"
+
+msgid "The builders"
+msgstr "Los constructores"
+
+msgid "Those against the work"
+msgstr "Los que se oponen a la obra"
+
+msgid "Governor of Judah · Cupbearer to the king"
+msgstr "Gobernador de Judá · Copero del rey"
+
+msgid "He asks King Artaxerxes to send him to rebuild the city of his forefathers, inspects the broken walls by night, and works beside the people. When his enemies call him away, he stays at the work."
+msgstr "Pide al rey Artajerjes que lo envíe a reconstruir la ciudad de sus antepasados, inspecciona de noche las murallas derribadas y trabaja junto al pueblo. Cuando sus enemigos intentan alejarlo, él sigue en la obra."
+
+msgid "The crew · First player"
+msgstr "El equipo · Primer jugador"
+
+msgid "The crew · Second player"
+msgstr "El equipo · Segundo jugador"
+
+msgid "The crew · Third player"
+msgstr "El equipo · Tercer jugador"
+
+msgid "The crew · Fourth player"
+msgstr "El equipo · Cuarto jugador"
+
+msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt. Every builder kept a sword at his side."
+msgstr "Coloca las piedras y levanta la muralla hilera por hilera, con un cesto de piedras a la espalda y un martillo al cinto. Cada constructor llevaba una espada a su lado."
+
+msgid "The burden-bearers carried their loads with one hand and held a weapon in the other: water for the mortar, stone and timber for the wall."
+msgstr "Los que llevaban cargas trabajaban con una mano y con la otra sostenían un arma: agua para la argamasa, piedra y madera para la muralla."
+
+msgid "Lays the beams and hangs the doors of each gate, with their bolts and bars."
+msgstr "Coloca las vigas y cuelga las puertas de cada entrada, con sus cerrojos y barras."
+
+msgid "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers."
+msgstr "La obra es grande y la muralla larga, y los constructores están dispersos a lo largo de ella. Donde suena el cuerno, el equipo se reúne."
+
+msgid "The Horonite · Samaria"
+msgstr "El horonita · Samaria"
+
+msgid "Furious that anyone has come to seek the good of the people. He mocks the builders before the army of Samaria, then plots to attack the city."
+msgstr "Le enfurece que alguien haya venido a buscar el bien del pueblo. Se burla de los constructores ante el ejército de Samaria y luego trama atacar la ciudad."
+
+msgid "The Ammonite · Ammon"
+msgstr "El amonita · Amón"
+
+msgid "Sanballat's companion, an official from Ammon. He jokes that a fox climbing on the wall would break it down, and sends letters to make Nehemiah afraid."
+msgstr "Compañero de Sanbalat, un funcionario de Amón. Bromea con que una zorra que subiera a la muralla la derribaría, y envía cartas para asustar a Nehemías."
+
+msgid "The Arab · Arabia"
+msgstr "El árabe · Arabia"
+
+msgid "He laughs at the work from the start, joins the plot against the city, and with Sanballat invites Nehemiah down to the plain of Ono."
+msgstr "Se ríe de la obra desde el principio, se une al complot contra la ciudad y, con Sanbalat, invita a Nehemías a bajar a la llanura de Ono."
+
+msgid "Sent by Sanballat and Geshem"
+msgstr "Enviado por Sanbalat y Guesem"
+
+msgid "He walks up to a worker with an open letter and an invitation to Ono, and waits. Go with him and you are led away from the wall. Keep working and he gives up."
+msgstr "Se acerca a un trabajador con una carta abierta y una invitación a Ono, y espera. Si vas con él, te aleja de la muralla. Si sigues trabajando, se rinde."
+
+msgid "Messenger"
+msgstr "Mensajero"
+
+msgid "Scout"
+msgstr "Explorador"
+
+msgid "Brute"
+msgstr "Bruto"
+
+msgid "Raider"
+msgstr "Saqueador"
+
+msgid "From the first day"
+msgstr "Desde el primer día"
+
+msgid "From day 9"
+msgstr "Desde el día 9"
+
+msgid "From day 21"
+msgstr "Desde el día 21"
+
+msgid "Light and quick. Some slip through the gaps for the inner city, others turn on the wall. A few sling stones bring one down."
+msgstr "Ligero y rápido. Algunos se cuelan por los huecos hacia la ciudad interior; otros atacan la muralla. Unas pocas piedras de honda lo derriban."
+
+msgid "Helmet, shield and spear. Slow, but he hits hard, takes many stones, and always goes for the wall."
+msgstr "Casco, escudo y lanza. Lento, pero golpea fuerte, aguanta muchas piedras y siempre va por la muralla."
+
+msgid "Hooded and cloaked, with a dagger, and the fastest of them all. Raiders reach a gap before you do."
+msgstr "Con capucha y capa, una daga, y el más rápido de todos. Los saqueadores llegan a un hueco antes que tú."
+
+msgid "Speed"
+msgstr "Velocidad"
+
+msgid "Toughness"
+msgstr "Resistencia"
+
+msgid "Strength"
+msgstr "Fuerza"
+
+msgid "First met at the %s"
+msgstr "Aparece por primera vez en: %s"
+
+msgid "Not yet met"
+msgstr "Aún no lo conoces"
+
+msgid "Keep building. You will meet them on the wall."
+msgstr "Sigue construyendo. Los encontrarás en la muralla."
+
+msgid "↑ ↓   Choose          Esc   Back"
+msgstr "↑ ↓   Elegir          Esc   Atrás"
+
+msgid "Foes here"
+msgstr "Enemigos aquí"
+
+msgid "The plain work"
+msgstr "El trabajo sencillo"
+
+msgid "Everything the wall has asked of you, all at once."
+msgstr "Todo lo que la muralla te ha pedido, todo a la vez."
