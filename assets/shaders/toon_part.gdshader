@@ -14,12 +14,12 @@ void fragment() {
 	ALBEDO = mix(part_color.rgb, flash_color.rgb, flash * 0.8);
 	ROUGHNESS = 1.0;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
-	EMISSION = rim_color.rgb * rim * 0.18 + flash_color.rgb * flash * 0.5;
+	EMISSION = rim_color.rgb * rim * 0.08 + flash_color.rgb * flash * 0.5;
 }
 
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
-	// Wide soft terminator: lit side flat, shadow side a clear second tone
-	float t = smoothstep(-0.05, 0.3, ndl);
-	DIFFUSE_LIGHT += mix(0.08, 1.0, t) * ATTENUATION * LIGHT_COLOR / PI;
+	// A broad painted transition reveals rounded cheeks, cloth and hair locks.
+	float t = smoothstep(-0.25, 0.85, ndl);
+	DIFFUSE_LIGHT += mix(0.12, 1.0, t) * ATTENUATION * LIGHT_COLOR / PI;
 }
