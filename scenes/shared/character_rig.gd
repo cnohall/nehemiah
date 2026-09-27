@@ -27,6 +27,10 @@ const BEVEL_SCALE  := 1.3      # chamfer as a multiple of each part's authored b
 # Building: turn a three-quarter view toward the camera so the mallet arm isn't
 # hidden behind the body when the wall is "up" screen (the usual case)
 const BUILD_TURN   := -0.65
+# Upper-body poses (sling wind-up, throw, delivery swing) played on the move still step:
+# leg phase per metre travelled, matching the run cycle (13 fps / 8 frames at 8 m/s)
+const STRIDE_RATE  := TAU * 13.0 / 8.0 / 8.0
+const MOVING_POSES := ["windup", "slash", "halfslash", "thrust"]
 
 # Rig dimensions (metres, before scale). Feet at y = 0.
 const HIP_Y      := 0.36
@@ -78,6 +82,8 @@ var _size := 1.0
 var _yaw := 0.0
 var _last_pos := Vector3.ZERO
 var _has_last := false
+var _ground_speed := 0.0   # smoothed, from the parent's actual motion (works on every peer)
+var _stride_ph := 0.0      # leg phase for upper-body poses played on the move
 var _squash := Vector2.ONE
 var _flash_tween: Tween
 var _squash_tween: Tween
@@ -279,6 +285,10 @@ func _update_facing(delta: float) -> void:
 		if _has_last:
 			var step := pos - _last_pos
 			step.y = 0.0
+			if delta > 0.0:
+				var v := minf(step.length() / delta, 20.0)   # a respawn jump isn't a sprint
+				_ground_speed = lerpf(_ground_speed, v, clampf(delta * 12.0, 0.0, 1.0))
+				_stride_ph = fmod(_stride_ph + _ground_speed * STRIDE_RATE * delta, TAU)
 			if step.length() > 0.02 * delta * 60.0 and step.normalized().dot(target) > 0.3:
 				target = step.normalized()
 		_last_pos = pos
@@ -374,6 +384,13 @@ func _apply_pose() -> void:
 			al = Vector3(-0.3, 0, 0.14 + c * 1.2)
 			ar = Vector3(-0.3, 0, -0.14 - c * 1.2)
 			head_rx = -0.3 * c
+	# Moving while the arms are busy: the legs keep walking instead of gliding
+	if _base in MOVING_POSES and _ground_speed > 0.4:
+		var amt := clampf(_ground_speed / 3.0, 0.0, 1.0)
+		var s := sin(_stride_ph)
+		ll = -s * 0.7 * amt
+		lr = s * 0.7 * amt
+		body_y += absf(cos(_stride_ph)) * 0.05 * amt
 	# Loads override the arms
 	if _base in ["idle", "walk", "run"]:
 		match hold:

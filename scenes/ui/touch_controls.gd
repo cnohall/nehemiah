@@ -17,6 +17,7 @@ extends Control
 const STICK_RADIUS := 58.0
 const KNOB_RADIUS  := 26.0
 const STICK_ZONE   := 0.45     # left fraction of the screen that spawns the stick
+const FULL_TILT    := 0.65     # stick deflection that already means full speed
 const AIM_RADIUS   := 44.0     # sling drag that counts as full deflection
 const AIM_DEADZONE := 0.3      # sling drag shorter than this (× AIM_RADIUS) = auto-aim
 const EDGE         := 18.0     # gap from the (safe-area) screen edge
@@ -41,6 +42,7 @@ var _stick_center := Vector2.ZERO
 var _stick_vec := Vector2.ZERO
 var _aim_origin := Vector2.ZERO
 var _horn := false
+var _was_active := false
 var _move_sent := {}           # move action → last strength sent
 var _safe := Rect2()
 
@@ -68,7 +70,12 @@ func _process(_delta: float) -> void:
 			_release_all()
 	if GameState.has_twist("horn") != _horn:
 		_layout()
-	queue_redraw()
+	# Idle buttons are static; only a held touch / the aim guide needs a fresh frame
+	# (plus one after, to clear it)
+	var active := not _touches.is_empty() or aiming
+	if active or _was_active:
+		queue_redraw()
+	_was_active = active
 
 # ── Layout ─────────────────────────────────────────────────
 
@@ -88,6 +95,7 @@ func _layout() -> void:
 	_horn = GameState.has_twist("horn")
 	if _horn:
 		_buttons.horn = { action = "horn", pos = br - Vector2(244, 40), r = 30.0, label = "Horn", icon = "horn" }
+	queue_redraw()
 
 # Display safe area (notch, rounded corners) mapped into viewport coordinates
 func _safe_rect(vp: Vector2) -> Rect2:
@@ -142,7 +150,8 @@ func _touch_move(index: int, pos: Vector2) -> void:
 	match _touches.get(index, ""):
 		"stick":
 			_stick_vec = ((pos - _stick_center) / STICK_RADIUS).limit_length(1.0)
-			_send_move(_stick_vec)
+			# Thumbs rarely reach the rim: full speed well before it
+			_send_move((_stick_vec / FULL_TILT).limit_length(1.0))
 		"sling":
 			var v := ((pos - _aim_origin) / AIM_RADIUS).limit_length(1.0)
 			if v.length() >= AIM_DEADZONE:

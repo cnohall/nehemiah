@@ -61,7 +61,9 @@ func _apply() -> void:
 	_env.ambient_light_color = (_day["ambient_color"] as Color).lerp(AMBIENT_NIGHT_COLOR, k)
 	_env.background_energy_multiplier = lerpf(_day["sky"], SKY_NIGHT, k)
 	for torch: Node3D in get_tree().get_nodes_in_group("torches"):
-		torch.get_node("Light").light_energy = TORCH_ENERGY * k
+		var light: Light3D = torch.get_node("Light")
+		light.light_energy = TORCH_ENERGY * k
+		light.visible = k > 0.0   # a dark light still costs every pixel it reaches
 		torch.get_node("Flame").visible = k > 0.15
 	_update_lamps()
 

@@ -544,10 +544,11 @@ func _update_anim() -> void:
 		return
 	if not _charging:
 		_facing = CharAnim.dir_from_velocity(velocity, _facing)
-	# Laden workers trudge; free hands run. Stride rate follows ground speed.
-	var laden := not carried_kind.is_empty()
-	_sprite.speed_scale = speed / (WALK_ANIM_SPEED if laden else RUN_ANIM_SPEED)
-	anim = ("walk_" if laden else "run_") + _facing
+	# Laden workers trudge; free hands run — or walk, with the stick pushed part-way.
+	# Stride rate follows ground speed, but never so slow the legs look frozen.
+	var walk := not carried_kind.is_empty() or speed < WALK_ANIM_SPEED * 1.2
+	_sprite.speed_scale = maxf(0.6, speed / (WALK_ANIM_SPEED if walk else RUN_ANIM_SPEED))
+	anim = ("walk_" if walk else "run_") + _facing
 
 # One-shot action animation that blocks input until it finishes (owner only)
 func _play_action(anim_base: String) -> void:

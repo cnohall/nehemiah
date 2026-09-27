@@ -617,9 +617,15 @@ func set_player_color(slot: int, color: Color) -> void:
 	_slot_colors[slot] = color
 	(_cards[slot].portrait as CrewPortrait).set_worker(slot, color)
 	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat
-	card.content_margin_left = 10
-	card.content_margin_top = 8
-	card.content_margin_bottom = 9
+	if Mobile.enabled():
+		card.content_margin_left = 5
+		card.content_margin_right = 8
+		card.content_margin_top = 4
+		card.content_margin_bottom = 4
+	else:
+		card.content_margin_left = 10
+		card.content_margin_top = 8
+		card.content_margin_bottom = 9
 	(_cards[slot].root as PanelContainer).add_theme_stylebox_override("panel", card)
 
 # ── Controls hint ──────────────────────────────────────────
@@ -750,6 +756,14 @@ func _build_player_cards() -> void:
 		var fill := UiStyle.box(UiStyle.OLIVE, Vector2.ZERO, 2)
 		bar.add_theme_stylebox_override("fill", fill)
 		vb.add_child(bar)
+		if Mobile.enabled():
+			# Phones: a small portrait and the health bar; the world already shows who's who
+			root.custom_minimum_size = Vector2.ZERO
+			hb.add_theme_constant_override("separation", 6)
+			portrait.custom_minimum_size = Vector2(34, 34)
+			who.hide()
+			name_lbl.hide()
+			bar.custom_minimum_size = Vector2(50, 6)
 		players_row.add_child(root)
 		_cards.append({ root = root, portrait = portrait, name = name_lbl, who = who,
 			carry = carry, bar = bar, fill = fill, load = load_icon })

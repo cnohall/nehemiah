@@ -15,6 +15,9 @@ signal layout_changed
 const MIN_DP_H     := 360.0   # smaller phones get slightly denser UI rather than clipping
 const MAX_DP_H     := 520.0   # tablets: cap so the HUD doesn't shrink to a speck
 const PREVIEW_DP_H := 411.0   # desktop --touch preview ≈ Pixel 9a landscape
+const MAX_FPS      := 60
+const SCALE_3D     := 0.75
+const _VIGNETTE_CHEAP := preload("res://assets/shaders/vignette_cheap.gdshader")
 
 ## Window pixels per UI unit (≈ screen density on a phone)
 var ui_scale := 1.0
@@ -29,6 +32,11 @@ func _ready() -> void:
 	if not enabled():
 		return
 	get_tree().quit_on_go_back = false
+	if OS.has_feature("mobile"):
+		# 120 Hz panels would otherwise have the GPU chase 120 fps and heat-throttle;
+		# the 3D world renders below native res (the UI stays crisp on top)
+		Engine.max_fps = MAX_FPS
+		get_tree().root.scaling_3d_scale = SCALE_3D
 	get_tree().root.size_changed.connect(_rescale)
 	_rescale()
 	# Phone-sized theme on the root window overrides the project (desktop) theme
@@ -83,6 +91,18 @@ func fit_safe(c: Control, pad := 0.0) -> void:
 	c.offset_top = s.y + pad
 	c.offset_right = -(s.z + pad)
 	c.offset_bottom = -(s.w + pad)
+
+## Phones: drop the full-screen effects that cost the most on a tile GPU — glow's
+## blur chain and the tilt-shift pass (it copies the screen and builds mips every
+## frame). The vignette stays, as a plain overlay.
+func lighten_world(env: Environment, post_fx: CanvasItem) -> void:
+	if not OS.has_feature("mobile"):
+		return
+	env.glow_enabled = false
+	env.ssao_enabled = false   # the Mobile renderer ignores it anyway
+	var mat := ShaderMaterial.new()
+	mat.shader = _VIGNETTE_CHEAP
+	post_fx.material = mat
 
 ## Light tick for on-screen buttons (needs the VIBRATE permission on Android)
 func haptic(ms := 12) -> void:

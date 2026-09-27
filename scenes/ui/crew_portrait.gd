@@ -32,6 +32,10 @@ func _init() -> void:
 	_vp.own_world_3d = true
 	_vp.msaa_3d = Viewport.MSAA_4X
 	_vp.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+	if Mobile.enabled():
+		# Phones: a second 3D world every frame costs real GPU — a still portrait will do
+		_vp.msaa_3d = Viewport.MSAA_2X
+		_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	box.add_child(_vp)
 	var world := Node3D.new()
 	_vp.add_child(world)
@@ -77,6 +81,13 @@ func set_worker(slot: int, color: Color) -> void:
 	else:
 		_rig.set_look(CharacterRig.worker_look(slot, color))
 	_rig.play("idle_down")
+	if Mobile.enabled():
+		_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+		# Once more after the pose has settled (the first frame can catch it mid-setup)
+		if is_inside_tree():
+			get_tree().create_timer(0.3).timeout.connect(func():
+				if is_instance_valid(_vp):
+					_vp.render_target_update_mode = SubViewport.UPDATE_ONCE)
 	queue_redraw()
 	_rim.queue_redraw()
 

@@ -51,6 +51,7 @@ func _ready() -> void:
 	_day_sun_color = sun.light_color
 	_day_sun_energy = sun.light_energy
 	GameState.phase_changed.connect(_on_phase_changed)
+	Mobile.lighten_world($WorldEnvironment.environment, $PostFX/Vignette)
 
 	story = StoryPlayer.new()
 	add_child(story)
