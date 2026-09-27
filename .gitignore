@@ -17,3 +17,4 @@ Thumbs.db
 # Export output
 build/
 eos_credentials.cfg
+__pycache__/
