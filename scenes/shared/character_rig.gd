@@ -12,6 +12,8 @@ extends Node3D
 # gameplay zoom. The player colour is the robe; the head-wrap is what the iso camera
 # sees most, so it stays light and bright.
 
+const BUILDER_HEAD := preload("res://scenes/shared/builder_head.gd")
+
 const PART_SHADER    := preload("res://assets/shaders/toon_part.gdshader")
 const PART_SHADER_WEB := preload("res://assets/shaders/toon_part_web.gdshader")
 # Instance uniforms render black on WebGL — the web build uses per-rig materials
@@ -129,7 +131,7 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 		0:
 			look.merge({"skin": SKIN[0], "hair": HAIR_DARK, "beard": "full", "hair_style": "short",
 				"strap": true, "basket": true, "basket_stones": true, "trim": LINEN.darkened(0.1),
-				"tool_always": true}, true)
+				"tool_always": true, "sculpted_builder": true}, true)
 		1:
 			look.merge({"skin": SKIN[2], "hair": HAIR_BLACK, "beard": "short", "hair_style": "curly",
 				"hat": "scarf", "hat_color": Color(0.95, 0.92, 0.85), "stripe": dye,
@@ -582,95 +584,98 @@ func _build(look: Dictionary) -> void:
 
 	# ── Head: a rounded jaw with layered cheeks, ears and expressive brows
 	_head = _pivot(_torso, Vector3(0, NECK_Y - HIP_Y, 0))
-	var hw := 0.64
-	var hh := 0.6
-	var hd := 0.58
-	var hc := Vector3(0, hh * 0.5 - 0.02, 0.02)
-	var front := hc.z + hd * 0.5
-	_part(_head, _soft(Vector3(hw, hh, hd), 0.20), skin, hc)
-	for sx: float in [-1.0, 1.0]:
-		_part(_head, _ellipsoid(Vector3(0.115, 0.17, 0.13)), skin.darkened(0.07), hc + Vector3((hw * 0.5 + 0.02) * sx, -0.02, 0.02))
-		_part(_head, _ellipsoid(Vector3(0.04, 0.085, 0.075)), skin.darkened(0.22), hc + Vector3((hw * 0.5 + 0.053) * sx, -0.02, 0.055))
-		# Cheeks soften the jaw and support the eyes above the beard line.
-		_part(_head, _ellipsoid(Vector3(0.21, 0.14, 0.085)), skin, hc + Vector3(0.19 * sx, -0.09, front - 0.05))
-	var hat: String = look.get("hat", "band")
-	_hair(look.get("hair_style", "short"), hair, hc, hw, hh, hd, hat)
-	# Face: dark eyes with a catch-light, heavy brows, a big wedge of a nose
-	for sx: float in [-1.0, 1.0]:
-		_part(_head, _ellipsoid(Vector3(0.085, 0.115, 0.045)), Color(0.1, 0.06, 0.04), hc + Vector3(0.125 * sx, 0.0, front + 0.005))
-		_part(_head, _soft(Vector3(0.028, 0.028, 0.02), 0.006), Color(1, 0.97, 0.9), hc + Vector3(0.125 * sx + 0.02, 0.03, front + 0.02))
-		var brow := _part(_head, _soft(Vector3(0.2, 0.075, 0.07), 0.02), look.get("brow", hair),
-			hc + Vector3(0.13 * sx, 0.1, front + 0.01))
-		# Inner ends low: determined on the crew, scowling on enemies
-		brow.rotation.z = (0.42 if look.get("brows", false) else 0.22) * sx
-	_part(_head, _ellipsoid(Vector3(0.15, 0.17, 0.16)), skin.darkened(0.05), hc + Vector3(0, -0.07, front + 0.045))
-	# Beard: a rounded mass around the jaw down onto the chest, cheek lobes up to the ears,
-	# sideburns into the hair, clumps along the jaw, the moustache as a bar under the nose
-	var bl: String = look.get("beard", "")
-	var bc: Color = look.get("beard_color", hair)
-	if not bl.is_empty():
-		var bh: float = {"full": 0.36, "long": 0.46, "short": 0.25}.get(bl, 0.3)
-		_part(_head, _ellipsoid(Vector3(hw + 0.03, bh * 1.15, 0.32)), bc, hc + Vector3(0, -0.1 - bh * 0.5, front - 0.11))
-		# Overlapping tapered locks, with a scalloped lower silhouette.
-		for lock_index in 7:
-			var u := (lock_index - 3) / 3.0
-			var lock_height := bh * (0.76 - absf(u) * 0.22)
-			_part(_head, _ellipsoid(Vector3(0.13, lock_height, 0.13)), bc.lightened(0.025 * (lock_index % 3)),
-				hc + Vector3(u * 0.25, -0.14 - bh * 0.48 + absf(u) * 0.06, front + 0.015 - absf(u) * 0.055), Vector3(0.08, 0, -u * 0.22))
-		for sx: float in [-1.0, 1.0]:
-			_part(_head, _ellipsoid(Vector3(0.15, 0.30, hd * 0.72)), bc, hc + Vector3((hw * 0.5 - 0.03) * sx, -0.13, 0.03))
-			_part(_head, _ellipsoid(Vector3(0.12, 0.26, 0.2)), bc, hc + Vector3((hw * 0.5 + 0.005) * sx, 0.03, 0.02))
-			_part(_head, _ellipsoid(Vector3(0.18, 0.19, 0.22)), bc.darkened(0.06), hc + Vector3(0.17 * sx, -0.1 - bh + 0.04, front - 0.1), Vector3(0, 0, 0.3 * sx))
-		if bl != "short":
-			_part(_head, _ellipsoid(Vector3(hw * (0.45 if bl == "long" else 0.55), 0.19, 0.25)), bc.darkened(0.04),
-				hc + Vector3(0, -0.1 - bh - 0.03, front - 0.1))
-		for sx: float in [-1.0, 1.0]:
-			_part(_head, _ellipsoid(Vector3(0.22, 0.095, 0.12)), bc.darkened(0.1), hc + Vector3(sx * 0.09, -0.15, front + 0.05), Vector3(0, 0, sx * 0.22))
-		_part(_head, _soft(Vector3(0.1, 0.03, 0.02), 0.008), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.225, front + 0.035))
+	if look.get("sculpted_builder", false):
+		BUILDER_HEAD.new().build(self, _head, look)
 	else:
-		_part(_head, _soft(Vector3(0.12, 0.035, 0.02), 0.008), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.19, front + 0.005))
+		var hw := 0.64
+		var hh := 0.6
+		var hd := 0.58
+		var hc := Vector3(0, hh * 0.5 - 0.02, 0.02)
+		var front := hc.z + hd * 0.5
+		_part(_head, _soft(Vector3(hw, hh, hd), 0.20), skin, hc)
+		for sx: float in [-1.0, 1.0]:
+			_part(_head, _ellipsoid(Vector3(0.115, 0.17, 0.13)), skin.darkened(0.07), hc + Vector3((hw * 0.5 + 0.02) * sx, -0.02, 0.02))
+			_part(_head, _ellipsoid(Vector3(0.04, 0.085, 0.075)), skin.darkened(0.22), hc + Vector3((hw * 0.5 + 0.053) * sx, -0.02, 0.055))
+			# Cheeks soften the jaw and support the eyes above the beard line.
+			_part(_head, _ellipsoid(Vector3(0.21, 0.14, 0.085)), skin, hc + Vector3(0.19 * sx, -0.09, front - 0.05))
+		var hat: String = look.get("hat", "band")
+		_hair(look.get("hair_style", "short"), hair, hc, hw, hh, hd, hat)
+		# Face: dark eyes with a catch-light, heavy brows, a big wedge of a nose
+		for sx: float in [-1.0, 1.0]:
+			_part(_head, _ellipsoid(Vector3(0.085, 0.115, 0.045)), Color(0.1, 0.06, 0.04), hc + Vector3(0.125 * sx, 0.0, front + 0.005))
+			_part(_head, _soft(Vector3(0.028, 0.028, 0.02), 0.006), Color(1, 0.97, 0.9), hc + Vector3(0.125 * sx + 0.02, 0.03, front + 0.02))
+			var brow := _part(_head, _soft(Vector3(0.2, 0.075, 0.07), 0.02), look.get("brow", hair),
+				hc + Vector3(0.13 * sx, 0.1, front + 0.01))
+			# Inner ends low: determined on the crew, scowling on enemies
+			brow.rotation.z = (0.42 if look.get("brows", false) else 0.22) * sx
+		_part(_head, _ellipsoid(Vector3(0.15, 0.17, 0.16)), skin.darkened(0.05), hc + Vector3(0, -0.07, front + 0.045))
+		# Beard: a rounded mass around the jaw down onto the chest, cheek lobes up to the ears,
+		# sideburns into the hair, clumps along the jaw, the moustache as a bar under the nose
+		var bl: String = look.get("beard", "")
+		var bc: Color = look.get("beard_color", hair)
+		if not bl.is_empty():
+			var bh: float = {"full": 0.36, "long": 0.46, "short": 0.25}.get(bl, 0.3)
+			_part(_head, _ellipsoid(Vector3(hw + 0.03, bh * 1.15, 0.32)), bc, hc + Vector3(0, -0.1 - bh * 0.5, front - 0.11))
+			# Overlapping tapered locks, with a scalloped lower silhouette.
+			for lock_index in 7:
+				var u := (lock_index - 3) / 3.0
+				var lock_height := bh * (0.76 - absf(u) * 0.22)
+				_part(_head, _ellipsoid(Vector3(0.13, lock_height, 0.13)), bc.lightened(0.025 * (lock_index % 3)),
+					hc + Vector3(u * 0.25, -0.14 - bh * 0.48 + absf(u) * 0.06, front + 0.015 - absf(u) * 0.055), Vector3(0.08, 0, -u * 0.22))
+			for sx: float in [-1.0, 1.0]:
+				_part(_head, _ellipsoid(Vector3(0.15, 0.30, hd * 0.72)), bc, hc + Vector3((hw * 0.5 - 0.03) * sx, -0.13, 0.03))
+				_part(_head, _ellipsoid(Vector3(0.12, 0.26, 0.2)), bc, hc + Vector3((hw * 0.5 + 0.005) * sx, 0.03, 0.02))
+				_part(_head, _ellipsoid(Vector3(0.18, 0.19, 0.22)), bc.darkened(0.06), hc + Vector3(0.17 * sx, -0.1 - bh + 0.04, front - 0.1), Vector3(0, 0, 0.3 * sx))
+			if bl != "short":
+				_part(_head, _ellipsoid(Vector3(hw * (0.45 if bl == "long" else 0.55), 0.19, 0.25)), bc.darkened(0.04),
+					hc + Vector3(0, -0.1 - bh - 0.03, front - 0.1))
+			for sx: float in [-1.0, 1.0]:
+				_part(_head, _ellipsoid(Vector3(0.22, 0.095, 0.12)), bc.darkened(0.1), hc + Vector3(sx * 0.09, -0.15, front + 0.05), Vector3(0, 0, sx * 0.22))
+			_part(_head, _soft(Vector3(0.1, 0.03, 0.02), 0.008), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.225, front + 0.035))
+		else:
+			_part(_head, _soft(Vector3(0.12, 0.035, 0.02), 0.008), Color(0.35, 0.12, 0.08), hc + Vector3(0, -0.19, front + 0.005))
 
-	var hat_c: Color = look.get("hat_color", LINEN)
-	match hat:
-		"band", "scarf":
-			# Cloth band tied round the brow, hair showing above; a scarf is deeper,
-			# striped, with long tails
-			var scarf := hat == "scarf"
-			var bh2 := 0.17 if scarf else 0.12
-			var by := hh * 0.5 - (0.11 if scarf else 0.1)
-			_part(_head, _oval_band(Vector3(hw + 0.08, bh2, hd + 0.08)), hat_c, hc + Vector3(0, by, 0))
-			if scarf:
-				for dy: float in [-0.045, 0.045]:
-					_part(_head, _oval_band(Vector3(hw + 0.09, 0.03, hd + 0.09)), look["stripe"], hc + Vector3(0, by + dy, 0))
-			_part(_head, _soft(Vector3(0.14, 0.14, 0.1), 0.035), hat_c.darkened(0.1), hc + Vector3(0.12, by, -hd * 0.5 - 0.05))
-			if look.get("tails", true):
-				var tl := 0.36 if scarf else 0.26
-				for t: Array in [[0.1, 0.4], [-0.02, -0.25]]:
-					var tail := _part(_head, _soft(Vector3(0.11, tl, 0.04), 0.012), hat_c.darkened(0.05),
-						hc + Vector3(0.12 + t[0], by - tl * 0.5 - 0.03, -hd * 0.5 - 0.1), Vector3(0.5, 0, t[1]))
-					if scarf:
-						_part(tail, _soft(Vector3(0.115, 0.03, 0.045), 0.008), look["stripe"], Vector3(0, -tl * 0.25, 0))
-		"wrap":
-			# Head-cloth over the crown, coloured band, cloth falling behind to the shoulders
-			_part(_head, _ellipsoid(Vector3(hw + 0.14, 0.35, hd + 0.14)), hat_c, hc + Vector3(0, hh * 0.5 + 0.02, -0.01))
-			# Folds of the wound cloth: raised bands slanting round the crown
-			for k in 3:
-				var f := _part(_head, _ellipsoid(Vector3(hw + 0.12, 0.19, hd + 0.12)), hat_c.darkened(0.07 + k * 0.02),
-					hc + Vector3(0, hh * 0.5 + 0.06 + k * 0.07, -0.01 - k * 0.02))
-				f.rotation.z = 0.12 - k * 0.1
-				f.scale = Vector3.ONE * (1.0 - k * 0.1)
-			_part(_head, _oval_band(Vector3(hw + 0.12, 0.1, hd + 0.12)), look["band"], hc + Vector3(0, hh * 0.5 - 0.1, -0.01))
-			_part(_head, _soft(Vector3(hw + 0.08, 0.6, 0.12), 0.04), hat_c.darkened(0.04), hc + Vector3(0, -0.12, -hd * 0.5 - 0.04), Vector3(0.12, 0, 0))
-			for sx: float in [-1.0, 1.0]:
-				_part(_head, _ellipsoid(Vector3(0.13, 0.53, hd * 0.7)), hat_c.darkened(0.02), hc + Vector3((hw * 0.5 + 0.05) * sx, -0.06, -0.08), Vector3(-0.12, 0, sx * 0.10))
-		"hood":
-			_part(_head, _soft(Vector3(hw + 0.12, hh * 0.55, hd + 0.1), 0.1), hat_c, hc + Vector3(0, hh * 0.3, -0.04))
-			for sx: float in [-1.0, 1.0]:
-				_part(_head, _soft(Vector3(0.08, hh * 0.8, hd * 0.9), 0.03), hat_c, hc + Vector3((hw * 0.5 + 0.05) * sx, -0.05, -0.05))
-			_part(_head, _soft(Vector3(hw + 0.1, 0.55, 0.12), 0.04), hat_c, hc + Vector3(0, -0.2, -hd * 0.5 - 0.02), Vector3(0.12, 0, 0))
-		"helmet":
-			_part(_head, _cyl(0.0, hw * 0.62, 0.42), hat_c, hc + Vector3(0, hh * 0.5 + 0.18, -0.02))
-			_part(_head, _soft(Vector3(hw + 0.1, 0.09, hd + 0.1), 0.03), hat_c.darkened(0.25), hc + Vector3(0, hh * 0.5 - 0.04, -0.01))
+		var hat_c: Color = look.get("hat_color", LINEN)
+		match hat:
+			"band", "scarf":
+				# Cloth band tied round the brow, hair showing above; a scarf is deeper,
+				# striped, with long tails
+				var scarf := hat == "scarf"
+				var bh2 := 0.17 if scarf else 0.12
+				var by := hh * 0.5 - (0.11 if scarf else 0.1)
+				_part(_head, _oval_band(Vector3(hw + 0.08, bh2, hd + 0.08)), hat_c, hc + Vector3(0, by, 0))
+				if scarf:
+					for dy: float in [-0.045, 0.045]:
+						_part(_head, _oval_band(Vector3(hw + 0.09, 0.03, hd + 0.09)), look["stripe"], hc + Vector3(0, by + dy, 0))
+				_part(_head, _soft(Vector3(0.14, 0.14, 0.1), 0.035), hat_c.darkened(0.1), hc + Vector3(0.12, by, -hd * 0.5 - 0.05))
+				if look.get("tails", true):
+					var tl := 0.36 if scarf else 0.26
+					for t: Array in [[0.1, 0.4], [-0.02, -0.25]]:
+						var tail := _part(_head, _soft(Vector3(0.11, tl, 0.04), 0.012), hat_c.darkened(0.05),
+							hc + Vector3(0.12 + t[0], by - tl * 0.5 - 0.03, -hd * 0.5 - 0.1), Vector3(0.5, 0, t[1]))
+						if scarf:
+							_part(tail, _soft(Vector3(0.115, 0.03, 0.045), 0.008), look["stripe"], Vector3(0, -tl * 0.25, 0))
+			"wrap":
+				# Head-cloth over the crown, coloured band, cloth falling behind to the shoulders
+				_part(_head, _ellipsoid(Vector3(hw + 0.14, 0.35, hd + 0.14)), hat_c, hc + Vector3(0, hh * 0.5 + 0.02, -0.01))
+				# Folds of the wound cloth: raised bands slanting round the crown
+				for k in 3:
+					var f := _part(_head, _ellipsoid(Vector3(hw + 0.12, 0.19, hd + 0.12)), hat_c.darkened(0.07 + k * 0.02),
+						hc + Vector3(0, hh * 0.5 + 0.06 + k * 0.07, -0.01 - k * 0.02))
+					f.rotation.z = 0.12 - k * 0.1
+					f.scale = Vector3.ONE * (1.0 - k * 0.1)
+				_part(_head, _oval_band(Vector3(hw + 0.12, 0.1, hd + 0.12)), look["band"], hc + Vector3(0, hh * 0.5 - 0.1, -0.01))
+				_part(_head, _soft(Vector3(hw + 0.08, 0.6, 0.12), 0.04), hat_c.darkened(0.04), hc + Vector3(0, -0.12, -hd * 0.5 - 0.04), Vector3(0.12, 0, 0))
+				for sx: float in [-1.0, 1.0]:
+					_part(_head, _ellipsoid(Vector3(0.13, 0.53, hd * 0.7)), hat_c.darkened(0.02), hc + Vector3((hw * 0.5 + 0.05) * sx, -0.06, -0.08), Vector3(-0.12, 0, sx * 0.10))
+			"hood":
+				_part(_head, _soft(Vector3(hw + 0.12, hh * 0.55, hd + 0.1), 0.1), hat_c, hc + Vector3(0, hh * 0.3, -0.04))
+				for sx: float in [-1.0, 1.0]:
+					_part(_head, _soft(Vector3(0.08, hh * 0.8, hd * 0.9), 0.03), hat_c, hc + Vector3((hw * 0.5 + 0.05) * sx, -0.05, -0.05))
+				_part(_head, _soft(Vector3(hw + 0.1, 0.55, 0.12), 0.04), hat_c, hc + Vector3(0, -0.2, -hd * 0.5 - 0.02), Vector3(0.12, 0, 0))
+			"helmet":
+				_part(_head, _cyl(0.0, hw * 0.62, 0.42), hat_c, hc + Vector3(0, hh * 0.5 + 0.18, -0.02))
+				_part(_head, _soft(Vector3(hw + 0.1, 0.09, hd + 0.1), 0.03), hat_c.darkened(0.25), hc + Vector3(0, hh * 0.5 - 0.04, -0.01))
 
 	# Weapons
 	match look.get("weapon", ""):

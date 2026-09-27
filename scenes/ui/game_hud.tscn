@@ -377,7 +377,7 @@ layout_mode = 2
 theme_type_variation = &"Verse"
 theme_override_colors/font_color = Color(0.391, 0.318, 0.257, 1)
 theme_override_font_sizes/font_size = 22
-text = "“So the wall was completed on the 25th day of Elul, in 52 days.”"
+text = "“So the wall was finished in the twenty-fifth day of Elul, in fifty-two days.”"
 horizontal_alignment = 1
 autowrap_mode = 3
 
