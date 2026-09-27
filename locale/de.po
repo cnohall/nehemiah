@@ -855,10 +855,10 @@ msgid "On the wall"
 msgstr "Auf der Mauer"
 
 msgid "Keep Jehovah in mind"
-msgstr "Denkt an Jehova"
+msgstr "Denkt an Jahwe"
 
 msgid "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”"
-msgstr "„Fürchtet euch nicht vor ihnen! Denkt an Jehova, der groß und furchtgebietend ist.“"
+msgstr "„Fürchtet euch nicht vor ihnen! Denkt an Jahwe, der groß und furchtgebietend ist.“"
 
 msgid "From that day on"
 msgstr "Von jenem Tag an"
