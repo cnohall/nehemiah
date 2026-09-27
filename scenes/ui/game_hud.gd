@@ -73,6 +73,7 @@ var _horn_row: Control
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 var _next_line: Label        # day plaque: what to do next, for the local player
+var _next_box: Control       # phones: the pill it moves into, bottom-centre
 var _next_poll := 0.0
 const NEXT_POLL := 0.25
 
@@ -255,6 +256,8 @@ func _process(delta: float) -> void:
 	var text := _next_text()
 	_next_line.visible = not text.is_empty()
 	_next_line.text = text
+	if _next_box != null:
+		_next_box.visible = _next_line.visible
 
 func _next_text() -> String:
 	if GameState.phase != GameState.Phase.WORK:
@@ -885,9 +888,13 @@ func _apply_mobile_layout(alerts: OffscreenAlerts) -> void:
 	circuit.hide()    # the 52-day strip is desktop detail; the day number says it
 	$Root/DayPlaque/VBox/WorkRow/WorkLabel.hide()
 	work_count.add_theme_font_size_override("font_size", 12)
-	work_bar.custom_minimum_size.y = 5
+	# Today's progress joins the day line: one row, so the plaque stays a slim strip
+	# and hides less of the wall's own tags up-screen
+	work_row.reparent(day_row)
+	work_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	work_bar.custom_minimum_size = Vector2(64, 5)
 	phase_label.add_theme_font_size_override("font_size", 11)
-	$Root/DayPlaque/VBox/WorkRow.add_theme_constant_override("separation", 8)
+	work_row.add_theme_constant_override("separation", 6)
 
 	# Threat — top right, same height as the day bar: the breach pips
 	threat.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(12, 7), 0.9))
@@ -919,6 +926,30 @@ func _apply_mobile_layout(alerts: OffscreenAlerts) -> void:
 	gather.offset_top = gather.offset_bottom
 	$Root/GatherPanel/VBox.add_theme_constant_override("separation", 4)
 	$Root/GatherPanel/VBox/Eyebrow.hide()   # the day bar already says it
+
+	# Next step — a pill bottom-centre (where Gather was) instead of a third line on the
+	# day bar: the wall and its tags are usually up-screen, under the top plaques
+	_next_box = PanelContainer.new()
+	_next_box.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(14, 6), 0.9))
+	_next_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_next_box.visible = false
+	$Root.add_child(_next_box)
+	$Root.move_child(_next_box, gather.get_index())
+	_next_line.reparent(_next_box, false)
+	_next_line.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_next_line.custom_minimum_size.x = 0
+	_next_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_next_line.add_theme_font_size_override("font_size", 14)
+	_next_box.anchor_left = 0.5
+	_next_box.anchor_right = 0.5
+	_next_box.anchor_top = 1.0
+	_next_box.anchor_bottom = 1.0
+	_next_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_next_box.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_next_box.offset_left = 0.0
+	_next_box.offset_right = 0.0
+	_next_box.offset_bottom = -(s.w + 14.0)
+	_next_box.offset_top = _next_box.offset_bottom
 
 	# Day banner — below the plaques, smaller type
 	banner.anchor_top = 0.3

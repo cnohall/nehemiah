@@ -14,6 +14,7 @@ const DRIFT_TIME  := 18.0     # slow pan/zoom across each slide
 const DRIFT_ZOOM  := 1.12
 const DRIFT_PAN   := 36.0
 const TEXT_WIDTH  := 1080.0
+const MOBILE_TEXT_WIDTH := 600.0   # dp; phones are ~800-900dp wide
 
 var _slides: Array = []
 var _index := -1
@@ -132,7 +133,7 @@ func _show_slide(slide: Dictionary) -> void:
 	_backdrop.visible = not has_art and not has_map
 	_map.visible = has_map
 	# The map sits on the right; the text keeps to a narrower column beside it
-	_content.custom_minimum_size.x = TEXT_WIDTH * (0.55 if has_map else 1.0)
+	_content.custom_minimum_size.x = (MOBILE_TEXT_WIDTH if _mobile else TEXT_WIDTH) * (0.55 if has_map else 1.0)
 	if has_map:
 		_map.section = slide["map"]
 		_map.inspect = slide.get("inspect", false)
@@ -281,7 +282,7 @@ func _build() -> void:
 
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 6 if _mobile else 10)
-	content.custom_minimum_size.x = 600.0 if _mobile else TEXT_WIDTH
+	content.custom_minimum_size.x = MOBILE_TEXT_WIDTH if _mobile else TEXT_WIDTH
 	content.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(content)
