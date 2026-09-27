@@ -14,6 +14,8 @@ extends RefCounted
 #           before it standing; "inspect": true for the night ride, every stretch broken
 #
 # Scripture: World English Bible (public domain, ebible.org/eng-web), checked 27 Sep 2026.
+# Adapted: Neh 4:14 reads "Yahweh" where the WEB has "the Lord", so credit it as
+# "adapted from" the WEB (its trademark covers unchanged text only).
 # Not the NWT: jw.org terms forbid its text in software or anything sold.
 
 const ROMAN := ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
@@ -47,7 +49,7 @@ const BEATS := {
 		{ "eyebrow": "Jerusalem · By night", "title": "The inspection",
 		  "text": "Telling no one, he rides out in the dark and inspects the broken walls and the burned gates.",
 		  "ref": "Nehemiah 2:12-15", "map": 0, "inspect": true },
-		{ "eyebrow": "Jerusalem · 445 B.C.E.", "title": "Let us build",
+		{ "eyebrow": "Jerusalem · 455 BCE", "title": "Let us build",
 		  "text": "He tells the people how the hand of his God has been with him.",
 		  "verse": "“Let’s rise up and build.”",
 		  "ref": "Nehemiah 2:18", "sky": "dawn", "built": 0.0 },
@@ -69,7 +71,7 @@ const BEATS := {
 		  "text": "The enemies plot together to come and fight against Jerusalem and throw it into confusion.",
 		  "ref": "Nehemiah 4:7, 8", "sky": "night", "built": 0.45 },
 		{ "eyebrow": "On the wall", "title": "Keep Jehovah in mind",
-		  "verse": "“Don’t be afraid of them! Remember the Lord, who is great and awesome.”",
+		  "verse": "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”",
 		  "ref": "Nehemiah 4:14", "sky": "dawn", "built": 0.45 },
 		{ "eyebrow": "From that day on", "title": "Armed while building",
 		  "text": "Half the men work, half hold the spears. The builders carry the loads with one hand and a weapon in the other. Where the horn sounds, gather.",
