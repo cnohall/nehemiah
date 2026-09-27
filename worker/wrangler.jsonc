@@ -9,6 +9,11 @@
   // SQLite-backed so it runs on the free plan
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby"] }],
   "r2_buckets": [{ "binding": "GAME", "bucket_name": "nehemiah-game" }],
-  "routes": [{ "pattern": "nehemiahgame.com", "custom_domain": true }],
+  // play. is the game's home; the apex moves to the landing page (Vercel) once
+  // play. is live. Drop the apex entry at that point.
+  "routes": [
+    { "pattern": "play.nehemiahgame.com", "custom_domain": true },
+    { "pattern": "nehemiahgame.com", "custom_domain": true }
+  ],
   "observability": { "enabled": true }
 }
