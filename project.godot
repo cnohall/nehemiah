@@ -137,6 +137,11 @@ pause={
 ]
 }
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/es.po", "res://locale/pt_BR.po", "res://locale/de.po", "res://locale/ko.po")
+locale/fallback="en"
+
 [rendering]
 
 lights_and_shadows/directional_shadow/size=4096

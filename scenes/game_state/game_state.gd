@@ -42,6 +42,17 @@ const TWIST_INTRO := {
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
 	"schemes": "Messengers will call you down to Ono — do not go with them",
 }
+## A verse reference in the player's language: short ("Neh. 3:1") for plaques, long
+## ("Nehemiah 3:1") for cards and quotes. Takes either English form.
+func short_ref(ref: String) -> String:
+	return tr("Neh. %s") % _verse_of(ref)
+
+func long_ref(ref: String) -> String:
+	return tr("Nehemiah %s") % _verse_of(ref)
+
+static func _verse_of(ref: String) -> String:
+	return ref.trim_prefix("Neh. ").trim_prefix("Nehemiah ")
+
 # Water Gate night watch (Neh. 4:22-23): the first day of the section is worked in
 # daylight, the rest end in darkness
 const NIGHT_FROM_DAY_IN_SECTION := 1

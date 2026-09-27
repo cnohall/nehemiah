@@ -72,6 +72,11 @@ func _ready() -> void:
 		_picker.open(GameState.picker_return)
 		GameState.picker_return = -1
 
+# Language picked in Settings: redo the one line built from a format string
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and not host_btn.disabled:
+		_show_default_status()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if join_panel.visible and event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
@@ -124,11 +129,11 @@ func _use_steam() -> bool:
 
 func _show_default_status() -> void:
 	if _use_steam():
-		net_status.text = "Signed in to Steam as %s — invite friends once in game" % NetworkManager.steam_name()
+		net_status.text = tr("Signed in to Steam as %s — invite friends once in game") % NetworkManager.steam_name()
 	elif NetworkManager.steam_available():
 		net_status.text = "LAN mode — share your IP address to play together"
 	else:
-		net_status.text = "Steam unavailable: %s — LAN play only" % NetworkManager.steam_error()
+		net_status.text = tr("Steam unavailable: %s — LAN play only") % tr(NetworkManager.steam_error())
 
 # ── Host ───────────────────────────────────────────────────
 
@@ -203,9 +208,9 @@ func _fill_friend_games() -> void:
 	for g: Dictionary in games:
 		var b := Button.new()
 		b.theme_type_variation = &"PrimaryButton" if first == null else &"GhostButton"
-		b.text = "Join %s" % g.name
+		b.text = tr("Join %s") % g.name
 		b.pressed.connect(func():
-			status_label.text = "Joining %s…" % g.name
+			status_label.text = tr("Joining %s…") % g.name
 			NetworkManager.join_steam(g.lobby))
 		box.add_child(b)
 		if first == null:

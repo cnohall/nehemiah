@@ -269,7 +269,8 @@ func _hbox(sep: int) -> HBoxContainer:
 
 func _label(t: String, face: String, size: int, color: Color) -> Label:
 	var l := Label.new()
-	l.text = t.to_upper() if face.begins_with("caps") else t
+	var shown := tr(t)   # material names, "Wall": small caps need the translation first
+	l.text = shown.to_upper() if face.begins_with("caps") else shown
 	l.add_theme_font_override("font", _font(face))
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
