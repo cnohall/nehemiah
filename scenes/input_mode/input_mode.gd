@@ -81,16 +81,16 @@ func gameplay_blocked() -> bool:
 ## Label for an action on the device in use: "E" or "A". Built from the live bindings,
 ## so rebinds and non-QWERTY layouts show the key actually pressed.
 func key(action: String) -> String:
-	var hold := ""
-	if action == "throw" and not Settings.toggle_charge:
-		hold = "Hold "
 	if action == "move":
 		if using_pad:
-			return "L Stick"
+			return tr("L Stick")
 		return "".join(["move_north", "move_west", "move_south", "move_east"].map(
 			func(a: String) -> String: return key_label(a)))
 	var a: String = ACTION.get(action, action)
-	return hold + (_pad_label(a) if using_pad else key_label(a))
+	var label := _pad_label(a) if using_pad else key_label(a)
+	if action == "throw" and not Settings.toggle_charge:
+		return tr("Hold %s") % label
+	return label
 
 ## Rebinding / reset changed what the hints should say
 func bindings_changed() -> void:
@@ -139,7 +139,7 @@ func key_label(action: String) -> String:
 		var s := OS.get_keycode_string(k if k != KEY_NONE else e.physical_keycode)
 		return "Esc" if s == "Escape" else s
 	if e is InputEventMouseButton:
-		return MOUSE.get(e.button_index, "Mouse %d" % e.button_index)
+		return tr(MOUSE[e.button_index]) if MOUSE.has(e.button_index) else tr("Mouse %d") % e.button_index
 	return "—"
 
 func _pad_label(action: String) -> String:
@@ -160,8 +160,8 @@ func _button_name(b: int) -> String:
 		JOY_BUTTON_START:          return SHOULDERS[pad_kind][5]
 		JOY_BUTTON_LEFT_STICK:     return "L3"
 		JOY_BUTTON_RIGHT_STICK:    return "R3"
-		JOY_BUTTON_DPAD_UP:        return "D-Pad Up"
-		JOY_BUTTON_DPAD_DOWN:      return "D-Pad Down"
-		JOY_BUTTON_DPAD_LEFT:      return "D-Pad Left"
-		JOY_BUTTON_DPAD_RIGHT:     return "D-Pad Right"
-	return "Button %d" % b
+		JOY_BUTTON_DPAD_UP:        return tr("D-Pad Up")
+		JOY_BUTTON_DPAD_DOWN:      return tr("D-Pad Down")
+		JOY_BUTTON_DPAD_LEFT:      return tr("D-Pad Left")
+		JOY_BUTTON_DPAD_RIGHT:     return tr("D-Pad Right")
+	return tr("Button %d") % b

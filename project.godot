@@ -138,6 +138,11 @@ pause={
 ]
 }
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/es.po", "res://locale/pt_BR.po", "res://locale/de.po", "res://locale/ko.po")
+locale/fallback="en"
+
 [nehemiah]
 
 online/signaling_url=""

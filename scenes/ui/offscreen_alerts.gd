@@ -87,6 +87,7 @@ func _pointer(target: Vector2, color: Color, text: String, pulse: float) -> void
 	draw_circle(pos, RADIUS + 2.0, Color(UiStyle.DUSK, 0.55 * pulse))
 	draw_circle(pos, RADIUS, fill)
 	var font := UiStyle.CINZEL_SEMI
+	text = tr(text)
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 	draw_string(font, pos + Vector2(-w * 0.5, FONT_SIZE * 0.35), text,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Color(UiStyle.CREAM, pulse))

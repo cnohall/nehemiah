@@ -137,7 +137,8 @@ func _show_slide(slide: Dictionary) -> void:
 	_set_label(_title, slide.get("title", ""))
 	_set_label(_text, slide.get("text", ""))
 	_set_label(_verse, slide.get("verse", ""))
-	_set_label(_ref, slide.get("ref", ""))
+	var ref: String = slide.get("ref", "")
+	_set_label(_ref, GameState.long_ref(ref) if not ref.is_empty() else "")
 	_page.text = "%d / %d" % [_index + 1, _slides.size()] if _slides.size() > 1 else ""
 
 	_drift(not has_map)
@@ -198,7 +199,7 @@ func _refresh_wait() -> void:
 	_wait_row.visible = want
 	if not want:
 		return
-	_wait_label.text = "Waiting for %d builder%s still reading" % [_waiting, "" if _waiting == 1 else "s"]
+	_wait_label.text = tr_n("Waiting for %d builder still reading", "Waiting for %d builders still reading", _waiting) % _waiting
 	_start_now.visible = multiplayer.is_server()
 
 func _kill_tweens() -> void:
@@ -206,6 +207,7 @@ func _kill_tweens() -> void:
 		if tw:
 			tw.kill()
 
+# Slides hold the English text; the Label translates it (auto_translate)
 func _set_label(l: Label, value: String) -> void:
 	l.text = value
 	l.visible = not value.is_empty()

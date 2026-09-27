@@ -608,7 +608,8 @@ func _server_interact(at: Vector3) -> void:
 # Server: hand the carried load to `dest` (null = nothing near wants it)
 func _deliver(dest: Node3D, at: Vector3) -> void:
 	if dest == null or not dest.deposit(carried_kind, 1):
-		_tell(_why_not_needed(at))
+		var why := _why_not_needed(at)
+		_tell(why[0], why[1])
 		return
 	get_tree().call_group("day_director", "note_load", get_multiplayer_authority())
 	_sfx.rpc("deposit_" + carried_kind)
@@ -624,20 +625,21 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 		return
 	_action.rpc("halfslash")
 
-# Server: explain a refused delivery (the carried material isn't wanted here)
-func _why_not_needed(at: Vector3) -> String:
+# Server: explain a refused delivery (the carried material isn't wanted here).
+# [message, material for its {need}]
+func _why_not_needed(at: Vector3) -> PackedStringArray:
 	var wall := _nearest_in_reach("build_sites", at, func(_s): return true)
 	if wall == null:
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
-			return "Hands full — deliver it, or {drop} to drop"
-		return "Bring it to a wall"
+			return ["Hands full — deliver it, or {drop} to drop", ""]
+		return ["Bring it to a wall", ""]
 	var need: String = wall.next_need()
 	if not need.is_empty():
-		return "Needs %s first" % need
+		return ["Needs {need} first", need]
 	if wall.can_build():
 		# Every load for this stage is in; it only wants working before the next material
-		return "Build this stage first — {drop} to drop, then {interact} to work"
-	return "This wall is finished"
+		return ["Build this stage first — {drop} to drop, then {interact} to work", ""]
+	return ["This wall is finished", ""]
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_drop(at: Vector3) -> void:
@@ -1085,20 +1087,20 @@ func _jolt(shake: float, weak: float, strong: float, duration: float) -> void:
 	get_tree().call_group("camera_rig", "shake", shake)
 	InputMode.rumble(weak, strong, duration)
 
-# Server → owning player only
-func _tell(text: String) -> void:
-	_feedback.rpc_id(get_multiplayer_authority(), text)
+# Server → owning player only. Sent in English; the owner shows it in their language.
+func _tell(text: String, need := "") -> void:
+	_feedback.rpc_id(get_multiplayer_authority(), text, need)
 
 @rpc("any_peer", "call_local", "reliable")
-func _feedback(text: String) -> void:
+func _feedback(text: String, need: String) -> void:
 	if multiplayer.get_remote_sender_id() == 1:
-		_toast(text)
+		_toast(text, need)
 
 # Short floating line above the head (local only)
-func _toast(text: String) -> void:
+func _toast(text: String, need := "") -> void:
 	# "{interact}" → "[E]" or "[A]", whichever device this player is using
-	var l := WorldTag.make(WorldTag.Kind.TOAST,
-		text.format({ "interact": "[%s]" % InputMode.key("interact"), "drop": "[%s]" % InputMode.key("drop") }))
+	var l := WorldTag.make(WorldTag.Kind.TOAST, tr(text).format({ "interact": "[%s]" % InputMode.key("interact"),
+		"drop": "[%s]" % InputMode.key("drop"), "need": tr({"beam": "beams"}.get(need, need)) if not need.is_empty() else "" }))
 	l.position = Vector3(0, HP_BAR_Y + 0.3, 0)
 	add_child(l)
 	var tw := l.create_tween()

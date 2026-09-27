@@ -205,7 +205,7 @@ func _draw_overlay() -> void:
 		var done := _done(i)
 		var here := not inspect and i == section
 		var locked: bool = picker and not unlocked[i]
-		var label: String = GameState.SECTIONS[i]["name"]
+		var label: String = tr(GameState.SECTIONS[i]["name"])
 		var fs := int(unit * (0.03 if here else 0.021))
 		var mask := _marks(i)
 		var gems := done and mask >= 0
@@ -240,8 +240,8 @@ func _draw_overlay() -> void:
 	var tiny := int(unit * 0.016)
 	for foe: Array in FOES:
 		var fp := _project(_diorama.unit_to_world(foe[2]))
-		var who: String = foe[0]
-		var land: String = foe[1]
+		var who: String = tr(foe[0])
+		var land: String = tr(foe[1])
 		var nf := UiStyle.CINZEL_BOLD
 		var lf := UiStyle.SPECTRAL_ITALIC
 		var nw := nf.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, small).x

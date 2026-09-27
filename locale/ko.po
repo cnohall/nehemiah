@@ -1,0 +1,960 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Nehemiah\n"
+"Language: ko\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Review: machine-drafted Korean; needs a native speaker review before release\n"
+
+msgid "455 BCE  ·  Jerusalem"
+msgstr "기원전 455년  ·  예루살렘"
+
+msgid "Nehemiah"
+msgstr "느헤미야"
+
+msgid "The Wall"
+msgstr "성벽"
+
+msgid "Host Game"
+msgstr "게임 만들기"
+
+msgid "Join Game"
+msgstr "게임 참가"
+
+msgid "Choose a Section"
+msgstr "구간 선택"
+
+msgid "Settings"
+msgstr "설정"
+
+msgid "Quit"
+msgstr "종료"
+
+msgid "“The work is great and widely spread out, and we are separated on the wall, far from one another.”"
+msgstr "“공사는 크고 넓게 퍼져 있어서, 우리는 성벽 위에 흩어져 서로 멀리 떨어져 있습니다.”"
+
+msgid "Nehemiah 4:19"
+msgstr "느헤미야 4:19"
+
+msgid "Music: “The Desert of Dreams” by insydnis (CC-BY 3.0)  ·  “Desert theme” by yd (CC0)  ·  Sound: Kenney.nl (CC0)  ·  Scripture adapted from the World English Bible (public domain)"
+msgstr "음악: “The Desert of Dreams” insydnis (CC-BY 3.0)  ·  “Desert theme” yd (CC0)  ·  효과음: Kenney.nl (CC0)  ·  성경 구절: World English Bible(퍼블릭 도메인)에서 번역"
+
+msgid "Join a crew"
+msgstr "작업단 합류"
+
+msgid "Accept a Steam invite, pick a friend below, or enter the host's IP address / lobby code."
+msgstr "Steam 초대를 수락하거나, 아래에서 친구를 고르거나, 호스트의 IP 주소 / 로비 코드를 입력하세요."
+
+msgid "Address or lobby code"
+msgstr "주소 또는 로비 코드"
+
+msgid "Back"
+msgstr "뒤로"
+
+msgid "Connect"
+msgstr "연결"
+
+msgid "Signed in to Steam as %s — invite friends once in game"
+msgstr "Steam에 %s(으)로 로그인됨 — 게임 안에서 친구를 초대하세요"
+
+msgid "LAN mode — share your IP address to play together"
+msgstr "LAN 모드 — 함께 하려면 IP 주소를 공유하세요"
+
+msgid "Steam unavailable: %s — LAN play only"
+msgstr "Steam 사용 불가: %s — LAN 플레이만 가능"
+
+msgid "Steam plugin failed to load"
+msgstr "Steam 플러그인을 불러오지 못했습니다"
+
+msgid "Creating Steam lobby…"
+msgstr "Steam 로비 만드는 중…"
+
+msgid "Friends building now"
+msgstr "지금 건축 중인 친구"
+
+msgid "Join %s"
+msgstr "%s 참가"
+
+msgid "Joining %s…"
+msgstr "%s 참가 중…"
+
+msgid "Enter an address or lobby code first."
+msgstr "먼저 주소나 로비 코드를 입력하세요."
+
+msgid "Connecting…"
+msgstr "연결 중…"
+
+msgid "That's a Steam lobby code — start Steam first."
+msgstr "Steam 로비 코드입니다 — 먼저 Steam을 실행하세요."
+
+msgid "Connection failed. Check the address and that the host is running."
+msgstr "연결에 실패했습니다. 주소와 호스트가 실행 중인지 확인하세요."
+
+msgid "Could not open port %d."
+msgstr "포트 %d을(를) 열 수 없습니다."
+
+msgid "Steam is not running."
+msgstr "Steam이 실행 중이 아닙니다."
+
+msgid "Steam could not create a lobby (result %d)."
+msgstr "Steam이 로비를 만들지 못했습니다 (결과 %d)."
+
+msgid "Steam host socket failed (err %d)."
+msgstr "Steam 호스트 소켓 오류 (오류 %d)."
+
+msgid "Preferences"
+msgstr "환경설정"
+
+msgid "Display"
+msgstr "화면"
+
+msgid "Windowed"
+msgstr "창 모드"
+
+msgid "Fullscreen"
+msgstr "전체 화면"
+
+msgid "Vertical sync"
+msgstr "수직 동기화"
+
+msgid "On"
+msgstr "켬"
+
+msgid "Off"
+msgstr "끔"
+
+msgid "Screen shake"
+msgstr "화면 흔들림"
+
+msgid "Volume"
+msgstr "음량"
+
+msgid "Music"
+msgstr "음악"
+
+msgid "Effects"
+msgstr "효과음"
+
+msgid "Done"
+msgstr "완료"
+
+msgid "Language"
+msgstr "언어"
+
+msgid "Rumble"
+msgstr "진동"
+
+msgid "Sling"
+msgstr "물매"
+
+msgid "Hold"
+msgstr "누르고 있기"
+
+msgid "Toggle"
+msgstr "전환"
+
+msgid "Keys"
+msgstr "키"
+
+msgid "Rebind keys…"
+msgstr "키 재설정…"
+
+msgid "Controllers: remap buttons in Steam Input."
+msgstr "컨트롤러: 버튼은 Steam 입력에서 재설정하세요."
+
+msgid "Reset to defaults"
+msgstr "기본값으로"
+
+msgid "Press a key…"
+msgstr "키를 누르세요…"
+
+msgid "Move up"
+msgstr "위로 이동"
+
+msgid "Move left"
+msgstr "왼쪽으로 이동"
+
+msgid "Move down"
+msgstr "아래로 이동"
+
+msgid "Move right"
+msgstr "오른쪽으로 이동"
+
+msgid "Pick up · deliver · build"
+msgstr "줍기 · 전달 · 건축"
+
+msgid "Drop"
+msgstr "내려놓기"
+
+msgid "Dash"
+msgstr "대시"
+
+msgid "Horn"
+msgstr "뿔나팔"
+
+msgid "L Stick"
+msgstr "왼쪽 스틱"
+
+msgid "Hold %s"
+msgstr "%s 누르고 있기"
+
+msgid "Click"
+msgstr "클릭"
+
+msgid "Right Click"
+msgstr "우클릭"
+
+msgid "Middle Click"
+msgstr "휠 클릭"
+
+msgid "Mouse 4"
+msgstr "마우스 4"
+
+msgid "Mouse 5"
+msgstr "마우스 5"
+
+msgid "Mouse %d"
+msgstr "마우스 %d"
+
+msgid "D-Pad Up"
+msgstr "방향키 위"
+
+msgid "D-Pad Down"
+msgstr "방향키 아래"
+
+msgid "D-Pad Left"
+msgstr "방향키 왼쪽"
+
+msgid "D-Pad Right"
+msgstr "방향키 오른쪽"
+
+msgid "Button %d"
+msgstr "버튼 %d"
+
+msgid "Day"
+msgstr "제"
+
+msgid "of %d"
+msgstr "일 / %d"
+
+msgid "Today's work"
+msgstr "오늘의 작업"
+
+msgid "City breaches"
+msgstr "도성 침입"
+
+msgid "Begin the work"
+msgstr "작업 시작"
+
+msgid "Waiting for the host to begin…"
+msgstr "호스트가 시작하기를 기다리는 중…"
+
+msgid "Return to Title"
+msgstr "타이틀로 돌아가기"
+
+msgid "The work goes on"
+msgstr "작업은 계속됩니다"
+
+msgid "Menu"
+msgstr "메뉴"
+
+msgid "The game keeps running for your crew while this is open."
+msgstr "이 메뉴가 열려 있어도 작업단의 게임은 계속 진행됩니다."
+
+msgid "Resume"
+msgstr "계속하기"
+
+msgid "Leave to Title"
+msgstr "타이틀로 나가기"
+
+msgid "Move"
+msgstr "이동"
+
+msgid "Sling — charge, then throw"
+msgstr "물매 — 모았다가 던지기"
+
+msgid "Horn — call the crew"
+msgstr "뿔나팔 — 작업단 부르기"
+
+msgid "Controller disconnected — reconnect it to carry on"
+msgstr "컨트롤러 연결이 끊겼습니다 — 다시 연결하면 계속할 수 있습니다"
+
+msgid "Invite friends"
+msgstr "친구 초대"
+
+msgid "Overlay off — use the Crew panel"
+msgstr "오버레이 꺼짐 — 작업단 패널을 사용하세요"
+
+msgid "or press %s to begin"
+msgstr "또는 %s 눌러 시작"
+
+msgid "Down — a crewmate can lift you, or wait it out"
+msgstr "쓰러짐 — 동료가 일으켜 주거나 기다리세요"
+
+msgid "The day's stretch is done — keep the wall"
+msgstr "오늘 구간 완성 — 성벽을 지키세요"
+
+msgid "Take the %s to the gate"
+msgstr "%s → 성문으로 가져가세요"
+
+msgid "Take the %s to the wall"
+msgstr "%s → 성벽으로 가져가세요"
+
+msgid "Nothing needs %s now — drop it (%s)"
+msgstr "지금은 %s 필요 없음 — 내려놓기 (%s)"
+
+msgid "Build it up — %s at the gate"
+msgstr "건축하기 — 성문에서 %s"
+
+msgid "Build it up — %s at the wall"
+msgstr "건축하기 — 성벽에서 %s"
+
+msgid "Next: bring %s to the gate"
+msgstr "다음: %s → 성문"
+
+msgid "Next: bring %s to the wall"
+msgstr "다음: %s → 성벽"
+
+msgid "stone"
+msgstr "돌"
+
+msgid "wood"
+msgstr "목재"
+
+msgid "mortar"
+msgstr "회반죽"
+
+msgid "lime"
+msgstr "석회"
+
+msgid "water"
+msgstr "물"
+
+msgid "beams"
+msgstr "들보"
+
+msgid "rubble"
+msgstr "잔해"
+
+msgid "Gathering the crew"
+msgstr "작업단 모으는 중"
+
+msgid "Dawn — ready the workers"
+msgstr "새벽 — 일꾼들을 준비시키세요"
+
+msgid "The day's work is done"
+msgstr "오늘의 작업 완료"
+
+msgid "The wall is finished"
+msgstr "성벽이 완성되었습니다"
+
+msgid "The city has fallen"
+msgstr "도성이 함락되었습니다"
+
+msgid "A new stretch: %s  ·  %s"
+msgstr "새 구간: %s  ·  %s"
+
+msgid "Day %d"
+msgstr "%d일차"
+
+msgid "Day %d of %d"
+msgstr "%d일차 / %d일"
+
+msgid "The city is overrun"
+msgstr "도성이 점령당했습니다"
+
+msgid "Too many enemies reached the inner city. Gather the workers and begin again."
+msgstr "너무 많은 적이 도성 안까지 들어왔습니다. 일꾼들을 모아 다시 시작하세요."
+
+msgid "Days built"
+msgstr "건축한 날"
+
+msgid "Sections"
+msgstr "구간"
+
+msgid "Breaches"
+msgstr "침입"
+
+msgid "Marks"
+msgstr "휘장"
+
+msgid "Time"
+msgstr "시간"
+
+msgid "Section %d of %d  ·  %s"
+msgstr "%d/%d 구간  ·  %s"
+
+msgid "The %s stands"
+msgstr "%s 완공"
+
+msgid "A new best for this stretch — %d of 3 marks."
+msgstr "이 구간 최고 기록 — 휘장 3개 중 %d개."
+
+msgid "%d of 3 marks. Your best here stays as it was."
+msgstr "휘장 3개 중 %d개. 이 구간 최고 기록은 그대로입니다."
+
+msgid "Too many enemies reached the inner city. Try the stretch again."
+msgstr "너무 많은 적이 도성 안까지 들어왔습니다. 이 구간에 다시 도전하세요."
+
+msgid "Back to the map"
+msgstr "지도로 돌아가기"
+
+msgid "Day %d complete"
+msgstr "%d일차 완료"
+
+msgid "Not one enemy got through."
+msgstr "적이 한 명도 통과하지 못했습니다."
+
+msgid "Section %d of %d complete  ·  %s"
+msgstr "%d/%d 구간 완료  ·  %s"
+
+msgid "Loads carried"
+msgstr "나른 짐"
+
+msgid "Foes felled"
+msgstr "물리친 적"
+
+msgid "%d:%02d of %d:%02d"
+msgstr "%d:%02d / %d:%02d"
+
+msgid "all through the section"
+msgstr "구간 전체에서"
+
+msgid "%d%% sound"
+msgstr "%d%% 견고"
+
+msgid "In good time"
+msgstr "제때 완공"
+
+msgid "None got through"
+msgstr "침입 없음"
+
+msgid "The wall holds"
+msgstr "성벽이 견고함"
+
+msgid "You"
+msgstr "나"
+
+msgid "%d of %d builders here"
+msgstr "건축가 %d/%d명 도착"
+
+msgid "Crew %s"
+msgstr "작업단 %s"
+
+msgid "Downed"
+msgstr "쓰러짐"
+
+msgid "Crew"
+msgstr "작업단"
+
+msgid "Copy code"
+msgstr "코드 복사"
+
+msgid "Lobby code %s"
+msgstr "로비 코드 %s"
+
+msgid "Copied"
+msgstr "복사됨"
+
+msgid "No friends online"
+msgstr "접속 중인 친구 없음"
+
+msgid "in game"
+msgstr "게임 중"
+
+msgid "invited"
+msgstr "초대함"
+
+msgid "invite failed"
+msgstr "초대 실패"
+
+msgid "Neh. %s"
+msgstr "느 %s"
+
+msgid "Nehemiah %s"
+msgstr "느헤미야 %s"
+
+msgid "Nehemiah 6:15"
+msgstr "느헤미야 6:15"
+
+msgid "“So the wall was finished in the twenty-fifth day of Elul, in fifty-two days.”"
+msgstr "“성벽 공사가 엘룰월 이십오 일에 끝났으니, 오십이 일 만이었습니다.”"
+
+msgid "Builder"
+msgstr "건축가"
+
+msgid "Water carrier"
+msgstr "물 긷는 이"
+
+msgid "Carpenter"
+msgstr "목수"
+
+msgid "Overseer"
+msgstr "감독"
+
+msgid "Sheep Gate"
+msgstr "양문"
+
+msgid "Fish Gate"
+msgstr "어문"
+
+msgid "Jeshanah Gate"
+msgstr "여사나 문"
+
+msgid "Broad Wall"
+msgstr "넓은 성벽"
+
+msgid "Tower of Ovens"
+msgstr "화덕 망대"
+
+msgid "Valley Gate"
+msgstr "골짜기 문"
+
+msgid "Dung Gate"
+msgstr "분문"
+
+msgid "Fountain Gate"
+msgstr "샘문"
+
+msgid "Water Gate"
+msgstr "수문"
+
+msgid "Horse Gate"
+msgstr "마문"
+
+msgid "East Gate"
+msgstr "동문"
+
+msgid "Miphkad Gate"
+msgstr "함밉갓 문"
+
+msgid "Finish the gate: hang its doors, bolts and bars"
+msgstr "성문을 완성하세요: 문짝과 빗장과 자물쇠를 다세요"
+
+msgid "The beams are heavy — carry them in pairs"
+msgstr "들보는 무겁습니다 — 둘이서 함께 나르세요"
+
+msgid "No quarry stone here — salvage it from the burned rubble"
+msgstr "여기엔 채석한 돌이 없습니다 — 불탄 잔해에서 건져 내세요"
+
+msgid "Make the mortar: lime and water into the trough, then to the wall"
+msgstr "회반죽을 만드세요: 석회와 물을 통에 넣고 성벽으로 가져가세요"
+
+msgid "The Broad Wall: build it double-thick — more stone, and room for four at the work"
+msgstr "넓은 성벽: 두 겹 두께로 쌓으세요 — 돌이 더 들고, 네 명이 함께 일할 수 있습니다"
+
+msgid "They come up the valley in surges — {horn} sounds the horn: gather there"
+msgstr "적들이 골짜기로 몰려옵니다 — {horn} 뿔나팔을 불면 그곳에 모이세요"
+
+msgid "A long haul from the yard — drop a load beside a friend to pass it on"
+msgstr "자재 더미에서 먼 길입니다 — 동료 옆에 짐을 내려놓아 넘겨주세요"
+
+msgid "A quiet stretch by the Pool of Shelah — the water is close at hand"
+msgstr "셀라 못 옆의 조용한 구간 — 물이 가까이 있습니다"
+
+msgid "Night falls on the work — keep to the torchlight, they come out of the dark"
+msgstr "밤이 되었습니다 — 횃불 곁에 머무세요, 적들이 어둠 속에서 나옵니다"
+
+msgid "Each priest builds in front of his own house — mind the narrow lanes"
+msgstr "제사장마다 자기 집 앞을 건축합니다 — 좁은 골목을 조심하세요"
+
+msgid "Messengers will call you down to Ono — do not go with them"
+msgstr "사자들이 오노로 내려오라고 부를 것입니다 — 따라가지 마세요"
+
+msgid "Doors"
+msgstr "문짝"
+
+msgid "Beams"
+msgstr "들보"
+
+msgid "Salvage"
+msgstr "잔해 활용"
+
+msgid "Mortar mixing"
+msgstr "회반죽 섞기"
+
+msgid "Double-thick wall"
+msgstr "두 겹 성벽"
+
+msgid "The horn"
+msgstr "뿔나팔"
+
+msgid "Long haul"
+msgstr "먼 운반"
+
+msgid "The spring"
+msgstr "샘"
+
+msgid "Night watch"
+msgstr "야간 경계"
+
+msgid "Narrow lanes"
+msgstr "좁은 골목"
+
+msgid "Schemes"
+msgstr "음모"
+
+msgid "Section %s of %s · Days %d–%d"
+msgstr "%s/%s 구간 · %d–%d일차"
+
+msgid "With: %s"
+msgstr "특징: %s"
+
+msgid "The plain work: carry, build, defend"
+msgstr "기본 작업: 나르고, 쌓고, 지키기"
+
+msgid "Build again"
+msgstr "다시 건축"
+
+msgid "Build this stretch"
+msgstr "이 구간 건축"
+
+msgid "Finish the %s first"
+msgstr "먼저 완성하세요: %s"
+
+msgid "Choose a stretch of wall"
+msgstr "성벽 구간을 고르세요"
+
+msgid "Your best here"
+msgstr "이 구간 최고 기록"
+
+msgid "← →  or  Click   Choose          Esc   Back"
+msgstr "← →  또는  클릭   선택          Esc   뒤로"
+
+msgid "Build"
+msgstr "건축"
+
+msgid "Hang the doors"
+msgstr "문짝 달기"
+
+msgid "Seal the gap"
+msgstr "틈 메우기"
+
+msgid "Trough"
+msgstr "반죽 통"
+
+msgid "Mortar ready"
+msgstr "회반죽 준비됨"
+
+msgid "Picked clean"
+msgstr "다 비었음"
+
+msgid "Stone"
+msgstr "돌"
+
+msgid "Wood"
+msgstr "목재"
+
+msgid "Mortar"
+msgstr "회반죽"
+
+msgid "Lime"
+msgstr "석회"
+
+msgid "Water"
+msgstr "물"
+
+msgid "Beam"
+msgstr "들보"
+
+msgid "Rubble"
+msgstr "잔해"
+
+msgid "Wall"
+msgstr "성벽"
+
+msgid "Help"
+msgstr "도움"
+
+msgid "Surge"
+msgstr "공세"
+
+msgid "Come down to the plain of Ono"
+msgstr "오노 평지로 내려오라"
+
+msgid "Let go of the beam"
+msgstr "들보를 놓았습니다"
+
+msgid "Holding the other end — {interact} to let go"
+msgstr "반대쪽 끝을 드는 중 — {interact} 놓기"
+
+msgid "Stage built!"
+msgstr "단계 완성!"
+
+msgid "Hands full — deliver it, or {drop} to drop"
+msgstr "손이 가득 참 — 전달하거나 {drop} 내려놓기"
+
+msgid "Bring it to a wall"
+msgstr "성벽으로 가져가세요"
+
+msgid "Needs {need} first"
+msgstr "먼저 필요: {need}"
+
+msgid "Build this stage first — {drop} to drop, then {interact} to work"
+msgstr "이 단계를 먼저 쌓으세요 — {drop} 내려놓고 {interact} 작업"
+
+msgid "This wall is finished"
+msgstr "이 성벽은 완성되었습니다"
+
+msgid "Caught it"
+msgstr "받았다"
+
+msgid "Heavy — a partner can take the other end {interact}"
+msgstr "무거움 — 동료가 반대쪽 끝을 들 수 있습니다 {interact}"
+
+msgid "Enough hands here"
+msgstr "여기는 일손이 충분합니다"
+
+msgid "The horn was just sounded"
+msgstr "방금 뿔나팔을 불었습니다"
+
+msgid "Going down to Ono…"
+msgstr "오노로 내려가는 중…"
+
+msgid "Why should the work stop? Back to the wall!"
+msgstr "어찌 공사를 멈추겠습니까? 성벽으로 돌아가자!"
+
+msgid "Begin now"
+msgstr "지금 시작"
+
+msgid "E · Click   Continue          Esc   Skip"
+msgstr "E · 클릭   계속          Esc   건너뛰기"
+
+msgid "Section %s of %s · Day %d"
+msgstr "%s/%s 구간 · %d일차"
+
+msgid "Sanballat"
+msgstr "산발랏"
+
+msgid "Tobiah"
+msgstr "도비야"
+
+msgid "Geshem"
+msgstr "게셈"
+
+msgid "Samaria"
+msgstr "사마리아"
+
+msgid "Ammon"
+msgstr "암몬"
+
+msgid "Arabia"
+msgstr "아라비아"
+
+msgid "Eliashib the high priest and his brothers the priests take up the work at the Sheep Gate."
+msgstr "대제사장 엘리아십과 그의 형제 제사장들이 양문에서 공사를 시작합니다."
+
+msgid "The sons of Hassenaah build the Fish Gate and lay its beams."
+msgstr "하스나아 자손이 어문을 세우고 들보를 얹습니다."
+
+msgid "Joiada and Meshullam repair the Gate of the Old City. Its stone lies in the burned rubble."
+msgstr "요야다와 므술람이 옛 성의 문을 보수합니다. 그 돌은 불탄 잔해 속에 묻혀 있습니다."
+
+msgid "Goldsmiths and ointment makers — craftsmen, not masons — repair the wall as far as the Broad Wall."
+msgstr "금장색과 향품 장사 — 석공이 아닌 장인들 — 이 넓은 성벽까지 성벽을 보수합니다."
+
+msgid "Malchijah and Hasshub repair another section, and the Tower of the Bake Ovens."
+msgstr "말기야와 핫숩이 다른 구간과 화덕 망대를 보수합니다."
+
+msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
+msgstr "하눈과 사노아 주민들이 골짜기 문과 성벽 천 규빗을 다시 쌓습니다."
+
+msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
+msgstr "레갑의 아들 말기야가 분문을 보수합니다. 돌을 쌓아 둔 곳에서 멀리 떨어진 곳입니다."
+
+msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
+msgstr "살룬이 왕의 동산 곁 못가에 있는 샘문을 보수합니다."
+
+msgid "The temple servants living on Ophel work as far as the Water Gate. Guards keep watch by night."
+msgstr "오벨에 사는 성전 봉사자들이 수문까지 일합니다. 밤에는 파수꾼이 지킵니다."
+
+msgid "Above the Horse Gate the priests each repair in front of their own house."
+msgstr "마문 위쪽에서는 제사장들이 각각 자기 집 앞을 보수합니다."
+
+msgid "Shemaiah, the keeper of the East Gate, makes repairs."
+msgstr "동문 문지기 스마야가 보수합니다."
+
+msgid "The last stretch: from the Inspection Gate back around to the Sheep Gate. Close the circuit."
+msgstr "마지막 구간: 함밉갓 문에서 양문까지 돌아옵니다. 성벽을 한 바퀴 이으세요."
+
+msgid "Shushan the citadel · Month of Chislev"
+msgstr "수산 궁 · 기슬르월"
+
+msgid "Word from Judah"
+msgstr "유다에서 온 소식"
+
+msgid "Nehemiah, cupbearer to King Artaxerxes, asks about the Jews who returned to Jerusalem."
+msgstr "아닥사스다 왕의 술 맡은 관원 느헤미야가 예루살렘으로 돌아간 유대인들의 소식을 묻습니다."
+
+msgid "“The wall of Jerusalem is also broken down, and its gates are burned with fire.”"
+msgstr "“예루살렘 성벽도 무너졌고, 성문들은 불에 탔습니다.”"
+
+msgid "Before the king · Month of Nisan"
+msgstr "왕 앞에서 · 니산월"
+
+msgid "The request"
+msgstr "간청"
+
+msgid "He prays to the God of the heavens, then asks the king to send him to rebuild the city of his forefathers. The king grants it."
+msgstr "그는 하늘의 하느님께 기도한 뒤, 조상들의 성읍을 다시 세우도록 자기를 보내 달라고 왕에게 청합니다. 왕이 허락합니다."
+
+msgid "Jerusalem · By night"
+msgstr "예루살렘 · 밤"
+
+msgid "The inspection"
+msgstr "성벽 살피기"
+
+msgid "Telling no one, he rides out in the dark and inspects the broken walls and the burned gates."
+msgstr "그는 아무에게도 알리지 않고 어둠 속에 나가, 무너진 성벽과 불탄 성문들을 살핍니다."
+
+msgid "Jerusalem · 455 BCE"
+msgstr "예루살렘 · 기원전 455년"
+
+msgid "Let us build"
+msgstr "건축합시다"
+
+msgid "He tells the people how the hand of his God has been with him."
+msgstr "그는 하느님의 손이 자기를 도우셨다는 것을 백성에게 알립니다."
+
+msgid "“Let’s rise up and build.”"
+msgstr "“일어나 건축합시다.”"
+
+msgid "Sanballat scoffs"
+msgstr "산발랏의 조롱"
+
+msgid "Sanballat the Horonite hears that the wall is going up. He is furious, and he mocks the Jews before his army."
+msgstr "호론 사람 산발랏은 성벽이 올라간다는 소식을 듣고 크게 분노하여, 자기 군대 앞에서 유대인들을 조롱합니다."
+
+msgid "“Will they revive the stones out of the heaps of rubbish, since they are burned?”"
+msgstr "“불탄 돌들을 흙무더기에서 다시 살려 내겠다는 것이냐?”"
+
+msgid "Beside Sanballat"
+msgstr "산발랏 곁에서"
+
+msgid "Tobiah laughs"
+msgstr "도비야의 비웃음"
+
+msgid "“What they are building, if a fox climbed up it, he would break down their stone wall.”"
+msgstr "“그들이 쌓는 돌 성벽은 여우 한 마리만 올라가도 무너질 것이다.”"
+
+msgid "The work goes on. The wall is joined together up to half its height, for the people have a heart to work."
+msgstr "공사는 계속됩니다. 백성이 마음을 다해 일하므로 성벽이 절반 높이까지 이어집니다."
+
+msgid "Sanballat · Tobiah · Geshem"
+msgstr "산발랏 · 도비야 · 게셈"
+
+msgid "The conspiracy"
+msgstr "음모"
+
+msgid "The enemies plot together to come and fight against Jerusalem and throw it into confusion."
+msgstr "원수들이 함께 모의하여 예루살렘을 치고 혼란에 빠뜨리려 합니다."
+
+msgid "On the wall"
+msgstr "성벽 위에서"
+
+msgid "Keep Jehovah in mind"
+msgstr "여호와를 기억하라"
+
+msgid "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”"
+msgstr "“그들을 두려워하지 마십시오! 크고 두려우신 여호와를 기억하십시오.”"
+
+msgid "From that day on"
+msgstr "그날부터"
+
+msgid "Armed while building"
+msgstr "무장한 채 건축하다"
+
+msgid "Half the men work, half hold the spears. The builders carry the loads with one hand and a weapon in the other. Where the horn sounds, gather."
+msgstr "절반은 일하고 절반은 창을 듭니다. 건축하는 이들은 한 손으로 짐을 나르고 다른 손에는 무기를 듭니다. 뿔나팔 소리가 나는 곳에 모이십시오."
+
+msgid "A message from Sanballat and Geshem"
+msgstr "산발랏과 게셈의 전갈"
+
+msgid "Come down to Ono"
+msgstr "오노로 내려오라"
+
+msgid "Four times they send the same invitation, meaning to harm him. Four times he gives the same answer."
+msgstr "그들은 그를 해치려고 네 번이나 같은 초대를 보냅니다. 그는 네 번 모두 같은 대답을 합니다."
+
+msgid "“I am doing a great work, so that I can’t come down.”"
+msgstr "“나는 큰 공사를 하고 있으므로 내려갈 수 없습니다.”"
+
+msgid "%d slipped through — but the wall stands."
+msgid_plural "%d slipped through — but the wall stands."
+msgstr[0] "%d명이 뚫고 들어왔지만 성벽은 무사합니다."
+
+msgid "%d got through"
+msgid_plural "%d got through"
+msgstr[0] "%d명 침입"
+
+msgid "%d load"
+msgid_plural "%d loads"
+msgstr[0] "짐 %d개"
+
+msgid "%d foe"
+msgid_plural "%d foes"
+msgstr[0] "적 %d명"
+
+msgid "Waiting for %d builder still reading"
+msgid_plural "Waiting for %d builders still reading"
+msgstr[0] "아직 읽는 중인 건축가 %d명을 기다리는 중"
+
+msgid "Host to get a room code — friends join with it or your invite link"
+msgstr "게임을 만들면 방 코드가 나와요 — 친구들은 그 코드나 초대 링크로 들어와요"
+
+msgid "Host to get a room code — friends join with it"
+msgstr "게임을 만들면 방 코드가 나와요 — 친구들은 그 코드로 들어와요"
+
+msgid "Enter the 5-letter room code the host sees in game, or open their invite link."
+msgstr "호스트가 게임 안에서 보는 다섯 글자 방 코드를 입력하거나 초대 링크를 여세요."
+
+msgid "Enter the host's 5-letter room code — or a Steam lobby code / IP address."
+msgstr "호스트의 다섯 글자 방 코드를 입력하세요 — 또는 Steam 로비 코드 / IP 주소."
+
+msgid "Room"
+msgstr "방"
+
+msgid "Room code"
+msgstr "방 코드"
+
+msgid "Opening a room…"
+msgstr "방 여는 중…"
+
+msgid "Enter the room code first."
+msgstr "먼저 방 코드를 입력하세요."
+
+msgid "Joining room %s…"
+msgstr "%s 방에 들어가는 중…"
+
+msgid "Room codes are 5 letters, like KXBQM."
+msgstr "방 코드는 KXBQM처럼 다섯 글자예요."
+
+msgid "Copy invite link"
+msgstr "초대 링크 복사"
+
+msgid "Link copied"
+msgstr "링크 복사됨"
+
+msgid "Could not reach the online server."
+msgstr "온라인 서버에 연결할 수 없습니다."
+
+msgid "Lost the online server."
+msgstr "온라인 서버와 연결이 끊겼습니다."
+
+msgid "The online server didn't answer."
+msgstr "온라인 서버가 응답하지 않습니다."
+
+msgid "Couldn't connect to the host — one of your networks may block direct connections."
+msgstr "호스트에 연결할 수 없습니다 — 한쪽 네트워크가 직접 연결을 막고 있을 수 있습니다."
+
+msgid "Online error."
+msgstr "온라인 오류."
+
+msgid "The host closed the room."
+msgstr "호스트가 방을 닫았습니다."
+
+msgid "WebRTC is not available on this device."
+msgstr "이 기기에서는 WebRTC를 사용할 수 없습니다."
+

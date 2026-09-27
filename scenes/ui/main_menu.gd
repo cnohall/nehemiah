@@ -83,6 +83,11 @@ func _ready() -> void:
 		_picker.open(GameState.picker_return)
 		GameState.picker_return = -1
 
+# Language picked in Settings: redo the one line built from a format string
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and not host_btn.disabled:
+		_show_default_status()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if join_panel.visible and event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
@@ -149,13 +154,13 @@ func _show_default_status() -> void:
 		Net.STEAM:
 			net_status.text = "Signed in to Steam as %s — invite friends once in game" % NetworkManager.steam_name()
 		Net.ONLINE:
-			net_status.text = "Host to get a room code — friends join with it" + (
-				" or your invite link" if OS.has_feature("web") else "")
+			net_status.text = tr("Host to get a room code — friends join with it or your invite link") if OS.has_feature("web") \
+				else tr("Host to get a room code — friends join with it")
 		_:
 			if NetworkManager.steam_available():
 				net_status.text = "LAN mode — share your IP address to play together"
 			else:
-				net_status.text = "Steam unavailable: %s — LAN play only" % NetworkManager.steam_error()
+				net_status.text = tr("Steam unavailable: %s — LAN play only") % tr(NetworkManager.steam_error())
 
 # Join panel wording follows what the field accepts in this mode
 func _setup_join_copy() -> void:
@@ -165,9 +170,9 @@ func _setup_join_copy() -> void:
 	content.get_node("FieldLabel").text = "Room code"
 	address_input.placeholder_text = "ABCDE"
 	address_input.max_length = NetworkManager.ROOM_CODE_LEN if OS.has_feature("web") else 0
-	content.get_node("Hint").text = ("Enter the 5-letter room code the host sees in game, or open their invite link."
+	content.get_node("Hint").text = (tr("Enter the 5-letter room code the host sees in game, or open their invite link.")
 		if OS.has_feature("web") else
-		"Enter the host's 5-letter room code — or a Steam lobby code / IP address.")
+		tr("Enter the host's 5-letter room code — or a Steam lobby code / IP address."))
 
 # ── Host ───────────────────────────────────────────────────
 
@@ -252,9 +257,9 @@ func _fill_friend_games() -> void:
 	for g: Dictionary in games:
 		var b := Button.new()
 		b.theme_type_variation = &"PrimaryButton" if first == null else &"GhostButton"
-		b.text = "Join %s" % g.name
+		b.text = tr("Join %s") % g.name
 		b.pressed.connect(func():
-			status_label.text = "Joining %s…" % g.name
+			status_label.text = tr("Joining %s…") % g.name
 			NetworkManager.join_steam(g.lobby))
 		box.add_child(b)
 		if first == null:
@@ -271,7 +276,7 @@ func _on_connect() -> void:
 	status_label.text = "Connecting…"
 	connect_btn.disabled = true
 	if NetworkManager.is_room_code(addr) and NetworkManager.online_available():
-		status_label.text = "Joining room %s…" % addr.to_upper()
+		status_label.text = tr("Joining room %s…") % addr.to_upper()
 		NetworkManager.join_online(addr)
 	elif OS.has_feature("web"):
 		_join_failed("Room codes are 5 letters, like KXBQM.")

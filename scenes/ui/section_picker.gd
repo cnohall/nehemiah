@@ -90,12 +90,12 @@ func _select(i: int) -> void:
 	_map.section = i
 	var sec: Dictionary = GameState.SECTIONS[i]
 	var days: Array = sec["days"]
-	_eyebrow.text = "Section %s of %s · Days %d–%d" % [ROMAN[i], ROMAN[ROMAN.size() - 1], days.front(), days.back()]
-	_title.text = sec["name"]
-	_ref.text = "Nehemiah %s" % sec["ref"].trim_prefix("Neh. ")
-	_text.text = StoryData.SECTION_LINES[i]
-	var twists: Array = sec.get("twists", []).map(func(t: String): return TWIST_NAMES.get(t, t))
-	_meta.text = "With: %s" % ", ".join(twists) if not twists.is_empty() else "The plain work: carry, build, defend"
+	_eyebrow.text = tr("Section %s of %s · Days %d–%d") % [ROMAN[i], ROMAN[ROMAN.size() - 1], days.front(), days.back()]
+	_title.text = tr(sec["name"])
+	_ref.text = GameState.long_ref(sec["ref"])
+	_text.text = tr(StoryData.SECTION_LINES[i])
+	var twists: Array = sec.get("twists", []).map(func(t: String): return tr(TWIST_NAMES.get(t, t)))
+	_meta.text = tr("With: %s") % ", ".join(twists) if not twists.is_empty() else tr("The plain work: carry, build, defend")
 
 	for c in _marks.get_children():
 		c.queue_free()
@@ -116,7 +116,7 @@ func _select(i: int) -> void:
 	_build_btn.text = "Build again" if best >= 0 else "Build this stretch"
 	_lock.visible = not open_
 	if not open_:
-		_lock.text = "Finish the %s first" % GameState.SECTIONS[i - 1]["name"]
+		_lock.text = tr("Finish the %s first") % tr(GameState.SECTIONS[i - 1]["name"])
 	if changed:
 		Sfx.play("tally")
 

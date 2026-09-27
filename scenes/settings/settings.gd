@@ -17,6 +17,19 @@ var toggle_charge := false   # sling: press to start, press again to throw (inst
 # Only an action's primary key / mouse event is rebindable; pad remaps go through Steam Input.
 var bindings := {}
 var _booted := false   # apply() has run once (the boot-time apply)
+# UI language: a locale from LANGUAGES, or "" to follow the OS / browser
+var language := ""
+
+# Shipped translations (locale/*.po; the English text is the key), in picker order.
+# Names are written in their own language so anyone can find theirs.
+const LANGUAGES := [
+	["en", "English"], ["es", "Español"], ["pt_BR", "Português (Brasil)"],
+	["de", "Deutsch"], ["ko", "한국어"],
+]
+# Cinzel and Spectral have no Hangul: these subsets (tools/i18n/subset_kr_font.py)
+# stand behind every UI font. Desktop could fall back to a system font, the web can't.
+const KR_REGULAR := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Medium-subset.ttf"
+const KR_BOLD    := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Bold-subset.ttf"
 
 const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
 	"interact", "drop", "dash", "throw_charge", "horn"]
@@ -33,7 +46,9 @@ func _ready() -> void:
 		rumble = cfg.get_value("controls", "rumble", rumble)
 		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
+		language = cfg.get_value("general", "language", language)
 	_apply_bindings()
+	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
 		if AudioServer.get_bus_index(bus_name) == -1:
 			AudioServer.add_bus()
@@ -57,6 +72,7 @@ func _fit_ui() -> void:
 	win.content_scale_factor = clampf(UI_MIN_SCALE / s, 1.0, UI_MAX_BOOST) if s > 0.0 else 1.0
 
 func apply() -> void:
+	TranslationServer.set_locale(language if not language.is_empty() else OS.get_locale())
 	# Embedded/headless runs have no real window to resize
 	if DisplayServer.get_name() != "headless":
 		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
@@ -85,7 +101,46 @@ func save() -> void:
 	cfg.set_value("controls", "rumble", rumble)
 	cfg.set_value("controls", "toggle_charge", toggle_charge)
 	cfg.set_value("controls", "bindings", bindings)
+	cfg.set_value("general", "language", language)
 	cfg.save(PATH)
+
+# ── Language ───────────────────────────────────────────────
+
+## Locale actually in use, matched to a shipped one ("en" when nothing matches)
+func current_language() -> String:
+	var best := "en"
+	var best_score := 0
+	for row: Array in LANGUAGES:
+		var score := TranslationServer.compare_locales(TranslationServer.get_locale(), row[0])
+		if score > best_score:
+			best = row[0]
+			best_score = score
+	return best
+
+func _add_font_fallbacks() -> void:
+	var regular := load(KR_REGULAR) as Font
+	var bold := load(KR_BOLD) as Font
+	if regular == null or bold == null:
+		return
+	var fonts: Array[Font] = [UiStyle.CINZEL, UiStyle.CINZEL_SEMI, UiStyle.CINZEL_BOLD, UiStyle.CINZEL_XBOLD,
+		UiStyle.SPECTRAL, UiStyle.SPECTRAL_MEDIUM, UiStyle.SPECTRAL_ITALIC, UiStyle.WORLD_FONT, ThemeDB.fallback_font]
+	var theme := ThemeDB.get_project_theme()
+	if theme != null:
+		if theme.default_font != null:
+			fonts.append(theme.default_font)
+		for type in theme.get_font_type_list():
+			for font_name in theme.get_font_list(type):
+				fonts.append(theme.get_font(font_name, type))
+	for f: Font in fonts:
+		# A variation shares its base font's fallbacks
+		while f is FontVariation and (f as FontVariation).base_font != null:
+			f = (f as FontVariation).base_font
+		if f == null or f.fallbacks.has(regular) or f.fallbacks.has(bold):
+			continue
+		var heavy := f is FontFile and (f as FontFile).font_weight >= 600
+		var fb := f.fallbacks
+		fb.append(bold if heavy else regular)
+		f.fallbacks = fb
 
 # ── Bindings ───────────────────────────────────────────────
 

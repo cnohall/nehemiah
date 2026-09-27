@@ -64,7 +64,7 @@ func host(port: int = DEFAULT_PORT) -> void:
 	var err  := peer.create_server(port, MAX_PLAYERS)
 	if err != OK:
 		push_error("NetworkManager: create_server failed (err %d)" % err)
-		host_failed.emit("Could not open port %d." % port)
+		host_failed.emit(tr("Could not open port %d.") % port)
 		return
 	multiplayer.multiplayer_peer = peer
 	lobby_created.emit()
@@ -311,7 +311,7 @@ func _init_steam() -> void:
 func _on_steam_lobby_created(result: int, lobby_id: int) -> void:
 	if result != STEAM_RESULT_OK:
 		_hosting_lobby = false
-		host_failed.emit("Steam could not create a lobby (result %d)." % result)
+		host_failed.emit(tr("Steam could not create a lobby (result %d).") % result)
 		return
 	_lobby_id = lobby_id
 	_steam.setLobbyData(lobby_id, LOBBY_TAG_KEY, LOBBY_TAG_VAL)
@@ -321,7 +321,7 @@ func _on_steam_lobby_created(result: int, lobby_id: int) -> void:
 	var err: int = peer.create_host(0)
 	if err != OK:
 		disconnect_session()
-		host_failed.emit("Steam host socket failed (err %d)." % err)
+		host_failed.emit(tr("Steam host socket failed (err %d).") % err)
 		return
 	multiplayer.multiplayer_peer = peer
 	_set_presence()

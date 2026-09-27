@@ -1,0 +1,1228 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Nehemiah\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: scenes\ui\game_hud.gd:531
+msgid "%d foe"
+msgid_plural "%d foes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: scenes\ui\game_hud.gd:491
+msgid "%d got through"
+msgid_plural "%d got through"
+msgstr[0] ""
+msgstr[1] ""
+
+#: scenes\ui\game_hud.gd:529
+msgid "%d load"
+msgid_plural "%d loads"
+msgstr[0] ""
+msgstr[1] ""
+
+#: scenes\ui\game_hud.gd:573
+msgid "%d of %d builders here"
+msgstr ""
+
+msgid "%d of 3 marks. Your best here stays as it was."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:447
+msgid "%d slipped through — but the wall stands."
+msgid_plural "%d slipped through — but the wall stands."
+msgstr[0] ""
+msgstr[1] ""
+
+#: scenes\ui\game_hud.gd:492
+msgid "%d%% sound"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:490
+msgid "%d:%02d of %d:%02d"
+msgstr ""
+
+msgid "455 BCE  ·  Jerusalem"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:39
+msgid "A long haul from the yard — drop a load beside a friend to pass it on"
+msgstr ""
+
+#: scenes\story\story_data.gd:81
+msgid "A message from Sanballat and Geshem"
+msgstr ""
+
+msgid "A new best for this stretch — %d of 3 marks."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:329
+msgid "A new stretch: %s  ·  %s"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:40
+msgid "A quiet stretch by the Pool of Shelah — the water is close at hand"
+msgstr ""
+
+#: scenes\story\story_data.gd:34
+msgid "Above the Horse Gate the priests each repair in front of their own house."
+msgstr ""
+
+msgid "Accept a Steam invite, pick a friend below, or enter the host's IP address / lobby code."
+msgstr ""
+
+msgid "Address or lobby code"
+msgstr ""
+
+#: scenes\story\circuit_map.gd:23
+msgid "Ammon"
+msgstr ""
+
+#: scenes\story\circuit_map.gd:24
+msgid "Arabia"
+msgstr ""
+
+#: scenes\story\story_data.gd:76
+msgid "Armed while building"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:194
+msgid "Back"
+msgstr ""
+
+msgid "Back to the map"
+msgstr ""
+
+msgid "Beam"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:13
+msgid "Beams"
+msgstr ""
+
+#: scenes\story\story_data.gd:46
+msgid "Before the king · Month of Nisan"
+msgstr ""
+
+#: scenes\story\story_player.gd:314
+msgid "Begin now"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:6
+msgid "Begin the work"
+msgstr ""
+
+#: scenes\story\story_data.gd:64
+msgid "Beside Sanballat"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:386
+msgid "Breaches"
+msgstr ""
+
+#: scenes\player\player.gd:635
+msgid "Bring it to a wall"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:19
+msgid "Broad Wall"
+msgstr ""
+
+msgid "Build"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:116
+msgid "Build again"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:273
+msgid "Build it up — %s at the gate"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:273
+msgid "Build it up — %s at the wall"
+msgstr ""
+
+#: scenes\player\player.gd:641
+msgid "Build this stage first — {drop} to drop, then {interact} to work"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:116
+msgid "Build this stretch"
+msgstr ""
+
+#: scenes\main\main.gd:192
+msgid "Builder"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:167
+msgid "Button %d"
+msgstr ""
+
+#: scenes\shared\character_rig.gd:115
+msgid "Carpenter"
+msgstr ""
+
+#: scenes\player\player.gd:678
+msgid "Caught it"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:46
+msgid "Choose a Section"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:158
+msgid "Choose a stretch of wall"
+msgstr ""
+
+msgid "City breaches"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:27
+msgid "Click"
+msgstr ""
+
+#: scenes\story\story_data.gd:81
+msgid "Come down to Ono"
+msgstr ""
+
+#: scenes\messenger\messenger.gd:66
+msgid "Come down to the plain of Ono"
+msgstr ""
+
+msgid "Connect"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:276
+msgid "Connecting…"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:306
+msgid "Connection failed. Check the address and that the host is running."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:111
+msgid "Controller disconnected — reconnect it to carry on"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:245
+msgid "Controllers: remap buttons in Steam Input."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:796
+msgid "Copied"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:791
+msgid "Copy code"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:832
+msgid "Copy invite link"
+msgstr ""
+
+#: scenes\network_manager\network_manager.gd:67
+msgid "Could not open port %d."
+msgstr ""
+
+#: scenes\network_manager\webrtc_online.gd:93
+msgid "Could not reach the online server."
+msgstr ""
+
+#: scenes\network_manager\webrtc_online.gd:127
+msgid "Couldn't connect to the host — one of your networks may block direct connections."
+msgstr ""
+
+#: scenes\ui\main_menu.gd:202
+msgid "Creating Steam lobby…"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:777
+msgid "Crew"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:583
+msgid "Crew %s"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:164
+msgid "D-Pad Down"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:165
+msgid "D-Pad Left"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:166
+msgid "D-Pad Right"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:163
+msgid "D-Pad Up"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:32
+msgid "Dash"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:296
+msgid "Dawn — ready the workers"
+msgstr ""
+
+msgid "Day"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:334
+msgid "Day %d"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:446
+msgid "Day %d complete"
+msgstr ""
+
+msgid "Day %d of %d"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:384
+msgid "Days built"
+msgstr ""
+
+#: scenes\ui\ui_style.gd:128
+msgid "Display"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:264
+msgid "Done"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:13
+msgid "Doors"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:14
+msgid "Double-thick wall"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:261
+msgid "Down — a crewmate can lift you, or wait it out"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:728
+msgid "Downed"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:31
+msgid "Drop"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:22
+msgid "Dung Gate"
+msgstr ""
+
+#: scenes\story\story_player.gd:320
+msgid "E · Click   Continue          Esc   Skip"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:42
+msgid "Each priest builds in front of his own house — mind the narrow lanes"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:27
+msgid "East Gate"
+msgstr ""
+
+msgid "Effects"
+msgstr ""
+
+#: scenes\story\story_data.gd:25
+msgid "Eliashib the high priest and his brothers the priests take up the work at the Sheep Gate."
+msgstr ""
+
+#: scenes\player\player.gd:944
+msgid "Enough hands here"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:273
+msgid "Enter an address or lobby code first."
+msgstr ""
+
+msgid "Enter the 5-letter room code the host sees in game, or open their invite link."
+msgstr ""
+
+#: scenes\ui\main_menu.gd:175
+msgid "Enter the host's 5-letter room code — or a Steam lobby code / IP address."
+msgstr ""
+
+#: scenes\ui\main_menu.gd:272
+msgid "Enter the room code first."
+msgstr ""
+
+#: scenes\ui\section_picker.gd:119
+msgid "Finish the %s first"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:33
+msgid "Finish the gate: hang its doors, bolts and bars"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:17
+msgid "Fish Gate"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:462
+msgid "Foes felled"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:23
+msgid "Fountain Gate"
+msgstr ""
+
+#: scenes\story\story_data.gd:82
+msgid "Four times they send the same invitation, meaning to harm him. Four times he gives the same answer."
+msgstr ""
+
+#: scenes\ui\main_menu.gd:254
+msgid "Friends building now"
+msgstr ""
+
+#: scenes\story\story_data.gd:76
+msgid "From that day on"
+msgstr ""
+
+msgid "Fullscreen"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:292
+msgid "Gathering the crew"
+msgstr ""
+
+#: scenes\story\circuit_map.gd:24
+msgid "Geshem"
+msgstr ""
+
+#: scenes\player\player.gd:1044
+msgid "Going down to Ono…"
+msgstr ""
+
+#: scenes\story\story_data.gd:28
+msgid "Goldsmiths and ointment makers — craftsmen, not masons — repair the wall as far as the Broad Wall."
+msgstr ""
+
+#: scenes\story\story_data.gd:77
+msgid "Half the men work, half hold the spears. The builders carry the loads with one hand and a weapon in the other. Where the horn sounds, gather."
+msgstr ""
+
+#: scenes\player\player.gd:634
+msgid "Hands full — deliver it, or {drop} to drop"
+msgstr ""
+
+#: scenes\gate\gate.gd:265
+msgid "Hang the doors"
+msgstr ""
+
+#: scenes\story\story_data.gd:30
+msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
+msgstr ""
+
+#: scenes\story\story_data.gd:47
+msgid "He prays to the God of the heavens, then asks the king to send him to rebuild the city of his forefathers. The king grants it."
+msgstr ""
+
+#: scenes\story\story_data.gd:53
+msgid "He tells the people how the hand of his God has been with him."
+msgstr ""
+
+#: scenes\player\player.gd:704
+msgid "Heavy — a partner can take the other end {interact}"
+msgstr ""
+
+#: scenes\ui\offscreen_alerts.gd:61
+msgid "Help"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:152
+msgid "Hold"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:92
+msgid "Hold %s"
+msgstr ""
+
+#: scenes\player\player.gd:588
+msgid "Holding the other end — {interact} to let go"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:29
+msgid "Horn"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:34
+msgid "Horn — call the crew"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:26
+msgid "Horse Gate"
+msgstr ""
+
+msgid "Host Game"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:158
+msgid "Host to get a room code — friends join with it"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:157
+msgid "Host to get a room code — friends join with it or your invite link"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:71
+msgid "In good time"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:187
+msgid "Invite friends"
+msgstr ""
+
+#: scenes\story\story_data.gd:52
+msgid "Jerusalem · 455 BCE"
+msgstr ""
+
+#: scenes\story\story_data.gd:49
+msgid "Jerusalem · By night"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:18
+msgid "Jeshanah Gate"
+msgstr ""
+
+#: scenes\story\story_data.gd:27
+msgid "Joiada and Meshullam repair the Gate of the Old City. Its stone lies in the burned rubble."
+msgstr ""
+
+#: scenes\ui\main_menu.gd:260
+msgid "Join %s"
+msgstr ""
+
+msgid "Join Game"
+msgstr ""
+
+msgid "Join a crew"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:262
+msgid "Joining %s…"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:279
+msgid "Joining room %s…"
+msgstr ""
+
+#: scenes\story\story_data.gd:73
+msgid "Keep Jehovah in mind"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:157
+msgid "Keys"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:86
+msgid "L Stick"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:161
+msgid "LAN mode — share your IP address to play together"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:168
+msgid "Language"
+msgstr ""
+
+msgid "Leave to Title"
+msgstr ""
+
+#: scenes\player\player.gd:584
+msgid "Let go of the beam"
+msgstr ""
+
+#: scenes\story\story_data.gd:52
+msgid "Let us build"
+msgstr ""
+
+msgid "Lime"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:836
+msgid "Link copied"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:461
+msgid "Loads carried"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:792
+msgid "Lobby code %s"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:15
+msgid "Long haul"
+msgstr ""
+
+#: scenes\network_manager\webrtc_online.gd:121
+msgid "Lost the online server."
+msgstr ""
+
+#: scenes\game_state\game_state.gd:36
+msgid "Make the mortar: lime and water into the trough, then to the wall"
+msgstr ""
+
+#: scenes\story\story_data.gd:29
+msgid "Malchijah and Hasshub repair another section, and the Tower of the Bake Ovens."
+msgstr ""
+
+#: scenes\story\story_data.gd:31
+msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:388
+msgid "Marks"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:23
+msgid "Menu"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:43
+msgid "Messengers will call you down to Ono — do not go with them"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:28
+msgid "Middle Click"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:28
+msgid "Miphkad Gate"
+msgstr ""
+
+msgid "Mortar"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:13
+msgid "Mortar mixing"
+msgstr ""
+
+#: scenes\trough\trough.gd:144
+msgid "Mortar ready"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:142
+msgid "Mouse %d"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:28
+msgid "Mouse 4"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:28
+msgid "Mouse 5"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:29
+msgid "Move"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:27
+msgid "Move down"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:26
+msgid "Move left"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:27
+msgid "Move right"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:26
+msgid "Move up"
+msgstr ""
+
+#: scenes\settings\settings.gd:52
+msgid "Music"
+msgstr ""
+
+msgid "Music: “The Desert of Dreams” by insydnis (CC-BY 3.0)  ·  “Desert theme” by yd (CC0)  ·  Sound: Kenney.nl (CC0)  ·  Scripture adapted from the World English Bible (public domain)"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:15
+msgid "Narrow lanes"
+msgstr ""
+
+#: scenes\player\player.gd:638
+msgid "Needs {need} first"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:48
+msgid "Neh. %s"
+msgstr ""
+
+msgid "Nehemiah"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:51
+msgid "Nehemiah %s"
+msgstr ""
+
+msgid "Nehemiah 4:19"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:25
+msgid "Nehemiah 6:15"
+msgstr ""
+
+#: scenes\story\story_data.gd:43
+msgid "Nehemiah, cupbearer to King Artaxerxes, asks about the Jews who returned to Jerusalem."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:277
+msgid "Next: bring %s to the gate"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:277
+msgid "Next: bring %s to the wall"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:41
+msgid "Night falls on the work — keep to the torchlight, they come out of the dark"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:15
+msgid "Night watch"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:850
+msgid "No friends online"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:35
+msgid "No quarry stone here — salvage it from the burned rubble"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:71
+msgid "None got through"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:447
+msgid "Not one enemy got through."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:271
+msgid "Nothing needs %s now — drop it (%s)"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:147
+msgid "Off"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:147
+msgid "On"
+msgstr ""
+
+#: scenes\story\story_data.gd:73
+msgid "On the wall"
+msgstr ""
+
+#: scenes\network_manager\webrtc_online.gd:139
+msgid "Online error."
+msgstr ""
+
+#: scenes\ui\main_menu.gd:205
+msgid "Opening a room…"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:191
+msgid "Overlay off — use the Crew panel"
+msgstr ""
+
+#: scenes\shared\character_rig.gd:115
+msgid "Overseer"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:30
+msgid "Pick up · deliver · build"
+msgstr ""
+
+#: scenes\supply_pile\supply_pile.gd:135
+msgid "Picked clean"
+msgstr ""
+
+msgid "Preferences"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:281
+msgid "Press a key…"
+msgstr ""
+
+msgid "Quit"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:159
+msgid "Rebind keys…"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:248
+msgid "Reset to defaults"
+msgstr ""
+
+msgid "Resume"
+msgstr ""
+
+msgid "Return to Title"
+msgstr ""
+
+#: scenes\input_mode\input_mode.gd:27
+msgid "Right Click"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:812
+msgid "Room"
+msgstr ""
+
+msgid "Room code"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:282
+msgid "Room codes are 5 letters, like KXBQM."
+msgstr ""
+
+#: scenes\supply_pile\supply_pile.gd:48
+msgid "Rubble"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:147
+msgid "Rumble"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:13
+msgid "Salvage"
+msgstr ""
+
+#: scenes\story\circuit_map.gd:22
+msgid "Samaria"
+msgstr ""
+
+#: scenes\story\circuit_map.gd:22
+msgid "Sanballat"
+msgstr ""
+
+#: scenes\story\story_data.gd:58
+msgid "Sanballat scoffs"
+msgstr ""
+
+#: scenes\story\story_data.gd:59
+msgid "Sanballat the Horonite hears that the wall is going up. He is furious, and he mocks the Jews before his army."
+msgstr ""
+
+#: scenes\story\story_data.gd:70
+msgid "Sanballat · Tobiah · Geshem"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:16
+msgid "Schemes"
+msgstr ""
+
+msgid "Screen shake"
+msgstr ""
+
+#: scenes\gate\gate.gd:265
+msgid "Seal the gap"
+msgstr ""
+
+msgid "Section %d of %d  ·  %s"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:451
+msgid "Section %d of %d complete  ·  %s"
+msgstr ""
+
+#: scenes\story\story_data.gd:97
+msgid "Section %s of %s · Day %d"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:93
+msgid "Section %s of %s · Days %d–%d"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:385
+msgid "Sections"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:263
+msgid "Settings"
+msgstr ""
+
+#: scenes\story\story_data.gd:32
+msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
+msgstr ""
+
+#: scenes\game_state\game_state.gd:16
+msgid "Sheep Gate"
+msgstr ""
+
+#: scenes\story\story_data.gd:35
+msgid "Shemaiah, the keeper of the East Gate, makes repairs."
+msgstr ""
+
+#: scenes\story\story_data.gd:42
+msgid "Shushan the citadel · Month of Chislev"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:155
+msgid "Signed in to Steam as %s — invite friends once in game"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:29
+msgid "Sling"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:33
+msgid "Sling — charge, then throw"
+msgstr ""
+
+#: scenes\player\player.gd:624
+msgid "Stage built!"
+msgstr ""
+
+#: scenes\network_manager\network_manager.gd:314
+msgid "Steam could not create a lobby (result %d)."
+msgstr ""
+
+#: scenes\network_manager\network_manager.gd:324
+msgid "Steam host socket failed (err %d)."
+msgstr ""
+
+#: scenes\network_manager\network_manager.gd:101
+msgid "Steam is not running."
+msgstr ""
+
+#: scenes\network_manager\network_manager.gd:289
+msgid "Steam plugin failed to load"
+msgstr ""
+
+#: scenes\ui\main_menu.gd:163
+msgid "Steam unavailable: %s — LAN play only"
+msgstr ""
+
+msgid "Stone"
+msgstr ""
+
+msgid "Surge"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:270
+msgid "Take the %s to the gate"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:270
+msgid "Take the %s to the wall"
+msgstr ""
+
+#: scenes\story\story_data.gd:50
+msgid "Telling no one, he rides out in the dark and inspects the broken walls and the burned gates."
+msgstr ""
+
+#: scenes\ui\main_menu.gd:286
+msgid "That's a Steam lobby code — start Steam first."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:450
+msgid "The %s stands"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:37
+msgid "The Broad Wall: build it double-thick — more stone, and room for four at the work"
+msgstr ""
+
+msgid "The Wall"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:34
+msgid "The beams are heavy — carry them in pairs"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:302
+msgid "The city has fallen"
+msgstr ""
+
+msgid "The city is overrun"
+msgstr ""
+
+#: scenes\story\story_data.gd:70
+msgid "The conspiracy"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:264
+msgid "The day's stretch is done — keep the wall"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:298
+msgid "The day's work is done"
+msgstr ""
+
+#: scenes\story\story_data.gd:71
+msgid "The enemies plot together to come and fight against Jerusalem and throw it into confusion."
+msgstr ""
+
+msgid "The game keeps running for your crew while this is open."
+msgstr ""
+
+#: scenes\ui\section_picker.gd:14
+msgid "The horn"
+msgstr ""
+
+#: scenes\player\player.gd:1012
+msgid "The horn was just sounded"
+msgstr ""
+
+#: scenes\network_manager\webrtc_online.gd:165
+msgid "The host closed the room."
+msgstr ""
+
+#: scenes\story\story_data.gd:49
+msgid "The inspection"
+msgstr ""
+
+#: scenes\story\story_data.gd:36
+msgid "The last stretch: from the Inspection Gate back around to the Sheep Gate. Close the circuit."
+msgstr ""
+
+#: scenes\network_manager\webrtc_online.gd:124
+msgid "The online server didn't answer."
+msgstr ""
+
+#: scenes\ui\section_picker.gd:98
+msgid "The plain work: carry, build, defend"
+msgstr ""
+
+#: scenes\story\story_data.gd:46
+msgid "The request"
+msgstr ""
+
+#: scenes\story\story_data.gd:26
+msgid "The sons of Hassenaah build the Fish Gate and lay its beams."
+msgstr ""
+
+#: scenes\ui\section_picker.gd:15
+msgid "The spring"
+msgstr ""
+
+#: scenes\story\story_data.gd:33
+msgid "The temple servants living on Ophel work as far as the Water Gate. Guards keep watch by night."
+msgstr ""
+
+#: scenes\game_state\game_state.gd:71
+msgid "The wall holds"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:300
+msgid "The wall is finished"
+msgstr ""
+
+msgid "The work goes on"
+msgstr ""
+
+#: scenes\story\story_data.gd:66
+msgid "The work goes on. The wall is joined together up to half its height, for the people have a heart to work."
+msgstr ""
+
+#: scenes\game_state\game_state.gd:38
+msgid "They come up the valley in surges — {horn} sounds the horn: gather there"
+msgstr ""
+
+#: scenes\player\player.gd:642
+msgid "This wall is finished"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:412
+msgid "Time"
+msgstr ""
+
+#: scenes\story\circuit_map.gd:23
+msgid "Tobiah"
+msgstr ""
+
+#: scenes\story\story_data.gd:64
+msgid "Tobiah laughs"
+msgstr ""
+
+msgid "Today's work"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:152
+msgid "Toggle"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:376
+msgid "Too many enemies reached the inner city. Gather the workers and begin again."
+msgstr ""
+
+msgid "Too many enemies reached the inner city. Try the stretch again."
+msgstr ""
+
+#: scenes\game_state\game_state.gd:20
+msgid "Tower of Ovens"
+msgstr ""
+
+msgid "Trough"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:21
+msgid "Valley Gate"
+msgstr ""
+
+msgid "Vertical sync"
+msgstr ""
+
+msgid "Volume"
+msgstr ""
+
+#: scenes\story\story_player.gd:202
+msgid "Waiting for %d builder still reading"
+msgid_plural "Waiting for %d builders still reading"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Waiting for the host to begin…"
+msgstr ""
+
+#: scenes\ui\offscreen_alerts.gd:49
+msgid "Wall"
+msgstr ""
+
+msgid "Water"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:25
+msgid "Water Gate"
+msgstr ""
+
+#: scenes\shared\character_rig.gd:115
+msgid "Water carrier"
+msgstr ""
+
+#: scenes\network_manager\webrtc_online.gd:172
+msgid "WebRTC is not available on this device."
+msgstr ""
+
+#: scenes\player\player.gd:1046
+msgid "Why should the work stop? Back to the wall!"
+msgstr ""
+
+msgid "Windowed"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:98
+msgid "With: %s"
+msgstr ""
+
+msgid "Wood"
+msgstr ""
+
+#: scenes\story\story_data.gd:42
+msgid "Word from Judah"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:527
+msgid "You"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:179
+msgid "Your best here"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:491
+msgid "all through the section"
+msgstr ""
+
+#: scenes\game_state\game_state.gd:17
+msgid "beams"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:855
+msgid "in game"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:861
+msgid "invite failed"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:861
+msgid "invited"
+msgstr ""
+
+#: scenes\dropped_item\dropped_item.gd:12
+msgid "lime"
+msgstr ""
+
+#: scenes\dropped_item\dropped_item.gd:10
+msgid "mortar"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:91
+msgid "of %d"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:204
+msgid "or press %s to begin"
+msgstr ""
+
+#: scenes\ui\tag_icon.gd:24
+msgid "rubble"
+msgstr ""
+
+#: scenes\dropped_item\dropped_item.gd:8
+msgid "stone"
+msgstr ""
+
+#: scenes\dropped_item\dropped_item.gd:13
+msgid "water"
+msgstr ""
+
+#: scenes\dropped_item\dropped_item.gd:9
+msgid "wood"
+msgstr ""
+
+#: scenes\story\story_data.gd:74
+msgid "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”"
+msgstr ""
+
+#: scenes\story\story_data.gd:83
+msgid "“I am doing a great work, so that I can’t come down.”"
+msgstr ""
+
+#: scenes\story\story_data.gd:54
+msgid "“Let’s rise up and build.”"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:24
+msgid "“So the wall was finished in the twenty-fifth day of Elul, in fifty-two days.”"
+msgstr ""
+
+#: scenes\story\story_data.gd:44
+msgid "“The wall of Jerusalem is also broken down, and its gates are burned with fire.”"
+msgstr ""
+
+msgid "“The work is great and widely spread out, and we are separated on the wall, far from one another.”"
+msgstr ""
+
+#: scenes\story\story_data.gd:65
+msgid "“What they are building, if a fox climbed up it, he would break down their stone wall.”"
+msgstr ""
+
+#: scenes\story\story_data.gd:60
+msgid "“Will they revive the stones out of the heaps of rubbish, since they are burned?”"
+msgstr ""
+
+#: scenes\ui\section_picker.gd:202
+msgid "← →  or  Click   Choose          Esc   Back"
+msgstr ""
+
