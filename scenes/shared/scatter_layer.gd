@@ -604,7 +604,12 @@ func _mesh_for(kind: String) -> Mesh:
 	match kind:
 		"block", "slab", "opening", "chip", "timber": return Chunky.unit_block()
 		"pebble":  return _sphere(0.13, 0.10, 5, 2)
-		"blade":   return _cylinder(0.0, 0.075, 1.0, 3)
+		"blade":
+			# Thousands of these: a bare 3-sided cone (6 tris), no caps — the base sits in the ground
+			var m := _cylinder(0.0, 0.075, 1.0, 3)
+			m.cap_top = false
+			m.cap_bottom = false
+			return m
 		"bush":    return _sphere(0.42, 0.62, 12, 6)
 		"leaf":    return _sphere(0.6, 1.0, 14, 7)
 		"boulder": return _sphere(0.6, 0.9, 6, 3)
@@ -663,6 +668,7 @@ func _cylinder(top: float, bottom: float, height: float, segments: int) -> Cylin
 	m.bottom_radius = bottom
 	m.height = height
 	m.radial_segments = segments
+	m.rings = 0   # straight sides; extra rings only add triangles
 	return m
 
 func _multimesh(mesh: Mesh, xf: Array[Transform3D], colors: Array[Color], mat: Material = null) -> MultiMeshInstance3D:

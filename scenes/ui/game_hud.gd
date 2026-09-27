@@ -824,6 +824,11 @@ func _build_room_panel() -> void:
 			DisplayServer.clipboard_set(link)
 			share.text = "Link copied")
 		hb.add_child(share)
+	# Lift the controls hint clear of the room card (it's built first, in the same corner)
+	if _controls != null:
+		var lift := panel.get_combined_minimum_size().y + 10.0
+		_controls.offset_top -= lift
+		_controls.offset_bottom -= lift
 
 func _fill_friend_list(list: VBoxContainer, scroll: ScrollContainer) -> void:
 	for c in list.get_children():

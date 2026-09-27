@@ -86,7 +86,8 @@ var _parts: Array[GeometryInstance3D] = []
 var _outline_mat: ShaderMaterial
 var _marker_mat: ShaderMaterial
 var _look: Dictionary = {}
-var _web_mats: Dictionary = {}   # colour → this rig's material (web build only)
+var _web_mats: Dictionary = {}   # this rig's baked-part material (web build only)
+var _part_colors: Array[Color] = []   # parallel to _parts until the web bake
 
 # Pivots
 var _body: Node3D        # feet pivot — squash, bob, collapse
@@ -105,6 +106,7 @@ var _belt_tool: Node3D      # the builder's hammer hung at the hip between strok
 static var _meshes: Dictionary = {}
 static var _part_mat: ShaderMaterial
 static var _outlines: Dictionary = {}
+static var _baked: Dictionary = {}   # look + pivot → merged part mesh (web build only)
 
 # ── Looks ──────────────────────────────────────────────────
 
@@ -178,6 +180,7 @@ func set_look(look: Dictionary) -> void:
 	for c in get_children():
 		c.free()
 	_parts.clear()
+	_part_colors.clear()
 	_web_mats.clear()
 	_tool = null
 	_spear = null
@@ -678,6 +681,8 @@ func _build(look: Dictionary) -> void:
 			_part(_belt_tool, _bbox(Vector3(0.06, 0.42, 0.06), 0.015), Color(0.50, 0.34, 0.20), Vector3(0, -0.08, 0))
 			_part(_belt_tool, _bbox(Vector3(0.28, 0.17, 0.17), 0.04), Color(0.58, 0.57, 0.58), Vector3(0, 0.15, 0))
 		_tool_visible()
+	if not _instance_uniforms:
+		_bake_web()
 
 # Hair by style: a cap over the crown and down the back, chunky locks on top
 func _hair(style: String, hair: Color, hc: Vector3, hw: float, hh: float, hd: float, hat: String) -> void:
@@ -734,7 +739,8 @@ func _pivot(parent: Node3D, pos: Vector3) -> Node3D:
 func _part(parent: Node3D, mesh: Mesh, color: Color, pos: Vector3, rot := Vector3.ZERO, scl := Vector3.ONE) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
-	mi.material_override = _part_mat if _instance_uniforms else _web_mat(color)
+	if _instance_uniforms:
+		mi.material_override = _part_mat
 	# Outline shells on tiny parts (eyes, mouth, buckles) read as dirt specks
 	var ab := mesh.get_aabb().size
 	if _outline_mat != null and minf(ab.x, minf(ab.y, ab.z)) >= OUTLINE_MIN_PART:
@@ -746,15 +752,91 @@ func _part(parent: Node3D, mesh: Mesh, color: Color, pos: Vector3, rot := Vector
 	if _instance_uniforms:
 		mi.set_instance_shader_parameter("part_color", color)
 	_parts.append(mi)
+	_part_colors.append(color)
 	return mi
 
-func _web_mat(color: Color) -> ShaderMaterial:
-	if not _web_mats.has(color):
-		var m := ShaderMaterial.new()
-		m.shader = PART_SHADER_WEB
-		m.set_shader_parameter("part_color", color)
-		_web_mats[color] = m
-	return _web_mats[color]
+# ── Web: one mesh per pivot ───────────────────────────────
+# WebGL pays dearly per draw call and a figure is ~90 parts (twice that with the
+# shadow pass). On the web build each pivot's parts merge into one mesh with the
+# colour in the vertices: a dozen draws a figure. Pivots still animate as before.
+
+func _bake_web() -> void:
+	var groups: Dictionary = {}   # [pivot, outlined] → [[mesh, xform, colour], …]
+	var order: Array = []
+	for i in _parts.size():
+		var mi := _parts[i] as MeshInstance3D
+		var xf := mi.transform
+		var p := mi.get_parent() as Node3D
+		while p is MeshInstance3D:   # a part hung off another part (scarf tails)
+			xf = p.transform * xf
+			p = p.get_parent() as Node3D
+		var key := [p, mi.material_overlay != null]
+		if not groups.has(key):
+			groups[key] = []
+			order.append(key)
+		groups[key].append([mi.mesh, xf, _part_colors[i]])
+	var mat := ShaderMaterial.new()
+	mat.shader = PART_SHADER_WEB
+	_web_mats.clear()
+	_web_mats[&"baked"] = mat
+	var look_hash := _look.hash()
+	var merged: Array[GeometryInstance3D] = []
+	for g in order.size():
+		var key: Array = order[g]
+		var cache_key := "%d|%d" % [look_hash, g]
+		if not _baked.has(cache_key):
+			_baked[cache_key] = _merge_parts(groups[key])
+		var mi := MeshInstance3D.new()
+		mi.mesh = _baked[cache_key]
+		mi.material_override = mat
+		if key[1]:
+			mi.material_overlay = _outline_mat
+		(key[0] as Node3D).add_child(mi)
+		merged.append(mi)
+	# Children before parents, so a part only kept as a holder frees once emptied
+	for i in range(_parts.size() - 1, -1, -1):
+		var old := _parts[i] as MeshInstance3D
+		if old.get_child_count() == 0:
+			old.free()
+		else:
+			old.mesh = null
+	_parts = merged
+	_part_colors.clear()
+
+static func _merge_parts(list: Array) -> ArrayMesh:
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	for e: Array in list:
+		var mesh: Mesh = e[0]
+		var xf: Transform3D = e[1]
+		var c: Color = e[2]
+		var nb := xf.basis.inverse().transposed()
+		for s in mesh.get_surface_count():
+			var a := mesh.surface_get_arrays(s)
+			var v: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var n: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+			var base := verts.size()
+			for k in v.size():
+				verts.append(xf * v[k])
+				norms.append((nb * n[k]).normalized())
+				cols.append(c)
+			if a[Mesh.ARRAY_INDEX] == null or (a[Mesh.ARRAY_INDEX] as PackedInt32Array).is_empty():
+				for k in v.size():
+					idx.append(base + k)
+			else:
+				for k: int in a[Mesh.ARRAY_INDEX]:
+					idx.append(base + k)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_COLOR] = cols
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var out := ArrayMesh.new()
+	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return out
 
 # Shared meshes, keyed by size — every rig in the game reuses the same few
 static func _cached(key: String, make: Callable) -> Mesh:

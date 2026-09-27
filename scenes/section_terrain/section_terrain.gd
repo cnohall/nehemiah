@@ -221,6 +221,7 @@ func _torch(at: Vector3) -> void:
 	light.omni_range = 8.0
 	light.omni_attenuation = 1.2
 	light.light_energy = 0.0
+	light.visible = false
 	light.position.y = 0.3
 	torch.add_child(light)
 	_collider(at, Vector3(0.3, 2.0, 0.3))

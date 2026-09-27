@@ -43,6 +43,10 @@ var _day_sun_energy: float
 var _mood_tween: Tween
 
 func _ready() -> void:
+	if OS.has_feature("web"):   # WebGL: vignette only, no screen-texture tilt-shift
+		var mat := ShaderMaterial.new()
+		mat.shader = preload("res://scenes/main/vignette_web.gdshader")
+		$PostFX/Vignette.material = mat
 	add_to_group("camera_rig")
 	hud = HUD_SCENE.instantiate()
 	add_child(hud)
