@@ -32,6 +32,10 @@ export default {
     if (url.pathname === "/ws" || url.pathname === "/health") {
       return env.LOBBY.get(env.LOBBY.idFromName("lobby")).fetch(req);
     }
+    // AI assistants look for these on whatever host they land on; the site keeps them
+    if (url.pathname === "/llms.txt" || url.pathname === "/llms-full.txt") {
+      return Response.redirect(`https://www.nehemiahgame.com${url.pathname}`, 301);
+    }
     return serveGame(req, env, url);
   },
 };
