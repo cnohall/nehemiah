@@ -21,7 +21,7 @@ const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
 const ROMAN         := ["I", "II", "III", "IV"]
-const WIN_VERSE     := "“So the wall was completed on the 25th day of Elul, in 52 days.”"
+const WIN_VERSE     := "“So the wall was finished in the twenty-fifth day of Elul, in fifty-two days.”"
 const WIN_VERSE_REF := "Nehemiah 6:15"
 # Action → what it does; the key / button label comes from InputMode for the device
 # in use. Shown while gathering and on day 1, and whenever paused.
