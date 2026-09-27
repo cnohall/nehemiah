@@ -136,7 +136,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_close_pause()
 		return
-	if not event.is_action_pressed("pause") or end_screen.visible or GameState.phase == GameState.Phase.STORY:
+	if not event.is_action_pressed("pause") or end_screen.visible or _story_up():
 		return
 	get_viewport().set_input_as_handled()
 	if pause_menu.visible:
@@ -161,7 +161,7 @@ func _open_pause() -> void:
 # Pad unplugged mid-game: bring the menu up (online play can't freeze, but the player
 # at least stops acting on ghost input) and say what happened
 func _on_pad_lost() -> void:
-	if end_screen.visible or GameState.phase == GameState.Phase.STORY:
+	if end_screen.visible or _story_up():
 		return
 	_open_pause()
 	_pad_lost_note.show()
@@ -331,7 +331,9 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 					sub += "\n" + tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
 			_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
-			_show_end(true)
+			# The campaign's ending story plays first; Main calls show_end after it
+			if not StoryData.plays_ending():
+				_show_end(true)
 		GameState.Phase.LOST:
 			_show_end(false)
 
@@ -359,6 +361,14 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 	_banner_tween.tween_interval(hold)
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_banner_tween.tween_callback(banner.hide)
+
+# Story cards on screen: before a day, or the ending before the end screen
+func _story_up() -> bool:
+	return GameState.phase == GameState.Phase.STORY 		or (GameState.phase == GameState.Phase.WON and not end_screen.visible)
+
+func show_end(won: bool) -> void:
+	if not end_screen.visible:
+		_show_end(won)
 
 func _show_end(won: bool) -> void:
 	if _banner_tween:

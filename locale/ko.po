@@ -901,3 +901,32 @@ msgid "Waiting for %d builder still reading"
 msgid_plural "Waiting for %d builders still reading"
 msgstr[0] "아직 읽는 중인 건축가 %d명을 기다리는 중"
 
+msgid "Jerusalem · The twenty-fifth of Elul"
+msgstr "예루살렘 · 엘룰월 이십오 일"
+
+msgid "Fifty-two days"
+msgstr "오십이 일"
+
+msgid "The last stone is set and the doors hang in their gates. From the Sheep Gate all the way around, the wall stands."
+msgstr "마지막 돌이 놓이고 성문마다 문짝이 달렸습니다. 양문에서부터 한 바퀴를 빙 둘러 성벽이 섰습니다."
+
+msgid "They lost heart"
+msgstr "그들이 낙심하다"
+
+msgid "The enemies hear of it, and all the nations around are afraid. Their schemes have come to nothing."
+msgstr "원수들이 그 소식을 듣고, 주위의 모든 민족이 두려워합니다. 그들의 계략은 모두 헛것이 되었습니다."
+
+msgid "“They perceived that this work was done by our God.”"
+msgstr "“그들은 이 일이 우리 하느님께서 하신 일임을 깨달았습니다.”"
+
+msgid "The dedication of the wall"
+msgstr "성벽 봉헌식"
+
+msgid "Heard far away"
+msgstr "멀리까지 들리다"
+
+msgid "Two great choirs of thanksgiving go in procession on top of the wall, one to the right and one to the left, and meet at the house of God."
+msgstr "감사하는 두 큰 찬양대가 성벽 위를 행진합니다. 하나는 오른쪽으로, 하나는 왼쪽으로 가서 하느님의 집에서 만납니다."
+
+msgid "“The joy of Jerusalem was heard even far away.”"
+msgstr "“예루살렘의 기쁨이 멀리까지 들렸습니다.”"

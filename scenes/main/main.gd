@@ -57,7 +57,7 @@ func _ready() -> void:
 	director.story_started.connect(func(day: int): story.play(StoryData.slides_for_day(day)))
 	director.story_waiting_changed.connect(story.set_waiting)
 	director.story_ended.connect(story.close)
-	story.finished.connect(director.finish_reading)
+	story.finished.connect(_on_story_finished)
 	story.start_now_requested.connect(director.force_story_end)
 
 	NetworkManager.peer_connected.connect(_on_peer_connected)
@@ -128,6 +128,17 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			shake(0.25)
 		GameState.Phase.DAWN, GameState.Phase.STORY, GameState.Phase.LOST:
 			_set_mood(_day_sun_color, _day_sun_energy, CAM_SIZE)
+		GameState.Phase.WON:
+			# Every peer reads the ending at its own pace; nothing waits on it
+			if StoryData.plays_ending():
+				story.play(StoryData.ENDING)
+
+func _on_story_finished() -> void:
+	if GameState.phase == GameState.Phase.WON:
+		story.close()
+		hud.show_end(true)
+	else:
+		director.finish_reading()
 
 # The finishing blow lands heavy: a breath of slow motion, then back to speed
 func _slowmo() -> void:

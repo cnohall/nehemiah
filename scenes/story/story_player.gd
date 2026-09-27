@@ -126,6 +126,7 @@ func _show_slide(slide: Dictionary) -> void:
 	if has_map:
 		_map.section = slide["map"]
 		_map.inspect = slide.get("inspect", false)
+		_map.finale = slide.get("finale", false)
 		_map.play()
 	elif has_art:
 		_art.texture = load(art_path)

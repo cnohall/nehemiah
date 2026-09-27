@@ -11,7 +11,8 @@ extends RefCounted
 #   sky   — "night" | "dawn" | "day" | "dusk"   (drawn backdrop)
 #   built — 0–1, how much of the wall stands     (drawn backdrop)
 #   map   — section index: the circuit map instead of a backdrop (CircuitMap), sections
-#           before it standing; "inspect": true for the night ride, every stretch broken
+#           before it standing; "inspect": true for the night ride, every stretch broken;
+#           "finale": true for the ending, the last stretch rises and the ring closes
 #
 # Scripture: World English Bible (public domain, ebible.org/eng-web), checked 27 Sep 2026.
 # Adapted: Neh 4:14 reads "Yahweh" where the WEB has "the Lord", so credit it as
@@ -84,6 +85,26 @@ const BEATS := {
 		  "ref": "Nehemiah 6:2-4", "sky": "day", "built": 0.85 },
 	],
 }
+
+# After day 52: the ring closes, the foes lose heart, the dedication. The end screen
+# that follows carries Neh 6:15 itself, so the first card leaves the verse to it.
+const ENDING := [
+	{ "eyebrow": "Jerusalem · The twenty-fifth of Elul", "title": "Fifty-two days",
+	  "text": "The last stone is set and the doors hang in their gates. From the Sheep Gate all the way around, the wall stands.",
+	  "ref": "Nehemiah 6:15", "map": 11, "finale": true },
+	{ "eyebrow": "Sanballat · Tobiah · Geshem", "title": "They lost heart",
+	  "text": "The enemies hear of it, and all the nations around are afraid. Their schemes have come to nothing.",
+	  "verse": "“They perceived that this work was done by our God.”",
+	  "ref": "Nehemiah 6:16", "sky": "dusk", "built": 1.0 },
+	{ "eyebrow": "The dedication of the wall", "title": "Heard far away",
+	  "text": "Two great choirs of thanksgiving go in procession on top of the wall, one to the right and one to the left, and meet at the house of God.",
+	  "verse": "“The joy of Jerusalem was heard even far away.”",
+	  "ref": "Nehemiah 12:31-43", "sky": "dawn", "built": 1.0 },
+]
+
+## Campaign won: the ending plays before the end screen (not after a replay)
+static func plays_ending() -> bool:
+	return not GameState.is_replay() and not disabled()
 
 ## Slides to play before `day` starts; empty when the day has no story
 static func slides_for_day(day: int) -> Array:

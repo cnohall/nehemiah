@@ -906,3 +906,32 @@ msgid_plural "Waiting for %d builders still reading"
 msgstr[0] "Warte auf %d Bauperson, die noch liest"
 msgstr[1] "Warte auf %d Bauleute, die noch lesen"
 
+msgid "Jerusalem · The twenty-fifth of Elul"
+msgstr "Jerusalem · Der fünfundzwanzigste Elul"
+
+msgid "Fifty-two days"
+msgstr "Zweiundfünfzig Tage"
+
+msgid "The last stone is set and the doors hang in their gates. From the Sheep Gate all the way around, the wall stands."
+msgstr "Der letzte Stein ist gesetzt, die Türflügel hängen in den Toren. Vom Schaftor rundherum steht die Mauer."
+
+msgid "They lost heart"
+msgstr "Der Mut verließ sie"
+
+msgid "The enemies hear of it, and all the nations around are afraid. Their schemes have come to nothing."
+msgstr "Die Feinde hören davon, und alle Völker ringsum fürchten sich. Ihre Pläne sind gescheitert."
+
+msgid "“They perceived that this work was done by our God.”"
+msgstr "„Sie erkannten, dass dieses Werk von unserem Gott vollbracht worden war.“"
+
+msgid "The dedication of the wall"
+msgstr "Die Einweihung der Mauer"
+
+msgid "Heard far away"
+msgstr "Weithin zu hören"
+
+msgid "Two great choirs of thanksgiving go in procession on top of the wall, one to the right and one to the left, and meet at the house of God."
+msgstr "Zwei große Dankchöre ziehen auf der Mauer entlang, einer nach rechts, einer nach links, und treffen sich am Haus Gottes."
+
+msgid "“The joy of Jerusalem was heard even far away.”"
+msgstr "„Die Freude Jerusalems war bis in die Ferne zu hören.“"

@@ -906,3 +906,32 @@ msgid_plural "Waiting for %d builders still reading"
 msgstr[0] "Esperando %d construtor que ainda está lendo"
 msgstr[1] "Esperando %d construtores que ainda estão lendo"
 
+msgid "Jerusalem · The twenty-fifth of Elul"
+msgstr "Jerusalém · O dia vinte e cinco de elul"
+
+msgid "Fifty-two days"
+msgstr "Cinquenta e dois dias"
+
+msgid "The last stone is set and the doors hang in their gates. From the Sheep Gate all the way around, the wall stands."
+msgstr "A última pedra é assentada e as portas já estão no lugar. Da Porta das Ovelhas, por toda a volta, a muralha está de pé."
+
+msgid "They lost heart"
+msgstr "Perderam a coragem"
+
+msgid "The enemies hear of it, and all the nations around are afraid. Their schemes have come to nothing."
+msgstr "Os inimigos ficam sabendo, e todas as nações ao redor têm medo. Suas tramas não deram em nada."
+
+msgid "“They perceived that this work was done by our God.”"
+msgstr "“Perceberam que esta obra tinha sido feita por nosso Deus.”"
+
+msgid "The dedication of the wall"
+msgstr "A dedicação da muralha"
+
+msgid "Heard far away"
+msgstr "Ouvida de longe"
+
+msgid "Two great choirs of thanksgiving go in procession on top of the wall, one to the right and one to the left, and meet at the house of God."
+msgstr "Dois grandes coros de ação de graças seguem em procissão sobre a muralha, um para a direita e outro para a esquerda, e se encontram na casa de Deus."
+
+msgid "“The joy of Jerusalem was heard even far away.”"
+msgstr "“A alegria de Jerusalém era ouvida até de longe.”"
