@@ -40,6 +40,12 @@ var _deadline := 0.0
 var _clock := 0.0
 var _last_tick := 0
 const MAX_STEP := 0.25
+# Browsers stop drawing frames in a hidden tab, which freezes _process — a host who
+# switches tabs (say, to paste the invite link) would never answer a joiner. JS
+# timers still run there (throttled to ~1 s), so one keeps the handshake moving.
+const BG_TICK_MS := 500
+var _bg_tick: JavaScriptObject
+var _bg_timer = null
 
 static func available() -> bool:
 	if OS.has_feature("web"):
@@ -78,9 +84,31 @@ func leave() -> void:
 	_state = IDLE
 	room_code = ""
 	set_process(false)
+	_stop_bg_tick()
 
 func _ready() -> void:
 	set_process(false)
+
+func _exit_tree() -> void:
+	_stop_bg_tick()
+
+func _start_bg_tick() -> void:
+	if not OS.has_feature("web") or _bg_timer != null:
+		return
+	if _bg_tick == null:
+		_bg_tick = JavaScriptBridge.create_callback(_on_bg_tick)
+	_bg_timer = JavaScriptBridge.get_interface("window").setInterval(_bg_tick, BG_TICK_MS)
+
+func _stop_bg_tick() -> void:
+	if _bg_timer == null:
+		return
+	JavaScriptBridge.get_interface("window").clearInterval(_bg_timer)
+	_bg_timer = null
+
+func _on_bg_tick(_args: Array) -> void:
+	# Visible tabs get real frames; only step in for hidden ones
+	if is_processing() and JavaScriptBridge.eval("document.hidden", true):
+		_process(0.0)
 
 func _start(as_host: bool, code: String) -> void:
 	leave()
@@ -96,6 +124,7 @@ func _start(as_host: bool, code: String) -> void:
 	_last_tick = Time.get_ticks_msec()
 	_deadline = _now() + CONNECT_TIMEOUT
 	set_process(true)
+	_start_bg_tick()
 
 func _process(_delta: float) -> void:
 	var tick := Time.get_ticks_msec()
