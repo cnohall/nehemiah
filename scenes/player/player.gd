@@ -18,7 +18,13 @@ const SLING_MAX_DAMAGE := 25.0
 const SLING_CHARGE_TIME := 0.9    # seconds to full charge
 const SLING_COOLDOWN   := 0.6
 const SLING_MIN_THROW  := 1.5     # never land closer than this
-const AIM_ASSIST_DEG   := 18.0    # enemies inside this cone of the aim get homed on
+const SWORD_REACH     := 2.0      # a foe this close turns the sling press into a sword cut
+const SWORD_ARC_DEG   := 65.0     # half-width of the cut, either side of the foe we turned to
+const SWORD_DAMAGE    := 20.0     # scout 2 cuts, raider 3, brute 5
+const SWORD_COOLDOWN  := 0.45
+const SWORD_KNOCKBACK := 1.3      # metres a scout is shoved (brutes feel ~a third)
+const SWORD_HIT_FRAME := 2        # frame of the "sword" anim where the blade lands
+const AIM_ASSIST_DEG   := 18.0   # enemies inside this cone of the aim get homed on
 const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
 const AIM_RING_FREE    := Color(0.45, 0.30, 0.12, 0.85)   # dark ochre — reads on sand
@@ -240,7 +246,7 @@ func _build_pip() -> void:
 func _refresh_pip() -> void:
 	if _pip == null:
 		return
-	_pip.visible = GameState.crew_size > 1
+	_pip.visible = GameState.crew_size > 1 and not GameState.attract
 	(_pip.material_override as StandardMaterial3D).albedo_color = slot_color
 	if _pip_tween:
 		_pip_tween.kill()
@@ -664,6 +670,8 @@ func _why_not_needed(at: Vector3) -> PackedStringArray:
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
 			return ["Hands full — deliver it, or {drop} to drop", ""]
 		return ["Bring it to a wall", ""]
+	if wall.has_method("refusal"):   # a watch post explains itself
+		return [wall.refusal(carried_kind), ""]
 	var need: String = wall.next_need()
 	if not need.is_empty():
 		return ["Needs {need} first", need]
@@ -756,6 +764,11 @@ func _handle_attack(delta: float) -> void:
 		if _throw_just_pressed() and _sling_cd <= 0.0 and (brain != null or get_viewport().gui_get_hovered_control() == null):
 			if brain != null:
 				brain.throw_pressed = false
+			# Foe at arm's length: no time to whirl — draw the sword instead (Neh. 4:18)
+			var foe := _foe_in_sword_reach()
+			if foe != null:
+				_swing_sword(foe)
+				return
 			_charging = true
 			_charge = 0.0
 			whirling = true
@@ -803,6 +816,57 @@ func release_throw() -> void:
 	if _sprite.animation.begins_with("slash"):
 		_sprite.squash(Vector2(1.08, 0.94))
 		_server_sling.rpc_id(1, global_position, land, charge, InputMode.using_pad or brain != null)
+
+# ── Sword ──────────────────────────────────────────────────
+
+func _foe_in_sword_reach() -> Node3D:
+	var best: Node3D = null
+	var best_d := SWORD_REACH
+	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
+		var d := Vector2(enemy.global_position.x - global_position.x,
+			enemy.global_position.z - global_position.z).length()
+		if d < best_d:
+			best_d = d
+			best = enemy
+	return best
+
+## Owner: cut at the nearest foe; the server works out who the blade catches
+func _swing_sword(foe: Node3D) -> void:
+	_sling_cd = SWORD_COOLDOWN
+	_face_aim(foe.global_position)
+	_play_action("sword")
+	_sprite.squash(Vector2(1.06, 0.95))
+	while is_instance_valid(self) and _sprite.animation.begins_with("sword") \
+			and _sprite.frame < SWORD_HIT_FRAME:
+		await _sprite.frame_changed
+	if not is_instance_valid(self) or not _sprite.animation.begins_with("sword"):
+		return   # knocked out of the swing before it landed
+	_server_sword.rpc_id(1, global_position, aim_yaw)
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_sword(at: Vector3, yaw: float) -> void:
+	if not _from_owner() or downed:
+		return
+	var fwd := Vector2(sin(yaw), cos(yaw))
+	var hit := false
+	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
+		var to := Vector2(enemy.global_position.x - at.x, enemy.global_position.z - at.z)
+		# A little slack on reach: the foe kept walking during the wind-up
+		if to.length() > SWORD_REACH + 0.4 or absf(fwd.angle_to(to)) > deg_to_rad(SWORD_ARC_DEG):
+			continue
+		enemy.take_damage(SWORD_DAMAGE, worker_id())
+		enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
+		hit = true
+	_sword_fx.rpc(hit)
+
+# Server → everyone: the swish, and a jolt for whoever landed it
+@rpc("any_peer", "call_local", "reliable")
+func _sword_fx(hit: bool) -> void:
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	Sfx.play("sword", global_position)
+	if hit and is_multiplayer_authority():
+		_jolt(0.25, 0.3, 0.45, 0.1)
 
 # Turn toward a ground point: exact yaw for the rig, nearest 4-way facing for the rest
 func _face_aim(at: Vector3) -> void:

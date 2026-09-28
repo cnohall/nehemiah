@@ -66,7 +66,10 @@ func _process(delta: float) -> bool:
 				var f := root.gui_get_focus_owner()
 				print("menu focus: ", f.name if f else "<none>")
 			"start_game":
-				current_scene.queue_free()
+				# Out of the tree now, so the menu hands back GameState.attract before Main reads it
+				var menu := current_scene
+				root.remove_child(menu)
+				menu.queue_free()
 				_main = load("res://scenes/main/main.tscn").instantiate()
 				root.add_child(_main)
 				current_scene = _main

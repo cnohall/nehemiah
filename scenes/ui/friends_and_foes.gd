@@ -13,6 +13,8 @@ signal closed
 # key, group, name, role (eyebrow), quote (World English Bible, verbatim), ref, text.
 # Optional: "slot" (crew trade, CharacterRig.worker_look), "enemy" (enemy_look kind),
 # "move" (a signature animation played when picked).
+# Foes in the order they turn up along the wall (GameState.MET_AT), so the lineup
+# fills in left to right as the work goes on.
 const ENTRIES := [
 	{ "key": "nehemiah", "group": "friends", "name": "Nehemiah",
 	  "role": "Governor of Judah · Cupbearer to the king",
@@ -34,14 +36,26 @@ const ENTRIES := [
 	  "role": "The crew · Fourth player",
 	  "quote": "“Wherever you hear the sound of the trumpet, rally there to us.”", "ref": "Neh. 4:20",
 	  "text": "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers." },
+	{ "key": "scout", "group": "foes", "name": "Scout", "enemy": "scout", "move": "thrust",
+	  "role": "From the first day",
+	  "quote": "“They will not know or see, until we come in among them.”", "ref": "Neh. 4:11",
+	  "text": "Light and quick. Some slip through the gaps for the inner city, others turn on the wall. A few sling stones bring one down." },
 	{ "key": "sanballat", "group": "foes", "name": "Sanballat",
 	  "role": "The Horonite · Samaria",
 	  "quote": "“Will they revive the stones out of the heaps of rubbish, since they are burned?”", "ref": "Neh. 4:2",
 	  "text": "Furious that anyone has come to seek the good of the people. He mocks the builders before the army of Samaria, then plots to attack the city." },
+	{ "key": "brute", "group": "foes", "name": "Brute", "enemy": "brute", "move": "thrust",
+	  "role": "From day 9",
+	  "quote": "“They all conspired together to come and fight against Jerusalem.”", "ref": "Neh. 4:8",
+	  "text": "Helmet, shield and spear. Slow, but he hits hard, takes many stones, and always goes for the wall." },
 	{ "key": "tobiah", "group": "foes", "name": "Tobiah",
 	  "role": "The Ammonite · Ammon",
 	  "quote": "“What they are building, if a fox climbed up it, he would break down their stone wall.”", "ref": "Neh. 4:3",
 	  "text": "Sanballat’s companion, an official from Ammon. When jokes fail, he sends letters to make Nehemiah afraid." },
+	{ "key": "raider", "group": "foes", "name": "Raider", "enemy": "raider", "move": "slash",
+	  "role": "From day 21",
+	  "quote": "“…and cause the work to cease.”", "ref": "Neh. 4:11",
+	  "text": "Hooded and cloaked, with a dagger, and the fastest of them all. Raiders reach a gap before you do." },
 	{ "key": "geshem", "group": "foes", "name": "Geshem",
 	  "role": "The Arab · Arabia",
 	  "quote": "“What is this thing that you are doing? Will you rebel against the king?”", "ref": "Neh. 2:19",
@@ -50,18 +64,6 @@ const ENTRIES := [
 	  "role": "Sent by Sanballat and Geshem",
 	  "quote": "“Come! Let’s meet together in the villages in the plain of Ono.”", "ref": "Neh. 6:2",
 	  "text": "He walks up to a worker with an open letter and waits. Go with him and you are led away from the wall. Keep working and he gives up." },
-	{ "key": "scout", "group": "foes", "name": "Scout", "enemy": "scout", "move": "thrust",
-	  "role": "From the first day",
-	  "quote": "“They will not know or see, until we come in among them.”", "ref": "Neh. 4:11",
-	  "text": "Light and quick. Some slip through the gaps for the inner city, others turn on the wall. A few sling stones bring one down." },
-	{ "key": "brute", "group": "foes", "name": "Brute", "enemy": "brute", "move": "thrust",
-	  "role": "From day 9",
-	  "quote": "“They all conspired together to come and fight against Jerusalem.”", "ref": "Neh. 4:8",
-	  "text": "Helmet, shield and spear. Slow, but he hits hard, takes many stones, and always goes for the wall." },
-	{ "key": "raider", "group": "foes", "name": "Raider", "enemy": "raider", "move": "slash",
-	  "role": "From day 21",
-	  "quote": "“…and cause the work to cease.”", "ref": "Neh. 4:11",
-	  "text": "Hooded and cloaked, with a dagger, and the fastest of them all. Raiders reach a gap before you do." },
 ]
 const GROUPS := { "friends": "The builders", "foes": "Those against the work" }
 
@@ -71,11 +73,30 @@ const SWAY_SPEED := 0.55
 const DRAG_TURN  := 0.012     # rad per pixel dragged
 const MOVE_HOLD  := 1.3       # seconds a looping signature move plays
 const MEDAL      := 92.0
-# Not met yet: the figure as one flat shape of ink, no detail showing through
+const SUN_X      := 0.84      # of the plate's width: off to the side, clear of the head
+# The backdrop runs this far past each side of the plate, so its wall reads chunkier
+const BACKDROP_BLEED := 0.125
+const TEXT_W     := 860.0     # measure of the text column, so lines stay readable
+# Not met yet: the figure as one flat shape of ink, no detail showing through — but
+# edged in moonlight on the plate, so it still reads against the night
 const SILHOUETTE := """
 shader_type canvas_item;
 uniform vec4 ink : source_color;
-void fragment() { COLOR = vec4(ink.rgb, texture(TEXTURE, UV).a * ink.a); }
+uniform vec4 rim : source_color = vec4(0.0);
+uniform float rim_px = 2.5;
+// A material here opts out of the parent's clip_children, so the medals mask their own disc
+uniform bool disc = false;
+void fragment() {
+	float a = texture(TEXTURE, UV).a;
+	if (disc) {
+		a *= 1.0 - smoothstep(0.5 - fwidth(UV.x), 0.5, distance(UV, vec2(0.5)));
+	}
+	vec2 d = TEXTURE_PIXEL_SIZE * rim_px;
+	float inner = min(min(texture(TEXTURE, UV + vec2(d.x, 0.0)).a, texture(TEXTURE, UV - vec2(d.x, 0.0)).a),
+		min(texture(TEXTURE, UV + vec2(0.0, d.y)).a, texture(TEXTURE, UV - vec2(0.0, d.y)).a));
+	float edge = clamp(a - inner, 0.0, 1.0) * rim.a;
+	COLOR = vec4(mix(ink.rgb, rim.rgb, edge), a * ink.a);
+}
 """
 
 var _selected := -1
@@ -83,10 +104,12 @@ var _time := 0.0
 var _drag := 0.0
 var _dragging := false
 var _silhouette: ShaderMaterial
+var _silhouette_rim: ShaderMaterial
 
 var _plate: Control
 var _scene: Control          # backdrop + figure, clipped to the arch
 var _backdrop: StoryBackdrop
+var _floor: Control
 var _view_box: SubViewportContainer
 var _holder: Node3D
 var _rig: CharacterRig
@@ -111,6 +134,10 @@ func _ready() -> void:
 	_silhouette = ShaderMaterial.new()
 	_silhouette.shader = sh
 	_silhouette.set_shader_parameter("ink", Color(0.06, 0.04, 0.03, 0.92))
+	_silhouette_rim = _silhouette.duplicate()
+	_silhouette.set_shader_parameter("disc", true)
+	_silhouette_rim.set_shader_parameter("ink", Color(0.03, 0.03, 0.05, 1.0))
+	_silhouette_rim.set_shader_parameter("rim", Color(0.80, 0.82, 0.90, 0.75))
 	_build()
 	hide()
 
@@ -179,9 +206,12 @@ func _select(i: int) -> void:
 	_backdrop.sky = "night" if not known else ("dusk" if foe else "dawn")
 	_backdrop.built = 1.0 if not foe else (0.3 if known else 0.0)
 	_backdrop.pattern = hash(e["key"])
+	# The sun clear of the figure's head; an unmet one stands under the moon
+	_backdrop.sun_at = ((SUN_X if known else 0.5) + BACKDROP_BLEED) / (1.0 + 2.0 * BACKDROP_BLEED)
 	_rig.set_look(_look(e))
 	_holder.scale = Vector3.ONE * (Enemy.SCALE[_enemy_type(e)] if e.has("enemy") else 1.0)
-	_view_box.material = null if known else _silhouette
+	_view_box.material = null if known else _silhouette_rim
+	_floor.queue_redraw()
 	_rig.play("idle_down")
 	_rig.squash(Vector2(0.92, 1.08))
 	if known and e.has("move"):
@@ -397,20 +427,41 @@ func _build_plate() -> Control:
 	_scene.draw.connect(func(): _scene.draw_colored_polygon(_arch(_scene.size, 0.0), UiStyle.DUSK))
 	_plate.add_child(_scene)
 	_backdrop = StoryBackdrop.new()
-	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scene.add_child(_backdrop)
-	# Warm pool of light where the figure stands
-	var pool := Control.new()
-	pool.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	pool.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pool.draw.connect(func():
-		var c := Vector2(pool.size.x * 0.5, pool.size.y * 0.9)
-		pool.draw_set_transform(c, 0, Vector2(1, 0.22))
-		for k in 6:
-			pool.draw_circle(Vector2.ZERO, pool.size.x * (0.42 - k * 0.05), Color(1.0, 0.80, 0.52, 0.07))
-		pool.draw_set_transform(Vector2.ZERO))
-	_scene.add_child(pool)
+	_scene.resized.connect(func():
+		var bleed := _scene.size.x * BACKDROP_BLEED
+		_backdrop.position = Vector2(-bleed, 0)
+		_backdrop.size = _scene.size + Vector2(2.0 * bleed, 0))
+	# The ground in front of the wall, lit from the sky, and a soft pool of light where
+	# the figure stands — warm by day, cold under the moon
+	var pool_tex := GradientTexture2D.new()
+	pool_tex.fill = GradientTexture2D.FILL_RADIAL
+	pool_tex.fill_from = Vector2(0.5, 0.5)
+	pool_tex.fill_to = Vector2(1.0, 0.5)
+	pool_tex.gradient = Gradient.new()
+	pool_tex.gradient.set_color(0, Color(1, 1, 1, 0.42))
+	pool_tex.gradient.set_color(1, Color(1, 1, 1, 0))
+	pool_tex.gradient.add_point(0.55, Color(1, 1, 1, 0.16))
+	_floor = Control.new()
+	_floor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_floor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_floor.draw.connect(func():
+		var s := _floor.size
+		var night := _backdrop.sky == "night"
+		var glow: Color = StoryBackdrop.SKIES[_backdrop.sky][1]
+		var y := s.y * StoryBackdrop.WALL_BASE + 1.0
+		var near := glow.lerp(Color.BLACK, 0.66)
+		var far := glow.lerp(Color.BLACK, 0.9)
+		_floor.draw_polygon(PackedVector2Array([Vector2(0, y), Vector2(s.x, y), Vector2(s.x, s.y), Vector2(0, s.y)]),
+			PackedColorArray([near, near, far, far]))
+		_floor.draw_line(Vector2(0, y), Vector2(s.x, y), Color(glow, 0.25), 1.5)
+		var r := s.x * 0.46
+		_floor.draw_set_transform(Vector2(s.x * 0.5, s.y * 0.9), 0, Vector2(1, 0.24))
+		_floor.draw_texture_rect(pool_tex, Rect2(-r, -r, 2 * r, 2 * r), false,
+			Color(0.72, 0.80, 1.0) if night else Color(1.0, 0.80, 0.52))
+		_floor.draw_set_transform(Vector2.ZERO))
+	_scene.add_child(_floor)
 	_view_box = SubViewportContainer.new()
 	_view_box.stretch = true
 	_view_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -429,7 +480,7 @@ func _build_plate() -> Control:
 		inner.append(inner[0])
 		frame.draw_polyline(inner, Color(UiStyle.GOLD, 0.85), 1.5, true))
 	_plate.add_child(frame)
-	for n: Control in [_scene, frame, pool]:
+	for n: Control in [_scene, frame, _floor]:
 		_plate.resized.connect(n.queue_redraw)
 	return _plate
 
@@ -487,11 +538,14 @@ static func _stage_world(vp: SubViewport) -> Node3D:
 	return world
 
 func _build_info() -> Control:
+	# Hung from a fixed line level with the shoulder of the arch, so the name stays put
+	# from one entry to the next however long the text runs
 	var info := VBoxContainer.new()
 	info.add_theme_constant_override("separation", 12)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	info.alignment = BoxContainer.ALIGNMENT_BEGIN
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.add_child(_gap(120))
 	_eyebrow = _label(&"Eyebrow", 14, UiStyle.TERRACOTTA, false)
 	_eyebrow.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
 	info.add_child(_eyebrow)
@@ -526,6 +580,8 @@ func _build_info() -> Control:
 	info.add_child(_gap(8))
 	_text = _label(&"Body", 22, UiStyle.INK_SOFT)
 	_text.add_theme_constant_override("line_spacing", 5)
+	_text.custom_minimum_size.x = TEXT_W
+	_text.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	info.add_child(_text)
 	info.add_child(_gap(6))
 	_extra = VBoxContainer.new()
@@ -556,10 +612,22 @@ func _build_lineup() -> Control:
 				row.add_child(div)
 				row.add_child(_gap_x(28))
 			var col := VBoxContainer.new()
-			col.add_theme_constant_override("separation", 10)
+			col.add_theme_constant_override("separation", 18)   # room for the picked one to rise
 			col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			row.add_child(col)
-			col.add_child(_label(&"Eyebrow", 12, UiStyle.INK_MUTED, false, GROUPS[group]))
+			# Group title with a hairline run out across the group
+			var head := HBoxContainer.new()
+			head.add_theme_constant_override("separation", 14)
+			head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			col.add_child(head)
+			head.add_child(_label(&"Eyebrow", 13, UiStyle.INK_SOFT, false, GROUPS[group]))
+			var hair := ColorRect.new()
+			hair.color = UiStyle.RULE
+			hair.custom_minimum_size = Vector2(0, 1)
+			hair.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			hair.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			hair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			head.add_child(hair)
 			box = HBoxContainer.new()
 			box.add_theme_constant_override("separation", 16)   # room for longer names (Wasserträger)
 			box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -591,13 +659,14 @@ func _medal(i: int) -> Control:
 	disc.custom_minimum_size = Vector2(MEDAL, MEDAL)
 	disc.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	disc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	disc.pivot_offset = Vector2(MEDAL, MEDAL) * 0.5
+	disc.pivot_offset = Vector2(MEDAL * 0.5, MEDAL)   # grows upward, clear of its name
 	disc.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
 	disc.draw.connect(func():
 		var c := disc.size * 0.5
 		var tint: Color = OXBLOOD if foe else UiStyle.OLIVE
 		disc.draw_circle(c, MEDAL * 0.5, tint.lerp(UiStyle.PARCHMENT, 0.72))
-		disc.draw_circle(c + Vector2(0, MEDAL * 0.22), MEDAL * 0.36, tint.lerp(UiStyle.PARCHMENT, 0.58)))
+		# Kept inside the disc: whatever the disc draws is also its clip mask
+		disc.draw_circle(c + Vector2(0, MEDAL * 0.16), MEDAL * 0.34, tint.lerp(UiStyle.PARCHMENT, 0.58)))
 	m.add_child(disc)
 	var box := SubViewportContainer.new()
 	box.stretch = true
@@ -637,7 +706,7 @@ func _medal(i: int) -> Control:
 		ring.draw_arc(ring.size * 0.5, MEDAL * 0.5 - (2.5 if here else 1.0), 0, TAU, 64,
 			UiStyle.GOLD if here else Color(UiStyle.INK, 0.3), 5.0 if here else 1.5, true))
 	disc.add_child(ring)
-	var name_l := _label(&"Eyebrow", 11, UiStyle.INK_SOFT, false)
+	var name_l := _label(&"Eyebrow", 12, UiStyle.INK_SOFT, false)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.custom_minimum_size.x = MEDAL + 4
 	name_l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
@@ -647,7 +716,9 @@ func _medal(i: int) -> Control:
 	# The one picked stands a little forward: larger, gold rim, its name in terracotta
 	m.draw.connect(func():
 		var here := i == _selected
-		name_l.add_theme_color_override("font_color", UiStyle.TERRACOTTA if here else UiStyle.INK_SOFT)
+		var known := name_l.text != "?"
+		name_l.add_theme_color_override("font_color",
+			UiStyle.TERRACOTTA if here else (UiStyle.INK_SOFT if known else UiStyle.INK_MUTED))
 		disc.scale = Vector2.ONE * (1.1 if here else 1.0)
 		ring.queue_redraw())
 	_medals.append(m)

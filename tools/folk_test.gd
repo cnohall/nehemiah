@@ -77,7 +77,7 @@ func _process(_delta: float) -> bool:
 		90:
 			_check(_page._selected == ENTRIES_LAST(), "← from the first wraps to the last")
 			_moves.clear()
-			_page._medals[9].grab_focus()   # scout
+			_page._medals[5].grab_focus()   # scout
 		104:
 			_shot("scout")
 		150:
@@ -91,7 +91,7 @@ func _process(_delta: float) -> bool:
 			_mouse(_page._plate.get_global_rect().get_center(), false)
 		300:
 			_check(absf(_page._drag) < 1.0, "the figure eases back after the drag")
-			_page._medals[10].grab_focus()   # brute
+			_page._medals[7].grab_focus()   # brute
 		330:
 			_shot("brute")
 			_key("ui_cancel")

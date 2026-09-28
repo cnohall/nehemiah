@@ -19,11 +19,16 @@ enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD }
 # push (1 = full run); aim_err = metres off the enemy; charge = least wind-up;
 # reach = how far a threat is noticed; dawdle = chance to stand about at a decision;
 # ono = chance of going with the messenger when he asks; guard = leaves the wall work to
-# see off an enemy that comes close
+# see off an enemy that comes close; crew = how much of a worker the bot counts as when
+# WaveManager sizes the enemy to the crew (a weak bot shouldn't bring a full worker's foes);
+# about = the one line the gathering screen shows under the choice
 const SKILLS := [
-	{ "name": "Apprentice",     "think": 0.7,  "speed": 0.72, "aim_err": 2.2,  "charge": 0.35, "reach": 6.0,  "dawdle": 0.12, "ono": 0.35, "guard": false },
-	{ "name": "Builder",        "think": 0.4,  "speed": 0.88, "aim_err": 1.0,  "charge": 0.6,  "reach": 8.5,  "dawdle": 0.04, "ono": 0.08, "guard": false },
-	{ "name": "Master builder", "think": 0.18, "speed": 1.0,  "aim_err": 0.35, "charge": 0.8,  "reach": 10.0, "dawdle": 0.0,  "ono": 0.0,  "guard": true },
+	{ "name": "Apprentice",     "think": 0.7,  "speed": 0.72, "aim_err": 2.2,  "charge": 0.35, "reach": 6.0,  "dawdle": 0.12, "ono": 0.35, "guard": false, "crew": 0.5,
+		"about": "Slow, misses often, may wander off" },
+	{ "name": "Builder",        "think": 0.4,  "speed": 0.88, "aim_err": 1.0,  "charge": 0.6,  "reach": 8.5,  "dawdle": 0.04, "ono": 0.08, "guard": false, "crew": 0.75,
+		"about": "Steady hands, a fair aim" },
+	{ "name": "Master builder", "think": 0.18, "speed": 1.0,  "aim_err": 0.35, "charge": 0.8,  "reach": 10.0, "dawdle": 0.0,  "ono": 0.0,  "guard": true,  "crew": 1.0,
+		"about": "Quick, sure shot, leaves the work to guard" },
 ]
 
 const ARRIVE        := 0.5    # close enough to a path point
@@ -39,6 +44,9 @@ const WORK_BREAK    := 4.5    # a Master builder leaves the work for an enemy th
 const FOLLOW_GAP    := 1.6    # holding a beam's far end: keep this close to the carrier
 const GUARD_BACK    := 2.5    # guards stand this far inside the wall they watch
 const THREAT_BONUS  := 4.0    # metres a harmful enemy is treated as nearer, for the sling
+const TROUGH_PRIORITY := 30.0 # fetch score bonus for the trough's lime and water
+const SPACING       := 1.2    # workers don't collide: a bot edges away from any this close…
+const SPREAD_PUSH   := 0.6    # …this hard (stick units) when right on top of them
 
 # Read by Player
 var move := Vector2.ZERO          # screen-space stick, like Input.get_vector
@@ -69,6 +77,7 @@ var _ono := {}                    # messenger → true/false: go with him when h
 func _init(player: Player, skill_index: int) -> void:
 	_p = player
 	set_skill(skill_index)
+	_think = randf() * skill["think"]   # out of step with the other bots from the first decision
 
 func set_skill(index: int) -> void:
 	skill = SKILLS[clampi(index, 0, SKILLS.size() - 1)]
@@ -94,9 +103,11 @@ func think(delta: float) -> void:
 		_think = skill["think"] * randf_range(0.8, 1.2)
 		_decide()
 	_sling()
-	if _dawdle > 0.0 or _p._work_site != null:
+	if _p._work_site != null:
 		return
-	_act(delta)
+	if _dawdle <= 0.0:
+		_act(delta)
+	_spread()
 
 func _can_act() -> bool:
 	if _p.downed or _p._led_by != null or _p._is_busy:
@@ -123,11 +134,25 @@ func _decide() -> void:
 		_set_job(Job.REVIVE, fallen)
 		return
 	if not _p.carried_kind.is_empty():
-		var site := _nearest_site(func(s): return s.needs(_p.carried_kind))
+		# The wall comes first — except a watch post that has run dry, which gets the
+		# next stone. Otherwise a post takes what no wall wants.
+		var site := _empty_post() if _p.carried_kind == "stone" else null
+		if site == null:
+			site = _nearest_site(func(s): return s.needs(_p.carried_kind))
+		if site == null:
+			site = _nearest_post(func(s): return s.needs(_p.carried_kind) and (s.built or _posts_ok()))
 		if site != null:
 			_set_job(Job.DELIVER, site)
 		elif _p.carried_kind in ["lime", "water"] and _trough() != null:
-			_set_job(Job.DELIVER, _trough())   # the next batch: wait by the trough with it
+			var trough := _trough()
+			if trough.mortar_ready and _dist(trough) < Player.INTERACT_REACH + 1.0:
+				# Mortar is waiting in it and our load can't go in until someone takes it:
+				# set ours down here (it'll be picked up again) and carry the mortar
+				_press("drop")
+				_set_job(Job.FETCH, trough)
+				_fetch_kind = "mortar"
+			else:
+				_set_job(Job.DELIVER, trough)   # the next batch: wait by the trough with it
 		else:
 			_press("drop")   # nobody wants it (the wall moved on) — clear the hands
 			_set_job(Job.IDLE, null)
@@ -144,6 +169,9 @@ func _decide() -> void:
 		return
 	var ready := _nearest_site(func(s): return s.can_build() and s.work() != null \
 		and (s.work().builder_count() < 2 or _job == Job.WORK and _target == s))
+	if ready == null:
+		ready = _nearest_post(func(s): return _posts_ok() and s.can_build() \
+			and (s.work().builder_count() < 1 or _job == Job.WORK and _target == s))
 	if ready != null:
 		_set_job(Job.WORK, ready)
 		return
@@ -210,6 +238,12 @@ func _pick_fetch() -> Node3D:
 	for s in _sites():
 		for kind: String in _missing(s):
 			missing[kind] = missing.get(kind, 0) + _missing(s)[kind]
+	# Watch posts: one load at a time on top of the wall's needs (timber to raise one,
+	# stone to keep one throwing)
+	var post := _nearest_post(func(s): return not s.next_need().is_empty() and (s.built or _posts_ok()))
+	if post != null:
+		var need: String = post.next_need()
+		missing[need] = missing.get(need, 0) + 1
 	# Mortar comes a batch at a time from the trough: while one mixes, bring the next
 	var trough := _trough()
 	if trough != null and missing.get("mortar", 0) >= 2:
@@ -232,6 +266,11 @@ func _pick_fetch() -> Node3D:
 		if src == null:
 			continue   # e.g. the trough is still mixing
 		var score: float = missing[kind] * 4.0 - _dist(src)
+		# The trough is the bottleneck of a mixing section: its lime and water come before
+		# more stone for the wall, or a half-filled trough waits all day (and every wall
+		# with it, stuck at "needs mortar")
+		if kind == "lime" or kind == "water":
+			score += TROUGH_PRIORITY
 		if score > best_score:
 			best_score = score
 			best = src
@@ -268,13 +307,13 @@ func _missing(site: Node3D) -> Dictionary:
 # Today's build sites that still want loads: the target walls and gates, plus the trough
 func _sites() -> Array:
 	return _p.get_tree().get_nodes_in_group("build_sites").filter(func(s):
-		return (not "is_target" in s or s.is_target) and not s.next_need().is_empty())
+		return (not "is_target" in s or s.is_target) and not s.next_need().is_empty() and WorkFront.is_open(s))
 
 func _nearest_site(accept: Callable) -> Node3D:
 	var best: Node3D = null
 	var best_d := INF
 	for s in _p.get_tree().get_nodes_in_group("build_sites"):
-		if "is_target" in s and not s.is_target:
+		if "is_target" in s and not s.is_target or not WorkFront.is_open(s):
 			continue
 		if not accept.call(s):
 			continue
@@ -283,6 +322,39 @@ func _nearest_site(accept: Callable) -> Node3D:
 			best_d = d
 			best = s
 	return best
+
+# Watch posts (GameState.posts): not among the day's targets, so looked up on their own
+func _nearest_post(accept: Callable) -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for s in _p.get_tree().get_nodes_in_group("watch_posts"):
+		if not s.is_visible_in_tree() or not accept.call(s):
+			continue
+		var d := _dist(s)
+		if d < best_d:
+			best_d = d
+			best = s
+	return best
+
+# Raising a new post is worth the timber only while the wall is on track: not on the
+# stretch's last day, and at least as far along as the days gone by
+func _posts_ok() -> bool:
+	if not GameState.sun:
+		return true
+	var pos := GameState.day_in_section(GameState.current_day)
+	if pos.x == pos.y - 1:
+		return false
+	return GameState.targets_done >= GameState.targets_total * pos.x / float(pos.y)
+
+# A standing post out of stones that no other bot is already taking stone to
+func _empty_post() -> Node3D:
+	return _nearest_post(func(s):
+		if not s.built or s.ammo > 0:
+			return false
+		for w in _p.get_tree().get_nodes_in_group("players"):
+			if w != _p and w.brain != null and w.brain._job == Job.DELIVER and w.brain._target == s:
+				return false
+		return true)
 
 # A load of `kind`: lying on the ground, or a pile (the trough counts once it's mixed)
 func _nearest_source(kind: String) -> Node3D:
@@ -482,6 +554,26 @@ func _check_stuck(delta: float) -> void:
 		_path = PackedVector3Array()
 	_stuck_t = 0.0
 	_stuck_from = _p.global_position
+
+# Workers pass through each other, so keep bots from sharing a spot: edge away from anyone
+# too close (people included — a bot gives way, a person never gets shoved). The beam
+# partner and the fallen are left alone; those need us close.
+func _spread() -> void:
+	var partner := _p._beam_partner()
+	var push := Vector3.ZERO
+	for w in _p.get_tree().get_nodes_in_group("players"):
+		if w == _p or w == partner or w.downed:
+			continue
+		var off := _flat(_p.global_position - w.global_position)
+		var d := off.length()
+		if d >= SPACING:
+			continue
+		if d < 0.05:   # right on top: a way of our own (by id), so the two part
+			off = Vector3.RIGHT.rotated(Vector3.UP, float(_p.get_instance_id() % 360))
+		push += off.normalized() * (1.0 - d / SPACING)
+	if push == Vector3.ZERO:
+		return
+	move = (move + Vector2(push.dot(Player.SCREEN_RIGHT), push.dot(Player.SCREEN_DOWN)) * SPREAD_PUSH).limit_length(1.0)
 
 # Ground direction → the screen-space stick Player expects (SCREEN_RIGHT/DOWN are orthonormal)
 func _steer(dir: Vector3) -> void:

@@ -6,6 +6,11 @@ const DRIFT_PERIOD := 64.0   # seconds for a full left-right-left sweep
 const PUSH_IN_ZOOM := 1.08
 const REST_ZOOM    := 1.035  # margin must cover DRIFT_PX at the edges
 const SETTLE_TIME  := 2.4
+# Live backdrop: the real game, played by bots (GameState.attract). The painting shows
+# until the world has settled, then fades off it; it's also the fallback.
+const WORLD_SETTLE  := 2.5   # nav bake, crew posed, dust down
+const WORLD_FADE    := 1.8
+const WORLD_RESTART := 5.0   # after the crew wins or falls, a breath before a fresh run
 
 var _rig: Node2D
 var _drift_t := 0.0
@@ -15,6 +20,8 @@ var _folk_btn: Button
 var _credits: CreditsRoll
 var _credits_btn: Button
 var _sections_btn: Button
+var _world: Node3D
+var _world_tween: Tween
 
 @onready var backdrop:      TextureRect = $Backdrop
 @onready var column:        Control  = $Content/Column
@@ -96,6 +103,12 @@ func _ready() -> void:
 	if GameState.picker_return >= 0:
 		_picker.open(GameState.picker_return)
 		GameState.picker_return = -1
+	GameState.game_won.connect(_on_world_over)
+	GameState.game_lost.connect(_on_world_over)
+	_start_world()
+
+func _exit_tree() -> void:
+	GameState.attract = false
 
 # Language picked in Settings: redo the one line built from a format string
 func _notification(what: int) -> void:
@@ -143,8 +156,63 @@ func _animate_backdrop(t: float) -> void:
 	_rig.position.x = size.x * 0.5 - sin(t * TAU / DRIFT_PERIOD) * DRIFT_PX
 
 func _process(delta: float) -> void:
+	if not backdrop.visible:
+		return
 	_drift_t += delta
 	_animate_backdrop(_drift_t)
+
+# ── Live world ─────────────────────────────────────────────
+
+func _start_world() -> void:
+	GameState.attract = true
+	_world = load(GAME_SCENE).instantiate()
+	add_child(_world)
+	move_child(_world, 0)   # 3D draws under every Control anyway; keep the tree honest
+	var world := _world
+	await get_tree().create_timer(WORLD_SETTLE).timeout
+	if world == _world and GameState.attract:
+		_fade_backdrop(0.0, WORLD_FADE)
+
+func _fade_backdrop(to: float, time: float) -> Tween:
+	if _world_tween:
+		_world_tween.kill()
+	backdrop.show()
+	_world_tween = create_tween()
+	_world_tween.tween_property(backdrop, "modulate:a", to, time) 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if to == 0.0:
+		_world_tween.tween_callback(backdrop.hide)
+	return _world_tween
+
+# The crew finished the wall or was overrun: the painting covers a fresh start
+func _on_world_over() -> void:
+	if not GameState.attract:
+		return
+	var world := _world
+	await get_tree().create_timer(WORLD_RESTART).timeout
+	if world == _world and GameState.attract:
+		_restart_world()
+
+func _restart_world() -> void:
+	await _fade_backdrop(1.0, 0.8).finished
+	if _world:
+		_world.queue_free()
+		_world = null
+	_start_world()
+
+# A real game is starting: hold the world still and hand GameState back clean
+func _stop_world() -> void:
+	if not GameState.attract:
+		return
+	GameState.attract = false
+	if _world:
+		_world.process_mode = Node.PROCESS_MODE_DISABLED
+	GameState.reset()
+
+# Hosting or joining fell through: back to a fresh live world
+func _resume_world() -> void:
+	if not GameState.attract and is_inside_tree():
+		GameState.attract = true
+		_restart_world()
 
 # ── Network status ─────────────────────────────────────────
 
@@ -181,6 +249,7 @@ func _on_section_chosen(section_index: int) -> void:
 	_host()
 
 func _host() -> void:
+	_stop_world()
 	host_btn.disabled = true
 	_sections_btn.disabled = true
 	if _use_steam():
@@ -193,6 +262,7 @@ func _on_host_failed(reason: String) -> void:
 	host_btn.disabled = false
 	_sections_btn.disabled = false
 	net_status.text = reason
+	_resume_world()
 
 func _on_lobby_created() -> void:
 	get_tree().change_scene_to_file(GAME_SCENE)
@@ -221,7 +291,9 @@ func _fill_friend_games() -> void:
 		content.move_child(box, content.get_node("FieldGap").get_index())
 	for c in box.get_children():
 		c.queue_free()
-	var games := NetworkManager.friend_lobbies() if _use_steam() else []
+	var games: Array[Dictionary] = []
+	if _use_steam():
+		games = NetworkManager.friend_lobbies()
 	if games.is_empty():
 		address_input.grab_focus()
 		return
@@ -236,6 +308,7 @@ func _fill_friend_games() -> void:
 		b.text = tr("Join %s") % g.name
 		b.pressed.connect(func():
 			status_label.text = tr("Joining %s…") % g.name
+			_stop_world()
 			NetworkManager.join_steam(g.lobby))
 		box.add_child(b)
 		if first == null:
@@ -249,6 +322,7 @@ func _on_connect() -> void:
 		return
 	status_label.text = "Connecting…"
 	connect_btn.disabled = true
+	_stop_world()
 	# Steam lobby ids are 64-bit numbers; anything else is treated as an IP/hostname
 	if addr.is_valid_int() and addr.length() > 12:
 		if not NetworkManager.steam_available():
@@ -266,6 +340,7 @@ func _on_back() -> void:
 
 func _on_lobby_joined(success: bool) -> void:
 	if success:
+		_stop_world()   # a Steam invite joins straight from the menu
 		get_tree().change_scene_to_file(GAME_SCENE)
 	else:
 		_join_failed("Connection failed. Check the address and that the host is running.")
@@ -275,6 +350,7 @@ func _join_failed(msg: String) -> void:
 	_open_join()
 	status_label.text = msg
 	connect_btn.disabled = false
+	_resume_world()
 
 # ── Settings ───────────────────────────────────────────────
 

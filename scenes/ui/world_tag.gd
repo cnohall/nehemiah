@@ -82,7 +82,7 @@ func _process(_delta: float) -> void:
 	if _dirty:
 		_rebuild()
 	var cam := get_viewport().get_camera_3d()
-	var show := is_visible_in_tree() and cam != null and not text.is_empty() \
+	var show := is_visible_in_tree() and cam != null and not text.is_empty() and not GameState.attract \
 		and not cam.is_position_behind(global_position)
 	_root.visible = show
 	if not show:

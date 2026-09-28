@@ -17,6 +17,8 @@ const ANIM_CFG: Dictionary = {
 	# Sling wind-up: arm up, rocking while the sling whirls
 	"windup":    { "cycle": [0, 1],                   "loop": true,  "fps": 5.0  },
 	"halfslash": { "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 16.0 },
+	# Sword cut at an enemy in close: wind back, sweep across, the blade lands on frame 2
+	"sword":     { "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 18.0 },
 	# Working at the wall: overhand mallet swing on a loop, strike on frame 4
 	"build":     { "cycle": [0, 1, 2, 3, 4, 5, 5, 0], "loop": true,  "fps": 12.0 },
 	# Downed / death: fall to the ground and stay

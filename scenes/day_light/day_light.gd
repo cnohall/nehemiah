@@ -17,11 +17,17 @@ const LAMP_ENERGY     := 1.3
 const LAMP_RANGE      := 4.5
 const LAMP_COLOR      := Color(1.0, 0.78, 0.52)
 const LAMP_POLL       := 0.5   # once night has settled, how often to hand out lamps
+# Sun clock (GameState.sun): the light warms and sinks as the day's last quarter runs
+# out; if the stars catch the work unfinished, night falls over the dusk
+const EVENING_COLOR   := Color(1.0, 0.62, 0.38)
+const EVENING_SUN     := 0.72   # sun energy at the very end of the day
+const EVENING_RATE    := 0.6
 
 @onready var _sun: DirectionalLight3D = get_parent().get_node("Sun")
 @onready var _env: Environment = get_parent().get_node("WorldEnvironment").environment
 
 var darkness := 0.0
+var evening := 0.0
 var _target := 0.0
 var _day := {}   # daylight values to return to
 var _lamp_poll := 0.0
@@ -34,14 +40,26 @@ func _ready() -> void:
 	}
 	GameState.phase_changed.connect(_retarget.unbind(1))
 	GameState.day_changed.connect(_retarget.unbind(1))
+	GameState.sun_changed.connect(_retarget)
 	_retarget()
 	_apply()
 
 func _retarget() -> void:
 	var dark_phase := GameState.phase == GameState.Phase.WORK or GameState.phase == GameState.Phase.DUSK
-	_target = 1.0 if GameState.is_night_day() and dark_phase else 0.0
+	var nightfall := GameState.sun_total > 0.0 and GameState.sun_left <= 0.0 \
+		and GameState.phase in [GameState.Phase.DUSK, GameState.Phase.LOST]
+	_target = 1.0 if (GameState.is_night_day() and dark_phase) or nightfall else 0.0
+
+func _evening_target() -> float:
+	if GameState.sun_total <= 0.0 or GameState.phase not in [GameState.Phase.WORK, GameState.Phase.DUSK, GameState.Phase.LOST]:
+		return 0.0
+	return clampf(1.0 - GameState.sun_left / (GameState.sun_total * GameState.SUN_LOW), 0.0, 1.0)
 
 func _process(delta: float) -> void:
+	var e := _evening_target()
+	if not is_equal_approx(evening, e):
+		evening = move_toward(evening, e, EVENING_RATE * delta)
+		_apply()
 	if is_equal_approx(darkness, _target):
 		_lamp_poll -= delta
 		if darkness > 0.0 and _lamp_poll <= 0.0:
@@ -55,8 +73,10 @@ func _process(delta: float) -> void:
 func _apply() -> void:
 	# Ease so the last light goes quickly, like a real dusk
 	var k := darkness * darkness * (3.0 - 2.0 * darkness)
-	_sun.light_energy = lerpf(_day["sun"], SUN_NIGHT, k)
-	_sun.light_color = (_day["sun_color"] as Color).lerp(SUN_NIGHT_COLOR, k)
+	var sun_day: float = _day["sun"] * lerpf(1.0, EVENING_SUN, evening)
+	var sun_color := (_day["sun_color"] as Color).lerp(EVENING_COLOR, evening * 0.55)
+	_sun.light_energy = lerpf(sun_day, SUN_NIGHT, k)
+	_sun.light_color = sun_color.lerp(SUN_NIGHT_COLOR, k)
 	_env.ambient_light_energy = lerpf(_day["ambient"], AMBIENT_NIGHT, k)
 	_env.ambient_light_color = (_day["ambient_color"] as Color).lerp(AMBIENT_NIGHT_COLOR, k)
 	_env.background_energy_multiplier = lerpf(_day["sky"], SKY_NIGHT, k)

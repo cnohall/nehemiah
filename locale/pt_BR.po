@@ -634,8 +634,8 @@ msgstr "Cocho"
 msgid "Mortar ready"
 msgstr "Argamassa pronta"
 
-msgid "Picked clean"
-msgstr "Esgotado"
+msgid "Digging out more"
+msgstr "Cavando mais"
 
 msgid "Stone"
 msgstr "Pedra"
@@ -1144,3 +1144,123 @@ msgstr "Obrigado por construir conosco."
 
 msgid "Hold E   Faster          Esc   Skip"
 msgstr "Segure E   Mais rápido          Esc   Pular"
+
+msgid "Daylight"
+msgstr "Luz do dia"
+
+msgid "Wave"
+msgstr "Ataque"
+
+msgid "The sun is low"
+msgstr "O sol está baixo"
+
+msgid "Finish before the stars appear — the %s must stand tonight"
+msgstr "Terminem antes de as estrelas aparecerem — %s precisa estar de pé esta noite"
+
+msgid "The last day of this stretch — it must stand before the stars appear"
+msgstr "O último dia deste trecho — ele precisa estar de pé antes de as estrelas aparecerem"
+
+msgid "The %s was not finished by nightfall. Gather the workers and begin again."
+msgstr "Não deu para terminar %s antes do anoitecer. Reúnam os trabalhadores e comecem de novo."
+
+msgid "The stretch was not finished by nightfall. Try it again."
+msgstr "O trecho não ficou pronto ao cair da noite. Tentem de novo."
+
+msgid "Nightfall on day %d"
+msgstr "Anoitece no dia %d"
+
+msgid "The stars appeared"
+msgstr "As estrelas apareceram"
+
+msgid "Watch post"
+msgstr "Posto de guarda"
+
+msgid "Slinger"
+msgstr "Fundibulário"
+
+msgid "Out of sling stones"
+msgstr "Sem pedras para a funda"
+
+msgid "The post needs timber"
+msgstr "O posto precisa de madeira"
+
+msgid "Enough timber — {interact} to raise it"
+msgstr "Madeira suficiente — {interact} para erguê-lo"
+
+msgid "The slinger wants stone for his sling"
+msgstr "O fundibulário quer pedras para a funda"
+
+msgid "The slinger has stones enough"
+msgstr "O fundibulário já tem pedras suficientes"
+
+msgid "The stars appeared — %d left for tomorrow."
+msgid_plural "The stars appeared — %d left for tomorrow."
+msgstr[0] "As estrelas apareceram — fica %d para amanhã."
+msgstr[1] "As estrelas apareceram — ficam %d para amanhã."
+
+msgid "The stretch"
+msgstr "O trecho"
+
+msgid "What isn't built by the stars waits for tomorrow"
+msgstr "O que não estiver pronto quando as estrelas aparecerem espera por amanhã"
+
+msgid "%d of %d stand — %d days left"
+msgstr "%d de %d de pé — faltam %d dias"
+
+msgid "Raise the whole stretch — %d day before the stars"
+msgid_plural "Raise the whole stretch — %d days before the stars"
+msgstr[0] "Levantem o trecho inteiro — %d dia antes das estrelas"
+msgstr[1] "Levantem o trecho inteiro — %d dias antes das estrelas"
+
+msgid "Finished with %d day to spare"
+msgid_plural "Finished with %d days to spare"
+msgstr[0] "Pronto com %d dia de folga"
+msgstr[1] "Pronto com %d dias de folga"
+
+msgid "Difficulty: %s"
+msgstr "Dificuldade: %s"
+
+msgid "Gentle"
+msgstr "Suave"
+
+msgid "Standard"
+msgstr "Normal"
+
+msgid "Hard"
+msgstr "Difícil"
+
+msgid "Fewer enemies, lighter blows"
+msgstr "Menos inimigos, golpes mais leves"
+
+msgid "The wall as it was built"
+msgstr "O muro como foi construído"
+
+msgid "More enemies, heavier blows"
+msgstr "Mais inimigos, golpes mais fortes"
+
+msgid "Bots: %d"
+msgstr "Bots: %d"
+
+msgid "Bot skill: %s"
+msgstr "Habilidade dos bots: %s"
+
+msgid "Bot"
+msgstr "Bot"
+
+msgid "Click to change"
+msgstr "Clique para mudar"
+
+msgid "Apprentice"
+msgstr "Aprendiz"
+
+msgid "Master builder"
+msgstr "Mestre de obras"
+
+msgid "Slow, misses often, may wander off"
+msgstr "Lento, erra muito, pode se distrair"
+
+msgid "Steady hands, a fair aim"
+msgstr "Mãos firmes, boa mira"
+
+msgid "Quick, sure shot, leaves the work to guard"
+msgstr "Rápido, certeiro, larga a obra para vigiar"

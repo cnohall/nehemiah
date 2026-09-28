@@ -23,6 +23,8 @@ Cooperative 2–4 player HD-2D isometric action-strategy set in 455 BCE Jerusale
 
 Three types, unlocked over the campaign (`wave_manager.gd`). Spawn rate and max alive scale with day and crew size.
 
+**Difficulty** (host picks on the gathering screen, `Settings.DIFFICULTIES`): Gentle / Standard / Hard. *pace* ×0.7 / 1.0 / 1.3 multiplies spawn rate, max alive and wave/surge size on top of each section's pressure; *harm* ×0.7 / 1.0 / 1.25 multiplies every enemy blow (workers and wall). **Bots count by skill** toward the enemy's crew size (Apprentice 0.5, Builder 0.75, Master builder 1.0), so adding weak bots no longer adds a full worker's foes. Building costs still use the whole crew. (Added 28 Sep 2026)
+
 | Type | Unlocks | Speed | Health | Damage | Notes |
 |---|---|---|---|---|---|
 | Scout | Day 1 | 3.5 | 40 | 5 | ~50% go for the wall ("wreckers"), rest run for gaps |
@@ -82,6 +84,7 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Working keeps going while you stand still (no holding); moving, dashing, dropping, the sling or **a hit** stops it. Progress is kept
 - Extra hands help: +70% each, max 3 at one site ("Enough hands here")
 - Hands are full while working — builders can't sling. Guarding the builders is the Neh. 4:17 moment
+- **Sword** (Neh. 4:18, "every builder had his sword girded by his side"): same button as the sling. A foe within 2 m → a quick cut instead of a wind-up: 20 damage to every foe in a 130° arc in front, shoves them back (scout 1.3 m, raider ~1 m, brute ~0.45 m), 0.45 s cooldown. Sling stays the safe way to chip at range; the sword pays better but means standing in reach. Unlimited sling stones stay — the stone-vs-wall choice lives in the watch posts
 - The next stage rises block by block (doors plank by plank) as the work fills; a knock + dust per stroke
 - Time per stage for one worker: framing 2 s, courses 3 s, mortar 2 s, doors/seal 2.5 s; solo works 25% faster
 - To keep days the same length, each stage costs one load less (never below 1); beams unchanged
@@ -95,6 +98,16 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Controls card shows keys or pad buttons, whichever is in use
 - Gamepad host starts the day from the pause menu ("Begin the work", focused)
 - Join: friends already in a lobby are listed with one-click Join; pause menu opens Steam's invite overlay
+
+### 5.6 Tower-defence layer — ◐ first pass, needs playtest
+Three rules, each on by default and each switched off from the command line to A/B it (`-- --no-waves`, `-- --no-sun`, `-- --no-posts`; the host's choice goes to everyone who joins). Test: `tools/td_test.gd` (run with `--day=4` for the last-day loss).
+- **Waves** (`WaveManager`): the trickle thins (×2) and the enemy comes in announced waves — bell + "Wave" pointer 5 s ahead, then a pack from one spot every 38 s (day 1) → 26 s (day 52). Pack = 2 + day/10 + one per two extra workers, × section pressure; from day 21 a wave comes at two spots, one on each half of the front. Tuned so the total count stays about the same — what changes is the rhythm (lulls to build, rushes to defend). Valley Gate keeps its own sharper surges (its twist)
+- **Sun clock** (`GameState.sun_*`, `DayDirector._tick_sun`): "from the rising of the morning till the stars appeared" (Neh 4:21). With the sun on there are no per-day slices: **the whole stretch is the goal** (plaque: "The stretch 2 / 6"), worked over its days, and every day of a section has the same light = section par ÷ its days × `sun_slack` (1.2 by default; 1.0 = the days add up to par; `-- --sun-slack=1.3` to try another; solo ×1.25). **Work front** (`WorkFront`): the stretch goes up in build order (gate first, then outward) — only the first unfinished units are open, one per two workers — so effort isn't spread over six half-built units; a knocked-down unit reopens in its place. Bots and the "Next:" line follow the front; people may still deliver anywhere. A day ends at the stars, or when the stretch stands — then its days to spare are skipped and the next stretch starts tomorrow ("Finished with 2 days to spare"). Nightfall on a section's **last day** with the stretch unfinished loses the run ("The stars appeared"). Day plaque shows a sun arc + time left; the last quarter warms the light and says "The sun is low". (Changed 28 Sep 2026 from "each day's slice, leftovers carried over": bots and players both lost track of what the day was for)
+- **Watch posts** (`WatchPost`, two behind the wall at x = ±8): "I set the people by their families" (Neh 4:13). Bring timber and work it up → a slinger climbs on. Feed it stone: one load = 6 throws, holds 3 loads. It throws at the nearest enemy within 12 m every 1.7 s for 9 damage (a scout takes five, a brute a dozen) — chips and staggers, never holds a flank alone. Stone for the post is stone not in the wall: that's the choice. Bare again on each new section. Tag pulses "Out of sling stones" during the work
+- Watch in playtests: does waves' rhythm make building lulls feel safe (less Neh 4:17 tension)? Is `sun_slack` 1.0 fair for 1–4 players? Do posts get fed, or ignored? Do they let the crew skip fighting?
+- Bots raise and feed posts: the wall comes first, a post gets what no wall wants (one load at a time), and a post that has run dry gets the next stone. They only raise a new post while the wall is on track (not on the last day, and at least as far along as the days gone by)
+- **Salvage**: rubble heaps also regrow one stone every 20 s during the work (up to their stock), so a stretch can slow down but never run dry ("Digging out more")
+- Open: section rating's "In good time" overlaps the sun now
 
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:
@@ -165,7 +178,7 @@ Borrow Overcooked's **structure and readability**, not its tone.
 ### 6.3 Build order
 1. Section framework — ◐ twists done (`GameState.SECTIONS[i].twists`, `has_twist()`, dawn banner introduces new twists, twist-only supply piles). ✅ per-section layouts (data-driven, `SECTIONS[i].yard` / `.gate`, applied by `SectionStage` on every peer): supply yard moves per section (Dung Gate ~30 m east = long haul); stretches with no gate (Broad Wall, Tower of Ovens) seal the opening with stone instead of doors. ✅ Terrain per section (`SECTIONS[i].terrain`, built by `SectionTerrain`, solid + in the nav bake, ground tint/scrub/valley shade per section): sheepfold · fish stalls · burned ruins · forge & perfume stalls · bread ovens · valley terraces (two gaps funnel enemies) · refuse heaps (lanes on the long haul) · Pool of Shelah + King's Garden · torches + Ophel boulders · priests' houses (narrow lanes) · Kidron olive grove · market + sheepfold again. Sections can pin single piles (`piles`) and set enemy pace (`pressure`)
 2. ✅ Doors step (gate sections: after both pillars, deliver timber → doors hang and close the gap) and ✅ beams (Fish + Jeshanah Gate: framing takes beams; drag alone slowly, or a partner takes the other end — tethered pair at carry pace)
-3. ✅ Salvage (3): Jeshanah has no stone pile — 5 burned rubble heaps (3 inside, 2 **outside** the wall) with 4 stones each, refilled at dawn. ✅ Mortar mixing (5): Tower of Ovens + Valley Gate have no mortar pile — lime (bin) + water (clay jars) → stone trough mixes by itself in 4 s (progress bar, stirring paddle) → carry mortar to the wall. ✅ Horn (6)
+3. ✅ Salvage (3): Jeshanah has no stone pile — 5 burned rubble heaps (3 inside, 2 **outside** the wall) with 4 stones each, refilled at dawn, and regrowing one every 20 s during the work so a stretch never runs dry. ✅ Mortar mixing (5): Tower of Ovens + Valley Gate have no mortar pile — lime (bin) + water (clay jars) → stone trough mixes by itself in 4 s (progress bar, stirring paddle) → carry mortar to the wall. ✅ Horn (6)
 4. ✅ Sections 7–12 (first pass, needs playtest):
    - **Dung Gate** `haul`: yard 30 m east, refuse heaps split the route. **Hand-off** (all sections): [G] beside an empty-handed teammate puts the load in their hands
    - **Fountain Gate** `spring`: pressure ×0.55, water jars by the pool near the wall, mixing

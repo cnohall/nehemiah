@@ -111,6 +111,8 @@ var _cape: Node3D
 var _carry_anchor: Node3D   # chest-front point where a carried load rides
 var _belt_tool: Node3D      # the builder's hammer hung at the hip between strokes
 var _hand_r: Node3D         # throwing hand
+var _sword: Node3D          # worker's sword, in hand only for the cut…
+var _belt_sword: Node3D     # …and girded at the side otherwise (Neh. 4:18)
 
 static var _meshes: Dictionary = {}
 static var _part_mat: ShaderMaterial
@@ -131,7 +133,7 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 	var dye := color.lerp(Color(0.55, 0.44, 0.33), 0.1)
 	var look := {
 		"robe": LINEN, "trim": LINEN.darkened(0.12), "sash": LEATHER, "band": BAND,
-		"outline": OUTLINE_PLAYER, "no_outline": true, "tool": true, "hat": "band", "hat_color": dye,
+		"outline": OUTLINE_PLAYER, "no_outline": true, "tool": true, "sword": true, "hat": "band", "hat_color": dye,
 	}
 	match slot % 4:
 		0:
@@ -193,6 +195,8 @@ func set_look(look: Dictionary) -> void:
 	_cape = null
 	_carry_anchor = null
 	_belt_tool = null
+	_sword = null
+	_belt_sword = null
 	_build(look)
 	_apply_pose()
 
@@ -303,7 +307,7 @@ func _update_facing(delta: float) -> void:
 		_last_pos = pos
 		_has_last = true
 	var want := atan2(target.x, target.z)
-	if _base == "windup" or _base == "slash":
+	if _base == "windup" or _base == "slash" or _base == "sword":
 		want = aim_yaw   # the sling faces its target, any angle
 	elif _base == "build":
 		want += BUILD_TURN
@@ -401,6 +405,35 @@ func _apply_pose() -> void:
 			al = Vector3(lerpf(-1.3, 0.35, ease(k, 0.7)), 0, lerpf(0.32, 0.4, k))   # off hand pulls back
 			head_ry = -twist * 0.7
 			head_rx = 0.08
+		"sword":
+			# Flat cut: draw back across the body, sweep through the foe (k ≈ 0.4), recover
+			var ax: float
+			var az: float
+			if k < 0.25:
+				var e := ease(k / 0.25, 0.5)
+				ax = lerpf(-0.6, -1.7, e)
+				az = lerpf(-0.2, 0.9, e)                    # blade cocked over the off shoulder
+				twist = lerpf(0.0, 0.6, e)
+				lean = lerpf(0.0, -0.1, e)
+			elif k < 0.5:
+				var e := ease((k - 0.25) / 0.25, 2.0)       # accelerating sweep
+				ax = lerpf(-1.7, -1.4, e)
+				az = lerpf(0.9, -1.0, e)
+				twist = lerpf(0.6, -0.55, e)
+				lean = lerpf(-0.1, 0.28, e)
+				ll = lerpf(0.0, -0.45, e)                   # step into the cut
+				body_y = -0.04 * e
+			else:
+				var e := ease((k - 0.5) / 0.5, 0.45)
+				ax = lerpf(-1.4, -0.3, e)
+				az = lerpf(-1.0, -0.2, e)
+				twist = lerpf(-0.55, 0.0, e)
+				lean = lerpf(0.28, 0.05, e)
+				ll = lerpf(-0.45, -0.1, e)
+				body_y = lerpf(-0.04, 0.0, e)
+			ar = Vector3(ax, 0, az)
+			al = Vector3(-0.5, 0, 0.35)
+			head_ry = -twist * 0.6
 		"halfslash":
 			var e := ease(k, 0.6)
 			ar = Vector3(lerpf(-3.0, -0.5, e), 0, -0.15)
@@ -466,6 +499,8 @@ func _apply_pose() -> void:
 	_tool_visible()
 	if _tool != null:
 		_tool.rotation.x = -1.35
+	if _sword != null:
+		_sword.rotation.x = -1.45   # blade out ahead of the fist
 	# Ease out of the previous animation's pose instead of snapping to the new one
 	if _blend < 1.0 and not _blend_from.is_empty():
 		var w := smoothstep(0.0, 1.0, _blend)
@@ -501,6 +536,10 @@ func _tool_visible() -> void:
 		_tool.visible = _base == "build"
 	if _belt_tool != null:
 		_belt_tool.visible = _base != "build"
+	if _sword != null:
+		_sword.visible = _base == "sword"
+	if _belt_sword != null:
+		_belt_sword.visible = _base != "sword"
 
 ## Chest-front point a carried load hangs from (follows the body's turn and bob)
 func carry_anchor() -> Node3D:
@@ -790,6 +829,21 @@ func _build(look: Dictionary) -> void:
 			_belt_tool.rotation = Vector3(0.15, 0, -0.12)
 			_part(_belt_tool, _soft(Vector3(0.06, 0.42, 0.06), 0.015), Color(0.50, 0.34, 0.20), Vector3(0, -0.08, 0))
 			_part(_belt_tool, _soft(Vector3(0.28, 0.17, 0.17), 0.04), Color(0.58, 0.57, 0.58), Vector3(0, 0.15, 0))
+		_tool_visible()
+	# Worker's sword: short bronze-hued blade, leather grip; sheathed at the left hip
+	if look.get("sword", false):
+		var blade := Color(0.84, 0.82, 0.76)
+		var brass := Color(0.78, 0.58, 0.26)
+		_sword = _pivot(hands[1], Vector3(0, -0.02, 0.02))
+		_part(_sword, _soft(Vector3(0.08, 0.2, 0.08), 0.02), LEATHER, Vector3(0, -0.02, 0))
+		_part(_sword, _soft(Vector3(0.3, 0.07, 0.1), 0.02), brass, Vector3(0, -0.14, 0))
+		_part(_sword, _soft(Vector3(0.15, 0.72, 0.04), 0.015), blade, Vector3(0, -0.52, 0))
+		# Sheathed: short, slung back along the hip so it doesn't read as a staff
+		_belt_sword = _pivot(_torso, Vector3(ARM_X - 0.02, 0.1, 0.06))
+		_belt_sword.rotation = Vector3(0.95, 0, 0.1)
+		_part(_belt_sword, _soft(Vector3(0.13, 0.5, 0.08), 0.03), LEATHER.darkened(0.2), Vector3(0, -0.22, 0))
+		_part(_belt_sword, _soft(Vector3(0.08, 0.15, 0.08), 0.02), LEATHER, Vector3(0, 0.13, 0))
+		_part(_belt_sword, _soft(Vector3(0.24, 0.06, 0.1), 0.02), brass, Vector3(0, 0.04, 0))
 		_tool_visible()
 
 # Hair by style: a cap over the crown and down the back, chunky locks on top
