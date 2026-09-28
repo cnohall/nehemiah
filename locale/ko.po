@@ -622,6 +622,9 @@ msgstr "← →  또는  클릭   선택          Esc   뒤로"
 msgid "Build"
 msgstr "건축"
 
+msgid "Help up"
+msgstr "일으키기"
+
 msgid "Hang the doors"
 msgstr "문짝 달기"
 

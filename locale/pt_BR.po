@@ -622,6 +622,9 @@ msgstr "← →  ou  Clique   Escolher          Esc   Voltar"
 msgid "Build"
 msgstr "Construir"
 
+msgid "Help up"
+msgstr "Levantar"
+
 msgid "Hang the doors"
 msgstr "Instalar as portas"
 

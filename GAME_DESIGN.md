@@ -110,6 +110,33 @@ Three rules, each on by default and each switched off from the command line to A
 - **Salvage**: rubble heaps also regrow one stone every 20 s during the work (up to their stock), so a stretch can slow down but never run dry ("Digging out more")
 - Open: section rating's "In good time" overlaps the sun now
 
+### 5.7 Playtest 2 Feedback — ◐ in progress
+**28 Sep 2026 — 2 human players, 0 bots.** Test: `tools/playtest2_test.gd`
+
+**Waiting for players (one shared widget):**
+- ☐ **Tally card waits for everyone** (important). Today it vanishes after the 9 s dusk. Reuse the story's wait-for-readers flow; on a section's last day the tally becomes the first story card, so there's one screen to confirm, not two
+- ☐ **Ready state**: hold the button to mark ready; each portrait shows a tick. Replaces the separate "Skip" vs "Continue / Begin now", which confused players in co-op: one "Ready (2/3)" button, and the host can hold to force everyone on
+- ☐ **Loading panel**: while loading, list the crew (Steam / platform names) and show who's in, who's ready and who's still loading
+
+**Flow:**
+- ☐ **Section ends when the stretch stands.** Players felt it ran to the end of the day. The code already ends the day the moment the last unit stands (`_on_stage_changed`) and skips the spare days, so it's a readability problem: the finish looks like any other dusk. Fix: a clear "The <gate> stands!" moment before the tally
+- ✅ **Watch posts raised while gathering carried into day 1** (`section_changed` doesn't fire going from gathering to day 1). Posts are now reset at every fresh section's dawn
+- ✅ **Stuck outside a finished wall.** Hung gate doors are on their own collision layer (16), which enemies and the nav bake collide with but workers don't: workers walk through, enemies still can't. Anywhere else, [E] against a finished wall (or sealed infill) with nothing else to do **climbs over** it (either way; carrying is fine, a beam isn't). Only finished walls, so a press at a half-built one never hops you to the wrong side
+
+**Combat:**
+- ✅ **Revive isn't discoverable.** **No self-revive:** a teammate (or bot) has to help you up. A "Help up [E]" tag pulses over a downed worker for everyone else. The 8 s countdown only runs when nobody is left standing (solo, or the whole crew down). Bots will cross the whole site to help (range 16 → 60 m)
+- ✅ **Full health on revive** (`REVIVE_HEALTH` 0.5 → 1.0)
+- ✅ **Breaches deeper into the city**: `BREACH_Z` 13.5 → 21 (goal 15 → 23), well behind the stockpiles, so a runner through a gap can still be chased down
+- ✅ **Bug: running on the spot on the loss / story screen**: input stopped but the animation wasn't updated, so the last run cycle kept looping
+
+**Content:**
+- ☐ **Play again**: on win/loss, a highlight replay of the day plays while the host (or a majority vote) picks Play again or Continue
+- ☐ **More dancing** in the day-end celebration: a short dance per character, not just arms up
+- ☐ **Optional tutorial**: a short level teaching the basics (carry, build, sling, revive). Setting: the temple area, or a practice piece of wall (Neh 2:17-18). Note: the temple rebuild was 515 BCE; Tobiah's chamber (Neh 13:7-9) comes after the wall
+
+**Later:**
+- ☐ **Cross-play** between web, mobile and Steam: look into it after the Steam launch. It needs one shared transport (WebRTC or a WebSocket relay via the existing Cloudflare DO); Steam/ENet/EOS don't talk to each other. Keep lobby code from blocking it
+
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:
 - Stations told apart by period-appropriate bases, not colour-coding: stone on a timber pallet, logs on sleeper beams, mortar on a reed mat with spilled lime (bright colour rugs tried and dropped: broke immersion)

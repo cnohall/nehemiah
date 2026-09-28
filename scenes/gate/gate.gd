@@ -22,6 +22,8 @@ const BAR_COLOR    := Color(0.36, 0.30, 0.24)
 const TARGET_COLOR := Color(0.86, 0.58, 0.22)
 const WORK_TIME    := 2.5   # seconds for one worker to hang the doors / wall up the gap
 const SOLO_WORK_MULT := 0.75
+const DOOR_LAYER   := 16   # enemies-only wall
+const WALL_LAYER   := 8
 
 @onready var _pillars: Array = [$PillarLeft, $PillarRight]
 
@@ -114,6 +116,10 @@ func try_build() -> bool:
 func is_complete() -> bool:
 	return finished or _material().is_empty()
 
+## Sealed infill is climbed like the wall; hung doors let workers straight through
+func blocks_workers() -> bool:
+	return finished and not GameState.has_gate()
+
 func reset_slot() -> void:
 	pending = 0
 	finished = false
@@ -187,6 +193,7 @@ func _refresh() -> void:
 	BuildWork.reveal(_doors, fill)
 	BuildWork.reveal(_infill, fill)
 	_door_body.get_child(0).set_deferred("disabled", not finished)
+	_door_body.collision_layer = DOOR_LAYER if gate else WALL_LAYER   # stone infill is wall
 	_footing.visible = _open_for_work() and is_target and not GameState.attract
 	_update_label()
 
@@ -222,9 +229,10 @@ func _build_doors() -> void:
 				Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v)))
 			x += w
 			i += 1
-	# Closed doors block movement like the wall
+	# Closed doors block enemies like the wall, but open for workers (layer 16 is in the
+	# enemies' and the nav bake's mask, not the players') — nobody gets shut outside
 	_door_body = StaticBody3D.new()
-	_door_body.collision_layer = 8
+	_door_body.collision_layer = DOOR_LAYER
 	_door_body.collision_mask = 4
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()

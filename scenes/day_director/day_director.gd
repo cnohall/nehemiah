@@ -126,6 +126,9 @@ func _begin_day() -> void:
 		_section_ono = 0
 		for item in _items.get_children():
 			item.queue_free()  # new stretch of wall, fresh work site
+		# Posts start bare too — including any raised while the crew was still gathering
+		# (section_changed doesn't fire going from the gathering into the first day)
+		get_tree().call_group("watch_posts", "reset_slot")
 	for unit in _units:
 		for part in unit:
 			if fresh_section:

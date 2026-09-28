@@ -159,6 +159,9 @@ msgstr ""
 msgid "Build"
 msgstr ""
 
+msgid "Help up"
+msgstr ""
+
 #: scenes\ui\section_picker.gd:118
 msgid "Build again"
 msgstr ""
