@@ -13,10 +13,14 @@ const _PATHS := {
 	copy     = '<rect x="8.5" y="8.5" width="11" height="12" rx="1.5" stroke="#FFF" stroke-width="2" fill="none"/><path d="M5.5 15.5V5a1.5 1.5 0 0 1 1.5-1.5h8.5" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round"/>',
 	check    = '<path d="M5 12.5l4.5 4.5L19 7.5" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 	# Touch actions
-	sling    = '<circle cx="16.5" cy="7.5" r="3.4" fill="#FFF"/><path d="M3.5 20.5C5 14 8.5 10.5 12.5 9" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="0.1 3.6"/>',
-	carry    = '<rect x="6" y="3.5" width="12" height="9.5" rx="1.2" fill="#FFF"/><path d="M3 16.5h4.5l2 2h5l2-2H21" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-	dash     = '<path d="M5 6l6 6-6 6M12.5 6l6 6-6 6" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-	drop     = '<path d="M12 3.5v11M7 10l5 5 5-5M5 20.5h14" stroke="#FFF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+	# A slung stone in flight, speed lines trailing it
+	sling    = '<circle cx="16" cy="8" r="4.6" fill="#FFF"/><path d="M3.5 20.5l7-7M2.5 14l4.5-4.5M10 21.5l4.5-4.5" stroke="#FFF" stroke-width="2.4" stroke-linecap="round"/>',
+	# Two dressed stones on cupped hands (pick up · deliver · build)
+	carry    = '<path fill="#FFF" fill-rule="evenodd" d="M6.5 3.5h11a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1zM5.5 8h13v1.4h-13zM11.3 3.5h1.4v4.5h-1.4z"/><path d="M2.5 13.5 7 17.5h10l4.5-4M7 17.5v3M17 17.5v3" stroke="#FFF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+	# A bold arrow with speed lines trailing it
+	dash     = '<path d="M11.2 4.6 18.6 12l-7.4 7.4-2.4-2.4 5-5-5-5z" fill="#FFF" stroke="#FFF" stroke-width="1" stroke-linejoin="round"/><path d="M2.5 8h5M1.5 12h8M2.5 16h5" stroke="#FFF" stroke-width="2.2" stroke-linecap="round"/>',
+	# A stone falling to the ground
+	drop     = '<rect x="8" y="2.5" width="8" height="6.5" rx="1" fill="#FFF"/><path d="M12 11.5v5.5M9 14.5l3 3 3-3M4.5 21h15" stroke="#FFF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 	# Shofar: a ram's horn curling up from the mouthpiece to a flared bell
 	horn     = '<path d="M4 18.5c3.5 1 8 .2 11-3.3 1.6-1.9 2.5-4.3 2.6-7" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M14.8 6.8 17.6 3l3.4 3.6z" fill="#FFF" stroke="#FFF" stroke-width="1.6" stroke-linejoin="round"/>',
 }

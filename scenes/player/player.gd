@@ -837,6 +837,16 @@ func _nearest_enemy(within: float) -> Node3D:
 	return best
 
 ## Owner, while winding up: where the ring sits (for the touch aim line), else null
+## Touch buttons: how much of each cooldown is left (1 → 0), and the wind-up (−1 = none)
+func sling_cooldown() -> float:
+	return _sling_cd / SLING_COOLDOWN
+
+func dash_cooldown() -> float:
+	return _dash_cd / DASH_COOLDOWN
+
+func sling_charge() -> float:
+	return _charge if _charging else -1.0
+
 func aim_preview() -> Variant:
 	if _charging and _aim_marker != null and _aim_marker.visible:
 		return _aim_marker.global_position

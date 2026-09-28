@@ -21,7 +21,7 @@ const FULL_TILT    := 0.65     # stick deflection that already means full speed
 const AIM_RADIUS   := 44.0     # sling drag that counts as full deflection
 const AIM_DEADZONE := 0.3      # sling drag shorter than this (× AIM_RADIUS) = auto-aim
 const EDGE         := 18.0     # gap from the (safe-area) screen edge
-const IDLE_ALPHA   := 0.62     # resting buttons stay out of the way of the world
+const IDLE_ALPHA   := 0.82     # resting buttons: solid enough to read, the world still shows
 
 ## Sling held: player aims from aim_vec (screen-space, length 0..1) instead of the mouse.
 ## aim_vec keeps its last value after release (the throw reads it a frame or more
@@ -54,6 +54,12 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if not OS.has_feature("mobile"):
 		Input.emulate_touch_from_mouse = true
+	# Every touch also arrives as an emulated left click (the GUI needs it), and the
+	# sling is bound to the left button — so a thumb on the move stick would start a
+	# wind-up and turn the worker toward the finger. Here the sling is the button only.
+	for e in InputMap.action_get_events("throw_charge"):
+		if e is InputEventMouseButton:
+			InputMap.action_erase_event("throw_charge", e)
 	get_viewport().size_changed.connect(_layout.call_deferred)
 	_layout()
 
@@ -72,7 +78,10 @@ func _process(_delta: float) -> void:
 		_layout()
 	# Idle buttons are static; only a held touch / the aim guide needs a fresh frame
 	# (plus one after, to clear it)
-	var active := not _touches.is_empty() or aiming
+	var me := Player.local
+	var cooling := me != null and is_instance_valid(me) \
+		and (me.sling_cooldown() > 0.0 or me.dash_cooldown() > 0.0 or me.sling_charge() >= 0.0)
+	var active := not _touches.is_empty() or aiming or cooling
 	if active or _was_active:
 		queue_redraw()
 	_was_active = active
@@ -215,20 +224,35 @@ func _draw() -> void:
 		var tip: Vector2 = p + aim_vec.normalized() * STICK_RADIUS * 1.6
 		draw_line(p, tip, Color(UiStyle.CREAM, 0.9), 4.0, true)
 		draw_circle(tip, 6.0, UiStyle.CREAM)
+	var me := Player.local if Player.local != null and is_instance_valid(Player.local) else null
 	for name: String in _buttons:
 		var b: Dictionary = _buttons[name]
 		var down := held.has(name)
 		var primary := name == "sling"
 		var fill := UiStyle.TERRACOTTA if primary else UiStyle.PARCHMENT
 		var ink := UiStyle.CREAM if primary else UiStyle.INK
+		var edge := UiStyle.TERRACOTTA_DEEP if primary else UiStyle.RULE
 		var a := 0.95 if down else IDLE_ALPHA
 		var r: float = b.r * (0.94 if down else 1.0)   # pressed: sink a touch
-		draw_circle(b.pos + Vector2(0, 2.5), r, Color(UiStyle.DUSK, 0.22 * a))
+		# Drop shadow, body, a lit upper rim and a firm edge: reads as a pressable stone
+		draw_circle(b.pos + Vector2(0, 3.0), r, Color(UiStyle.DUSK, 0.28 * a))
 		draw_circle(b.pos, r, Color(fill, a))
-		draw_arc(b.pos, r - 1.0, 0, TAU, 48, Color(UiStyle.TERRACOTTA_DEEP if primary else UiStyle.RULE, a), 1.5, true)
+		draw_circle(b.pos + Vector2(0, r * 0.12), r * 0.86, Color(edge, 0.10 * a))
+		draw_arc(b.pos, r - 3.0, PI * 1.15, PI * 1.85, 24, Color(UiStyle.CREAM, (0.35 if primary else 0.7) * a), 2.0, true)
+		draw_arc(b.pos, r - 1.0, 0, TAU, 48, Color(edge, minf(1.0, a + 0.15)), 2.0, true)
+		# Cooldown: a dark sweep that unwinds clockwise; wind-up: a bright ring filling
+		var cd := 0.0
+		if me != null:
+			cd = me.sling_cooldown() if primary else (me.dash_cooldown() if name == "dash" else 0.0)
+		if cd > 0.0:
+			draw_arc(b.pos, r * 0.5, -PI / 2, -PI / 2 + TAU * cd, 32, Color(UiStyle.DUSK, 0.35), r, false)
+		if primary and me != null and me.sling_charge() >= 0.0:
+			var ch: float = me.sling_charge()
+			draw_arc(b.pos, r + 5.0, 0, TAU, 48, Color(UiStyle.DUSK, 0.25), 4.0, true)
+			draw_arc(b.pos, r + 5.0, -PI / 2, -PI / 2 + TAU * maxf(ch, 0.02), 48, UiStyle.CREAM, 4.0, true)
 		# Glyph above a small caption; the smallest button is icon-only
 		var labelled := r >= 30.0
-		var glyph := r * (0.62 if not labelled else 0.56)
+		var glyph := r * (0.78 if not labelled else 0.7)
 		var gpos: Vector2 = b.pos - Vector2(glyph, glyph) * 0.5 - Vector2(0, 6.0 if labelled else 0.0)
 		draw_texture_rect(UiIcons.get_icon(b.icon, glyph), Rect2(gpos, Vector2(glyph, glyph)), false, Color(ink, 0.95))
 		if labelled:
