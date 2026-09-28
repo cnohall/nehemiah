@@ -1724,3 +1724,63 @@ msgstr ""
 
 msgid "Waiting for the host or most of the crew"
 msgstr ""
+
+msgid "Learn the Basics"
+msgstr ""
+
+msgid "Leave the practice"
+msgstr ""
+
+msgid "Back to the title"
+msgstr ""
+
+msgid "Step %d of %d"
+msgstr ""
+
+msgid "The Sheep Gate"
+msgstr ""
+
+msgid "Eliashib the high priest and his brothers built here, beside the temple (Neh. 3:1). Learn the work with them.\n{interact} to begin"
+msgstr ""
+
+msgid "Walk"
+msgstr ""
+
+msgid "Walk with {move}"
+msgstr ""
+
+msgid "A quick burst: {dash}. It works while carrying too"
+msgstr ""
+
+msgid "Carry"
+msgstr ""
+
+msgid "Walk up to a stockpile and pick up a load with {interact}. The wall's tag says what it needs"
+msgstr ""
+
+msgid "Deliver"
+msgstr ""
+
+msgid "Take it to the wall on the amber footing and press {interact}. Not needed there? {drop} drops it"
+msgstr ""
+
+msgid "Bring what the wall still asks for. Once it has it all, stand at the wall and work it up with {interact}"
+msgstr ""
+
+msgid "Guard the builders"
+msgstr ""
+
+msgid "An enemy! Hold {throw} to whirl the sling, aim, and let go. Close in, the same button is a sword cut"
+msgstr ""
+
+msgid "Nobody gets up alone"
+msgstr ""
+
+msgid "Your crewmate is down. Go to them and press {interact} to help them up"
+msgstr ""
+
+msgid "That's the work"
+msgstr ""
+
+msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
+msgstr ""

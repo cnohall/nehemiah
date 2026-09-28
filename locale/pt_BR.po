@@ -1373,3 +1373,63 @@ msgstr "%s — %d de %d"
 
 msgid "Waiting for the host or most of the crew"
 msgstr "Esperando o anfitrião ou a maioria"
+
+msgid "Learn the Basics"
+msgstr "Aprender o básico"
+
+msgid "Leave the practice"
+msgstr "Sair do treino"
+
+msgid "Back to the title"
+msgstr "Voltar ao título"
+
+msgid "Step %d of %d"
+msgstr "Passo %d de %d"
+
+msgid "The Sheep Gate"
+msgstr "A Porta das Ovelhas"
+
+msgid "Eliashib the high priest and his brothers built here, beside the temple (Neh. 3:1). Learn the work with them.\n{interact} to begin"
+msgstr "Eliasibe, o sumo sacerdote, e seus irmãos construíram aqui, ao lado do templo (Nee. 3:1). Aprenda o trabalho com eles.\n{interact} para começar"
+
+msgid "Walk"
+msgstr "Andar"
+
+msgid "Walk with {move}"
+msgstr "Ande com {move}"
+
+msgid "A quick burst: {dash}. It works while carrying too"
+msgstr "Uma arrancada rápida: {dash}. Funciona carregando também"
+
+msgid "Carry"
+msgstr "Carregar"
+
+msgid "Walk up to a stockpile and pick up a load with {interact}. The wall's tag says what it needs"
+msgstr "Vá até um estoque e pegue uma carga com {interact}. A etiqueta do muro diz o que ele precisa"
+
+msgid "Deliver"
+msgstr "Entregar"
+
+msgid "Take it to the wall on the amber footing and press {interact}. Not needed there? {drop} drops it"
+msgstr "Leve ao muro sobre a base âmbar e aperte {interact}. Não precisa lá? {drop} solta"
+
+msgid "Bring what the wall still asks for. Once it has it all, stand at the wall and work it up with {interact}"
+msgstr "Traga o que o muro ainda pede. Quando tiver tudo, fique junto ao muro e erga-o com {interact}"
+
+msgid "Guard the builders"
+msgstr "Proteja os construtores"
+
+msgid "An enemy! Hold {throw} to whirl the sling, aim, and let go. Close in, the same button is a sword cut"
+msgstr "Um inimigo! Segure {throw} para girar a funda, mire e solte. De perto, o mesmo botão é um golpe de espada"
+
+msgid "Nobody gets up alone"
+msgstr "Ninguém se levanta sozinho"
+
+msgid "Your crewmate is down. Go to them and press {interact} to help them up"
+msgstr "Seu companheiro caiu. Vá até ele e aperte {interact} para levantá-lo"
+
+msgid "That's the work"
+msgstr "Esse é o trabalho"
+
+msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
+msgstr "Carregar, construir, proteger e levantar uns aos outros.\n“Levantemo-nos e edifiquemos.” (Nee. 2:18)"

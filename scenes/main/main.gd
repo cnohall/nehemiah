@@ -99,7 +99,11 @@ func _ready() -> void:
 		for id in multiplayer.get_peers():
 			_spawn_player(id)
 		director.start()
-		fit_bots()
+		if GameState.tutorial:
+			fit_bots(0)
+			add_child(Tutorial.new(self))
+		else:
+			fit_bots()
 	else:
 		_ask_for_roster()
 
