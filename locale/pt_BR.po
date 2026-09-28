@@ -1264,3 +1264,18 @@ msgstr "Mãos firmes, boa mira"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "Rápido, certeiro, larga a obra para vigiar"
+
+msgid "Pause · menu"
+msgstr "Pausa · menu"
+
+msgid "Short of hands? Add bots to the crew."
+msgstr "Faltam mãos? Adicione bots à equipe."
+
+msgid "Paused"
+msgstr "Pausado"
+
+msgid "The work waits"
+msgstr "A obra espera"
+
+msgid "Nothing moves until you resume."
+msgstr "Nada se move até você continuar."

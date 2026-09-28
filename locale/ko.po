@@ -1256,3 +1256,18 @@ msgstr "안정된 손, 괜찮은 조준"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "빠르고 정확하며, 일을 두고 지킴"
+
+msgid "Pause · menu"
+msgstr "일시정지 · 메뉴"
+
+msgid "Short of hands? Add bots to the crew."
+msgstr "일손이 부족한가요? 봇을 추가하세요."
+
+msgid "Paused"
+msgstr "일시정지됨"
+
+msgid "The work waits"
+msgstr "작업이 기다립니다"
+
+msgid "Nothing moves until you resume."
+msgstr "계속할 때까지 아무것도 움직이지 않습니다."

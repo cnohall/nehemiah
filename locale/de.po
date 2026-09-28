@@ -1264,3 +1264,18 @@ msgstr "Ruhige Hände, ordentliches Zielen"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "Schnell, treffsicher, verlässt die Arbeit zum Wachen"
+
+msgid "Pause · menu"
+msgstr "Pause · Menü"
+
+msgid "Short of hands? Add bots to the crew."
+msgstr "Zu wenige Hände? Hol Bots in die Mannschaft."
+
+msgid "Paused"
+msgstr "Pausiert"
+
+msgid "The work waits"
+msgstr "Die Arbeit ruht"
+
+msgid "Nothing moves until you resume."
+msgstr "Nichts bewegt sich, bis du weitermachst."

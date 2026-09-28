@@ -98,6 +98,7 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Controls card shows keys or pad buttons, whichever is in use
 - Gamepad host starts the day from the pause menu ("Begin the work", focused)
 - Join: friends already in a lobby are listed with one-click Join; pause menu opens Steam's invite overlay
+- Playtest feedback (28 Sep 2026): "bit of a learning curve — can't see how to add bots, pause the game". Answer: with no other people connected (solo, or bots only), the menu really pauses and the controls card says "Pause · menu"; online it stays "Menu" and play goes on. The host's difficulty / bots / bot skill rows are in the pause menu too (pad-navigable, work mid-day). While gathering with no bots, the gather panel says "Short of hands? Add bots to the crew." Still open: no tutorial / first-run prompts beyond the controls card and "Next:" line
 
 ### 5.6 Tower-defence layer — ◐ first pass, needs playtest
 Three rules, each on by default and each switched off from the command line to A/B it (`-- --no-waves`, `-- --no-sun`, `-- --no-posts`; the host's choice goes to everyone who joins). Test: `tools/td_test.gd` (run with `--day=4` for the last-day loss).

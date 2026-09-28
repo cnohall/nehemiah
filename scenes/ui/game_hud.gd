@@ -33,7 +33,7 @@ const CONTROLS := [
 	["dash", "Dash"],
 	["throw", "Sling — charge, then throw"],
 	["horn", "Horn — call the crew"],   # only in sections with the horn
-	["pause", "Menu"],
+	["pause", "Menu"],   # "Pause · menu" when playing alone (see _refresh_controls)
 ]
 
 @onready var day_number:   Label       = $Root/DayPlaque/VBox/DayRow/DayNumber
@@ -68,6 +68,8 @@ var _pad_lost_note: Label   # pause menu line shown after the pad in use disconn
 var _tally: VBoxContainer
 var _last_tally := {}   # the latest dusk numbers (a replay's end screen shows its marks)
 var _horn_row: Control
+var _pause_what: Label       # controls card: what the pause key does
+var _host_refreshers: Array[Callable] = []   # bot / difficulty rows (gather panel + pause menu)
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 var _next_line: Label        # day plaque: what to do next, for the local player
@@ -79,6 +81,8 @@ var _sun_time: Label
 var _sun_warned := false     # "the sun is low" said once a day
 
 func _ready() -> void:
+	# Keeps running while a solo game is paused (menus, settings, fades)
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
 		UiStyle.ornament(p)
 	_build_player_cards()
@@ -107,7 +111,20 @@ func _ready() -> void:
 	$Root/GatherPanel/VBox/Begin.focus_mode = Control.FOCUS_NONE
 	_build_gamepad_begin()
 	if is_host:
-		_build_bot_row()
+		_build_bot_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
+		# Also from the menu: mid-day, and reachable on a pad
+		var menu := $Root/PauseMenu/Center/Modal/VBox
+		var at: int = $Root/PauseMenu/Center/Modal/VBox/Settings.get_index()
+		var rule := HSeparator.new()
+		menu.add_child(rule)
+		menu.move_child(rule, at)
+		_build_bot_row(menu, at + 1, true)
+	# Someone joined a paused solo game: the world can't stay frozen for them
+	NetworkManager.peer_connected.connect(func(_id: int):
+		get_tree().paused = false
+		$Root/PauseMenu/Center/Modal/VBox/Hint.text = "The game keeps running for your crew while this is open."
+		_refresh_controls())
+	NetworkManager.peer_disconnected.connect(func(_id: int): _refresh_controls())
 	GameState.crew_changed.connect(_on_crew_changed)
 	_on_crew_changed(GameState.crew_size)
 	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
@@ -157,6 +174,15 @@ func _open_pause() -> void:
 		return
 	pause_menu.show()
 	InputMode.set_menu_open(true)
+	# Alone (solo or with bots) the menu really pauses; online the others play on
+	get_tree().paused = _solo()
+	var vb := $Root/PauseMenu/Center/Modal/VBox
+	vb.get_node("Eyebrow").text = "The work waits" if _solo() else "The work goes on"
+	vb.get_node("Title").text = "Paused" if _solo() else "Menu"
+	vb.get_node("Hint").text = "Nothing moves until you resume." if _solo() \
+		else "The game keeps running for your crew while this is open."
+	for r in _host_refreshers:
+		r.call()
 	UiFx.fade_in(pause_menu, 0.16)
 	_refresh_controls()
 	_pause_begin.visible = multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER
@@ -211,16 +237,25 @@ func _refresh_gather_hint() -> void:
 
 func _close_pause() -> void:
 	pause_menu.hide()
+	get_tree().paused = false
 	gather.modulate.a = 1.0
 	settings.hide()
 	_pad_lost_note.hide()
 	InputMode.set_menu_open(false)
+	for r in _host_refreshers:
+		r.call()
 	_refresh_controls()
 
 func _exit_tree() -> void:
 	InputMode.set_menu_open(false)
+	get_tree().paused = false
+
+# No other people connected (bots don't count): pausing freezes the world
+func _solo() -> bool:
+	return multiplayer.get_peers().is_empty()
 
 func _leave() -> void:
+	get_tree().paused = false
 	NetworkManager.disconnect_session()
 	GameState.reset()
 	get_tree().change_scene_to_file(MENU_SCENE)
@@ -658,27 +693,33 @@ func _on_crew_changed(size: int) -> void:
 
 # Host, while gathering: how hard the enemy presses, and bots to fill the empty places —
 # how many, and how good. Each row has a caption saying what the choice means.
-# Mouse only, like Begin (a pad's A is busy picking things up here).
-func _build_bot_row() -> void:
-	var vb := $Root/GatherPanel/VBox
-	var at: int = $Root/GatherPanel/VBox/Begin.get_index()
+# Built twice: in the gather panel (mouse only, like Begin — a pad's A is busy picking
+# things up there) and in the pause menu (focusable, and usable mid-day).
+func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	# Difficulty
-	var diff := _bot_button("")
+	var diff := _bot_button("", in_menu)
 	var diff_about := _host_caption()
 	var diff_row := _host_row([diff])
 	# Bots
 	var label := Label.new()
 	label.theme_type_variation = &"Caption"
-	var fewer := _bot_button("−")
-	var more := _bot_button("+")
-	var skill := _bot_button("")
+	var fewer := _bot_button("−", in_menu)
+	var more := _bot_button("+", in_menu)
+	var skill := _bot_button("", in_menu)
 	var skill_about := _host_caption()
 	var bot_row := _host_row([label, fewer, more, skill])
-	for c in [diff_row, diff_about, bot_row, skill_about]:
+	# Gather panel: point a lone builder at the bots (playtest: nobody found them)
+	var nudge := _host_caption()
+	nudge.text = "Short of hands? Add bots to the crew."
+	nudge.add_theme_color_override("font_color", UiStyle.INK)
+	nudge.visible = false
+	for c in [diff_row, diff_about, nudge, bot_row, skill_about]:
 		vb.add_child(c)
 		vb.move_child(c, at)
 		at += 1
 	var refresh := func():
+		nudge.visible = not in_menu and Settings.bot_count == 0 \
+			and GameState.phase == GameState.Phase.GATHER
 		var d: Dictionary = Settings.diff()
 		diff.text = tr("Difficulty: %s") % tr(d["name"])
 		diff_about.text = tr(d["about"])
@@ -690,11 +731,13 @@ func _build_bot_row() -> void:
 		skill_about.visible = Settings.bot_count > 0
 		fewer.disabled = Settings.bot_count <= 0
 		more.disabled = Settings.bot_count >= NetworkManager.MAX_PLAYERS - 1
+	_host_refreshers.append(refresh)
 	var change := func(count: int, level: int):
 		Settings.bot_count = clampi(count, 0, NetworkManager.MAX_PLAYERS - 1)
 		Settings.bot_skill = level
 		Settings.save()
-		refresh.call()
+		for r in _host_refreshers:
+			r.call()
 		bots_changed.emit()
 	fewer.pressed.connect(func(): change.call(Settings.bot_count - 1, Settings.bot_skill))
 	more.pressed.connect(func(): change.call(Settings.bot_count + 1, Settings.bot_skill))
@@ -703,7 +746,8 @@ func _build_bot_row() -> void:
 	diff.pressed.connect(func():
 		Settings.difficulty = (Settings.difficulty + 1) % Settings.DIFFICULTIES.size()
 		Settings.save()
-		refresh.call())
+		for r in _host_refreshers:
+			r.call())
 	diff.tooltip_text = tr("Click to change")
 	skill.tooltip_text = tr("Click to change")
 	refresh.call()
@@ -723,11 +767,11 @@ func _host_caption() -> Label:
 	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	return l
 
-func _bot_button(text: String) -> Button:
+func _bot_button(text: String, focusable := false) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.theme_type_variation = &"GhostButton"
-	b.focus_mode = Control.FOCUS_NONE
+	b.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	return b
 
 # ── Player cards ───────────────────────────────────────────
@@ -816,6 +860,8 @@ func _build_controls_hint() -> void:
 		what.add_theme_font_size_override("font_size", 14)
 		what.text = row[1]
 		hb.add_child(what)
+		if row[0] == "pause":
+			_pause_what = what
 		if row[0] == "horn":
 			_horn_row = hb
 	_controls = panel
@@ -830,6 +876,8 @@ func _refresh_controls() -> void:
 		return
 	if _horn_row != null:
 		_horn_row.visible = GameState.has_twist("horn")
+	if _pause_what != null:
+		_pause_what.text = "Pause · menu" if _solo() else "Menu"
 	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1
 	var want := (early and not GameState.is_over()) or pause_menu.visible
 	if want == _controls.visible:

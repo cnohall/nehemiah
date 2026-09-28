@@ -1615,3 +1615,18 @@ msgstr ""
 msgid "← →  or  Click   Choose          Esc   Back"
 msgstr ""
 
+
+msgid "Pause · menu"
+msgstr ""
+
+msgid "Short of hands? Add bots to the crew."
+msgstr ""
+
+msgid "Paused"
+msgstr ""
+
+msgid "The work waits"
+msgstr ""
+
+msgid "Nothing moves until you resume."
+msgstr ""

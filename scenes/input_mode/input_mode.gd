@@ -36,6 +36,8 @@ var _pad_device := -1
 var _await_release := false
 
 func _ready() -> void:
+	# Device hints and the release guard must work in a paused (solo) game's menu
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	Input.joy_connection_changed.connect(_on_joy_connection)
 	# Godot's built-in ui_accept / ui_cancel are keyboard-only; without these, A can't
 	# press a focused button and B can't back out of a menu
