@@ -13,6 +13,7 @@ const DUSK_TIME        := 9.0   # long enough to read the tally
 const CELEBRATE_STEP   := 0.12  # seconds between each finished unit's flourish
 const NAV_REBAKE_DELAY := 0.4
 const REPAIR_ON_DAWN   := 0.5   # fraction of lost health restored overnight
+const SUN_RESYNC       := 2.0   # seconds between sun-clock corrections to clients
 
 # Every peer: Main shows/hides the StoryPlayer on these
 signal story_started(day: int)
@@ -21,8 +22,8 @@ signal story_ended
 # Every peer: the day's numbers, for the dusk tally card
 signal day_tallied(stats: Dictionary)
 
-# Build order within a section: the named gate first, then outward to the towers
-const UNIT_ORDER := ["SheepGate", "Section1", "Section3", "TowerLeft", "Section4", "TowerRight"]
+# Build order within a section: the named gate first, then outward (WorkFront)
+const UNIT_ORDER := WorkFront.UNIT_ORDER
 
 @onready var _wall: Node3D                = get_parent().get_node("Wall")
 @onready var _waves: Node                 = get_parent().get_node("WaveManager")
@@ -43,6 +44,7 @@ var _breaches_at_dawn := 0
 var _section_time := 0.0
 var _section_breaches := 0   # GameState.breaches when the section began
 var _section_ono := 0        # workers who went with the messenger ("schemes")
+var _sun_resync := 0.0
 
 func _ready() -> void:
 	add_to_group("day_director")
@@ -88,13 +90,23 @@ func _process(delta: float) -> void:
 		GameState.Phase.WORK:
 			_stats["time"] += delta
 			_section_time += delta
+			_tick_sun(delta)
 		GameState.Phase.DUSK:
 			_timer -= delta
 			if _timer <= 0.0:
 				# A replay is one section: it ends when that section stands
 				var pos := GameState.day_in_section(GameState.current_day)
-				if GameState.is_replay() and pos.x == pos.y - 1:
+				var done := _section_done()
+				if GameState.is_replay() and (done or pos.x == pos.y - 1):
 					GameState.set_phase(GameState.Phase.WON)
+				elif GameState.sun and done and pos.x < pos.y - 1:
+					# Sun clock: the stretch stood early — the days to spare are skipped,
+					# the next stretch starts tomorrow (the last one wins at once)
+					var next := GameState.current_section_index + 1
+					if next >= GameState.SECTIONS.size():
+						GameState.set_phase(GameState.Phase.WON)
+					elif GameState.advance_day(GameState.SECTIONS[next]["days"][0]):
+						_begin_day()
 				elif GameState.advance_day():
 					_begin_day()
 
@@ -102,7 +114,7 @@ func _process(delta: float) -> void:
 
 func _begin_day() -> void:
 	_waves.stop()
-	if _story_day != GameState.current_day and not StoryData.disabled() \
+	if _story_day != GameState.current_day and not StoryData.disabled() and not GameState.attract \
 			and not StoryData.slides_for_day(GameState.current_day).is_empty():
 		_start_story()
 		return
@@ -122,10 +134,18 @@ func _begin_day() -> void:
 				part.repair(REPAIR_ON_DAWN)
 			part.is_target = false
 
-	# Split the section's units evenly over its days; the last day takes the remainder
-	var from := floori(_units.size() * pos.x / float(pos.y))
-	var to := floori(_units.size() * (pos.x + 1) / float(pos.y))
-	_targets = _units.slice(from, to)
+	if GameState.sun:
+		# Sun clock: the whole stretch is the goal, worked over its days of equal light;
+		# a day ends at the stars (or when the stretch stands)
+		_targets = _units.duplicate()
+		var light := GameState.day_length()
+		GameState.set_sun(light, light)
+	else:
+		# Split the section's units evenly over its days; the last day takes the remainder
+		var from := floori(_units.size() * pos.x / float(pos.y))
+		var to := floori(_units.size() * (pos.x + 1) / float(pos.y))
+		_targets = _units.slice(from, to)
+		GameState.set_sun(0.0, 0.0)
 	for unit in _targets:
 		for part in unit:
 			part.is_target = true
@@ -137,8 +157,32 @@ func _begin_day() -> void:
 	_timer = DAWN_TIME
 	_request_nav_rebake()
 
-func _end_day() -> void:
+# Server: the sun clock runs down; at the stars the day ends with whatever is built.
+# On a section's last day that loses the run (Neh. 4:21 — they worked till the stars).
+func _tick_sun(delta: float) -> void:
+	if GameState.sun_total <= 0.0:
+		return
+	_sun_resync -= delta
+	if _sun_resync <= 0.0:
+		_sun_resync = SUN_RESYNC
+		GameState.set_sun(GameState.sun_total, GameState.sun_left)
+	if GameState.sun_left > 0.0 or GameState.targets_done >= GameState.targets_total:
+		return
+	if GameState.last_day_of_section():
+		print("DayDirector: the stars appeared — %s unfinished (%d of %d units)" % [
+			GameState.get_current_section()["name"], GameState.targets_done, GameState.targets_total])
+		GameState.set_sun(GameState.sun_total, 0.0)
+		GameState.lose("stars")
+	else:
+		_end_day(true)
+
+func _end_day(nightfall := false) -> void:
 	_waves.stop()
+	_stats["unfinished"] = GameState.targets_total - GameState.targets_done if nightfall else 0
+	if GameState.sun_total > 0.0:
+		print("DayDirector: day %d — work %.0f s of %.0f s daylight%s" % [GameState.current_day,
+			_stats["time"], GameState.sun_total, ", nightfall with %d unfinished" % _stats["unfinished"] if nightfall else ""])
+	GameState.set_sun(GameState.sun_total, GameState.sun_left)
 	GameState.set_phase(GameState.Phase.DUSK)
 	for e in _enemies.get_children():
 		e.flee()
@@ -151,8 +195,9 @@ func _end_day() -> void:
 			p._set_downed.rpc(false)
 	_stats["breaches"] = GameState.breaches - _breaches_at_dawn
 	_stats["crew"] = _crew_rows()
-	var pos := GameState.day_in_section(GameState.current_day)
-	if pos.x == pos.y - 1:
+	if _section_done():
+		var pos := GameState.day_in_section(GameState.current_day)
+		_stats["spare"] = pos.y - 1 - pos.x
 		_rate_section()
 	for id: int in _scene_peers():
 		_tally.rpc_id(id, _stats)
@@ -180,6 +225,9 @@ func _rate_section() -> void:
 	_stats["section_breaches"] = GameState.breaches - _section_breaches
 	_stats["wall"] = health
 	_stats["section_ono"] = _section_ono
+
+func _section_done() -> bool:
+	return _units.all(func(unit): return unit.all(func(p): return p.is_complete()))
 
 ## Average health of every wall part in the section, 0..1 (doors have none)
 func _wall_health() -> float:

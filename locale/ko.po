@@ -634,8 +634,8 @@ msgstr "반죽 통"
 msgid "Mortar ready"
 msgstr "회반죽 준비됨"
 
-msgid "Picked clean"
-msgstr "다 비었음"
+msgid "Digging out more"
+msgstr "더 파내는 중"
 
 msgid "Stone"
 msgstr "돌"
@@ -1202,3 +1202,120 @@ msgstr "호스트가 방을 닫았습니다."
 
 msgid "WebRTC is not available on this device."
 msgstr "이 기기에서는 WebRTC를 사용할 수 없습니다."
+
+msgid "Daylight"
+msgstr "햇빛"
+
+msgid "Wave"
+msgstr "습격"
+
+msgid "The sun is low"
+msgstr "해가 기울었습니다"
+
+msgid "Finish before the stars appear — the %s must stand tonight"
+msgstr "별이 뜨기 전에 끝내세요 — 오늘 밤 %s이(가) 서야 합니다"
+
+msgid "The last day of this stretch — it must stand before the stars appear"
+msgstr "이 구간의 마지막 날 — 별이 뜨기 전에 세워야 합니다"
+
+msgid "The %s was not finished by nightfall. Gather the workers and begin again."
+msgstr "해가 질 때까지 %s을(를) 끝내지 못했습니다. 일꾼들을 모아 다시 시작하세요."
+
+msgid "The stretch was not finished by nightfall. Try it again."
+msgstr "해가 질 때까지 구간을 끝내지 못했습니다. 다시 해 보세요."
+
+msgid "Nightfall on day %d"
+msgstr "%d일째 밤"
+
+msgid "The stars appeared"
+msgstr "별이 떴습니다"
+
+msgid "Watch post"
+msgstr "망대"
+
+msgid "Slinger"
+msgstr "물매꾼"
+
+msgid "Out of sling stones"
+msgstr "물맷돌이 떨어졌습니다"
+
+msgid "The post needs timber"
+msgstr "망대에는 목재가 필요합니다"
+
+msgid "Enough timber — {interact} to raise it"
+msgstr "목재는 충분합니다 — {interact}로 세우세요"
+
+msgid "The slinger wants stone for his sling"
+msgstr "물매꾼에게는 물맷돌이 필요합니다"
+
+msgid "The slinger has stones enough"
+msgstr "물매꾼에게 돌이 충분합니다"
+
+msgid "The stars appeared — %d left for tomorrow."
+msgid_plural "The stars appeared — %d left for tomorrow."
+msgstr[0] "별이 떴습니다 — %d개는 내일로 넘어갑니다."
+
+msgid "The stretch"
+msgstr "이 구간"
+
+msgid "What isn't built by the stars waits for tomorrow"
+msgstr "별이 뜰 때까지 못 지은 것은 내일로 미뤄집니다"
+
+msgid "%d of %d stand — %d days left"
+msgstr "%d/%d 완성 — %d일 남음"
+
+msgid "Raise the whole stretch — %d day before the stars"
+msgid_plural "Raise the whole stretch — %d days before the stars"
+msgstr[0] "구간 전체를 세우세요 — 별이 뜨기까지 %d일"
+
+msgid "Finished with %d day to spare"
+msgid_plural "Finished with %d days to spare"
+msgstr[0] "%d일 남기고 완성"
+
+msgid "Difficulty: %s"
+msgstr "난이도: %s"
+
+msgid "Gentle"
+msgstr "순함"
+
+msgid "Standard"
+msgstr "보통"
+
+msgid "Hard"
+msgstr "어려움"
+
+msgid "Fewer enemies, lighter blows"
+msgstr "적은 적, 약한 공격"
+
+msgid "The wall as it was built"
+msgstr "성벽을 지은 그대로"
+
+msgid "More enemies, heavier blows"
+msgstr "많은 적, 강한 공격"
+
+msgid "Bots: %d"
+msgstr "봇: %d"
+
+msgid "Bot skill: %s"
+msgstr "봇 실력: %s"
+
+msgid "Bot"
+msgstr "봇"
+
+msgid "Click to change"
+msgstr "클릭하여 변경"
+
+msgid "Apprentice"
+msgstr "견습공"
+
+msgid "Master builder"
+msgstr "숙련 건축가"
+
+msgid "Slow, misses often, may wander off"
+msgstr "느리고, 자주 빗나가고, 딴 데로 샘"
+
+msgid "Steady hands, a fair aim"
+msgstr "안정된 손, 괜찮은 조준"
+
+msgid "Quick, sure shot, leaves the work to guard"
+msgstr "빠르고 정확하며, 일을 두고 지킴"

@@ -634,8 +634,8 @@ msgstr "Trog"
 msgid "Mortar ready"
 msgstr "Mörtel fertig"
 
-msgid "Picked clean"
-msgstr "Leergeräumt"
+msgid "Digging out more"
+msgstr "Es wird nachgegraben"
 
 msgid "Stone"
 msgstr "Stein"
@@ -1207,3 +1207,123 @@ msgstr "Der Host hat den Raum geschlossen."
 
 msgid "WebRTC is not available on this device."
 msgstr "WebRTC ist auf diesem Gerät nicht verfügbar."
+
+msgid "Daylight"
+msgstr "Tageslicht"
+
+msgid "Wave"
+msgstr "Angriff"
+
+msgid "The sun is low"
+msgstr "Die Sonne steht tief"
+
+msgid "Finish before the stars appear — the %s must stand tonight"
+msgstr "Fertig werden, bevor die Sterne aufgehen — %s muss heute Abend stehen"
+
+msgid "The last day of this stretch — it must stand before the stars appear"
+msgstr "Der letzte Tag an diesem Abschnitt — er muss stehen, bevor die Sterne aufgehen"
+
+msgid "The %s was not finished by nightfall. Gather the workers and begin again."
+msgstr "%s war bei Einbruch der Nacht nicht fertig. Ruft die Arbeiter zusammen und beginnt von vorn."
+
+msgid "The stretch was not finished by nightfall. Try it again."
+msgstr "Der Abschnitt war bei Einbruch der Nacht nicht fertig. Versucht es noch einmal."
+
+msgid "Nightfall on day %d"
+msgstr "Nacht über Tag %d"
+
+msgid "The stars appeared"
+msgstr "Die Sterne sind aufgegangen"
+
+msgid "Watch post"
+msgstr "Wachposten"
+
+msgid "Slinger"
+msgstr "Schleuderer"
+
+msgid "Out of sling stones"
+msgstr "Keine Schleudersteine mehr"
+
+msgid "The post needs timber"
+msgstr "Der Posten braucht Holz"
+
+msgid "Enough timber — {interact} to raise it"
+msgstr "Genug Holz — {interact}, um ihn aufzurichten"
+
+msgid "The slinger wants stone for his sling"
+msgstr "Der Schleuderer braucht Steine für seine Schleuder"
+
+msgid "The slinger has stones enough"
+msgstr "Der Schleuderer hat Steine genug"
+
+msgid "The stars appeared — %d left for tomorrow."
+msgid_plural "The stars appeared — %d left for tomorrow."
+msgstr[0] "Die Sterne sind aufgegangen — %d bleibt für morgen."
+msgstr[1] "Die Sterne sind aufgegangen — %d bleiben für morgen."
+
+msgid "The stretch"
+msgstr "Der Abschnitt"
+
+msgid "What isn't built by the stars waits for tomorrow"
+msgstr "Was bis zu den Sternen nicht steht, wartet auf morgen"
+
+msgid "%d of %d stand — %d days left"
+msgstr "%d von %d stehen — noch %d Tage"
+
+msgid "Raise the whole stretch — %d day before the stars"
+msgid_plural "Raise the whole stretch — %d days before the stars"
+msgstr[0] "Baut den ganzen Abschnitt — %d Tag bis zu den Sternen"
+msgstr[1] "Baut den ganzen Abschnitt — %d Tage bis zu den Sternen"
+
+msgid "Finished with %d day to spare"
+msgid_plural "Finished with %d days to spare"
+msgstr[0] "Fertig mit %d Tag Vorsprung"
+msgstr[1] "Fertig mit %d Tagen Vorsprung"
+
+msgid "Difficulty: %s"
+msgstr "Schwierigkeit: %s"
+
+msgid "Gentle"
+msgstr "Sanft"
+
+msgid "Standard"
+msgstr "Normal"
+
+msgid "Hard"
+msgstr "Schwer"
+
+msgid "Fewer enemies, lighter blows"
+msgstr "Weniger Feinde, leichtere Schläge"
+
+msgid "The wall as it was built"
+msgstr "Die Mauer, wie sie gebaut wurde"
+
+msgid "More enemies, heavier blows"
+msgstr "Mehr Feinde, härtere Schläge"
+
+msgid "Bots: %d"
+msgstr "Bots: %d"
+
+msgid "Bot skill: %s"
+msgstr "Bot-Können: %s"
+
+msgid "Bot"
+msgstr "Bot"
+
+msgid "Click to change"
+msgstr "Klicken zum Ändern"
+
+msgid "Apprentice"
+msgstr "Lehrling"
+
+msgid "Master builder"
+msgstr "Werkmeister"
+
+msgid "Slow, misses often, may wander off"
+msgstr "Langsam, trifft oft daneben, wandert ab"
+
+msgid "Steady hands, a fair aim"
+msgstr "Ruhige Hände, ordentliches Zielen"
+
+msgid "Quick, sure shot, leaves the work to guard"
+msgstr "Schnell, treffsicher, verlässt die Arbeit zum Wachen"

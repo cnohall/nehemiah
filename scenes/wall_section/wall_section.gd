@@ -76,7 +76,7 @@ var is_target := false:
 	set(value):
 		is_target = value
 		if is_node_ready():
-			_foundation_mat.albedo_color = TARGET_COLOR if value else EARTH_COLOR
+			_foundation_mat.albedo_color = TARGET_COLOR if value and not GameState.attract else EARTH_COLOR
 			_update_label()
 
 # Replicated; a drop shakes the stones on every peer so an attack reads at a glance
@@ -416,7 +416,7 @@ func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
 func _add_foundation() -> void:
 	var s := Vector3(_size.x + 0.35, 0.12, _size.z + 0.35)
 	_foundation_mat = _add_box(s, Vector3(_center.x, 0.06, _center.z),
-		TARGET_COLOR if is_target else EARTH_COLOR)
+		TARGET_COLOR if is_target and not GameState.attract else EARTH_COLOR)  # the title backdrop stays unmarked
 
 # Staggered courses of rough-cut blocks, one MultiMesh for the whole section
 func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void:

@@ -29,6 +29,10 @@ var pattern := 1:          # seeds stars, hills and rubble so each slide differs
 	set(v):
 		pattern = v
 		queue_redraw()
+var sun_at := -1.0:        # sun/moon across the width (0–1); below 0, the pattern picks
+	set(v):
+		sun_at = v
+		queue_redraw()
 
 func _ready() -> void:
 	resized.connect(queue_redraw)
@@ -54,7 +58,8 @@ func _draw() -> void:
 
 	# Sun or moon, low on the horizon at dawn/dusk
 	var lift: float = { "night": 0.34, "day": 0.38, "dawn": 0.07, "dusk": 0.1 }.get(sky, 0.1)
-	var sun := Vector2(w * rng.randf_range(0.62, 0.78), horizon - h * lift)
+	var sun_x := rng.randf_range(0.62, 0.78)
+	var sun := Vector2(w * (sun_at if sun_at >= 0.0 else sun_x), horizon - h * lift)
 	var r := h * (0.028 if sky == "night" else 0.045)
 	for i in 16:
 		draw_circle(sun, r * (5.0 - i * 0.25), Color(sun_col, 0.018))

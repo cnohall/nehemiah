@@ -5,7 +5,7 @@ extends SceneTree
 #   Godot --path . --script res://tools/folk_shots.gd -- <out_dir> [--unlock-all]
 # Without --unlock-all, foes this player hasn't met show as silhouettes.
 
-const PICKS := [0, 1, 5, 7, 8, 9, 10, 11]
+const PICKS := [0, 1, 5, 6, 7, 9, 10, 11]
 const SECTIONS := [0, 2, 5, 10, 11]
 const HOLD := 30
 

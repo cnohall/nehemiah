@@ -22,6 +22,16 @@ var language := ""
 # Bots on the host's crew (BotBrain): how many fill the empty places, and how good they are
 var bot_count := 0
 var bot_skill := 1   # index into BotBrain.SKILLS
+# How hard the enemy presses (host's choice; only the server reads it): index into DIFFICULTIES
+var difficulty := 1
+
+# pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
+# harm: multiplies every enemy blow, on workers and on the wall
+const DIFFICULTIES := [
+	{ "name": "Gentle",   "pace": 0.7, "harm": 0.7,  "about": "Fewer enemies, lighter blows" },
+	{ "name": "Standard", "pace": 1.0, "harm": 1.0,  "about": "The wall as it was built" },
+	{ "name": "Hard",     "pace": 1.3, "harm": 1.25, "about": "More enemies, heavier blows" },
+]
 
 # Shipped translations (locale/*.po; the English text is the key), in picker order.
 # Names are written in their own language so anyone can find theirs.
@@ -52,6 +62,7 @@ func _ready() -> void:
 		language = cfg.get_value("general", "language", language)
 		bot_count = cfg.get_value("bots", "count", bot_count)
 		bot_skill = cfg.get_value("bots", "skill", bot_skill)
+		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -109,7 +120,12 @@ func save() -> void:
 	cfg.set_value("general", "language", language)
 	cfg.set_value("bots", "count", bot_count)
 	cfg.set_value("bots", "skill", bot_skill)
+	cfg.set_value("general", "difficulty", difficulty)
 	cfg.save(PATH)
+
+## The chosen difficulty's row of DIFFICULTIES
+func diff() -> Dictionary:
+	return DIFFICULTIES[clampi(difficulty, 0, DIFFICULTIES.size() - 1)]
 
 # ── Language ───────────────────────────────────────────────
 
