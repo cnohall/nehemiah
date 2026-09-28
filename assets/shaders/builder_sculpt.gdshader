@@ -6,7 +6,7 @@ instance uniform float flash = 0.0;
 instance uniform float hair_detail = 0.0;
 
 void fragment() {
-	vec3 paint = part_color.rgb;
+	vec3 paint = part_color.rgb * COLOR.rgb;   // merged rigs: colour per vertex
 	// UV.x runs around each sculpted lock, UV.y follows its growth direction.
 	// Fine tonal strands reinforce the actual grooves without extra draw calls.
 	float strand = sin(UV.x * 75.398 + sin(UV.y * 7.0) * 0.6);

@@ -11,7 +11,8 @@ uniform vec4 flash_color : source_color = vec4(1.0, 0.96, 0.88, 1.0);
 uniform vec4 rim_color : source_color = vec4(1.0, 0.93, 0.78, 1.0);
 
 void fragment() {
-	ALBEDO = mix(part_color.rgb, flash_color.rgb, flash * 0.8);
+	// Merged rigs carry each part's colour in the vertices (linear); lone parts have none (= white)
+	ALBEDO = mix(part_color.rgb * COLOR.rgb, flash_color.rgb, flash * 0.8);
 	ROUGHNESS = 1.0;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	EMISSION = rim_color.rgb * rim * 0.08 + flash_color.rgb * flash * 0.5;

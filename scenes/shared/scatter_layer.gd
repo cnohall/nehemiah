@@ -580,12 +580,32 @@ func _add(kind: String, xf: Transform3D, color: Color) -> void:
 	_batches[kind][0].append(xf)
 	_batches[kind][1].append(color)
 
+# A map-wide MultiMesh has one bounding box, so it's never culled: the camera sees a
+# fraction of the map, the GPU drew all of it. The big batches (~11k grass blades)
+# split into map tiles; small ones stay whole — every tile is a draw.
+const TILE := 24.0
+const TILE_MIN := 1500   # instances before a kind is worth splitting
+
 func _flush() -> void:
 	for kind: String in _batches:
-		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
-		# Ground-hugging bits: shadows cost more than they add
-		if kind in ["pebble", "patch", "slab", "blade", "bed", "chip"]:
-			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var mesh := _mesh_for(kind)
+		var mat := _material_for(kind)
+		var tiles := {}
+		var xfs: Array[Transform3D] = _batches[kind][0]
+		var cols: Array[Color] = _batches[kind][1]
+		var split := xfs.size() >= TILE_MIN
+		for i in xfs.size():
+			var o := xfs[i].origin
+			var key := Vector2i(floori(o.x / TILE), floori(o.z / TILE)) if split else Vector2i.ZERO
+			if not tiles.has(key):
+				tiles[key] = [[] as Array[Transform3D], [] as Array[Color]]
+			tiles[key][0].append(xfs[i])
+			tiles[key][1].append(cols[i])
+		for key: Vector2i in tiles:
+			var mmi := _multimesh(mesh, tiles[key][0], tiles[key][1], mat)
+			# Ground-hugging bits: shadows cost more than they add
+			if kind in ["pebble", "patch", "slab", "blade", "bed", "chip"]:
+				mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
 
 # Chunky look: bevelled blocks, faceted foliage and rock
@@ -604,7 +624,13 @@ func _mesh_for(kind: String) -> Mesh:
 	match kind:
 		"block", "slab", "opening", "chip", "timber": return Chunky.unit_block()
 		"pebble":  return _sphere(0.13, 0.10, 5, 2)
-		"blade":   return _cylinder(0.0, 0.075, 1.0, 3)
+		"blade":
+			# ~11k of these: a bare 3-sided spike, 6 triangles (the default height rings
+			# and caps made it 44 — half a million triangles of grass a frame)
+			var b := _cylinder(0.0, 0.075, 1.0, 3)
+			b.cap_top = false
+			b.cap_bottom = false
+			return b
 		"bush":    return _sphere(0.42, 0.62, 12, 6)
 		"leaf":    return _sphere(0.6, 1.0, 14, 7)
 		"boulder": return _sphere(0.6, 0.9, 6, 3)
@@ -663,6 +689,7 @@ func _cylinder(top: float, bottom: float, height: float, segments: int) -> Cylin
 	m.bottom_radius = bottom
 	m.height = height
 	m.radial_segments = segments
+	m.rings = 0   # straight sides: height rings only add triangles
 	return m
 
 func _multimesh(mesh: Mesh, xf: Array[Transform3D], colors: Array[Color], mat: Material = null) -> MultiMeshInstance3D:

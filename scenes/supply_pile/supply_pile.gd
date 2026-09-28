@@ -48,6 +48,7 @@ func _ready() -> void:
 		count_label.text = "Rubble"
 		add_to_group("restockable")
 		_build_rubble_heap(rng)
+		_fold_visual()
 		_build_sync()
 		GameState.section_changed.connect(_refresh_active.unbind(1))
 		_refresh_active()
@@ -70,6 +71,7 @@ func _ready() -> void:
 			_build_lime(rng)
 		"water":
 			_build_water(rng)
+	_fold_visual()
 	GameState.section_changed.connect(_refresh_active.unbind(1))
 	_refresh_active()
 
@@ -319,6 +321,23 @@ func _build_pad(rng: RandomNumberGenerator) -> void:
 	mmi.material_override = Chunky.material(0.05, false, 0.3)
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_visual.add_child(mmi)
+
+# The pile's props never move: fold them into one mesh (one draw + one shadow instead of
+# a few dozen). Rubble blocks stay separate — they vanish one by one as it's picked.
+func _fold_visual() -> void:
+	var items := []
+	for c in _visual.get_children():
+		var mi := c as MeshInstance3D
+		if mi == null or _rubble_stones.has(mi):
+			continue
+		items.append([mi.mesh, mi.transform, (mi.material_override as StandardMaterial3D).albedo_color])
+		mi.free()
+	if items.is_empty():
+		return
+	var folded := MeshInstance3D.new()
+	folded.mesh = MeshFold.fold(items)
+	folded.material_override = MeshFold.vertex_material()
+	_visual.add_child(folded)
 
 func _box(size: Vector3) -> Mesh:
 	return Chunky.bevel_box(size, minf(0.04, minf(size.x, minf(size.y, size.z)) * 0.3))

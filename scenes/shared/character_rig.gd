@@ -175,6 +175,7 @@ func setup(look: Dictionary, size_scale := 1.0) -> void:
 	_size = size_scale * BASE_SCALE
 	scale = Vector3.ONE * _size
 	_build(look)
+	_merge_parts(look)
 	_build_marker()
 
 ## Rebuild with another look (e.g. a player's slot colour), keeping the pose
@@ -188,6 +189,7 @@ func set_look(look: Dictionary) -> void:
 	_carry_anchor = null
 	_belt_tool = null
 	_build(look)
+	_merge_parts(look)
 	_apply_pose()
 
 func set_ring_color(c: Color) -> void:
@@ -780,6 +782,57 @@ func _part(parent: Node3D, mesh: Mesh, color: Color, pos: Vector3, rot := Vector
 	mi.set_instance_shader_parameter("part_color", color)
 	_parts.append(mi)
 	return mi
+
+# Draw calls: a figure is ~70-130 parts, each its own draw (+ shadow, + outline shell),
+# so a crowd ran to thousands per frame. Parts never move against their pivot, so every
+# pivot's parts fold into one mesh — per material / outline group — with each part's
+# colour baked into the vertices. Pivots (limbs, tool, spear, cape) still animate.
+# Same look → same meshes, cached, so a spawn only pays for building the parts.
+static var _merged: Dictionary = {}   # look → Array of merged meshes, in group order
+
+func _merge_parts(look: Dictionary) -> void:
+	var is_part := {}
+	for p in _parts:
+		is_part[p] = true
+	var groups: Array[Dictionary] = []
+	var by_key := {}
+	for p: GeometryInstance3D in _parts:
+		var mi := p as MeshInstance3D
+		# Parts can hang off other parts (a scarf's stripe off its tail): fold up to the pivot
+		var xf := mi.transform
+		var pivot := mi.get_parent()
+		while is_part.has(pivot):
+			xf = (pivot as Node3D).transform * xf
+			pivot = pivot.get_parent()
+		var hair: Variant = mi.get_instance_shader_parameter("hair_detail")
+		var key := "%d|%d|%d|%s" % [pivot.get_instance_id(), mi.material_override.get_instance_id(),
+			mi.material_overlay.get_instance_id() if mi.material_overlay else 0, str(hair)]
+		if not by_key.has(key):
+			by_key[key] = groups.size()
+			groups.append({ pivot = pivot, mat = mi.material_override, overlay = mi.material_overlay,
+				hair = hair, items = [] })
+		groups[by_key[key]].items.append([mi.mesh, xf, mi.get_instance_shader_parameter("part_color")])
+	var cache_key := str(look)
+	var meshes: Array = _merged.get(cache_key, [])
+	if meshes.size() != groups.size():
+		meshes = []
+		for g in groups:
+			meshes.append(MeshFold.fold(g.items))
+		_merged[cache_key] = meshes
+	for p in _parts:
+		if is_instance_valid(p) and not is_part.has(p.get_parent()):
+			p.free()   # takes any parts hanging off it along
+	_parts.clear()
+	for i in groups.size():
+		var g: Dictionary = groups[i]
+		var mi := MeshInstance3D.new()
+		mi.mesh = meshes[i]
+		mi.material_override = g.mat
+		mi.material_overlay = g.overlay
+		(g.pivot as Node).add_child(mi)
+		if g.hair != null:
+			mi.set_instance_shader_parameter("hair_detail", g.hair)
+		_parts.append(mi)
 
 # Shared meshes, keyed by size — every rig in the game reuses the same few
 static func _cached(key: String, make: Callable) -> Mesh:
