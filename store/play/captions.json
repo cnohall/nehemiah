@@ -1,0 +1,66 @@
+{
+  "_comment": "Play phone screenshots, rendered in array order by render.mjs. `capture` is a file in captures/<game lang>/ (tools/store_shots.gd on mobile-spike). Wrap a phrase in ==double equals== to set it on the gold marker. Captions are burned into the PNG.",
+  "langs": { "en-US": "en", "es-419": "es", "pt-BR": "pt_BR", "de-DE": "de", "ko-KR": "ko" },
+  "shots": [
+    {
+      "capture": "1_build.png",
+      "captions": {
+        "en-US": "Rebuild ==Jerusalem's wall== together",
+        "es-419": "Reconstruyan juntos ==la muralla de Jerusalén==",
+        "pt-BR": "Reconstruam juntos ==a muralha de Jerusalém==",
+        "de-DE": "Baut gemeinsam ==Jerusalems Mauer== wieder auf",
+        "ko-KR": "함께 ==예루살렘 성벽==을 다시 쌓아요"
+      }
+    },
+    {
+      "capture": "2_wave.png",
+      "captions": {
+        "en-US": "Guard the builders ==as the waves come==",
+        "es-419": "Protejan a los constructores ==cuando llegan las oleadas==",
+        "pt-BR": "Protejam os construtores ==quando as ondas chegam==",
+        "de-DE": "Schützt die Bauleute ==vor jeder Angriffswelle==",
+        "ko-KR": "==적이 몰려올 때== 건축가들을 지키세요"
+      }
+    },
+    {
+      "capture": "6_join.png",
+      "captions": {
+        "en-US": "Up to four friends ==with one room code==",
+        "es-419": "Hasta cuatro amigos ==con un código de sala==",
+        "pt-BR": "Até quatro amigos ==com um código de sala==",
+        "de-DE": "Bis zu vier Freunde ==mit einem Raumcode==",
+        "ko-KR": "==방 코드 하나로== 친구 최대 4명과 함께"
+      }
+    },
+    {
+      "capture": "3_post.png",
+      "captions": {
+        "en-US": "Raise ==watch posts== and keep them in stones",
+        "es-419": "Levanten ==puestos de guardia== y que no falten piedras",
+        "pt-BR": "Ergam ==postos de guarda== e não deixem faltar pedras",
+        "de-DE": "Errichtet ==Wachposten== und versorgt sie mit Steinen",
+        "ko-KR": "==망대==를 세우고 돌을 채워 두세요"
+      }
+    },
+    {
+      "capture": "4_evening.png",
+      "captions": {
+        "en-US": "Finish the stretch ==before the stars appear==",
+        "es-419": "Terminen el tramo ==antes de que salgan las estrellas==",
+        "pt-BR": "Terminem o trecho ==antes de as estrelas aparecerem==",
+        "de-DE": "Vollendet den Abschnitt, ==bevor die Sterne aufgehen==",
+        "ko-KR": "==별이 뜨기 전에== 구간을 완성하세요"
+      }
+    },
+    {
+      "capture": "5_story.png",
+      "captions": {
+        "en-US": "52 days, ==straight from the book of Nehemiah==",
+        "es-419": "52 días, ==tomados del libro de Nehemías==",
+        "pt-BR": "52 dias, ==direto do livro de Neemias==",
+        "de-DE": "52 Tage, ==direkt aus dem Buch Nehemia==",
+        "ko-KR": "==느헤미야서 그대로의== 52일"
+      }
+    }
+  ]
+}
