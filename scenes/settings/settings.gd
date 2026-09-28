@@ -19,6 +19,9 @@ var bindings := {}
 var _booted := false   # apply() has run once (the boot-time apply)
 # UI language: a locale from LANGUAGES, or "" to follow the OS / browser
 var language := ""
+# Bots on the host's crew (BotBrain): how many fill the empty places, and how good they are
+var bot_count := 0
+var bot_skill := 1   # index into BotBrain.SKILLS
 
 # Shipped translations (locale/*.po; the English text is the key), in picker order.
 # Names are written in their own language so anyone can find theirs.
@@ -47,6 +50,8 @@ func _ready() -> void:
 		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
 		language = cfg.get_value("general", "language", language)
+		bot_count = cfg.get_value("bots", "count", bot_count)
+		bot_skill = cfg.get_value("bots", "skill", bot_skill)
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -102,6 +107,8 @@ func save() -> void:
 	cfg.set_value("controls", "toggle_charge", toggle_charge)
 	cfg.set_value("controls", "bindings", bindings)
 	cfg.set_value("general", "language", language)
+	cfg.set_value("bots", "count", bot_count)
+	cfg.set_value("bots", "skill", bot_skill)
 	cfg.save(PATH)
 
 # ── Language ───────────────────────────────────────────────

@@ -10,8 +10,10 @@ extends RefCounted
 #   art   — texture path; until it exists the drawn backdrop stands in
 #   sky   — "night" | "dawn" | "day" | "dusk"   (drawn backdrop)
 #   built — 0–1, how much of the wall stands     (drawn backdrop)
+#   met   — Friends and Foes key this slide introduces (GameState.mark_met)
 #   map   — section index: the circuit map instead of a backdrop (CircuitMap), sections
-#           before it standing; "inspect": true for the night ride, every stretch broken
+#           before it standing; "inspect": true for the night ride, every stretch broken;
+#           "finale": true for the ending, the last stretch rises and the ring closes
 #
 # Scripture: World English Bible (public domain, ebible.org/eng-web), checked 27 Sep 2026.
 # Adapted: Neh 4:14 reads "Yahweh" where the WEB has "the Lord", so credit it as
@@ -55,22 +57,22 @@ const BEATS := {
 		  "ref": "Nehemiah 2:18", "sky": "dawn", "built": 0.0 },
 	],
 	2: [
-		{ "eyebrow": "Samaria", "title": "Sanballat scoffs",
+		{ "eyebrow": "Samaria", "title": "Sanballat scoffs", "met": "sanballat",
 		  "text": "Sanballat the Horonite hears that the wall is going up. He is furious, and he mocks the Jews before his army.",
 		  "verse": "“Will they revive the stones out of the heaps of rubbish, since they are burned?”",
 		  "ref": "Nehemiah 4:1, 2", "sky": "dusk", "built": 0.15 },
 	],
 	3: [
-		{ "eyebrow": "Beside Sanballat", "title": "Tobiah laughs",
+		{ "eyebrow": "Beside Sanballat", "title": "Tobiah laughs", "met": "tobiah",
 		  "verse": "“What they are building, if a fox climbed up it, he would break down their stone wall.”",
 		  "text": "The work goes on. The wall is joined together up to half its height, for the people have a heart to work.",
 		  "ref": "Nehemiah 4:3, 6", "sky": "dusk", "built": 0.3 },
 	],
 	5: [
-		{ "eyebrow": "Sanballat · Tobiah · Geshem", "title": "The conspiracy",
+		{ "eyebrow": "Sanballat · Tobiah · Geshem", "title": "The conspiracy", "met": "geshem",
 		  "text": "The enemies plot together to come and fight against Jerusalem and throw it into confusion.",
 		  "ref": "Nehemiah 4:7, 8", "sky": "night", "built": 0.45 },
-		{ "eyebrow": "On the wall", "title": "Keep Jehovah in mind",
+		{ "eyebrow": "On the wall", "title": "Keep Yahweh in mind",
 		  "verse": "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”",
 		  "ref": "Nehemiah 4:14", "sky": "dawn", "built": 0.45 },
 		{ "eyebrow": "From that day on", "title": "Armed while building",
@@ -84,6 +86,26 @@ const BEATS := {
 		  "ref": "Nehemiah 6:2-4", "sky": "day", "built": 0.85 },
 	],
 }
+
+# After day 52: the ring closes, the foes lose heart, the dedication. The end screen
+# that follows carries Neh 6:15 itself, so the first card leaves the verse to it.
+const ENDING := [
+	{ "eyebrow": "Jerusalem · The twenty-fifth of Elul", "title": "Fifty-two days",
+	  "text": "The last stone is set and the doors hang in their gates. From the Sheep Gate all the way around, the wall stands.",
+	  "ref": "Nehemiah 6:15", "map": 11, "finale": true },
+	{ "eyebrow": "Sanballat · Tobiah · Geshem", "title": "They lost heart",
+	  "text": "The enemies hear of it, and all the nations around are afraid. Their schemes have come to nothing.",
+	  "verse": "“They perceived that this work was done by our God.”",
+	  "ref": "Nehemiah 6:16", "sky": "dusk", "built": 1.0 },
+	{ "eyebrow": "The dedication of the wall", "title": "Heard far away",
+	  "text": "Two great choirs of thanksgiving go in procession on top of the wall, one to the right and one to the left, and meet at the house of God.",
+	  "verse": "“The joy of Jerusalem was heard even far away.”",
+	  "ref": "Nehemiah 12:31-43", "sky": "dawn", "built": 1.0 },
+]
+
+## Campaign won: the ending plays before the end screen (not after a replay)
+static func plays_ending() -> bool:
+	return not GameState.is_replay() and not disabled()
 
 ## Slides to play before `day` starts; empty when the day has no story
 static func slides_for_day(day: int) -> Array:

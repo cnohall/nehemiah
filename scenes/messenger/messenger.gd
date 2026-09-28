@@ -50,6 +50,7 @@ func _ready() -> void:
 		"outline": Color(0.20, 0.12, 0.24),
 	})
 	_figure.play(anim)
+	GameState.mark_met("messenger")
 	# The letter in his hand (6:5 — "an open letter")
 	var scroll := MeshInstance3D.new()
 	var cyl := CylinderMesh.new()

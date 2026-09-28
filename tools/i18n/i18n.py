@@ -34,6 +34,8 @@ QUIET = re.compile(r'print|push_warning|push_error|printerr|assert|get_node|has_
 IGNORE = {
     "of 52", "Day 1", "Day 52 of 52", "1 of 4 builders here", "Sheep Gate · Neh. 3:1",
     "A new stretch: Sheep Gate · Neh. 3:1", "Wall %d%%", "Building the wall", "Desert theme", "Hold RT",
+    # Credits: names of people and works, shown as written
+    "Chris Nohall", "Joakim Henriquez", "World English Bible", "Godot Engine", "Cinzel · Spectral · Noto Serif KR",
 }
 # Built at runtime (kind.capitalize() on a world tag), so no literal in the code
 DYNAMIC = {"Stone", "Wood", "Mortar", "Lime", "Water", "Beam", "Beams", "Rubble"}

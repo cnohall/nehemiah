@@ -23,8 +23,6 @@ const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
 const AIM_RING_FREE    := Color(0.45, 0.30, 0.12, 0.85)   # dark ochre — reads on sand
 const GROUND_Y         := 0.1     # top of the floor slab
-const WHIRL_HAND_Y     := 1.7     # throwing hand, raised beside the head
-const WHIRL_SIDE       := 0.32    # hand offset to the side of the body (screen space)
 const WHIRL_RADIUS     := 0.42
 const HP_BAR_Y         := 2.75
 const DOWNED_BAR_COLOR := Color(0.78, 0.30, 0.20)
@@ -134,14 +132,37 @@ var whirling := false:
 		if _whirl != null:
 			_whirl.visible = value
 
+# Replicated: world yaw the sling is aimed along (owner writes while winding up / throwing)
+var aim_yaw := 0.0:
+	set(value):
+		aim_yaw = value
+		if _sprite != null:
+			_sprite.aim_yaw = value
+
 @onready var _sprite: CharacterRig = $Figure
 
 ## This peer's own worker, or null before it spawns
 static var local: Player
 
+# Bots (BotBrain) are workers too: named from this range instead of a peer id and owned by
+# the host, whose copy is steered by the brain in place of keys / pad. Everything that
+# means "which worker" uses worker_id(), not the multiplayer authority.
+const BOT_ID_BASE := 1 << 31   # past every peer id (those fit in 31 bits)
+## Host only, bots only
+var brain: BotBrain
+
+static func is_bot_id(id: int) -> bool:
+	return id >= BOT_ID_BASE
+
+func worker_id() -> int:
+	return name.to_int()
+
+func is_bot() -> bool:
+	return is_bot_id(worker_id())
+
 func _ready() -> void:
 	add_to_group("players")
-	if is_multiplayer_authority():
+	if is_multiplayer_authority() and not is_bot():
 		local = self
 	# Server-owned (host) player: don't replicate to a client still loading the
 	# game scene — its copy of this node doesn't exist yet
@@ -150,6 +171,10 @@ func _ready() -> void:
 	_sprite.setup(CharacterRig.worker_look(0, _DEFAULT_ROBE))
 	_sprite.footstep.connect(func(): Sfx.play("step", global_position))
 	_sprite.strike.connect(_on_strike)
+	# The whirl follows the hand, so place it once the rig has posed this frame
+	_sprite.posed.connect(func(delta: float):
+		if whirling:
+			_update_whirl(delta))
 	_sprite.play(anim)
 	_carry_prop = Node3D.new()
 	_carry_prop.position.y = CARRY_HEIGHT
@@ -168,8 +193,6 @@ func _process(delta: float) -> void:
 		_sprite.hold = "beam"
 	else:
 		_sprite.hold = "" if carried_kind.is_empty() else "front"
-	if whirling:
-		_update_whirl(delta)
 	if downed:
 		# Every peer counts down locally; the server's copy decides the self-revive
 		_down_timer -= delta
@@ -232,8 +255,11 @@ func _physics_process(delta: float) -> void:
 		return
 	_sling_cd = maxf(0.0, _sling_cd - delta)
 	_dash_cd = maxf(0.0, _dash_cd - delta)
+	if brain != null:
+		brain.think(delta)
 	_buffer_input(delta)
-	_update_focus(delta)
+	if brain == null:
+		_update_focus(delta)
 	if downed or GameState.is_over() or GameState.phase == GameState.Phase.STORY:
 		velocity = Vector3.ZERO
 		_dash_time = 0.0
@@ -267,11 +293,11 @@ static func screen_to_ground(v: Vector2) -> Vector3:
 
 # Remember presses for a moment, so one made during a pickup / throw animation still counts
 func _buffer_input(delta: float) -> void:
-	if InputMode.gameplay_blocked():
+	if brain == null and InputMode.gameplay_blocked():
 		_buffered.clear()
 		return
 	for action: String in ["interact", "drop", "dash", "horn"]:
-		if Input.is_action_just_pressed(action):
+		if brain.take_press(action) if brain != null else Input.is_action_just_pressed(action):
 			_buffered[action] = INPUT_BUFFER
 		elif _buffered.has(action):
 			_buffered[action] -= delta
@@ -283,11 +309,15 @@ func _consume(action: String) -> bool:
 
 # Stick / keys, zero while a menu is up (the pad is navigating it, not walking)
 func _move_input() -> Vector2:
+	if brain != null:
+		return brain.move
 	if InputMode.gameplay_blocked():
 		return Vector2.ZERO
 	return Input.get_vector("move_west", "move_east", "move_north", "move_south", STICK_DEADZONE)
 
 func _throw_just_pressed() -> bool:
+	if brain != null:
+		return brain.throw_pressed
 	return Input.is_action_just_pressed("throw_charge") and not InputMode.gameplay_blocked()
 
 func _handle_movement(delta: float) -> void:
@@ -325,7 +355,7 @@ func _beam_partner() -> Node3D:
 	if helping_id != 0:
 		return get_parent().get_node_or_null(str(helping_id))
 	if carried_kind == "beam":
-		var me := get_multiplayer_authority()
+		var me := worker_id()
 		for p in get_tree().get_nodes_in_group("players"):
 			if p.helping_id == me:
 				return p
@@ -360,7 +390,7 @@ func _set_helping(carrier_id: int) -> void:
 
 # Server: let go of whoever holds the other end of our beam
 func _release_helper() -> void:
-	var me := get_multiplayer_authority()
+	var me := worker_id()
 	for p in get_tree().get_nodes_in_group("players"):
 		if p.helping_id == me:
 			p._set_helping.rpc(0)
@@ -533,7 +563,7 @@ func _update_anim() -> void:
 	var speed := velocity.length()
 	if _charging:
 		# Face the aim, not the walking direction, while winding up
-		_facing = CharAnim.dir_from_velocity(_aim_point - global_position, _facing)
+		_face_aim(_aim_point)
 		_sprite.speed_scale = 1.0
 		anim = "windup_" + _facing
 		return
@@ -583,13 +613,14 @@ func _server_interact(at: Vector3) -> void:
 			_set_helping.rpc(0)
 			_tell("Let go of the beam")
 		Act.HELP:
-			_set_helping.rpc(target.get_multiplayer_authority())
+			_set_helping.rpc(target.worker_id())
 			_sfx.rpc("pickup")
 			_tell("Holding the other end — {interact} to let go")
 		Act.DELIVER:
 			_deliver(target, at)
 		Act.MESSENGER:
 			target.accept(self)
+			get_tree().call_group("day_director", "note_ono")
 		Act.WORK:
 			if GameState.active_build:
 				_start_work(target)
@@ -611,7 +642,7 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 		var why := _why_not_needed(at)
 		_tell(why[0], why[1])
 		return
-	get_tree().call_group("day_director", "note_load", get_multiplayer_authority())
+	get_tree().call_group("day_director", "note_load", worker_id())
 	_sfx.rpc("deposit_" + carried_kind)
 	_set_carried.rpc("")
 	if dest.can_build():
@@ -722,15 +753,22 @@ func _sfx(event: String) -> void:
 func _handle_attack(delta: float) -> void:
 	if not _charging:
 		# A click on HUD buttons / the Esc menu isn't a throw
-		if _throw_just_pressed() and _sling_cd <= 0.0 and get_viewport().gui_get_hovered_control() == null:
+		if _throw_just_pressed() and _sling_cd <= 0.0 and (brain != null or get_viewport().gui_get_hovered_control() == null):
+			if brain != null:
+				brain.throw_pressed = false
 			_charging = true
 			_charge = 0.0
 			whirling = true
 		return
-	if InputMode.gameplay_blocked():
+	if brain == null and InputMode.gameplay_blocked():
 		_cancel_charge()   # opened the menu mid wind-up
 		return
 	_charge = minf(1.0, _charge + delta / SLING_CHARGE_TIME)
+	if brain != null:
+		_update_aim(brain.aim_point)
+		if _charge >= brain.charge_goal:
+			release_throw()
+		return
 	_update_aim(_pad_aim_point() if InputMode.using_pad else _cursor_on_ground())
 	# Toggle mode (accessibility): a second press throws; otherwise letting go does
 	if (_throw_just_pressed() if Settings.toggle_charge else not Input.is_action_pressed("throw_charge")):
@@ -751,20 +789,32 @@ func release_throw() -> void:
 		return
 	var land := _aim_point
 	var charge := _charge
-	_cancel_charge()
+	_cancel_charge(true)   # the stone keeps whirling through the cast until it's let go
 	_sling_cd = SLING_COOLDOWN
-	_facing = CharAnim.dir_from_velocity(land - global_position, _facing)
+	_face_aim(land)
 	_play_action("slash")
 	# Release on the swing's release frame, not at wind-up
 	while is_instance_valid(self) and _sprite.animation.begins_with("slash") \
 			and _sprite.frame < SLING_RELEASE_FRAME:
 		await _sprite.frame_changed
-	if is_instance_valid(self) and _sprite.animation.begins_with("slash"):
-		_server_sling.rpc_id(1, global_position, land, charge, InputMode.using_pad)
-
-func _cancel_charge() -> void:
-	_charging = false
+	if not is_instance_valid(self):
+		return
 	whirling = false
+	if _sprite.animation.begins_with("slash"):
+		_sprite.squash(Vector2(1.08, 0.94))
+		_server_sling.rpc_id(1, global_position, land, charge, InputMode.using_pad or brain != null)
+
+# Turn toward a ground point: exact yaw for the rig, nearest 4-way facing for the rest
+func _face_aim(at: Vector3) -> void:
+	var d := at - global_position
+	if Vector2(d.x, d.z).length_squared() > 0.0001:
+		aim_yaw = atan2(d.x, d.z)
+	_facing = CharAnim.dir_from_velocity(d, _facing)
+
+func _cancel_charge(keep_whirl := false) -> void:
+	_charging = false
+	if not keep_whirl:
+		whirling = false
 	if _aim_marker:
 		_aim_marker.visible = false
 
@@ -775,7 +825,9 @@ func _update_aim(cursor: Vector3) -> void:
 	var dist := clampf(flat.length(), SLING_MIN_THROW, reach)
 	var dir := flat.normalized() if flat.length_squared() > 0.001 else Vector3.FORWARD
 	_aim_point = Vector3(global_position.x, GROUND_Y, global_position.z) + dir * dist
-	var locked := _assist_target(global_position, _aim_point, reach, _assist_cone(InputMode.using_pad))
+	var locked := _assist_target(global_position, _aim_point, reach, _assist_cone(InputMode.using_pad or brain != null))
+	if brain != null:
+		return   # nobody at this screen is aiming it
 	_show_aim_marker(locked.global_position if locked else _aim_point, locked != null)
 
 func _cursor_on_ground() -> Vector3:
@@ -861,7 +913,7 @@ func _throw_stone(target_path: NodePath, land: Vector3, damage: float) -> void:
 	var stone := SLING_STONE.instantiate()
 	get_tree().current_scene.add_child(stone)
 	stone.global_position = global_position + Vector3(0, SLING_RELEASE_Y, 0)
-	stone.shooter = get_multiplayer_authority()
+	stone.shooter = worker_id()
 	stone.init(target, land, damage)
 
 # Owner: the day's work is done — throw both arms up. A beat late, so the server's
@@ -878,7 +930,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 	_facing = "down"   # toward the camera
 	_play_action("cheer")
 	_sprite.squash(Vector2(0.9, 1.12))
-	InputMode.rumble(0.3, 0.2, 0.12)
+	if brain == null:
+		InputMode.rumble(0.3, 0.2, 0.12)
 
 # ── Damage / Downed (server) ───────────────────────────────
 
@@ -996,7 +1049,7 @@ func _on_strike() -> void:
 	Sfx.play("work_" + mat, global_position)
 	var at: Vector3 = site.approach_point(global_position, 0.0) if site != null else global_position
 	DustFx.puff(self, Vector3(at.x, 0.9, at.z), 5, 0.35)
-	if is_multiplayer_authority():
+	if is_multiplayer_authority() and brain == null:
 		InputMode.rumble(0.15, 0.0, 0.05)
 
 # ── Horn ("horn" twist) ────────────────────────────────────
@@ -1084,11 +1137,15 @@ func _sync_status(kind: String, is_downed: bool, hp: float, helping: int) -> voi
 
 # Local player only: shake our camera and rumble our pad
 func _jolt(shake: float, weak: float, strong: float, duration: float) -> void:
+	if brain != null:
+		return
 	get_tree().call_group("camera_rig", "shake", shake)
 	InputMode.rumble(weak, strong, duration)
 
 # Server → owning player only. Sent in English; the owner shows it in their language.
 func _tell(text: String, need := "") -> void:
+	if is_bot():
+		return
 	_feedback.rpc_id(get_multiplayer_authority(), text, need)
 
 @rpc("any_peer", "call_local", "reliable")
@@ -1098,6 +1155,8 @@ func _feedback(text: String, need: String) -> void:
 
 # Short floating line above the head (local only)
 func _toast(text: String, need := "") -> void:
+	if brain != null:
+		return
 	# "{interact}" → "[E]" or "[A]", whichever device this player is using
 	var l := WorldTag.make(WorldTag.Kind.TOAST, tr(text).format({ "interact": "[%s]" % InputMode.key("interact"),
 		"drop": "[%s]" % InputMode.key("drop"), "need": tr({"beam": "beams"}.get(need, need)) if not need.is_empty() else "" }))
@@ -1165,13 +1224,21 @@ func _update_whirl(delta: float) -> void:
 	# Spin speeds up as the charge builds (time-based so every peer agrees)
 	_whirl_time += delta
 	_whirl_angle += lerpf(WHIRL_SPIN_MIN, WHIRL_SPIN_MAX, minf(_whirl_time / SLING_CHARGE_TIME, 1.0)) * delta
-	var right := cam.global_basis.x
-	# Throwing (right) hand: screen-left when facing the camera or right, screen-right otherwise.
-	# Facing comes from the replicated anim ("windup_left") so remote peers agree.
-	var facing := anim.get_slice("_", 1)
-	var side := -1.0 if facing == "down" or facing == "right" else 1.0
-	var hand := global_position + Vector3.UP * WHIRL_HAND_Y + right * side * WHIRL_SIDE
-	_whirl.global_transform = Transform3D(cam.global_basis * Basis(Vector3.BACK, _whirl_angle), hand)
+	_sprite.whirl_phase = _whirl_angle
+	# Circle in the body's side plane (a real sling's), turned halfway to the camera so it
+	# never goes edge-on in the iso view; the stone comes over the top toward the target
+	var fig := _sprite.global_basis.orthonormalized()
+	var fwd := Vector3(fig.z.x, 0.0, fig.z.z).normalized()
+	var side := Vector3(fig.x.x, 0.0, fig.x.z).normalized()
+	var to_cam := cam.global_basis.z
+	if side.dot(to_cam) < 0.0:
+		side = -side
+	var z := (side + to_cam).normalized()
+	var y := (Vector3.UP - z * z.dot(Vector3.UP)).normalized()
+	var x := y.cross(z)
+	var spin := -1.0 if x.dot(fwd) > 0.0 else 1.0
+	_whirl.global_transform = Transform3D(Basis(x, y, z) * Basis(Vector3.BACK, _whirl_angle * spin),
+		_sprite.hand_position())
 
 # ── Carried prop ───────────────────────────────────────────
 

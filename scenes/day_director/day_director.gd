@@ -42,6 +42,7 @@ var _breaches_at_dawn := 0
 # Server: this section so far, for its rating
 var _section_time := 0.0
 var _section_breaches := 0   # GameState.breaches when the section began
+var _section_ono := 0        # workers who went with the messenger ("schemes")
 
 func _ready() -> void:
 	add_to_group("day_director")
@@ -110,6 +111,7 @@ func _begin_day() -> void:
 	if fresh_section:
 		_section_time = 0.0
 		_section_breaches = GameState.breaches
+		_section_ono = 0
 		for item in _items.get_children():
 			item.queue_free()  # new stretch of wall, fresh work site
 	for unit in _units:
@@ -177,6 +179,7 @@ func _rate_section() -> void:
 	_stats["par"] = par
 	_stats["section_breaches"] = GameState.breaches - _section_breaches
 	_stats["wall"] = health
+	_stats["section_ono"] = _section_ono
 
 ## Average health of every wall part in the section, 0..1 (doors have none)
 func _wall_health() -> float:
@@ -291,6 +294,10 @@ func note_load(peer_id: int) -> void:
 	if GameState.phase == GameState.Phase.WORK:
 		_stats["loads"] += 1
 		_crew_entry(peer_id)["loads"] += 1
+
+## Server: a worker went down to Ono with the messenger
+func note_ono() -> void:
+	_section_ono += 1
 
 ## Server: an enemy fell (peer_id = whose stone landed last, 0 if unknown)
 func note_foe(peer_id: int) -> void:

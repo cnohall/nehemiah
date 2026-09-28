@@ -599,11 +599,7 @@ msgstr "Intrigas"
 msgid "Section %s of %s · Days %d–%d"
 msgstr "Tramo %s de %s · Días %d–%d"
 
-msgid "With: %s"
-msgstr "Con: %s"
 
-msgid "The plain work: carry, build, defend"
-msgstr "El trabajo de siempre: cargar, construir, defender"
 
 msgid "Build again"
 msgstr "Construir de nuevo"
@@ -854,7 +850,7 @@ msgstr "Los enemigos conspiran para venir a luchar contra Jerusalén y sembrar l
 msgid "On the wall"
 msgstr "Sobre la muralla"
 
-msgid "Keep Jehovah in mind"
+msgid "Keep Yahweh in mind"
 msgstr "Ten presente a Jehová"
 
 msgid "“Don’t be afraid of them! Remember Yahweh, who is great and awesome.”"
@@ -905,6 +901,255 @@ msgid "Waiting for %d builder still reading"
 msgid_plural "Waiting for %d builders still reading"
 msgstr[0] "Esperando a %d constructor que sigue leyendo"
 msgstr[1] "Esperando a %d constructores que siguen leyendo"
+
+msgid "Jerusalem · The twenty-fifth of Elul"
+msgstr "Jerusalén · El veinticinco de elul"
+
+msgid "Fifty-two days"
+msgstr "Cincuenta y dos días"
+
+msgid "The last stone is set and the doors hang in their gates. From the Sheep Gate all the way around, the wall stands."
+msgstr "Se coloca la última piedra y las puertas ya cuelgan en su lugar. Desde la Puerta de las Ovejas y en todo su contorno, la muralla está en pie."
+
+msgid "They lost heart"
+msgstr "Perdieron el ánimo"
+
+msgid "The enemies hear of it, and all the nations around are afraid. Their schemes have come to nothing."
+msgstr "Los enemigos se enteran, y todas las naciones de alrededor tienen miedo. Sus intrigas no han servido de nada."
+
+msgid "“They perceived that this work was done by our God.”"
+msgstr "“Se dieron cuenta de que esta obra había sido hecha por nuestro Dios.”"
+
+msgid "The dedication of the wall"
+msgstr "La dedicación de la muralla"
+
+msgid "Heard far away"
+msgstr "Se oyó a lo lejos"
+
+msgid "Two great choirs of thanksgiving go in procession on top of the wall, one to the right and one to the left, and meet at the house of God."
+msgstr "Dos grandes coros de acción de gracias marchan en procesión sobre la muralla, uno hacia la derecha y otro hacia la izquierda, y se encuentran en la casa de Dios."
+
+msgid "“The joy of Jerusalem was heard even far away.”"
+msgstr "“La alegría de Jerusalén se oía hasta muy lejos.”"
+
+msgid "Friends and Foes"
+msgstr "Amigos y enemigos"
+
+msgid "The builders"
+msgstr "Los constructores"
+
+msgid "Those against the work"
+msgstr "Los que se oponen a la obra"
+
+msgid "Governor of Judah · Cupbearer to the king"
+msgstr "Gobernador de Judá · Copero del rey"
+
+msgid "He asks King Artaxerxes to send him to rebuild the city of his forefathers, inspects the broken walls by night, and works beside the people. When his enemies call him away, he stays at the work."
+msgstr "Pide al rey Artajerjes que lo envíe a reconstruir la ciudad de sus antepasados, inspecciona de noche las murallas derribadas y trabaja junto al pueblo. Cuando sus enemigos intentan alejarlo, él sigue en la obra."
+
+msgid "The crew · First player"
+msgstr "El equipo · Primer jugador"
+
+msgid "The crew · Second player"
+msgstr "El equipo · Segundo jugador"
+
+msgid "The crew · Third player"
+msgstr "El equipo · Tercer jugador"
+
+msgid "The crew · Fourth player"
+msgstr "El equipo · Cuarto jugador"
+
+
+
+
+msgid "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers."
+msgstr "La obra es grande y la muralla larga, y los constructores están dispersos a lo largo de ella. Donde suena el cuerno, el equipo se reúne."
+
+msgid "The Horonite · Samaria"
+msgstr "El horonita · Samaria"
+
+msgid "Furious that anyone has come to seek the good of the people. He mocks the builders before the army of Samaria, then plots to attack the city."
+msgstr "Le enfurece que alguien haya venido a buscar el bien del pueblo. Se burla de los constructores ante el ejército de Samaria y luego trama atacar la ciudad."
+
+msgid "The Ammonite · Ammon"
+msgstr "El amonita · Amón"
+
+
+msgid "The Arab · Arabia"
+msgstr "El árabe · Arabia"
+
+msgid "He laughs at the work from the start, joins the plot against the city, and with Sanballat invites Nehemiah down to the plain of Ono."
+msgstr "Se ríe de la obra desde el principio, se une al complot contra la ciudad y, con Sanbalat, invita a Nehemías a bajar a la llanura de Ono."
+
+msgid "Sent by Sanballat and Geshem"
+msgstr "Enviado por Sanbalat y Guesem"
+
+
+msgid "Messenger"
+msgstr "Mensajero"
+
+msgid "Scout"
+msgstr "Explorador"
+
+msgid "Brute"
+msgstr "Bruto"
+
+msgid "Raider"
+msgstr "Saqueador"
+
+msgid "From the first day"
+msgstr "Desde el primer día"
+
+msgid "From day 9"
+msgstr "Desde el día 9"
+
+msgid "From day 21"
+msgstr "Desde el día 21"
+
+msgid "Light and quick. Some slip through the gaps for the inner city, others turn on the wall. A few sling stones bring one down."
+msgstr "Ligero y rápido. Algunos se cuelan por los huecos hacia la ciudad interior; otros atacan la muralla. Unas pocas piedras de honda lo derriban."
+
+msgid "Helmet, shield and spear. Slow, but he hits hard, takes many stones, and always goes for the wall."
+msgstr "Casco, escudo y lanza. Lento, pero golpea fuerte, aguanta muchas piedras y siempre va por la muralla."
+
+msgid "Hooded and cloaked, with a dagger, and the fastest of them all. Raiders reach a gap before you do."
+msgstr "Con capucha y capa, una daga, y el más rápido de todos. Los saqueadores llegan a un hueco antes que tú."
+
+msgid "Speed"
+msgstr "Velocidad"
+
+msgid "Toughness"
+msgstr "Resistencia"
+
+msgid "Strength"
+msgstr "Fuerza"
+
+msgid "First met at the %s"
+msgstr "Aparece por primera vez en: %s"
+
+msgid "Not yet met"
+msgstr "Aún no lo conoces"
+
+msgid "Keep building. You will meet them on the wall."
+msgstr "Sigue construyendo. Los encontrarás en la muralla."
+
+
+msgid "Foes here"
+msgstr "Enemigos aquí"
+
+msgid "The plain work"
+msgstr "El trabajo sencillo"
+
+msgid "Everything the wall has asked of you, all at once."
+msgstr "Todo lo que la muralla te ha pedido, todo a la vez."
+
+msgid "Met %d of %d"
+msgstr "Conocidos: %d de %d"
+
+msgid "Friend"
+msgstr "Amigo"
+
+msgid "Foe"
+msgstr "Enemigo"
+
+msgid "Wears this player's colour"
+msgstr "Lleva el color de este jugador"
+
+msgid "← →   Choose          Drag   Turn          Esc   Back"
+msgstr "← →   Elegir          Arrastrar   Girar          Esc   Atrás"
+
+msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt."
+msgstr "Coloca las piedras y levanta la muralla hilera por hilera, con un cesto de piedras a la espalda y un martillo al cinto."
+
+msgid "Water for the mortar, stone and timber for the wall: the burden-bearers keep the builders supplied."
+msgstr "Agua para la argamasa, piedra y madera para la muralla: los cargadores mantienen abastecidos a los constructores."
+
+msgid "Lays the beams and hangs the doors of each gate. The long timbers take two to carry."
+msgstr "Coloca las vigas y cuelga las puertas de cada entrada. Las vigas largas se cargan entre dos."
+
+msgid "Sanballat’s companion, an official from Ammon. When jokes fail, he sends letters to make Nehemiah afraid."
+msgstr "Compañero de Sanbalat, un funcionario de Amón. Cuando las burlas no funcionan, envía cartas para asustar a Nehemías."
+
+msgid "He walks up to a worker with an open letter and waits. Go with him and you are led away from the wall. Keep working and he gives up."
+msgstr "Se acerca a un trabajador con una carta abierta y espera. Si vas con él, te aleja de la muralla. Si sigues trabajando, se rinde."
+
+msgid "“Among the builders, everyone wore his sword at his side, and so built.”"
+msgstr "“Cada uno de los constructores llevaba su espada ceñida a la cintura, y así edificaban.”"
+
+msgid "“Everyone with one of his hands did the work, and with the other held his weapon.”"
+msgstr "“Cada uno con una mano trabajaba en la obra, y con la otra sostenía el arma.”"
+
+msgid "“They laid its beams, and set up its doors, its bolts, and its bars.”"
+msgstr "“Colocaron sus vigas y pusieron sus puertas, sus cerrojos y sus barras.”"
+
+msgid "“Wherever you hear the sound of the trumpet, rally there to us.”"
+msgstr "“Dondequiera que oigan el sonido de la trompeta, reúnanse allí con nosotros.”"
+
+msgid "“What is this thing that you are doing? Will you rebel against the king?”"
+msgstr "“¿Qué es esto que están haciendo? ¿Se van a rebelar contra el rey?”"
+
+msgid "“Come! Let’s meet together in the villages in the plain of Ono.”"
+msgstr "“¡Ven! Reunámonos en las aldeas de la llanura de Ono.”"
+
+msgid "“They will not know or see, until we come in among them.”"
+msgstr "“No lo sabrán ni lo verán hasta que entremos en medio de ellos.”"
+
+msgid "“They all conspired together to come and fight against Jerusalem.”"
+msgstr "“Todos conspiraron juntos para venir a pelear contra Jerusalén.”"
+
+msgid "“…and cause the work to cease.”"
+msgstr "“…y hacer que cese la obra.”"
+
+msgid "Credits"
+msgstr "Créditos"
+
+msgid "A Corner Stone Games production"
+msgstr "Una producción de Corner Stone Games"
+
+msgid "Development"
+msgstr "Desarrollo"
+
+msgid "Game design"
+msgstr "Diseño del juego"
+
+msgid "Scripture"
+msgstr "Texto bíblico"
+
+msgid "Sound"
+msgstr "Sonido"
+
+msgid "Type"
+msgstr "Tipografía"
+
+msgid "Made with"
+msgstr "Hecho con"
+
+msgid "Public domain · ebible.org"
+msgstr "Dominio público · ebible.org"
+
+msgid "Nehemiah 4:14 adapted"
+msgstr "Nehemías 4:14 adaptado"
+
+msgid "by insydnis · CC-BY 3.0 · opengameart.org"
+msgstr "de insydnis · CC-BY 3.0 · opengameart.org"
+
+msgid "by yd · CC0 · opengameart.org"
+msgstr "de yd · CC0 · opengameart.org"
+
+msgid "“Remember me, my God, for good.”"
+msgstr "“Acuérdate de mí, Dios mío, para bien.”"
+
+msgid "Thank you for building with us."
+msgstr "Gracias por construir con nosotros."
+
+msgid "Hold E   Faster          Esc   Skip"
+msgstr "Mantén E   Más rápido          Esc   Saltar"
+
+msgid "With: %s"
+msgstr "Con: %s"
+
+msgid "The plain work: carry, build, defend"
+msgstr "El trabajo de siempre: cargar, construir, defender"
 
 msgid "Host to get a room code — friends join with it or your invite link"
 msgstr "Crea una partida para recibir un código de sala — tus amigos entran con él o con tu enlace de invitación"
@@ -962,4 +1207,3 @@ msgstr "El anfitrión cerró la sala."
 
 msgid "WebRTC is not available on this device."
 msgstr "WebRTC no está disponible en este dispositivo."
-

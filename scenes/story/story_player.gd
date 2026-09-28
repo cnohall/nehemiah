@@ -115,6 +115,8 @@ func _advance() -> void:
 	_slide_tween.tween_callback(_show_slide.bind(_slides[_index]))
 
 func _show_slide(slide: Dictionary) -> void:
+	if slide.has("met"):
+		GameState.mark_met(slide["met"])
 	var art_path: String = slide.get("art", "")
 	var has_art := not art_path.is_empty() and ResourceLoader.exists(art_path)
 	var has_map := slide.has("map")
@@ -126,6 +128,7 @@ func _show_slide(slide: Dictionary) -> void:
 	if has_map:
 		_map.section = slide["map"]
 		_map.inspect = slide.get("inspect", false)
+		_map.finale = slide.get("finale", false)
 		_map.play()
 	elif has_art:
 		_art.texture = load(art_path)
