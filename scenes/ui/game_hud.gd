@@ -4,6 +4,7 @@ extends CanvasLayer
 # numbers by Main. Player cards and the Steam invite panel are built in code.
 
 signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDirector)
+signal bots_changed      # host changed Settings.bot_count / bot_skill (Main refits the crew)
 
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 const BANNER_HOLD   := 3.2
@@ -100,6 +101,8 @@ func _ready() -> void:
 	# Mouse only: with a pad, A near a stockpile must not also start the day
 	$Root/GatherPanel/VBox/Begin.focus_mode = Control.FOCUS_NONE
 	_build_gamepad_begin()
+	if is_host:
+		_build_bot_row()
 	GameState.crew_changed.connect(_on_crew_changed)
 	_on_crew_changed(GameState.crew_size)
 	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
@@ -580,15 +583,56 @@ func _stat(value: String, caption: String) -> Control:
 func _on_crew_changed(size: int) -> void:
 	gather_crew.text = tr("%d of %d builders here") % [size, NetworkManager.MAX_PLAYERS]
 
+# Host, while gathering: bots to fill the empty places — how many, and how good.
+# Mouse only, like Begin (a pad's A is busy picking things up here).
+func _build_bot_row() -> void:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6)
+	var vb := $Root/GatherPanel/VBox
+	vb.add_child(row)
+	vb.move_child(row, $Root/GatherPanel/VBox/Begin.get_index())
+	var label := Label.new()
+	label.theme_type_variation = &"Caption"
+	row.add_child(label)
+	var fewer := _bot_button("−")
+	var more := _bot_button("+")
+	var skill := _bot_button("")
+	row.add_child(fewer)
+	row.add_child(more)
+	row.add_child(skill)
+	var refresh := func():
+		label.text = tr("Bots: %d") % Settings.bot_count
+		skill.text = tr(BotBrain.SKILLS[Settings.bot_skill]["name"])
+		fewer.disabled = Settings.bot_count <= 0
+		more.disabled = Settings.bot_count >= NetworkManager.MAX_PLAYERS - 1
+	var change := func(count: int, level: int):
+		Settings.bot_count = clampi(count, 0, NetworkManager.MAX_PLAYERS - 1)
+		Settings.bot_skill = level
+		Settings.save()
+		refresh.call()
+		bots_changed.emit()
+	fewer.pressed.connect(func(): change.call(Settings.bot_count - 1, Settings.bot_skill))
+	more.pressed.connect(func(): change.call(Settings.bot_count + 1, Settings.bot_skill))
+	skill.pressed.connect(func(): change.call(Settings.bot_count, (Settings.bot_skill + 1) % BotBrain.SKILLS.size()))
+	refresh.call()
+
+func _bot_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.theme_type_variation = &"GhostButton"
+	b.focus_mode = Control.FOCUS_NONE
+	return b
+
 # ── Player cards ───────────────────────────────────────────
 
-func set_player_present(slot: int, present: bool, is_local: bool) -> void:
+func set_player_present(slot: int, present: bool, is_local: bool, is_bot := false) -> void:
 	if slot >= _cards.size():
 		return
 	var card: Dictionary = _cards[slot]
 	card.root.visible = present
 	card.name.text = CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
-	card.who.text = tr("You") if is_local else tr("Crew %s") % ROMAN[slot]
+	card.who.text = tr("You") if is_local else (tr("Bot") if is_bot else tr("Crew %s") % ROMAN[slot])
 
 func set_player_health(slot: int, frac: float) -> void:
 	if slot >= _cards.size():

@@ -121,8 +121,12 @@ msgid "Beside Sanballat"
 msgstr ""
 
 #: scenes\achievements\achievements.gd:89
+msgid "Bot"
+msgstr ""
 
 #: scenes\ui\game_hud.gd:605
+msgid "Bots: %d"
+msgstr ""
 
 #: scenes\ui\game_hud.gd:397
 msgid "Breaches"

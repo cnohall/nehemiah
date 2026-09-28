@@ -27,6 +27,7 @@ GameState="*res://scenes/game_state/game_state.gd"
 Sfx="*res://scenes/sfx/sfx.gd"
 Settings="*res://scenes/settings/settings.gd"
 InputMode="*res://scenes/input_mode/input_mode.gd"
+Achievements="*res://scenes/achievements/achievements.gd"
 
 [display]
 
@@ -140,11 +141,9 @@ pause={
 [internationalization]
 
 locale/translations=PackedStringArray("res://locale/es.po", "res://locale/pt_BR.po", "res://locale/de.po", "res://locale/ko.po")
-locale/fallback="en"
 
 [rendering]
 
-lights_and_shadows/directional_shadow/size=4096
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
 camera/depth_of_field/depth_of_field_bokeh_shape=0
 environment/ssao/quality=1

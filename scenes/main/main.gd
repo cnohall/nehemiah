@@ -48,7 +48,9 @@ func _ready() -> void:
 	hud = HUD_SCENE.instantiate()
 	add_child(hud)
 	hud.begin_requested.connect(director.begin)
+	hud.bots_changed.connect(fit_bots)
 	director.day_tallied.connect(hud.show_tally)
+	director.day_tallied.connect(Achievements.on_day_tallied)
 	_day_sun_color = sun.light_color
 	_day_sun_energy = sun.light_energy
 	GameState.phase_changed.connect(_on_phase_changed)
@@ -77,6 +79,7 @@ func _ready() -> void:
 
 	if multiplayer.is_server():
 		director.start()
+		fit_bots()
 	else:
 		_request_roster.rpc_id(1)
 
@@ -170,7 +173,7 @@ func _refresh_hud() -> void:
 	for slot in 4:
 		if slot < players.size():
 			var pl = players[slot]
-			hud.set_player_present(slot, true, pl.name == local_name)
+			hud.set_player_present(slot, true, pl.name == local_name, pl.is_bot())
 			hud.set_player_health(slot, pl.health / pl.MAX_HEALTH)
 			hud.set_player_downed(slot, pl.downed)
 			hud.set_player_carry(slot, pl.carried_kind)
@@ -182,8 +185,15 @@ func _refresh_hud() -> void:
 func _on_peer_connected(id: int) -> void:
 	# All peers spawn the newly arrived player
 	_spawn_player(id)
+	if multiplayer.is_server():
+		fit_bots()   # a person takes a bot's place when the crew is full
 
 func _on_peer_disconnected(id: int) -> void:
+	_despawn(id)
+	if multiplayer.is_server():
+		fit_bots()
+
+func _despawn(id: int) -> void:
 	var node := players_root.get_node_or_null(str(id))
 	if node:
 		players_root.remove_child(node)
@@ -193,15 +203,20 @@ func _on_peer_disconnected(id: int) -> void:
 	if multiplayer.is_server():
 		GameState.set_crew(players_root.get_child_count())
 
+# `peer_id` is a worker id: a peer's own, or a bot's (Player.BOT_ID_BASE and up, owned
+# by the host — whose copy gets the brain)
 func _spawn_player(peer_id: int) -> void:
 	if players_root.has_node(str(peer_id)):
 		return
+	var bot := Player.is_bot_id(peer_id)
 	var player := PLAYER_SCENE.instantiate()
 	player.name = str(peer_id)
-	player.set_multiplayer_authority(peer_id)
+	player.set_multiplayer_authority(1 if bot else peer_id)
+	if bot and multiplayer.is_server():
+		player.brain = BotBrain.new(player, Settings.bot_skill)
 	players_root.add_child(player)
 	player.global_position = player.RESPAWN_POS
-	GameState.register_player(peer_id, "Builder")
+	GameState.register_player(peer_id, "Bot" if bot else "Builder")
 	_assign_colors()
 	if multiplayer.is_server():
 		GameState.set_crew(players_root.get_child_count())
@@ -219,6 +234,39 @@ func _assign_colors() -> void:
 		players[slot].set_slot(slot, c)
 		if hud:
 			hud.set_player_color(slot, c)
+
+# ── Bots (server) ──────────────────────────────────────────
+
+## Server: as many bots as Settings.bot_count asks for, in the places people leave free.
+## Call again after changing the count or skill.
+func fit_bots() -> void:
+	if not multiplayer.is_server():
+		return
+	var bots: Array = _sorted_players().filter(func(p): return p.is_bot())
+	var people := players_root.get_child_count() - bots.size()
+	var want := clampi(Settings.bot_count, 0, maxi(0, NetworkManager.MAX_PLAYERS - people))
+	for p in bots:
+		p.brain.set_skill(Settings.bot_skill)
+	while bots.size() > want:
+		var id: int = bots.pop_back().worker_id()
+		_despawn(id)
+		for peer in _ready_peers():
+			_remove_bot.rpc_id(peer, id)
+	var next := Player.BOT_ID_BASE
+	while bots.size() < want:
+		while players_root.has_node(str(next)):
+			next += 1
+		_spawn_player(next)
+		bots.append(players_root.get_node(str(next)))
+		for peer in _ready_peers():
+			_receive_roster_entry.rpc_id(peer, next)
+
+func _ready_peers() -> Array:
+	return Array(multiplayer.get_peers()).filter(NetworkManager.is_peer_ready)
+
+@rpc("authority", "reliable")
+func _remove_bot(id: int) -> void:
+	_despawn(id)
 
 # ── Late-join roster sync (server → client) ────────────────
 

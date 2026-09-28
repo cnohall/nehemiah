@@ -70,6 +70,10 @@ func join(address: String, port: int = DEFAULT_PORT) -> void:
 func steam_available() -> bool:
 	return _steam != null
 
+## GodotSteam singleton, or null without Steam (for Achievements)
+func steam() -> Object:
+	return _steam
+
 func steam_error() -> String:
 	return _steam_error
 
