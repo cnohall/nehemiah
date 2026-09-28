@@ -1325,3 +1325,51 @@ msgstr[1] "Faltan terminar %d tramos — busca las bases ámbar"
 
 msgid "Last piece!  %s"
 msgstr "¡Último tramo!  %s"
+
+msgid "You went down"
+msgstr "Caíste"
+
+msgid "%s went down"
+msgstr "%s cayó"
+
+msgid "Back on your feet"
+msgstr "De nuevo en pie"
+
+msgid "%s is back on their feet"
+msgstr "%s está de nuevo en pie"
+
+msgid "Day %d · %d of %d stand"
+msgstr "Día %d · %d de %d en pie"
+
+msgid "Day %d · a finished piece knocked back down"
+msgstr "Día %d · derribaron un tramo terminado"
+
+msgid "Day %d · they broke through"
+msgstr "Día %d · se abrieron paso"
+
+msgid "Day %d · the day's work is done"
+msgstr "Día %d · la obra del día está hecha"
+
+msgid "Day %d · the city fell"
+msgstr "Día %d · la ciudad cayó"
+
+msgid "Play it again"
+msgstr "Jugarlo otra vez"
+
+msgid "Next stretch"
+msgstr "Siguiente tramo"
+
+msgid "Play again"
+msgstr "Jugar otra vez"
+
+msgid "Try the stretch again"
+msgstr "Reintentar el tramo"
+
+msgid "The host's pick decides — or most of the crew"
+msgstr "Decide el anfitrión — o la mayoría del equipo"
+
+msgid "%s — %d of %d"
+msgstr "%s — %d de %d"
+
+msgid "Waiting for the host or most of the crew"
+msgstr "Esperando al anfitrión o a la mayoría"

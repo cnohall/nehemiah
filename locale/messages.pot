@@ -1676,3 +1676,51 @@ msgstr[1] ""
 
 msgid "Last piece!  %s"
 msgstr ""
+
+msgid "You went down"
+msgstr ""
+
+msgid "%s went down"
+msgstr ""
+
+msgid "Back on your feet"
+msgstr ""
+
+msgid "%s is back on their feet"
+msgstr ""
+
+msgid "Day %d · %d of %d stand"
+msgstr ""
+
+msgid "Day %d · a finished piece knocked back down"
+msgstr ""
+
+msgid "Day %d · they broke through"
+msgstr ""
+
+msgid "Day %d · the day's work is done"
+msgstr ""
+
+msgid "Day %d · the city fell"
+msgstr ""
+
+msgid "Play it again"
+msgstr ""
+
+msgid "Next stretch"
+msgstr ""
+
+msgid "Play again"
+msgstr ""
+
+msgid "Try the stretch again"
+msgstr ""
+
+msgid "The host's pick decides — or most of the crew"
+msgstr ""
+
+msgid "%s — %d of %d"
+msgstr ""
+
+msgid "Waiting for the host or most of the crew"
+msgstr ""

@@ -1315,3 +1315,51 @@ msgstr[0] "마무리할 부분 %d개 — 호박색 기초를 찾으세요"
 
 msgid "Last piece!  %s"
 msgstr "마지막 부분!  %s"
+
+msgid "You went down"
+msgstr "쓰러졌습니다"
+
+msgid "%s went down"
+msgstr "%s 쓰러짐"
+
+msgid "Back on your feet"
+msgstr "다시 일어섰습니다"
+
+msgid "%s is back on their feet"
+msgstr "%s 다시 일어섬"
+
+msgid "Day %d · %d of %d stand"
+msgstr "%d일차 · %d/%d 완성"
+
+msgid "Day %d · a finished piece knocked back down"
+msgstr "%d일차 · 완성된 부분이 무너짐"
+
+msgid "Day %d · they broke through"
+msgstr "%d일차 · 적이 뚫고 들어옴"
+
+msgid "Day %d · the day's work is done"
+msgstr "%d일차 · 오늘의 일을 마침"
+
+msgid "Day %d · the city fell"
+msgstr "%d일차 · 도성이 함락됨"
+
+msgid "Play it again"
+msgstr "다시 하기"
+
+msgid "Next stretch"
+msgstr "다음 구간"
+
+msgid "Play again"
+msgstr "다시 하기"
+
+msgid "Try the stretch again"
+msgstr "이 구간 다시 도전"
+
+msgid "The host's pick decides — or most of the crew"
+msgstr "호스트의 선택 또는 다수결로 정합니다"
+
+msgid "%s — %d of %d"
+msgstr "%s — %d/%d"
+
+msgid "Waiting for the host or most of the crew"
+msgstr "호스트 또는 다수의 선택을 기다리는 중"

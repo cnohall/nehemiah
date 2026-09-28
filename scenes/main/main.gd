@@ -26,6 +26,7 @@ const PLAYER_COLORS := Palette.CREW
 # Title-screen backdrop (GameState.attract)
 const ATTRACT_LEAD     := 6.0    # metres the camera sits left of the crew, so they land right of the menu
 const ATTRACT_SMOOTH   := 0.35   # a slow, drifting follow — never a snap to one worker's dash
+const ROSTER_RETRY     := 1.5    # seconds between a client's asks for the roster
 
 @onready var players_root: Node3D           = $Players
 @onready var enemies_root: Node3D           = $Enemies
@@ -53,6 +54,12 @@ func _ready() -> void:
 		return
 	hud = HUD_SCENE.instantiate()
 	add_child(hud)
+	var reel := Highlights.new()
+	reel.name = "Highlights"
+	add_child(reel)
+	hud.highlights = reel
+	hud.vote_cast.connect(director.cast_vote)
+	director.votes_changed.connect(hud.set_votes)
 	hud.begin_requested.connect(director.begin)
 	hud.bots_changed.connect(fit_bots)
 	director.day_tallied.connect(hud.show_tally)
@@ -88,10 +95,22 @@ func _ready() -> void:
 
 	if multiplayer.is_server():
 		NetworkManager.open_crew()
+		# After a "Play again" reload the crew is still connected: nobody joins anew
+		for id in multiplayer.get_peers():
+			_spawn_player(id)
 		director.start()
 		fit_bots()
 	else:
+		_ask_for_roster()
+
+# Client: after a "Play again" everyone reloads at once, and the host's new Main may not
+# be up when our first ask lands — ask again until the roster arrives
+var _roster_in := false
+
+func _ask_for_roster() -> void:
+	while is_inside_tree() and not _roster_in and multiplayer.has_multiplayer_peer():
 		_request_roster.rpc_id(1)
+		await get_tree().create_timer(ROSTER_RETRY).timeout
 
 func _process(delta: float) -> void:
 	if GameState.attract:
@@ -347,6 +366,7 @@ func _request_roster() -> void:
 
 @rpc("authority", "reliable")
 func _receive_roster_entry(peer_id: int) -> void:
+	_roster_in = true
 	_spawn_player(peer_id)
 
 # ── Win / Loss ─────────────────────────────────────────────

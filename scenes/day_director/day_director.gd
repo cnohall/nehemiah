@@ -21,6 +21,8 @@ signal story_started(day: int)
 signal story_ended
 # Every peer: who the story / tally is still waiting on ("story" | "tally" | "" = none)
 signal ready_changed(kind: String, waiting: Array)
+# Every peer: end-screen picks so far, peer_id → "again" | "next"
+signal votes_changed(votes: Dictionary)
 # Every peer: the day's numbers, for the dusk tally card
 signal day_tallied(stats: Dictionary)
 
@@ -42,6 +44,7 @@ var _story_day := 0          # server: last day whose story has played
 # waits until every peer in the scene is through. peer_id → true while not yet ready.
 var _wait_kind := ""
 var _waiting := {}
+var _votes := {}   # server: end-screen picks, peer_id → "again" | "next"
 # Server: today's numbers. "crew" is peer_id → { loads, foes }
 var _stats := {}
 var _breaches_at_dawn := 0
@@ -78,6 +81,7 @@ func start() -> void:
 	GameState.reset()
 	GameState.apply_replay()
 	GameState.apply_debug_start_day()
+	GameState.apply_restart()   # after --day=N: a restart picks its own day
 
 ## Server: host is ready — day 1 starts
 func begin() -> void:
@@ -336,6 +340,66 @@ func _peer_ready(id: int) -> void:
 func _broadcast_ready() -> void:
 	for id: int in _scene_peers():
 		_set_ready_state.rpc_id(id, _wait_kind, _waiting.keys())
+
+# ── End screen vote: play again / next stretch ─────────────
+
+## Every peer: the local player's pick on the end screen ("again" | "next")
+func cast_vote(choice: String) -> void:
+	if multiplayer.is_server():
+		_peer_vote(1, choice)
+	else:
+		_vote_from_peer.rpc_id(1, choice)
+
+@rpc("any_peer", "reliable")
+func _vote_from_peer(choice: String) -> void:
+	if multiplayer.is_server():
+		_peer_vote(multiplayer.get_remote_sender_id(), choice)
+
+# Server: the host's pick decides at once; otherwise a majority of the people present
+func _peer_vote(id: int, choice: String) -> void:
+	if not GameState.is_over() or not choice in ["again", "next"]:
+		return
+	_votes[id] = choice
+	var people := _scene_peers()
+	var count := _votes.values().count(choice)
+	for peer: int in people:
+		_set_votes.rpc_id(peer, _votes)
+	if id == 1 or count * 2 > people.size():
+		_restart(choice)
+
+@rpc("authority", "call_local", "reliable")
+func _set_votes(votes: Dictionary) -> void:
+	votes_changed.emit(votes)
+
+# Server: set up the next run, then every peer reloads the game scene together. Peers go
+# back to "loading" so nothing replicates into a scene that's being torn down; each one
+# asks for the roster again once its new Main is up (Main._request_roster).
+func _restart(choice: String) -> void:
+	_votes.clear()
+	if GameState.is_replay():
+		if choice == "next" and GameState.replay_section + 1 < GameState.SECTIONS.size():
+			GameState.replay_section += 1
+			GameState.picker_return = GameState.replay_section
+	elif GameState.phase == GameState.Phase.LOST:
+		GameState.restart_day = GameState.get_current_section()["days"][0]
+	print("DayDirector: play again (%s) — replay %d, from day %d" % [choice, GameState.replay_section, GameState.restart_day])
+	var peers := _scene_peers()   # before readiness resets, or nobody hears about it
+	NetworkManager.reset_scene_readiness()
+	for id: int in peers:
+		if id != multiplayer.get_unique_id():
+			_reload.rpc_id(id, GameState.replay_section, GameState.picker_return)
+	_reload(GameState.replay_section, GameState.picker_return)
+
+@rpc("authority", "call_remote", "reliable")
+func _reload(replay: int, picker: int) -> void:
+	GameState.replay_section = replay
+	GameState.picker_return = picker
+	get_tree().paused = false
+	Engine.time_scale = 1.0
+	var restart := GameState.restart_day
+	GameState.reset()
+	GameState.restart_day = restart
+	get_tree().reload_current_scene.call_deferred()
 
 # Host plus every client whose Main scene exists — a peer still loading in has
 # nowhere to receive these RPCs (it catches up via send_story_to)

@@ -7,6 +7,9 @@ signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDi
 signal bots_changed      # host changed Settings.bot_count / bot_skill (Main refits the crew)
 signal ready_pressed         # local player is done with the dusk tally (Main → DayDirector)
 signal begin_now_requested   # host: go on without the ones still at the tally
+signal vote_cast(choice: String)   # end screen: "again" | "next" (Main → DayDirector)
+
+var highlights: Highlights   # the run's stills, set by Main (end-screen reel)
 
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 const BANNER_HOLD   := 3.2
@@ -542,10 +545,115 @@ func _show_end(won: bool) -> void:
 		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
 	if GameState.is_replay():
 		_replay_end(won, vb, stats)
+	_build_reel(vb)
+	_build_vote(won, vb)
 	end_screen.show()
 	UiFx.fade_in(end_screen, 0.9)
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
-	vb.get_node("Buttons/MenuButton").grab_focus()
+	var first: Button = vb.get_node("Buttons").get_child(0)
+	first.grab_focus()
+
+# ── End screen: highlight reel + play again ────────────────
+
+const REEL_SIZE  := Vector2(512, 288)
+const REEL_SLIDE := 2.6   # seconds per still
+
+var _reel_tween: Tween
+var _vote_note: Label
+var _vote_buttons := {}   # choice → Button
+
+# The run's stills (Highlights), one after another while the crew decides
+func _build_reel(vb: Control) -> void:
+	var old := vb.get_node_or_null("Reel")
+	if old:
+		old.queue_free()
+	if highlights == null or highlights.shots.is_empty():
+		return
+	var shots: Array = highlights.shots.duplicate()
+	var reel := VBoxContainer.new()
+	reel.name = "Reel"
+	reel.add_theme_constant_override("separation", 6)
+	reel.alignment = BoxContainer.ALIGNMENT_CENTER
+	var frame := PanelContainer.new()
+	frame.add_theme_stylebox_override("panel", UiStyle.bordered(UiStyle.box(UiStyle.DUSK, Vector2(4, 4), 3), UiStyle.RULE, 1))
+	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	reel.add_child(frame)
+	var pic := TextureRect.new()
+	pic.custom_minimum_size = REEL_SIZE
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	frame.add_child(pic)
+	var caption := Label.new()
+	caption.theme_type_variation = &"Caption"
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	caption.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # captions arrive translated
+	reel.add_child(caption)
+	vb.add_child(reel)
+	vb.move_child(reel, 0)
+	if _reel_tween:
+		_reel_tween.kill()
+	_reel_tween = create_tween().set_loops()
+	for i in shots.size():
+		var shot: Dictionary = shots[i]
+		_reel_tween.tween_callback(func():
+			pic.texture = shot["tex"]
+			caption.text = "%s   ·   %d / %d" % [shot["caption"], i + 1, shots.size()])
+		_reel_tween.tween_property(pic, "modulate:a", 1.0, 0.35).from(0.0)
+		_reel_tween.tween_interval(REEL_SLIDE)
+		_reel_tween.tween_property(pic, "modulate:a", 0.0, 0.35)
+
+# "Play again" / "Next stretch": the host's pick decides, or a majority of the crew
+# (DayDirector.cast_vote). Back to the menu stays each person's own choice.
+func _build_vote(won: bool, vb: Control) -> void:
+	var buttons: HBoxContainer = vb.get_node("Buttons")
+	buttons.add_theme_constant_override("separation", 16)
+	for b in _vote_buttons.values():
+		b.queue_free()
+	_vote_buttons.clear()
+	var choices: Array = []   # [choice, label]
+	if GameState.is_replay():
+		choices.append(["again", "Play it again"])
+		var next := GameState.replay_section + 1
+		if won and next < GameState.SECTIONS.size():
+			choices.append(["next", "Next stretch"])
+	elif won:
+		choices.append(["again", "Play again"])
+	else:
+		choices.append(["again", "Try the stretch again"])
+	for i in choices.size():
+		var b := Button.new()
+		b.text = choices[i][1]
+		b.custom_minimum_size.x = 220
+		b.theme_type_variation = &"PrimaryButton" if i == 0 else &"GhostButton"
+		var choice: String = choices[i][0]
+		b.pressed.connect(func(): vote_cast.emit(choice))
+		buttons.add_child(b)
+		buttons.move_child(b, i)
+		_vote_buttons[choice] = b
+	(vb.get_node("Buttons/MenuButton") as Button).theme_type_variation = &"GhostButton"
+	if _vote_note == null:
+		_vote_note = Label.new()
+		_vote_note.theme_type_variation = &"Caption"
+		_vote_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_vote_note.add_theme_color_override("font_color", UiStyle.INK_MUTED)
+		vb.add_child(_vote_note)
+	_vote_note.text = "" if _solo() else tr("The host's pick decides — or most of the crew")
+
+## DayDirector.votes_changed: how many want what
+func set_votes(votes: Dictionary) -> void:
+	if _vote_note == null:
+		return
+	var people := 1 + multiplayer.get_peers().size()
+	var lines: PackedStringArray = []
+	for choice: String in _vote_buttons:
+		var n := votes.values().count(choice)
+		if n > 0:
+			lines.append(tr("%s — %d of %d") % [tr(_vote_buttons[choice].text), n, people])
+	var mine: String = votes.get(multiplayer.get_unique_id(), "")
+	for choice: String in _vote_buttons:
+		_vote_buttons[choice].disabled = not mine.is_empty()
+	_vote_note.text = "   ·   ".join(lines) + ("\n" + tr("Waiting for the host or most of the crew") if not mine.is_empty() else "")
 
 # A replay is one section: name it, show its three marks, and head back to the map
 func _replay_end(won: bool, vb: Control, stats: Control) -> void:

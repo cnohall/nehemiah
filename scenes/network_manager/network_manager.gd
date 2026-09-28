@@ -213,6 +213,15 @@ func mark_peer_ready(id: int) -> void:
 		crew_info[id]["loading"] = false
 		_broadcast_crew()
 
+## Server: everyone is reloading the game scene (Play again) — each peer counts as
+## loading until it asks for the roster again
+func reset_scene_readiness() -> void:
+	_ready_peers.clear()
+	for id: int in crew_info:
+		if id != multiplayer.get_unique_id():
+			crew_info[id]["loading"] = true
+	_broadcast_crew()
+
 func is_peer_ready(id: int) -> bool:
 	return _ready_peers.has(id)
 

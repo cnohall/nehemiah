@@ -1325,3 +1325,51 @@ msgstr[1] "Noch %d Stücke fertigzustellen — such die bernsteinfarbenen Fundam
 
 msgid "Last piece!  %s"
 msgstr "Letztes Stück!  %s"
+
+msgid "You went down"
+msgstr "Du bist gefallen"
+
+msgid "%s went down"
+msgstr "%s ist gefallen"
+
+msgid "Back on your feet"
+msgstr "Wieder auf den Beinen"
+
+msgid "%s is back on their feet"
+msgstr "%s ist wieder auf den Beinen"
+
+msgid "Day %d · %d of %d stand"
+msgstr "Tag %d · %d von %d stehen"
+
+msgid "Day %d · a finished piece knocked back down"
+msgstr "Tag %d · ein fertiges Stück eingerissen"
+
+msgid "Day %d · they broke through"
+msgstr "Tag %d · sie sind durchgebrochen"
+
+msgid "Day %d · the day's work is done"
+msgstr "Tag %d · das Tagewerk ist getan"
+
+msgid "Day %d · the city fell"
+msgstr "Tag %d · die Stadt ist gefallen"
+
+msgid "Play it again"
+msgstr "Noch einmal spielen"
+
+msgid "Next stretch"
+msgstr "Nächster Abschnitt"
+
+msgid "Play again"
+msgstr "Noch einmal"
+
+msgid "Try the stretch again"
+msgstr "Den Abschnitt erneut versuchen"
+
+msgid "The host's pick decides — or most of the crew"
+msgstr "Die Wahl des Gastgebers entscheidet — oder die Mehrheit"
+
+msgid "%s — %d of %d"
+msgstr "%s — %d von %d"
+
+msgid "Waiting for the host or most of the crew"
+msgstr "Warte auf den Gastgeber oder die Mehrheit"
