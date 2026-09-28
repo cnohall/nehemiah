@@ -56,7 +56,7 @@ func _ready() -> void:
 	hud.begin_requested.connect(director.begin)
 	hud.bots_changed.connect(fit_bots)
 	director.day_tallied.connect(hud.show_tally)
-	director.day_tallied.connect(Achievements.on_day_tallied)
+	director.day_tallied.connect(SteamAchievements.on_day_tallied)
 	_day_sun_color = sun.light_color
 	_day_sun_energy = sun.light_energy
 	GameState.phase_changed.connect(_on_phase_changed)
