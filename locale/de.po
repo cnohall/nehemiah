@@ -1299,3 +1299,12 @@ msgstr "Die Arbeit ruht"
 
 msgid "Nothing moves until you resume."
 msgstr "Nichts bewegt sich, bis du weitermachst."
+
+msgid "%s · joining…"
+msgstr "%s · tritt bei…"
+
+msgid "%s is joining…"
+msgstr "%s tritt bei…"
+
+msgid "A builder is joining…"
+msgstr "Eine Bauperson tritt bei…"

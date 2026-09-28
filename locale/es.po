@@ -1299,3 +1299,12 @@ msgstr "La obra espera"
 
 msgid "Nothing moves until you resume."
 msgstr "Nada se mueve hasta que continúes."
+
+msgid "%s · joining…"
+msgstr "%s · uniéndose…"
+
+msgid "%s is joining…"
+msgstr "%s se está uniendo…"
+
+msgid "A builder is joining…"
+msgstr "Un constructor se está uniendo…"

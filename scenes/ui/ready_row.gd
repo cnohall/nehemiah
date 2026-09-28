@@ -118,13 +118,18 @@ func _people() -> Array:
 		var p: Player = crew[slot]
 		if p.is_bot():
 			continue
-		var who: String = "You" if p.worker_id() == multiplayer.get_unique_id() \
-			else CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
-		out.append([p.worker_id(), p.slot_color, who])
+		var id := p.worker_id()
+		var who: String = tr("You") if id == multiplayer.get_unique_id() else NetworkManager.name_of(id)
+		if who.is_empty():
+			who = tr(CharacterRig.TRADES[slot % CharacterRig.TRADES.size()])
+		if NetworkManager.is_loading(id):
+			who = tr("%s · joining…") % who
+		out.append([id, p.slot_color, who])
 	return out
 
 func _chip(id: int, color: Color, who: String) -> Control:
-	var ready := not id in _waiting
+	# Someone still loading in isn't waited on, but isn't ready either
+	var ready := not id in _waiting and not NetworkManager.is_loading(id)
 	var chip := HBoxContainer.new()
 	chip.add_theme_constant_override("separation", 8)
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -151,8 +156,17 @@ func _chip(id: int, color: Color, who: String) -> Control:
 	chip.modulate.a = 1.0 if ready else 0.7
 	return chip
 
+func _enter_tree() -> void:
+	if not NetworkManager.crew_info_changed.is_connected(refresh):
+		NetworkManager.crew_info_changed.connect(refresh)
+
+func _exit_tree() -> void:
+	if NetworkManager.crew_info_changed.is_connected(refresh):
+		NetworkManager.crew_info_changed.disconnect(refresh)
+
 func _label(text: String, color: Color) -> Label:
 	var l := Label.new()
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # names arrive translated / as typed
 	l.theme_type_variation = &"Body"
 	l.text = text
 	l.add_theme_color_override("font_color", color)

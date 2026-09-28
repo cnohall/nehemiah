@@ -87,6 +87,7 @@ func _ready() -> void:
 	_spawn_player(multiplayer.get_unique_id())
 
 	if multiplayer.is_server():
+		NetworkManager.open_crew()
 		director.start()
 		fit_bots()
 	else:
@@ -222,7 +223,8 @@ func _refresh_hud() -> void:
 	for slot in 4:
 		if slot < players.size():
 			var pl = players[slot]
-			hud.set_player_present(slot, true, pl.name == local_name, pl.is_bot())
+			hud.set_player_present(slot, true, pl.name == local_name, pl.is_bot(),
+				NetworkManager.name_of(pl.worker_id()), NetworkManager.is_loading(pl.worker_id()))
 			hud.set_player_health(slot, pl.health / pl.MAX_HEALTH)
 			hud.set_player_downed(slot, pl.downed)
 			hud.set_player_carry(slot, pl.carried_kind)

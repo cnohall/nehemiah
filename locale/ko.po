@@ -1290,3 +1290,12 @@ msgstr "작업이 기다립니다"
 
 msgid "Nothing moves until you resume."
 msgstr "계속할 때까지 아무것도 움직이지 않습니다."
+
+msgid "%s · joining…"
+msgstr "%s · 참가 중…"
+
+msgid "%s is joining…"
+msgstr "%s 님이 참가하는 중…"
+
+msgid "A builder is joining…"
+msgstr "건축가가 참가하는 중…"

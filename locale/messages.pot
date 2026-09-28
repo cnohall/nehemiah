@@ -1650,3 +1650,12 @@ msgstr ""
 
 msgid "Nothing moves until you resume."
 msgstr ""
+
+msgid "%s · joining…"
+msgstr ""
+
+msgid "%s is joining…"
+msgstr ""
+
+msgid "A builder is joining…"
+msgstr ""

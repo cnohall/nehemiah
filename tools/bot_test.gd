@@ -135,9 +135,13 @@ func _network(_delta: float) -> bool:
 	if _t > 45.0:
 		var moved := bots.filter(func(b): return b.global_position.distance_to(_seen[b.name][0]) > 3.0).size()
 		var carried := bots.filter(func(b): return _seen[b.name][1]).size()
-		var ok := bots.size() == 2 and moved == 2 and carried >= 1
-		print(("PASS" if ok else "FAIL") + ": client sees %d bots, %d moved, %d carried; crew %d" % [
-			bots.size(), moved, carried, gs.crew_size])
+		# The crew list (NetworkManager.crew_info): both people, neither still loading
+		var info: Dictionary = nm.crew_info
+		var listed: bool = info.size() == 2 and info.has(1) and info.has(root.multiplayer.get_unique_id()) \
+			and nm.loading_peers().is_empty()
+		var ok := bots.size() == 2 and moved == 2 and carried >= 1 and listed
+		print(("PASS" if ok else "FAIL") + ": client sees %d bots, %d moved, %d carried; crew %d; crew list %s" % [
+			bots.size(), moved, carried, gs.crew_size, info])
 		return _finish(0 if ok else 1)
 	return false
 

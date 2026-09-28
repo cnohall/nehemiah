@@ -94,6 +94,7 @@ func _ready() -> void:
 	_build_controls_hint()
 	_build_next_line()
 	_build_sun_row()
+	_build_joining_plaque()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -803,15 +804,58 @@ func _bot_button(text: String, focusable := false) -> Button:
 	b.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	return b
 
+# ── Joining ────────────────────────────────────────────────
+
+var _joining: PanelContainer
+var _joining_label: Label
+
+# Top centre, only while someone is still loading in: who, so the rest know to wait
+func _build_joining_plaque() -> void:
+	_joining = PanelContainer.new()
+	_joining.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(18, 8), 0.9))
+	_joining.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$Root.add_child(_joining)
+	_joining.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 18)
+	_joining.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_joining_label = Label.new()
+	_joining_label.theme_type_variation = &"Body"
+	_joining_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_joining_label.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	_joining.add_child(_joining_label)
+	_joining.hide()
+	NetworkManager.crew_info_changed.connect(_refresh_joining)
+	_refresh_joining()
+
+func _refresh_joining() -> void:
+	var lines: PackedStringArray = []
+	for id: int in NetworkManager.loading_peers():
+		var who := NetworkManager.name_of(id)
+		lines.append(tr("%s is joining…") % who if not who.is_empty() else tr("A builder is joining…"))
+	_joining_label.text = "\n".join(lines)
+	var want := not lines.is_empty()
+	if want and not _joining.visible:
+		_joining.show()
+		UiFx.fade_in(_joining, 0.2)
+	elif not want:
+		_joining.hide()
+	# Anchored to its minimum size: re-centre as the text changes
+	_joining.reset_size()
+	_joining.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 18)
+
 # ── Player cards ───────────────────────────────────────────
 
-func set_player_present(slot: int, present: bool, is_local: bool, is_bot := false) -> void:
+## `display` = their Steam name ("" = none); `loading` = still joining (game not loaded)
+func set_player_present(slot: int, present: bool, is_local: bool, is_bot := false,
+		display := "", loading := false) -> void:
 	if slot >= _cards.size():
 		return
 	var card: Dictionary = _cards[slot]
 	card.root.visible = present
 	card.name.text = CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
-	card.who.text = tr("You") if is_local else (tr("Bot") if is_bot else tr("Crew %s") % ROMAN[slot])
+	var who: String = tr("You") if is_local else (tr("Bot") if is_bot \
+		else (display if not display.is_empty() else tr("Crew %s") % ROMAN[slot]))
+	card.who.text = tr("%s · joining…") % who if loading else who
+	card.root.modulate.a = 0.6 if loading else 1.0
 
 func set_player_health(slot: int, frac: float) -> void:
 	if slot >= _cards.size():
