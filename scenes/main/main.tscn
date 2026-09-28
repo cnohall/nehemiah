@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://scenes/section_terrain/section_terrain.gd" id="12_terrain"]
 [ext_resource type="Script" path="res://scenes/day_light/day_light.gd" id="13_daylight"]
 [ext_resource type="Script" path="res://scenes/horn/horn.gd" id="14_horn"]
+[ext_resource type="PackedScene" path="res://scenes/watch_post/watch_post.tscn" id="15_post"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 geometry/parsed_geometry_type = 1
@@ -247,6 +248,14 @@ twist = "mixing"
 
 [node name="Trough" parent="Supplies" instance=ExtResource("11_trough")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 6.5)
+
+[node name="Posts" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
+
+[node name="PostWest" parent="Posts" instance=ExtResource("15_post")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 3)
+
+[node name="PostEast" parent="Posts" instance=ExtResource("15_post")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 3)
 
 [node name="Rubble" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
 

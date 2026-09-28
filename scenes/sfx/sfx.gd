@@ -37,6 +37,8 @@ var _defs := {
 	"enemy_swing":    [["knifeSlice", "knifeSlice2"], -8.0, 0.85, 1.05],
 	"enemy_hit":      [_n("impactPunch_medium_%03d", 0, 5), -3.0, 0.9, 1.1],
 	"enemy_die":      [_n("impactPunch_heavy_%03d", 0, 5), -2.0, 0.75, 0.9],
+	# Builder's sword (Neh. 4:18): the swing, higher and brighter than an enemy's
+	"sword":          [["knifeSlice", "knifeSlice2"], -6.0, 1.15, 1.35],
 	"sling_miss":     [_n("impactGeneric_light_%03d", 0, 5), -8.0, 0.8, 1.0],
 	"hurt":           [_n("impactSoft_heavy_%03d", 0, 5), -2.0, 0.9, 1.1],
 	"downed":         [_n("impactPunch_heavy_%03d", 0, 5), 0.0, 0.6, 0.7],
@@ -126,7 +128,7 @@ func _ready() -> void:
 	GameState.phase_changed.connect(_on_phase)
 	# Deferred: Settings (loaded after us) creates the Music bus in its _ready
 	play_music.call_deferred("calm")
-	GameState.breaches_changed.connect(func(n: int): if n > 0: play("breach"))
+	GameState.breaches_changed.connect(func(n: int): if n > 0 and not GameState.attract: play("breach"))
 
 # Let go of streams (and live playbacks) so shutdown doesn't report them leaked
 func _exit_tree() -> void:
@@ -200,6 +202,8 @@ func play_jingle(event: String) -> void:
 	_duck_tween.tween_method(func(db: float): AudioServer.set_bus_volume_db(bus, _music_bus_db() + db), DUCK_DB, 0.0, 1.5)
 
 func _on_phase(phase: int) -> void:
+	if GameState.attract:
+		return  # the title screen keeps its own music; the world behind it stays hushed
 	match phase:
 		GameState.Phase.DAWN:
 			play_jingle("day_start")

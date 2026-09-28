@@ -27,10 +27,8 @@ const BEVEL_SCALE  := 1.3      # chamfer as a multiple of each part's authored b
 # Building: turn a three-quarter view toward the camera so the mallet arm isn't
 # hidden behind the body when the wall is "up" screen (the usual case)
 const BUILD_TURN   := -0.65
-# Upper-body poses (sling wind-up, throw, delivery swing) played on the move still step:
-# leg phase per metre travelled, matching the run cycle (13 fps / 8 frames at 8 m/s)
-const STRIDE_RATE  := TAU * 13.0 / 8.0 / 8.0
-const MOVING_POSES := ["windup", "slash", "halfslash", "thrust"]
+const BLEND_TIME   := 0.09     # cross-fade from the old pose when the animation changes
+const WINDUP_FULL  := 0.9      # wind-up reaches full tension (= Player.SLING_CHARGE_TIME)
 
 # Rig dimensions (metres, before scale). Feet at y = 0.
 const HIP_Y      := 0.36
@@ -64,6 +62,7 @@ signal footstep
 signal strike            # tool meets stone in the "build" loop
 signal frame_changed
 signal animation_finished
+signal posed(delta: float)   # after each frame's pose, so props can follow the hands
 
 var animation := ""
 var frame := 0
@@ -71,6 +70,10 @@ var speed_scale := 1.0
 ## What the hands hold: "" (free), "front" (a load hugged to the chest), "overhead"
 ## (a load on the head), "beam" (arms forward)
 var hold := ""
+## Sling: world yaw faced while winding up / throwing (free aim, not the 4-way facing)
+var aim_yaw := 0.0
+## Sling: angle of the whirling stone, so the hand circles in step with it
+var whirl_phase := 0.0
 
 var _base := ""          # animation without the direction suffix
 var _dir := "down"
@@ -82,8 +85,6 @@ var _size := 1.0
 var _yaw := 0.0
 var _last_pos := Vector3.ZERO
 var _has_last := false
-var _ground_speed := 0.0   # smoothed, from the parent's actual motion (works on every peer)
-var _stride_ph := 0.0      # leg phase for upper-body poses played on the move
 var _squash := Vector2.ONE
 var _flash_tween: Tween
 var _squash_tween: Tween
@@ -91,6 +92,10 @@ var _parts: Array[GeometryInstance3D] = []
 var _outline_mat: ShaderMaterial
 var _marker_mat: ShaderMaterial
 var _look: Dictionary = {}
+var _move_speed := 0.0   # ground speed of the parent, measured from its motion
+var _stride := 0.0       # leg phase for stepping while in a non-locomotion pose
+var _blend_from: Dictionary = {}
+var _blend := 1.0        # 0..1 progress of the cross-fade from _blend_from
 
 # Pivots
 var _body: Node3D        # feet pivot — squash, bob, collapse
@@ -105,6 +110,9 @@ var _spear: Node3D
 var _cape: Node3D
 var _carry_anchor: Node3D   # chest-front point where a carried load rides
 var _belt_tool: Node3D      # the builder's hammer hung at the hip between strokes
+var _hand_r: Node3D         # throwing hand
+var _sword: Node3D          # worker's sword, in hand only for the cut…
+var _belt_sword: Node3D     # …and girded at the side otherwise (Neh. 4:18)
 
 static var _meshes: Dictionary = {}
 static var _part_mat: ShaderMaterial
@@ -125,7 +133,7 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 	var dye := color.lerp(Color(0.55, 0.44, 0.33), 0.1)
 	var look := {
 		"robe": LINEN, "trim": LINEN.darkened(0.12), "sash": LEATHER, "band": BAND,
-		"outline": OUTLINE_PLAYER, "no_outline": true, "tool": true, "hat": "band", "hat_color": dye,
+		"outline": OUTLINE_PLAYER, "no_outline": true, "tool": true, "sword": true, "hat": "band", "hat_color": dye,
 	}
 	match slot % 4:
 		0:
@@ -188,6 +196,8 @@ func set_look(look: Dictionary) -> void:
 	_cape = null
 	_carry_anchor = null
 	_belt_tool = null
+	_sword = null
+	_belt_sword = null
 	_build(look)
 	_merge_parts(look)
 	_apply_pose()
@@ -212,6 +222,9 @@ func play(anim_name: String = "") -> void:
 	_dir = dir
 	_playing = true
 	if not same_loop:
+		if base != _base and _body != null:
+			_blend_from = _pose_snapshot()
+			_blend = 0.0
 		_base = base
 		_cfg = CharAnim.ANIM_CFG.get(base, CharAnim.ANIM_CFG["idle"])
 		_t = 0.0
@@ -264,8 +277,10 @@ func _process(delta: float) -> void:
 			animation_finished.emit()
 		else:
 			_set_frame(f % n)
+	_blend = minf(1.0, _blend + delta / BLEND_TIME)
 	_update_facing(delta)
 	_apply_pose()
+	posed.emit(delta)
 
 func _set_frame(f: int) -> void:
 	if f == frame:
@@ -284,19 +299,19 @@ func _update_facing(delta: float) -> void:
 	var p := get_parent() as Node3D
 	if p != null:
 		var pos := p.global_position
-		if _has_last:
+		if _has_last and delta > 0.0:
 			var step := pos - _last_pos
 			step.y = 0.0
-			if delta > 0.0:
-				var v := minf(step.length() / delta, 20.0)   # a respawn jump isn't a sprint
-				_ground_speed = lerpf(_ground_speed, v, clampf(delta * 12.0, 0.0, 1.0))
-				_stride_ph = fmod(_stride_ph + _ground_speed * STRIDE_RATE * delta, TAU)
+			_move_speed = lerpf(_move_speed, step.length() / delta, clampf(delta * 12.0, 0.0, 1.0))
+			_stride += _move_speed * delta * 2.4
 			if step.length() > 0.02 * delta * 60.0 and step.normalized().dot(target) > 0.3:
 				target = step.normalized()
 		_last_pos = pos
 		_has_last = true
 	var want := atan2(target.x, target.z)
-	if _base == "build":
+	if _base == "windup" or _base == "slash" or _base == "sword":
+		want = aim_yaw   # the sling faces its target, any angle
+	elif _base == "build":
 		want += BUILD_TURN
 	_yaw = lerp_angle(_yaw, want, clampf(delta * TURN_RATE, 0.0, 1.0))
 	rotation.y = _yaw
@@ -314,7 +329,9 @@ func _apply_pose() -> void:
 	var body_y := 0.0
 	var body_rx := 0.0
 	var lean := 0.0
+	var twist := 0.0                                    # torso yaw; negative pulls the right shoulder back
 	var head_rx := 0.0
+	var head_ry := 0.0
 	var al := Vector3(-0.08, 0, 0.14)                   # left arm (rx, ry, rz)
 	var ar := Vector3(-0.08, 0, -0.14)
 	var ll := 0.0
@@ -338,11 +355,88 @@ func _apply_pose() -> void:
 			body_y = absf(cos(ph)) * (0.07 if _base == "run" else 0.04)
 			lean = 0.2 if _base == "run" else 0.05
 		"windup":
-			var w := sin(_t * 10.0)
-			ar = Vector3(-0.3, 0, -2.5 + w * 0.12)
-			al = Vector3(-1.2, 0, 0.2)
-			lean = -0.1
-		"slash", "halfslash":
+			# Sling whirl: throwing hand raised and circling in step with the stone, off hand
+			# pointing at the target, shoulders coiling back as the tension builds
+			var c := ease(minf(_t / WINDUP_FULL, 1.0), 0.6)
+			var wc := cos(whirl_phase)
+			var ws := sin(whirl_phase)
+			ar = Vector3(-0.6 + wc * 0.22, 0, -2.3 + ws * 0.18)
+			al = Vector3(-1.3 + ws * 0.04, 0, 0.32)
+			twist = -0.2 - 0.25 * c
+			head_ry = -twist * 0.85                         # eyes stay on the target
+			lean = -0.05 - 0.08 * c
+			body_y = -0.025 * c + ws * 0.008
+			# Braced stance, lead (left) foot forward; stepping when walking while winding up
+			var go := minf(_move_speed / 2.0, 1.0)
+			var s := sin(_stride) * go
+			ll = lerpf(-0.3, -s * 0.5, go)
+			lr = lerpf(0.22, s * 0.5, go)
+			body_y += absf(cos(_stride)) * 0.03 * go
+		"slash":
+			# Sling cast: cock back, whip overhand (the stone leaves on frame 3, k = 0.5),
+			# follow through across the body and settle
+			var ax: float
+			var az: float
+			if k < 0.3:
+				var e := ease(k / 0.3, 0.5)
+				ax = lerpf(-2.2, -3.4, e)
+				az = lerpf(-1.3, -0.45, e)
+				twist = lerpf(-0.45, -0.65, e)
+				lean = lerpf(-0.13, -0.2, e)
+				ll = lerpf(-0.3, -0.12, e)                  # weight rocks onto the back foot
+				lr = lerpf(0.22, 0.3, e)
+			elif k < 0.55:
+				var e := ease((k - 0.3) / 0.25, 2.2)        # accelerating whip
+				ax = lerpf(-3.4, -0.9, e)
+				az = lerpf(-0.45, -0.1, e)
+				twist = lerpf(-0.65, 0.5, e)
+				lean = lerpf(-0.2, 0.34, e)
+				ll = lerpf(-0.12, -0.5, e)                  # step into the throw
+				lr = lerpf(0.3, 0.38, e)
+				body_y = -0.04 * e
+			else:
+				var e := ease((k - 0.55) / 0.45, 0.45)      # settle out of the follow-through
+				ax = lerpf(-0.9, -0.35, e)
+				az = lerpf(-0.1, 0.3, e)
+				twist = lerpf(0.5, 0.12, e)
+				lean = lerpf(0.34, 0.08, e)
+				ll = lerpf(-0.5, -0.2, e)
+				lr = lerpf(0.38, 0.12, e)
+				body_y = lerpf(-0.04, 0.0, e)
+			ar = Vector3(ax, 0, az)
+			al = Vector3(lerpf(-1.3, 0.35, ease(k, 0.7)), 0, lerpf(0.32, 0.4, k))   # off hand pulls back
+			head_ry = -twist * 0.7
+			head_rx = 0.08
+		"sword":
+			# Flat cut: draw back across the body, sweep through the foe (k ≈ 0.4), recover
+			var ax: float
+			var az: float
+			if k < 0.25:
+				var e := ease(k / 0.25, 0.5)
+				ax = lerpf(-0.6, -1.7, e)
+				az = lerpf(-0.2, 0.9, e)                    # blade cocked over the off shoulder
+				twist = lerpf(0.0, 0.6, e)
+				lean = lerpf(0.0, -0.1, e)
+			elif k < 0.5:
+				var e := ease((k - 0.25) / 0.25, 2.0)       # accelerating sweep
+				ax = lerpf(-1.7, -1.4, e)
+				az = lerpf(0.9, -1.0, e)
+				twist = lerpf(0.6, -0.55, e)
+				lean = lerpf(-0.1, 0.28, e)
+				ll = lerpf(0.0, -0.45, e)                   # step into the cut
+				body_y = -0.04 * e
+			else:
+				var e := ease((k - 0.5) / 0.5, 0.45)
+				ax = lerpf(-1.4, -0.3, e)
+				az = lerpf(-1.0, -0.2, e)
+				twist = lerpf(-0.55, 0.0, e)
+				lean = lerpf(0.28, 0.05, e)
+				ll = lerpf(-0.45, -0.1, e)
+				body_y = lerpf(-0.04, 0.0, e)
+			ar = Vector3(ax, 0, az)
+			al = Vector3(-0.5, 0, 0.35)
+			head_ry = -twist * 0.6
+		"halfslash":
 			var e := ease(k, 0.6)
 			ar = Vector3(lerpf(-3.0, -0.5, e), 0, -0.15)
 			al = Vector3(lerpf(-0.9, 0.4, e), 0, 0.2)
@@ -386,13 +480,6 @@ func _apply_pose() -> void:
 			al = Vector3(-0.3, 0, 0.14 + c * 1.2)
 			ar = Vector3(-0.3, 0, -0.14 - c * 1.2)
 			head_rx = -0.3 * c
-	# Moving while the arms are busy: the legs keep walking instead of gliding
-	if _base in MOVING_POSES and _ground_speed > 0.4:
-		var amt := clampf(_ground_speed / 3.0, 0.0, 1.0)
-		var s := sin(_stride_ph)
-		ll = -s * 0.7 * amt
-		lr = s * 0.7 * amt
-		body_y += absf(cos(_stride_ph)) * 0.05 * amt
 	# Loads override the arms
 	if _base in ["idle", "walk", "run"]:
 		match hold:
@@ -414,11 +501,28 @@ func _apply_pose() -> void:
 	_tool_visible()
 	if _tool != null:
 		_tool.rotation.x = -1.35
+	if _sword != null:
+		_sword.rotation.x = -1.45   # blade out ahead of the fist
+	# Ease out of the previous animation's pose instead of snapping to the new one
+	if _blend < 1.0 and not _blend_from.is_empty():
+		var w := smoothstep(0.0, 1.0, _blend)
+		var f := _blend_from
+		body_y = lerpf(f.body_y, body_y, w)
+		lean = lerpf(f.lean, lean, w)
+		twist = lerp_angle(f.twist, twist, w)
+		head_rx = lerpf(f.head.x, head_rx, w)
+		head_ry = lerp_angle(f.head.y, head_ry, w)
+		al = f.al.lerp(al, w)
+		ar = f.ar.lerp(ar, w)
+		ll = lerpf(f.ll, ll, w)
+		lr = lerpf(f.lr, lr, w)
 	_body.position.y = body_y
 	_body.rotation.x = body_rx
 	_body.scale = Vector3(_squash.x, _squash.y, _squash.x)
 	_torso.rotation.x = lean
+	_torso.rotation.y = twist
 	_head.rotation.x = head_rx
+	_head.rotation.y = head_ry
 	_arm_l.rotation = al
 	_arm_r.rotation = ar
 	_leg_l.rotation.x = ll
@@ -434,10 +538,25 @@ func _tool_visible() -> void:
 		_tool.visible = _base == "build"
 	if _belt_tool != null:
 		_belt_tool.visible = _base != "build"
+	if _sword != null:
+		_sword.visible = _base == "sword"
+	if _belt_sword != null:
+		_belt_sword.visible = _base != "sword"
 
 ## Chest-front point a carried load hangs from (follows the body's turn and bob)
 func carry_anchor() -> Node3D:
 	return _carry_anchor
+
+## World position of the throwing (right) hand, where the sling cord is held
+func hand_position() -> Vector3:
+	return _hand_r.global_position if _hand_r != null else global_position + Vector3.UP * 1.7
+
+func _pose_snapshot() -> Dictionary:
+	return {
+		"body_y": _body.position.y, "lean": _torso.rotation.x, "twist": _torso.rotation.y,
+		"head": _head.rotation, "al": _arm_l.rotation, "ar": _arm_r.rotation,
+		"ll": _leg_l.rotation.x, "lr": _leg_r.rotation.x,
+	}
 
 func _set_flash(v: float) -> void:
 	for p in _parts:
@@ -588,6 +707,7 @@ func _build(look: Dictionary) -> void:
 		_part(hand, _soft(Vector3(0.18, 0.17, 0.18), 0.05), skin, Vector3.ZERO)
 		_part(hand, _soft(Vector3(0.06, 0.08, 0.07), 0.02), skin.darkened(0.05), Vector3(0, 0.02, 0.1))
 		hands.append(hand)
+	_hand_r = hands[1]
 
 	# ── Head: a rounded jaw with layered cheeks, ears and expressive brows
 	_head = _pivot(_torso, Vector3(0, NECK_Y - HIP_Y, 0))
@@ -711,6 +831,21 @@ func _build(look: Dictionary) -> void:
 			_belt_tool.rotation = Vector3(0.15, 0, -0.12)
 			_part(_belt_tool, _soft(Vector3(0.06, 0.42, 0.06), 0.015), Color(0.50, 0.34, 0.20), Vector3(0, -0.08, 0))
 			_part(_belt_tool, _soft(Vector3(0.28, 0.17, 0.17), 0.04), Color(0.58, 0.57, 0.58), Vector3(0, 0.15, 0))
+		_tool_visible()
+	# Worker's sword: short bronze-hued blade, leather grip; sheathed at the left hip
+	if look.get("sword", false):
+		var blade := Color(0.84, 0.82, 0.76)
+		var brass := Color(0.78, 0.58, 0.26)
+		_sword = _pivot(hands[1], Vector3(0, -0.02, 0.02))
+		_part(_sword, _soft(Vector3(0.08, 0.2, 0.08), 0.02), LEATHER, Vector3(0, -0.02, 0))
+		_part(_sword, _soft(Vector3(0.3, 0.07, 0.1), 0.02), brass, Vector3(0, -0.14, 0))
+		_part(_sword, _soft(Vector3(0.15, 0.72, 0.04), 0.015), blade, Vector3(0, -0.52, 0))
+		# Sheathed: short, slung back along the hip so it doesn't read as a staff
+		_belt_sword = _pivot(_torso, Vector3(ARM_X - 0.02, 0.1, 0.06))
+		_belt_sword.rotation = Vector3(0.95, 0, 0.1)
+		_part(_belt_sword, _soft(Vector3(0.13, 0.5, 0.08), 0.03), LEATHER.darkened(0.2), Vector3(0, -0.22, 0))
+		_part(_belt_sword, _soft(Vector3(0.08, 0.15, 0.08), 0.02), LEATHER, Vector3(0, 0.13, 0))
+		_part(_belt_sword, _soft(Vector3(0.24, 0.06, 0.1), 0.02), brass, Vector3(0, 0.04, 0))
 		_tool_visible()
 
 # Hair by style: a cap over the crown and down the back, chunky locks on top

@@ -19,6 +19,11 @@ var count: int = 999:
 			_show_stock()
 
 var _rubble_stones: Array[Node3D] = []
+# A picked heap isn't the end of it: more stone is dug out of the burned rubble while
+# the work goes on, one every RUBBLE_REGROW seconds, up to its stock — so a stretch can
+# never run dry, only slow down
+const RUBBLE_REGROW := 20.0
+var _regrow := RUBBLE_REGROW
 
 @onready var _visual:     Node3D  = $Visual
 const PAD_COLOR := Color(0.80, 0.76, 0.68)   # worn limestone flags
@@ -93,6 +98,16 @@ func _in_section() -> bool:
 		return not GameState.has_twist(twist.substr(1))
 	return GameState.has_twist(twist)
 
+func _process(delta: float) -> void:
+	if rubble_stock <= 0 or not multiplayer.is_server() or count >= rubble_stock \
+			or GameState.phase != GameState.Phase.WORK or not visible:
+		_regrow = RUBBLE_REGROW
+		return
+	_regrow -= delta
+	if _regrow <= 0.0:
+		_regrow = RUBBLE_REGROW
+		count += 1
+
 func request_pickup() -> bool:
 	if not multiplayer.is_server() or count <= 0:
 		return false
@@ -134,7 +149,7 @@ func _show_stock() -> void:
 	for i in _rubble_stones.size():
 		_rubble_stones[i].visible = i < count
 	if rubble_stock > 0:
-		count_label.text = "Rubble" if count > 0 else "Picked clean"
+		count_label.text = "Rubble" if count > 0 else "Digging out more"
 
 const TIMBER := Color(0.46, 0.34, 0.22)
 const REED   := Color(0.58, 0.47, 0.28)

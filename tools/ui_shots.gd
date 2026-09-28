@@ -1,11 +1,13 @@
 extends SceneTree
 
 # UI screenshots: title menu, then the in-game gather phase, pause menu and a working day.
-#   Godot --path . --script res://tools/ui_shots.gd -- --nostory <out_dir> [--pad] [--size=WxH]
-# `--pad` pretends a gamepad is in use (button labels, focus rings).
+#   Godot --path . --script res://tools/ui_shots.gd -- --nostory <out_dir> [--pad] [--size=WxH] [--lang=ko]
+# `--pad` pretends a gamepad is in use (button labels, focus rings); `--lang` picks the
+# UI language for this run only (not saved).
 
 var _out := ""
 var _pad := false
+var _lang := ""
 var _frame := 0
 var _t := 0.0
 var _step := 0
@@ -31,6 +33,8 @@ func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a == "--pad":
 			_pad = true
+		elif a.begins_with("--lang="):
+			_lang = a.trim_prefix("--lang=")
 		elif a.begins_with("--size="):
 			var wh := a.trim_prefix("--size=").split("x")
 			res = Vector2i(int(wh[0]), int(wh[1]))
@@ -43,6 +47,9 @@ func _initialize() -> void:
 
 func _process(delta: float) -> bool:
 	_frame += 1
+	# After the autoloads: Settings.apply() sets the saved / OS locale in its _ready
+	if _frame == 1 and not _lang.is_empty():
+		TranslationServer.set_locale(_lang)
 	if _frame == 2 and _pad:
 		var ev := InputEventJoypadButton.new()
 		ev.button_index = JOY_BUTTON_LEFT_STICK
@@ -59,7 +66,10 @@ func _process(delta: float) -> bool:
 				var f := root.gui_get_focus_owner()
 				print("menu focus: ", f.name if f else "<none>")
 			"start_game":
-				current_scene.queue_free()
+				# Out of the tree now, so the menu hands back GameState.attract before Main reads it
+				var menu := current_scene
+				root.remove_child(menu)
+				menu.queue_free()
 				_main = load("res://scenes/main/main.tscn").instantiate()
 				root.add_child(_main)
 				current_scene = _main

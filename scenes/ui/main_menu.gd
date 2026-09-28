@@ -6,13 +6,24 @@ const DRIFT_PERIOD := 64.0   # seconds for a full left-right-left sweep
 const PUSH_IN_ZOOM := 1.08
 const REST_ZOOM    := 1.035  # margin must cover DRIFT_PX at the edges
 const SETTLE_TIME  := 2.4
+# Live backdrop: the real game, played by bots (GameState.attract). The painting shows
+# until the world has settled, then fades off it; it's also the fallback.
+const WORLD_SETTLE  := 2.5   # nav bake, crew posed, dust down
+const WORLD_FADE    := 1.8
+const WORLD_RESTART := 5.0   # after the crew wins or falls, a breath before a fresh run
 
 var _rig: Node2D
 var _drift_t := 0.0
 var _picker: SectionPicker
+var _folk: FriendsAndFoes
+var _folk_btn: Button
+var _credits: CreditsRoll
+var _credits_btn: Button
 var _sections_btn: Button
 # Phone room-code keypad: the code alphabet (no I/O) in QWERTY order
 const KEY_ROWS := ["QWERTYUP", "ASDFGHJKL", "ZXCVBNM"]
+var _world: Node3D
+var _world_tween: Tween
 
 @onready var backdrop:      TextureRect = $Backdrop
 @onready var column:        Control  = $Content/Column
@@ -59,6 +70,27 @@ func _ready() -> void:
 	move_child(_picker, fade.get_index())
 	_picker.chosen.connect(_on_section_chosen)
 	_picker.closed.connect(_sections_btn.grab_focus)
+	# Friends and Foes: an entry under the sections, the page over everything
+	_folk_btn = join_btn.duplicate()
+	_folk_btn.name = "FolkButton"
+	_folk_btn.text = "Friends and Foes"
+	menu.add_child(_folk_btn)
+	menu.move_child(_folk_btn, _sections_btn.get_index() + 1)
+	_folk = FriendsAndFoes.new()
+	add_child(_folk)
+	move_child(_folk, fade.get_index())
+	_folk_btn.pressed.connect(_folk.open)
+	_folk.closed.connect(_folk_btn.grab_focus)
+	# Credits: an entry above Quit; the roll plays over the menu
+	_credits_btn = join_btn.duplicate()
+	_credits_btn.name = "CreditsButton"
+	_credits_btn.text = "Credits"
+	menu.add_child(_credits_btn)
+	menu.move_child(_credits_btn, quit_btn.get_index())
+	_credits = CreditsRoll.new()
+	add_child(_credits)
+	_credits_btn.pressed.connect(_credits.play)
+	_credits.finished.connect(_credits_btn.grab_focus)
 	join_btn.pressed.connect(_on_join)
 	settings_btn.pressed.connect(_on_settings)
 	quit_btn.pressed.connect(get_tree().quit)
@@ -86,6 +118,17 @@ func _ready() -> void:
 	if GameState.picker_return >= 0:
 		_picker.open(GameState.picker_return)
 		GameState.picker_return = -1
+	GameState.game_won.connect(_on_world_over)
+	GameState.game_lost.connect(_on_world_over)
+	_start_world()
+
+func _exit_tree() -> void:
+	GameState.attract = false
+
+# Language picked in Settings: redo the one line built from a format string
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and not host_btn.disabled:
+		_show_default_status()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if join_panel.visible and _code_sheet and _code_sheet.visible and event is InputEventKey \
@@ -146,8 +189,63 @@ func _animate_backdrop(t: float) -> void:
 	_rig.position.x = size.x * 0.5 - sin(t * TAU / DRIFT_PERIOD) * DRIFT_PX
 
 func _process(delta: float) -> void:
+	if not backdrop.visible:
+		return
 	_drift_t += delta
 	_animate_backdrop(_drift_t)
+
+# ── Live world ─────────────────────────────────────────────
+
+func _start_world() -> void:
+	GameState.attract = true
+	_world = load(GAME_SCENE).instantiate()
+	add_child(_world)
+	move_child(_world, 0)   # 3D draws under every Control anyway; keep the tree honest
+	var world := _world
+	await get_tree().create_timer(WORLD_SETTLE).timeout
+	if world == _world and GameState.attract:
+		_fade_backdrop(0.0, WORLD_FADE)
+
+func _fade_backdrop(to: float, time: float) -> Tween:
+	if _world_tween:
+		_world_tween.kill()
+	backdrop.show()
+	_world_tween = create_tween()
+	_world_tween.tween_property(backdrop, "modulate:a", to, time) 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if to == 0.0:
+		_world_tween.tween_callback(backdrop.hide)
+	return _world_tween
+
+# The crew finished the wall or was overrun: the painting covers a fresh start
+func _on_world_over() -> void:
+	if not GameState.attract:
+		return
+	var world := _world
+	await get_tree().create_timer(WORLD_RESTART).timeout
+	if world == _world and GameState.attract:
+		_restart_world()
+
+func _restart_world() -> void:
+	await _fade_backdrop(1.0, 0.8).finished
+	if _world:
+		_world.queue_free()
+		_world = null
+	_start_world()
+
+# A real game is starting: hold the world still and hand GameState back clean
+func _stop_world() -> void:
+	if not GameState.attract:
+		return
+	GameState.attract = false
+	if _world:
+		_world.process_mode = Node.PROCESS_MODE_DISABLED
+	GameState.reset()
+
+# Hosting or joining fell through: back to a fresh live world
+func _resume_world() -> void:
+	if not GameState.attract and is_inside_tree():
+		GameState.attract = true
+		_restart_world()
 
 # ── Network status ─────────────────────────────────────────
 
@@ -166,7 +264,7 @@ func _show_default_status() -> void:
 	if _use_eos():
 		net_status.text = "Online — host for a room code, or join with one"
 	elif _use_steam():
-		net_status.text = "Signed in to Steam as %s — invite friends once in game" % NetworkManager.steam_name()
+		net_status.text = tr("Signed in to Steam as %s — invite friends once in game") % NetworkManager.steam_name()
 	elif NetworkManager.steam_available():
 		net_status.text = "LAN mode — share your IP address to play together"
 	elif NetworkManager.online_error().is_empty():
@@ -195,6 +293,7 @@ func _on_section_chosen(section_index: int) -> void:
 	_host()
 
 func _host() -> void:
+	_stop_world()
 	host_btn.disabled = true
 	_sections_btn.disabled = true
 	if _use_eos():
@@ -210,6 +309,7 @@ func _on_host_failed(reason: String) -> void:
 	host_btn.disabled = false
 	_sections_btn.disabled = false
 	net_status.text = reason
+	_resume_world()
 
 func _on_lobby_created() -> void:
 	get_tree().change_scene_to_file(GAME_SCENE)
@@ -258,9 +358,10 @@ func _fill_friend_games() -> void:
 	for g: Dictionary in games:
 		var b := Button.new()
 		b.theme_type_variation = &"PrimaryButton" if first == null else &"GhostButton"
-		b.text = "Join %s" % g.name
+		b.text = tr("Join %s") % g.name
 		b.pressed.connect(func():
-			status_label.text = "Joining %s…" % g.name
+			status_label.text = tr("Joining %s…") % g.name
+			_stop_world()
 			NetworkManager.join_steam(g.lobby))
 		box.add_child(b)
 		if first == null:
@@ -274,6 +375,7 @@ func _on_connect() -> void:
 		return
 	status_label.text = "Connecting…"
 	connect_btn.disabled = true
+	_stop_world()
 	# 5 letters = EOS room code; Steam lobby ids are 64-bit numbers; else an IP/hostname
 	if NetworkManager.is_room_code(addr):
 		if not NetworkManager.online_available():
@@ -297,6 +399,7 @@ func _on_back() -> void:
 
 func _on_lobby_joined(success: bool) -> void:
 	if success:
+		_stop_world()   # a Steam invite joins straight from the menu
 		get_tree().change_scene_to_file(GAME_SCENE)
 	else:
 		var why := NetworkManager.last_error
@@ -311,6 +414,7 @@ func _join_failed(msg: String) -> void:
 		_refresh_slots()
 		UiFx.shake(_code_sheet.get_child(0))
 		Mobile.haptic(40)
+	_resume_world()
 
 # ── Settings ───────────────────────────────────────────────
 

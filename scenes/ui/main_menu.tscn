@@ -103,7 +103,7 @@ layout_mode = 2
 theme_type_variation = &"Eyebrow"
 theme_override_colors/font_color = Color(0.676, 0.313, 0.124, 1)
 theme_override_font_sizes/font_size = 16
-text = "445 BC  ·  Jerusalem"
+text = "455 BCE  ·  Jerusalem"
 
 [node name="Title" type="Label" parent="Content/Column"]
 layout_mode = 2
@@ -195,7 +195,7 @@ alignment = 2
 [node name="Text" type="Label" parent="Verse"]
 layout_mode = 2
 theme_type_variation = &"Verse"
-text = "“The work is great and vast, and we are spread out on the wall, far apart from each other.”"
+text = "“The work is great and widely spread out, and we are separated on the wall, far from one another.”"
 autowrap_mode = 3
 
 [node name="Ref" type="Label" parent="Verse"]
@@ -220,7 +220,7 @@ grow_vertical = 0
 mouse_filter = 2
 theme_type_variation = &"Caption"
 theme_override_font_sizes/font_size = 13
-text = "Music: “The Desert of Dreams” by insydnis (CC-BY 3.0)  ·  “Desert theme” by yd (CC0)  ·  Sound: Kenney.nl (CC0)"
+text = "Music: “The Desert of Dreams” by insydnis (CC-BY 3.0)  ·  “Desert theme” by yd (CC0)  ·  Sound: Kenney.nl (CC0)  ·  Scripture adapted from the World English Bible (public domain)"
 horizontal_alignment = 2
 vertical_alignment = 1
 

@@ -16,6 +16,32 @@ var toggle_charge := false   # sling: press to start, press again to throw (inst
 # Keyboard / mouse rebinds: action → {"key": physical keycode} or {"mouse": button index}.
 # Only an action's primary key / mouse event is rebindable; pad remaps go through Steam Input.
 var bindings := {}
+# UI language: a locale from LANGUAGES, or "" to follow the OS / browser
+var language := ""
+# Bots on the host's crew (BotBrain): how many fill the empty places, and how good they are
+var bot_count := 0
+var bot_skill := 1   # index into BotBrain.SKILLS
+# How hard the enemy presses (host's choice; only the server reads it): index into DIFFICULTIES
+var difficulty := 1
+
+# pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
+# harm: multiplies every enemy blow, on workers and on the wall
+const DIFFICULTIES := [
+	{ "name": "Gentle",   "pace": 0.7, "harm": 0.7,  "about": "Fewer enemies, lighter blows" },
+	{ "name": "Standard", "pace": 1.0, "harm": 1.0,  "about": "The wall as it was built" },
+	{ "name": "Hard",     "pace": 1.3, "harm": 1.25, "about": "More enemies, heavier blows" },
+]
+
+# Shipped translations (locale/*.po; the English text is the key), in picker order.
+# Names are written in their own language so anyone can find theirs.
+const LANGUAGES := [
+	["en", "English"], ["es", "Español"], ["pt_BR", "Português (Brasil)"],
+	["de", "Deutsch"], ["ko", "한국어"],
+]
+# Cinzel and Spectral have no Hangul: these subsets (tools/i18n/subset_kr_font.py)
+# stand behind every UI font. Desktop could fall back to a system font, the web can't.
+const KR_REGULAR := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Medium-subset.ttf"
+const KR_BOLD    := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Bold-subset.ttf"
 
 const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
 	"interact", "drop", "dash", "throw_charge", "horn"]
@@ -32,7 +58,12 @@ func _ready() -> void:
 		rumble = cfg.get_value("controls", "rumble", rumble)
 		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
+		language = cfg.get_value("general", "language", language)
+		bot_count = cfg.get_value("bots", "count", bot_count)
+		bot_skill = cfg.get_value("bots", "skill", bot_skill)
+		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 	_apply_bindings()
+	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
 		if AudioServer.get_bus_index(bus_name) == -1:
 			AudioServer.add_bus()
@@ -55,6 +86,7 @@ func _fit_ui() -> void:
 	win.content_scale_factor = clampf(UI_MIN_SCALE / s, 1.0, UI_MAX_BOOST) if s > 0.0 else 1.0
 
 func apply() -> void:
+	TranslationServer.set_locale(language if not language.is_empty() else OS.get_locale())
 	# Embedded/headless runs have no real window to resize
 	if OS.has_feature("mobile"):
 		# Fullscreen = immersive on Android (system bars hidden); no vsync choice
@@ -84,7 +116,53 @@ func save() -> void:
 	cfg.set_value("controls", "rumble", rumble)
 	cfg.set_value("controls", "toggle_charge", toggle_charge)
 	cfg.set_value("controls", "bindings", bindings)
+	cfg.set_value("general", "language", language)
+	cfg.set_value("bots", "count", bot_count)
+	cfg.set_value("bots", "skill", bot_skill)
+	cfg.set_value("general", "difficulty", difficulty)
 	cfg.save(PATH)
+
+## The chosen difficulty's row of DIFFICULTIES
+func diff() -> Dictionary:
+	return DIFFICULTIES[clampi(difficulty, 0, DIFFICULTIES.size() - 1)]
+
+# ── Language ───────────────────────────────────────────────
+
+## Locale actually in use, matched to a shipped one ("en" when nothing matches)
+func current_language() -> String:
+	var best := "en"
+	var best_score := 0
+	for row: Array in LANGUAGES:
+		var score := TranslationServer.compare_locales(TranslationServer.get_locale(), row[0])
+		if score > best_score:
+			best = row[0]
+			best_score = score
+	return best
+
+func _add_font_fallbacks() -> void:
+	var regular := load(KR_REGULAR) as Font
+	var bold := load(KR_BOLD) as Font
+	if regular == null or bold == null:
+		return
+	var fonts: Array[Font] = [UiStyle.CINZEL, UiStyle.CINZEL_SEMI, UiStyle.CINZEL_BOLD, UiStyle.CINZEL_XBOLD,
+		UiStyle.SPECTRAL, UiStyle.SPECTRAL_MEDIUM, UiStyle.SPECTRAL_ITALIC, UiStyle.WORLD_FONT, ThemeDB.fallback_font]
+	var theme := ThemeDB.get_project_theme()
+	if theme != null:
+		if theme.default_font != null:
+			fonts.append(theme.default_font)
+		for type in theme.get_font_type_list():
+			for font_name in theme.get_font_list(type):
+				fonts.append(theme.get_font(font_name, type))
+	for f: Font in fonts:
+		# A variation shares its base font's fallbacks
+		while f is FontVariation and (f as FontVariation).base_font != null:
+			f = (f as FontVariation).base_font
+		if f == null or f.fallbacks.has(regular) or f.fallbacks.has(bold):
+			continue
+		var heavy := f is FontFile and (f as FontFile).font_weight >= 600
+		var fb := f.fallbacks
+		fb.append(bold if heavy else regular)
+		f.fallbacks = fb
 
 # ── Bindings ───────────────────────────────────────────────
 

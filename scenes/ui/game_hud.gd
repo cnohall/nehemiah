@@ -4,6 +4,7 @@ extends CanvasLayer
 # numbers by Main. Player cards and the Steam invite panel are built in code.
 
 signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDirector)
+signal bots_changed      # host changed Settings.bot_count / bot_skill (Main refits the crew)
 
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 const BANNER_HOLD   := 3.2
@@ -21,7 +22,7 @@ const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
 const ROMAN         := ["I", "II", "III", "IV"]
-const WIN_VERSE     := "“So the wall was completed on the 25th day of Elul, in 52 days.”"
+const WIN_VERSE     := "“So the wall was finished in the twenty-fifth day of Elul, in fifty-two days.”"
 const WIN_VERSE_REF := "Nehemiah 6:15"
 # Action → what it does; the key / button label comes from InputMode for the device
 # in use. Shown while gathering and on day 1, and whenever paused.
@@ -76,6 +77,10 @@ var _next_line: Label        # day plaque: what to do next, for the local player
 var _next_box: Control       # phones: the pill it moves into, bottom-centre
 var _next_poll := 0.0
 const NEXT_POLL := 0.25
+var _sun_row: HBoxContainer  # day plaque: the sun clock (GameState.sun)
+var _sun_dial: SunDial
+var _sun_time: Label
+var _sun_warned := false     # "the sun is low" said once a day
 
 func _ready() -> void:
 	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
@@ -86,6 +91,7 @@ func _ready() -> void:
 	else:
 		_build_controls_hint()
 	_build_next_line()
+	_build_sun_row()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -97,7 +103,7 @@ func _ready() -> void:
 	if Mobile.enabled():
 		_apply_mobile_layout(alerts)
 	breach_pips.count = GameState.MAX_BREACHES
-	day_of.text = "of %d" % GameState.TOTAL_DAYS
+	day_of.text = tr("of %d") % GameState.TOTAL_DAYS
 	_last_breaches = GameState.breaches
 
 	$Root/EndScreen/Center/VBox/Buttons/MenuButton.pressed.connect(_leave)
@@ -111,6 +117,8 @@ func _ready() -> void:
 	# Mouse only: with a pad, A near a stockpile must not also start the day
 	$Root/GatherPanel/VBox/Begin.focus_mode = Control.FOCUS_NONE
 	_build_gamepad_begin()
+	if is_host:
+		_build_bot_row()
 	GameState.crew_changed.connect(_on_crew_changed)
 	_on_crew_changed(GameState.crew_size)
 	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
@@ -131,6 +139,15 @@ func _ready() -> void:
 	_on_breaches_changed(GameState.breaches)
 	_on_phase_changed(GameState.phase)
 
+# Language picked from the pause menu: redo the lines built from format strings
+# (plain Labels retranslate themselves)
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		day_of.text = tr("of %d") % GameState.TOTAL_DAYS
+		refresh_day(GameState.current_day)
+		_on_crew_changed(GameState.crew_size)
+		_refresh_gather_hint()
+
 func _unhandled_input(event: InputEvent) -> void:
 	# B / Esc backs out of the menu, like every other screen
 	var back := event.is_action_pressed("ui_cancel") and not event.is_action_pressed("pause")
@@ -138,7 +155,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_close_pause()
 		return
-	if not event.is_action_pressed("pause") or end_screen.visible or GameState.phase == GameState.Phase.STORY:
+	if not event.is_action_pressed("pause") or end_screen.visible or _story_up():
 		return
 	get_viewport().set_input_as_handled()
 	_toggle_pause()
@@ -168,7 +185,7 @@ func _open_pause() -> void:
 # Pad unplugged mid-game: bring the menu up (online play can't freeze, but the player
 # at least stops acting on ghost input) and say what happened
 func _on_pad_lost() -> void:
-	if end_screen.visible or GameState.phase == GameState.Phase.STORY:
+	if end_screen.visible or _story_up():
 		return
 	_open_pause()
 	_pad_lost_note.show()
@@ -206,7 +223,7 @@ func _build_gamepad_begin() -> void:
 func _refresh_gather_hint() -> void:
 	if _gather_hint != null:
 		_gather_hint.visible = InputMode.using_pad and multiplayer.is_server()
-		_gather_hint.text = "or press %s to begin" % InputMode.key("pause")
+		_gather_hint.text = tr("or press %s to begin") % InputMode.key("pause")
 
 func _close_pause() -> void:
 	pause_menu.hide()
@@ -230,7 +247,8 @@ func refresh_day(day: int) -> void:
 	var section := GameState.get_section_for_day(day)
 	day_number.text  = str(day)
 	# Phones share one line with the day number: name only
-	day_section.text = ("·  %s" % section["name"]) if Mobile.enabled() 		else "%s  ·  %s" % [section["name"], section["ref"]]
+	day_section.text = ("·  %s" % tr(section["name"])) if Mobile.enabled() \
+		else "%s  ·  %s" % [tr(section["name"]), GameState.short_ref(section["ref"])]
 	circuit.day = day
 
 # ── Next step ──────────────────────────────────────────────
@@ -248,7 +266,53 @@ func _build_next_line() -> void:
 	vb.add_child(_next_line)
 	vb.move_child(_next_line, work_row.get_index() + 1)
 
+# Sun clock under today's work: "Daylight", the arc, minutes left
+func _build_sun_row() -> void:
+	_sun_row = HBoxContainer.new()
+	_sun_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sun_row.add_theme_constant_override("separation", 12)
+	_sun_row.visible = false
+	var label := Label.new()
+	label.theme_type_variation = &"Eyebrow"
+	label.text = "Daylight"
+	_sun_row.add_child(label)
+	_sun_dial = SunDial.new()
+	_sun_dial.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sun_dial.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_sun_row.add_child(_sun_dial)
+	_sun_time = Label.new()
+	_sun_time.theme_type_variation = &"Body"
+	_sun_time.add_theme_font_size_override("font_size", 15)
+	_sun_time.add_theme_color_override("font_color", UiStyle.INK)
+	_sun_time.custom_minimum_size.x = 40
+	_sun_time.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_sun_row.add_child(_sun_time)
+	var vb := $Root/DayPlaque/VBox
+	vb.add_child(_sun_row)
+	vb.move_child(_sun_row, work_row.get_index() + 1)
+
+func _refresh_sun() -> void:
+	var on := GameState.sun_total > 0.0 and GameState.phase in [GameState.Phase.DAWN, GameState.Phase.WORK]
+	_sun_row.visible = on
+	if not on:
+		return
+	var low := GameState.sun_low()
+	_sun_dial.t = 1.0 - GameState.sun_left / GameState.sun_total
+	_sun_dial.low = low
+	_sun_dial.last_day = GameState.last_day_of_section()
+	var secs := ceili(GameState.sun_left)
+	_sun_time.text = "%d:%02d" % [secs / 60, secs % 60]
+	_sun_time.add_theme_color_override("font_color", UiStyle.TERRACOTTA if low else UiStyle.INK)
+	if low and not _sun_warned and GameState.phase == GameState.Phase.WORK:
+		_sun_warned = true
+		Sfx.play("alert")
+		_flash(_sun_row, Color(1.0, 0.72, 0.6))
+		_show_banner(tr("The sun is low"), tr("Finish before the stars appear — the %s must stand tonight") % tr(GameState.get_current_section()["name"]) \
+			if GameState.last_day_of_section() else tr("What isn't built by the stars waits for tomorrow"), 2.2)
+
 func _process(delta: float) -> void:
+	if _sun_row != null:
+		_refresh_sun()
 	_next_poll -= delta
 	if _next_poll > 0.0 or _next_line == null:
 		return
@@ -270,26 +334,32 @@ func _next_text() -> String:
 	var site := SiteFocus.site()
 	if site == null:
 		return "The day's stretch is done — keep the wall"
-	var place := "gate" if not site.is_in_group("wall_sections") else "wall"
+	# One line per place (not "to the %s"): a translation needs the whole sentence
+	var at_gate := not site.is_in_group("wall_sections")
 	var carry: String = me.carried_kind
 	if not carry.is_empty():
 		if SiteFocus.matches_carry():
-			return "Take the %s to the %s" % [_material_name(carry), place]
-		return "Nothing needs %s now — drop it (%s)" % [_material_name(carry), InputMode.key("drop")]
+			return (tr("Take the %s to the gate") if at_gate else tr("Take the %s to the wall")) % _material_name(carry)
+		return tr("Nothing needs %s now — drop it (%s)") % [_material_name(carry), InputMode.key("drop")]
 	if GameState.active_build and site.can_build():
-		return "Build it up — %s at the %s" % [InputMode.key("interact"), place]
+		return (tr("Build it up — %s at the gate") if at_gate else tr("Build it up — %s at the wall")) % InputMode.key("interact")
 	var need: String = site.next_need()
 	if need.is_empty():
 		return ""
-	return "Next: bring %s to the %s" % [_material_name(need), place]
+	return (tr("Next: bring %s to the gate") if at_gate else tr("Next: bring %s to the wall")) % _material_name(need)
 
-static func _material_name(kind: String) -> String:
-	return {"beam": "beams", "rubble": "rubble"}.get(kind, kind)
+## A material as a word in a sentence ("stone", "beams"), translated
+func _material_name(kind: String) -> String:
+	return tr({"beam": "beams"}.get(kind, kind))
 
 func _on_progress_changed(_done: int, _total: int) -> void:
 	_refresh_progress()
 
 func _refresh_progress() -> void:
+	# Sun clock: the bar is the whole stretch, not a day's share
+	var work_label := get_node_or_null("Root/DayPlaque/VBox/WorkRow/WorkLabel") as Label   # gone on phones
+	if work_label != null:
+		work_label.text = "The stretch" if GameState.sun_total > 0.0 else "Today's work"
 	var working := GameState.phase == GameState.Phase.WORK
 	work_row.visible = working
 	phase_label.visible = not working
@@ -331,15 +401,26 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 	var section := GameState.get_current_section()
 	match phase:
 		GameState.Phase.DAWN:
+			_sun_warned = false
 			var first_day := GameState.day_in_section(GameState.current_day).x == 0
-			var sub: String = ("A new stretch: %s  ·  %s" if first_day else "%s  ·  %s") % [section["name"], section["ref"]]
+			var sub: String = (tr("A new stretch: %s  ·  %s") if first_day else "%s  ·  %s") % [tr(section["name"]), GameState.short_ref(section["ref"])]
 			# First day of a section that brings something new: say what
 			if first_day:
 				for twist: String in GameState.new_twists():
-					sub += "\n" + GameState.TWIST_INTRO.get(twist, "").format({"horn": "[%s]" % InputMode.key("horn")})
-			_show_banner("Day %d" % GameState.current_day, sub)
+					sub += "\n" + tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
+			if GameState.sun_total > 0.0:
+				var pos := GameState.day_in_section(GameState.current_day)
+				if pos.x == 0:
+					sub += "\n" + tr_n("Raise the whole stretch — %d day before the stars", "Raise the whole stretch — %d days before the stars", pos.y) % pos.y
+				elif pos.x == pos.y - 1:
+					sub += "\n" + tr("The last day of this stretch — it must stand before the stars appear")
+				else:
+					sub += "\n" + tr("%d of %d stand — %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
+			_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
-			_show_end(true)
+			# The campaign's ending story plays first; Main calls show_end after it
+			if not StoryData.plays_ending():
+				_show_end(true)
 		GameState.Phase.LOST:
 			_show_end(false)
 
@@ -368,6 +449,14 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_banner_tween.tween_callback(banner.hide)
 
+# Story cards on screen: before a day, or the ending before the end screen
+func _story_up() -> bool:
+	return GameState.phase == GameState.Phase.STORY 		or (GameState.phase == GameState.Phase.WON and not end_screen.visible)
+
+func show_end(won: bool) -> void:
+	if not end_screen.visible:
+		_show_end(won)
+
 func _show_end(won: bool) -> void:
 	if _banner_tween:
 		_banner_tween.kill()
@@ -376,11 +465,13 @@ func _show_end(won: bool) -> void:
 	for n: Control in [$Root/DayPlaque, threat, players_row]:
 		n.hide()
 	var vb := $Root/EndScreen/Center/VBox
-	vb.get_node("Eyebrow").text = "Day %d of %d" % [GameState.current_day, GameState.TOTAL_DAYS]
-	vb.get_node("Title").text = "The wall is finished" if won else "The city is overrun"
+	vb.get_node("Eyebrow").text = tr("Day %d of %d") % [GameState.current_day, GameState.TOTAL_DAYS]
+	var stars := not won and GameState.loss_reason == "stars"
+	vb.get_node("Title").text = "The wall is finished" if won else ("The stars appeared" if stars else "The city is overrun")
 	vb.get_node("Message").text = WIN_VERSE if won \
-		else "Too many enemies reached the inner city. Gather the workers and begin again."
-	vb.get_node("Ref").text = WIN_VERSE_REF if won else ""
+		else (tr("The %s was not finished by nightfall. Gather the workers and begin again.") % tr(GameState.get_current_section()["name"]) if stars \
+		else tr("Too many enemies reached the inner city. Gather the workers and begin again."))
+	vb.get_node("Ref").text = GameState.long_ref(WIN_VERSE_REF) if won else ""
 	vb.get_node("Ref").visible = won
 	var days_done := GameState.TOTAL_DAYS if won else GameState.current_day - 1
 	var sections_done := GameState.SECTIONS.size() if won else GameState.current_section_index
@@ -403,11 +494,13 @@ func _show_end(won: bool) -> void:
 func _replay_end(won: bool, vb: Control, stats: Control) -> void:
 	var i := GameState.replay_section
 	var sec: Dictionary = GameState.SECTIONS[i]
-	vb.get_node("Eyebrow").text = "Section %d of %d  ·  %s" % [i + 1, GameState.SECTIONS.size(), sec["ref"]]
+	vb.get_node("Eyebrow").text = tr("Section %d of %d  ·  %s") % [i + 1, GameState.SECTIONS.size(), GameState.short_ref(sec["ref"])]
 	if won:
-		vb.get_node("Title").text = "The %s stands" % sec["name"]
+		vb.get_node("Title").text = tr("The %s stands") % tr(sec["name"])
 		var got := GameState.mark_count(GameState.section_marks[i])
-		vb.get_node("Message").text = ("A new best for this stretch — %d of 3 marks." if GameState.rating_improved 			else "%d of 3 marks. Your best here stays as it was.") % got
+		vb.get_node("Message").text = (tr("A new best for this stretch — %d of 3 marks.") if GameState.rating_improved 			else tr("%d of 3 marks. Your best here stays as it was.")) % got
+	elif GameState.loss_reason == "stars":
+		vb.get_node("Message").text = tr("The stretch was not finished by nightfall. Try it again.")
 	else:
 		vb.get_node("Message").text = "Too many enemies reached the inner city. Try the stretch again."
 	vb.get_node("Ref").hide()
@@ -447,15 +540,22 @@ func show_tally(stats: Dictionary) -> void:
 		c.queue_free()
 
 	var day := GameState.current_day
-	var pos := GameState.day_in_section(day)
 	var section := GameState.get_current_section()
-	var title := "Day %d complete" % day
-	var sub := "Not one enemy got through." if stats["breaches"] == 0 		else "%d slipped through — but the wall stands." % stats["breaches"]
-	# Last day of a stretch: the whole section is done — say so
-	if pos.x == pos.y - 1:
-		title = "The %s stands" % section["name"]
-		sub = "Section %d of %d complete  ·  %s" % [GameState.current_section_index + 1,
+	var title := tr("Day %d complete") % day
+	var sub := tr("Not one enemy got through.") if stats["breaches"] == 0 		else tr_n("%d slipped through — but the wall stands.", "%d slipped through — but the wall stands.", stats["breaches"]) % stats["breaches"]
+	var unfinished: int = stats.get("unfinished", 0)
+	if unfinished > 0:
+		# The stars came first: the day ends, the rest waits for tomorrow
+		title = tr("Nightfall on day %d") % day
+		sub = tr_n("The stars appeared — %d left for tomorrow.", "The stars appeared — %d left for tomorrow.", unfinished) % unfinished
+	# The whole section is done (rated) — say so, and how many days it had to spare
+	elif stats.has("marks"):
+		title = tr("The %s stands") % tr(section["name"])
+		sub = tr("Section %d of %d complete  ·  %s") % [GameState.current_section_index + 1,
 			GameState.SECTIONS.size(), sub]
+		var spare: int = stats.get("spare", 0)
+		if GameState.sun_total > 0.0 and spare > 0:
+			sub += "\n" + tr_n("Finished with %d day to spare", "Finished with %d days to spare", spare) % spare
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -493,9 +593,9 @@ func _marks_line(stats: Dictionary) -> Control:
 	var secs := int(stats["section_time"])
 	var par := int(stats["par"])
 	var details := {
-		GameState.Mark.PACE: "%d:%02d of %d:%02d" % [secs / 60, secs % 60, par / 60, par % 60],
-		GameState.Mark.CLEAN: "all through the section" if mask & GameState.Mark.CLEAN 			else "%d got through" % stats["section_breaches"],
-		GameState.Mark.SOUND: "%d%% sound" % roundi(stats["wall"] * 100.0),
+		GameState.Mark.PACE: tr("%d:%02d of %d:%02d") % [secs / 60, secs % 60, par / 60, par % 60],
+		GameState.Mark.CLEAN: tr("all through the section") if mask & GameState.Mark.CLEAN 			else tr_n("%d got through", "%d got through", stats["section_breaches"]) % stats["section_breaches"],
+		GameState.Mark.SOUND: tr("%d%% sound") % roundi(stats["wall"] * 100.0),
 	}
 	for m: int in GameState.MARKS:
 		var earned := bool(mask & m)
@@ -532,9 +632,9 @@ func _crew_line(crew: Array) -> Control:
 		chip.add_child(swatch)
 		var who: String = "You" if r[0] == multiplayer.get_unique_id() else CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
 		chip.add_child(_crew_label(who, UiStyle.INK))
-		chip.add_child(_crew_label("%d loads" % r[1], UiStyle.TERRACOTTA if r[1] > 0 and r[1] == top_loads else UiStyle.INK_SOFT))
+		chip.add_child(_crew_label(tr_n("%d load", "%d loads", r[1]) % r[1], UiStyle.TERRACOTTA if r[1] > 0 and r[1] == top_loads else UiStyle.INK_SOFT))
 		chip.add_child(_crew_label("·", UiStyle.INK_MUTED))
-		chip.add_child(_crew_label("%d foes" % r[2], UiStyle.TERRACOTTA if r[2] > 0 and r[2] == top_foes else UiStyle.INK_SOFT))
+		chip.add_child(_crew_label(tr_n("%d foe", "%d foes", r[2]) % r[2], UiStyle.TERRACOTTA if r[2] > 0 and r[2] == top_foes else UiStyle.INK_SOFT))
 		line.add_child(chip)
 	return line
 
@@ -576,17 +676,91 @@ func _stat(value: String, caption: String) -> Control:
 	return v
 
 func _on_crew_changed(size: int) -> void:
-	gather_crew.text = "%d of %d builders here" % [size, NetworkManager.MAX_PLAYERS]
+	gather_crew.text = tr("%d of %d builders here") % [size, NetworkManager.MAX_PLAYERS]
+
+# Host, while gathering: how hard the enemy presses, and bots to fill the empty places —
+# how many, and how good. Each row has a caption saying what the choice means.
+# Mouse only, like Begin (a pad's A is busy picking things up here).
+func _build_bot_row() -> void:
+	var vb := $Root/GatherPanel/VBox
+	var at: int = $Root/GatherPanel/VBox/Begin.get_index()
+	# Difficulty
+	var diff := _bot_button("")
+	var diff_about := _host_caption()
+	var diff_row := _host_row([diff])
+	# Bots
+	var label := Label.new()
+	label.theme_type_variation = &"Caption"
+	var fewer := _bot_button("−")
+	var more := _bot_button("+")
+	var skill := _bot_button("")
+	var skill_about := _host_caption()
+	var bot_row := _host_row([label, fewer, more, skill])
+	for c in [diff_row, diff_about, bot_row, skill_about]:
+		vb.add_child(c)
+		vb.move_child(c, at)
+		at += 1
+	var refresh := func():
+		var d: Dictionary = Settings.diff()
+		diff.text = tr("Difficulty: %s") % tr(d["name"])
+		diff_about.text = tr(d["about"])
+		var sk: Dictionary = BotBrain.SKILLS[Settings.bot_skill]
+		label.text = tr("Bots: %d") % Settings.bot_count
+		skill.text = tr("Bot skill: %s") % tr(sk["name"])
+		skill_about.text = tr(sk["about"])
+		skill.visible = Settings.bot_count > 0
+		skill_about.visible = Settings.bot_count > 0
+		fewer.disabled = Settings.bot_count <= 0
+		more.disabled = Settings.bot_count >= NetworkManager.MAX_PLAYERS - 1
+	var change := func(count: int, level: int):
+		Settings.bot_count = clampi(count, 0, NetworkManager.MAX_PLAYERS - 1)
+		Settings.bot_skill = level
+		Settings.save()
+		refresh.call()
+		bots_changed.emit()
+	fewer.pressed.connect(func(): change.call(Settings.bot_count - 1, Settings.bot_skill))
+	more.pressed.connect(func(): change.call(Settings.bot_count + 1, Settings.bot_skill))
+	skill.pressed.connect(func(): change.call(Settings.bot_count, (Settings.bot_skill + 1) % BotBrain.SKILLS.size()))
+	# Read by the server only (WaveManager, Enemy), so no refit or sync
+	diff.pressed.connect(func():
+		Settings.difficulty = (Settings.difficulty + 1) % Settings.DIFFICULTIES.size()
+		Settings.save()
+		refresh.call())
+	diff.tooltip_text = tr("Click to change")
+	skill.tooltip_text = tr("Click to change")
+	refresh.call()
+
+func _host_row(children: Array) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6)
+	for c in children:
+		row.add_child(c)
+	return row
+
+func _host_caption() -> Label:
+	var l := Label.new()
+	l.theme_type_variation = &"Caption"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	return l
+
+func _bot_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.theme_type_variation = &"GhostButton"
+	b.focus_mode = Control.FOCUS_NONE
+	return b
 
 # ── Player cards ───────────────────────────────────────────
 
-func set_player_present(slot: int, present: bool, is_local: bool) -> void:
+func set_player_present(slot: int, present: bool, is_local: bool, is_bot := false) -> void:
 	if slot >= _cards.size():
 		return
 	var card: Dictionary = _cards[slot]
 	card.root.visible = present
 	card.name.text = CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
-	card.who.text = "You" if is_local else "Crew %s" % ROMAN[slot]
+	card.who.text = tr("You") if is_local else (tr("Bot") if is_bot else tr("Crew %s") % ROMAN[slot])
 
 func set_player_health(slot: int, frac: float) -> void:
 	if slot >= _cards.size():
@@ -1030,7 +1204,7 @@ func _build_invite_panel() -> void:
 	var copy := Button.new()
 	copy.theme_type_variation = &"GhostButton"
 	copy.text = "Copy code"
-	copy.tooltip_text = "Lobby code %s" % NetworkManager.lobby_code()
+	copy.tooltip_text = tr("Lobby code %s") % NetworkManager.lobby_code()
 	copy.focus_mode = Control.FOCUS_NONE
 	copy.pressed.connect(func():
 		DisplayServer.clipboard_set(NetworkManager.lobby_code())
@@ -1048,13 +1222,13 @@ func _fill_friend_list(list: VBoxContainer, scroll: ScrollContainer) -> void:
 	for f: Dictionary in friends:
 		var b := Button.new()
 		b.theme_type_variation = &"GhostButton"
-		b.text = f.name + ("  · in game" if f.in_game else "")
+		b.text = f.name + ("  · " + tr("in game") if f.in_game else "")
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.focus_mode = Control.FOCUS_NONE
 		b.clip_text = true
 		b.pressed.connect(func():
 			var ok := NetworkManager.invite_friend(f.id)
-			b.text = "%s  · %s" % [f.name, "invited" if ok else "invite failed"]
+			b.text = "%s  · %s" % [f.name, tr("invited") if ok else tr("invite failed")]
 			b.disabled = ok)
 		list.add_child(b)
 	# Grow with the list up to ~8 rows, then scroll

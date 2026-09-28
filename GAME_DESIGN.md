@@ -5,7 +5,7 @@
 
 ## 1. Overview
 
-Cooperative 2–4 player HD-2D isometric action-strategy set in 445 BC Jerusalem. Players embody the workers and guards of Nehemiah's rebuilding effort, racing to reconstruct the city wall in 52 days while repelling Sanballat's and Tobiah's increasingly desperate forces. Tone: urgent and collaborative — think Overcooked meets tower defense, grounded in Biblical history.
+Cooperative 2–4 player HD-2D isometric action-strategy set in 455 BCE Jerusalem. Players embody the workers and guards of Nehemiah's rebuilding effort, racing to reconstruct the city wall in 52 days while repelling Sanballat's and Tobiah's increasingly desperate forces. Tone: urgent and collaborative — think Overcooked meets tower defense, grounded in Biblical history.
 
 **Core loop per day:**
 1. Day begins — enemies spawn in waves
@@ -22,6 +22,8 @@ Cooperative 2–4 player HD-2D isometric action-strategy set in 445 BC Jerusalem
 ## 2. Enemy Types
 
 Three types, unlocked over the campaign (`wave_manager.gd`). Spawn rate and max alive scale with day and crew size.
+
+**Difficulty** (host picks on the gathering screen, `Settings.DIFFICULTIES`): Gentle / Standard / Hard. *pace* ×0.7 / 1.0 / 1.3 multiplies spawn rate, max alive and wave/surge size on top of each section's pressure; *harm* ×0.7 / 1.0 / 1.25 multiplies every enemy blow (workers and wall). **Bots count by skill** toward the enemy's crew size (Apprentice 0.5, Builder 0.75, Master builder 1.0), so adding weak bots no longer adds a full worker's foes. Building costs still use the whole crew. (Added 28 Sep 2026)
 
 | Type | Unlocks | Speed | Health | Damage | Notes |
 |---|---|---|---|---|---|
@@ -45,9 +47,9 @@ Just one type of structure so far
 ## 4. Historical Notes
 
 - Wall circuit: Nehemiah 3, clockwise from Sheep Gate
-- 52 days: Nehemiah 6:15 (Elul 25, 445 BC)
+- 52 days: Nehemiah 6:15 (Elul 25, 455 BCE)
 - Enemy leaders: Sanballat the Horonite, Tobiah the Ammonite, Geshem the Arab
-- Persian king: Artaxerxes I (465–424 BC)
+- Persian king: Artaxerxes I; his 20th year (Neh 2:1) = 455 BCE, per Watch Tower chronology (secular dating puts it at 445). Use BCE, not BC
 - Workers armed while building: Nehemiah 4:17 ("trowel in one hand, weapon in the other")
 - Families stationed behind the wall with weapons: Nehemiah 4:13
 
@@ -64,7 +66,7 @@ Just one type of structure so far
 - 12 wall sections × ~4 days each ≈ 48–52 days → matches the Day 52 win condition
 - Each section plays like one Overcooked level
 - Short clips/cutscenes between sections as checkpoint and reward
-  - ✅ **Circuit map** (`CircuitMap`, on the story cards and the section picker): a low-poly 3D diorama of Jerusalem (`CircuitDiorama`, built in code — Kidron/Hinnom valleys, Mount of Olives, whitewashed city, temple, olive groves, land fading into warm haze) with the 12 sections on the ring; labels, marks and the gold line on the current stretch are drawn over it in 2D. Prologue = Nehemiah's night ride (Neh 2:13-15), every stretch broken. Each section card: the stretch just finished rises in gold, the next one pulses, and the three foes watch from their lands. Later: win-screen ring closing
+  - ✅ **Circuit map** (`CircuitMap`, on the story cards and the section picker): a low-poly 3D diorama of Jerusalem (`CircuitDiorama`, built in code — Kidron/Hinnom valleys, Mount of Olives, whitewashed city, temple, olive groves, land fading into warm haze) with the 12 sections on the ring; labels, marks and the gold line on the current stretch are drawn over it in 2D. Prologue = Nehemiah's night ride (Neh 2:13-15), every stretch broken. Each section card: the stretch just finished rises in gold, the next one pulses, and the three foes watch from their lands. ✅ Finale (ending story, first card): the Miphkad stretch rises, a gold line runs the whole ring back to the Sheep Gate, and the foes fade (6:16)
 
 ### 5.2 Next (low cost, high impact)
 1. ✅ **Sound** — done: footsteps, pickup/drop/deposit (per material), dash, sling throw/hit/miss, enemy swing/death, wall build/hit/crumble, alarm bell on breach, jingles for day start/end + win/loss. Kenney CC0 packs, `Sfx` autoload
@@ -82,6 +84,7 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Working keeps going while you stand still (no holding); moving, dashing, dropping, the sling or **a hit** stops it. Progress is kept
 - Extra hands help: +70% each, max 3 at one site ("Enough hands here")
 - Hands are full while working — builders can't sling. Guarding the builders is the Neh. 4:17 moment
+- **Sword** (Neh. 4:18, "every builder had his sword girded by his side"): same button as the sling. A foe within 2 m → a quick cut instead of a wind-up: 20 damage to every foe in a 130° arc in front, shoves them back (scout 1.3 m, raider ~1 m, brute ~0.45 m), 0.45 s cooldown. Sling stays the safe way to chip at range; the sword pays better but means standing in reach. Unlimited sling stones stay — the stone-vs-wall choice lives in the watch posts
 - The next stage rises block by block (doors plank by plank) as the work fills; a knock + dust per stroke
 - Time per stage for one worker: framing 2 s, courses 3 s, mortar 2 s, doors/seal 2.5 s; solo works 25% faster
 - To keep days the same length, each stage costs one load less (never below 1); beams unchanged
@@ -95,6 +98,16 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Controls card shows keys or pad buttons, whichever is in use
 - Gamepad host starts the day from the pause menu ("Begin the work", focused)
 - Join: friends already in a lobby are listed with one-click Join; pause menu opens Steam's invite overlay
+
+### 5.6 Tower-defence layer — ◐ first pass, needs playtest
+Three rules, each on by default and each switched off from the command line to A/B it (`-- --no-waves`, `-- --no-sun`, `-- --no-posts`; the host's choice goes to everyone who joins). Test: `tools/td_test.gd` (run with `--day=4` for the last-day loss).
+- **Waves** (`WaveManager`): the trickle thins (×2) and the enemy comes in announced waves — bell + "Wave" pointer 5 s ahead, then a pack from one spot every 38 s (day 1) → 26 s (day 52). Pack = 2 + day/10 + one per two extra workers, × section pressure; from day 21 a wave comes at two spots, one on each half of the front. Tuned so the total count stays about the same — what changes is the rhythm (lulls to build, rushes to defend). Valley Gate keeps its own sharper surges (its twist)
+- **Sun clock** (`GameState.sun_*`, `DayDirector._tick_sun`): "from the rising of the morning till the stars appeared" (Neh 4:21). With the sun on there are no per-day slices: **the whole stretch is the goal** (plaque: "The stretch 2 / 6"), worked over its days, and every day of a section has the same light = section par ÷ its days × `sun_slack` (1.2 by default; 1.0 = the days add up to par; `-- --sun-slack=1.3` to try another; solo ×1.25). **Work front** (`WorkFront`): the stretch goes up in build order (gate first, then outward) — only the first unfinished units are open, one per two workers — so effort isn't spread over six half-built units; a knocked-down unit reopens in its place. Bots and the "Next:" line follow the front; people may still deliver anywhere. A day ends at the stars, or when the stretch stands — then its days to spare are skipped and the next stretch starts tomorrow ("Finished with 2 days to spare"). Nightfall on a section's **last day** with the stretch unfinished loses the run ("The stars appeared"). Day plaque shows a sun arc + time left; the last quarter warms the light and says "The sun is low". (Changed 28 Sep 2026 from "each day's slice, leftovers carried over": bots and players both lost track of what the day was for)
+- **Watch posts** (`WatchPost`, two behind the wall at x = ±8): "I set the people by their families" (Neh 4:13). Bring timber and work it up → a slinger climbs on. Feed it stone: one load = 6 throws, holds 3 loads. It throws at the nearest enemy within 12 m every 1.7 s for 9 damage (a scout takes five, a brute a dozen) — chips and staggers, never holds a flank alone. Stone for the post is stone not in the wall: that's the choice. Bare again on each new section. Tag pulses "Out of sling stones" during the work
+- Watch in playtests: does waves' rhythm make building lulls feel safe (less Neh 4:17 tension)? Is `sun_slack` 1.0 fair for 1–4 players? Do posts get fed, or ignored? Do they let the crew skip fighting?
+- Bots raise and feed posts: the wall comes first, a post gets what no wall wants (one load at a time), and a post that has run dry gets the next stone. They only raise a new post while the wall is on track (not on the last day, and at least as far along as the days gone by)
+- **Salvage**: rubble heaps also regrow one stone every 20 s during the work (up to their stock), so a stretch can slow down but never run dry ("Digging out more")
+- Open: section rating's "In good time" overlaps the sun now
 
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:
@@ -151,8 +164,9 @@ Keep the earthy palette, borrow Overcooked's readability:
 
 ### 6.1 Also against repetition
 - **Layout per section** — each section is its own map (terrain, where the supply yard sits, where the gaps are), not a re-skin.
-- **Section intros** — a short, still illustrated card or clip between sections with its Neh 3 reference, and the narrative beat where one applies (mockery, conspiracy, Ono). Dignified, no cartoon cutscenes. ◐ System done (`StoryData` / `StoryPlayer`, Phase.STORY): prologue before day 1 (Neh 1–2), a card per section, beats at Jeshanah (4:2), Broad Wall (4:3), Valley Gate (4:7-20), East Gate (6:2-4). Every reader must finish (or skip) before the day starts; host can "Begin now". Drawn silhouette backdrops stand in until art exists (`art` key per slide). TODO: verify NWT quotations, commission art, ending story after day 52
+- **Section intros** — a short, still illustrated card or clip between sections with its Neh 3 reference, and the narrative beat where one applies (mockery, conspiracy, Ono). Dignified, no cartoon cutscenes. ◐ System done (`StoryData` / `StoryPlayer`, Phase.STORY): prologue before day 1 (Neh 1–2), a card per section, beats at Jeshanah (4:2), Broad Wall (4:3), Valley Gate (4:7-20), East Gate (6:2-4). Every reader must finish (or skip) before the day starts; host can "Begin now". Drawn silhouette backdrops stand in until art exists (`art` key per slide). Verses: World English Bible (public domain; NWT barred by jw.org terms for software/commercial use). ✅ Ending after day 52 (`StoryData.ENDING`, campaign only, each reader at their own pace, then the end screen): the ring closes (6:15), they lost heart (6:16), the dedication (12:31-43). Then the **credits** (`CreditsRoll`): they roll up the dark column over the finished city with the ring closing, ending on Neh 13:31 "Remember me, my God, for good." Also a main menu entry. Chris Nohall (development), Joakim Henriquez (design), plus the attributions the licences ask for (CC-BY music, OFL fonts, MIT Godot/GodotSteam, WEB). Tests: `tools/ending_test.gd`, `tools/credits_test.gd`; shots/video: `tools/ending_shots.gd`, `tools/credits_shots.gd`. TODO: commission art
 - **Section rating** ✅ — three marks per section, each earned on its own: *In good time* (section work time ≤ par: 7 min + extra for beams/salvage/mixing/haul — TODO tune, the log prints time vs par), *None got through* (no breaches in the section), *The wall holds* (average wall health ≥ 80% at the end). Shown on the section's last dusk card, beside each gate on the circuit map, and totalled on the end screen. Each player's best per section is saved to `user://progress.cfg` (not for `--day=N` runs) — and the replay picker reads it: main menu → **Choose a Section** opens the circuit map (`SectionPicker`), finished stretches standing with their best marks; a section opens once the one before it is finished (debug `-- --unlock-all`). Picking one hosts a game of just that section (`GameState.replay_section`): its card only, its days, then an end screen with the marks and "Back to the map". Test: `tools/replay_test.gd`. Replay value without coins or loot.
+- **Friends and Foes** ✅ — main menu page (`FriendsAndFoes`): the whole cast as a lineup of portrait medallions (crew | foes); the one picked stands in an arched plate (dawn before the finished wall for friends, dusk outside a broken one for foes, night for the unmet), sways in 3/4 view, turns on drag and plays a signature move (build, cheer, thrust, slash), beside a verbatim WEB quote in their own words, who they are, and for enemies speed / toughness / strength. "Met N of 12" counter. Foes stay ink silhouettes ("Not yet met", with the gate where they first show) until this player meets them: enemies and the messenger on sight, leaders in their story beat (`GameState.mark_met` → `progress.cfg [met]`; older saves backfill from finished sections via `MET_AT`). The section picker shows each stretch's twists as chips, a line on what's new there, and its foes (`?` until met); a locked stretch keeps its twists hidden. Shots: `tools/folk_shots.gd`.
 
 ### 6.2 Style guardrails (against "cartoonish")
 Borrow Overcooked's **structure and readability**, not its tone.
@@ -164,7 +178,7 @@ Borrow Overcooked's **structure and readability**, not its tone.
 ### 6.3 Build order
 1. Section framework — ◐ twists done (`GameState.SECTIONS[i].twists`, `has_twist()`, dawn banner introduces new twists, twist-only supply piles). ✅ per-section layouts (data-driven, `SECTIONS[i].yard` / `.gate`, applied by `SectionStage` on every peer): supply yard moves per section (Dung Gate ~30 m east = long haul); stretches with no gate (Broad Wall, Tower of Ovens) seal the opening with stone instead of doors. ✅ Terrain per section (`SECTIONS[i].terrain`, built by `SectionTerrain`, solid + in the nav bake, ground tint/scrub/valley shade per section): sheepfold · fish stalls · burned ruins · forge & perfume stalls · bread ovens · valley terraces (two gaps funnel enemies) · refuse heaps (lanes on the long haul) · Pool of Shelah + King's Garden · torches + Ophel boulders · priests' houses (narrow lanes) · Kidron olive grove · market + sheepfold again. Sections can pin single piles (`piles`) and set enemy pace (`pressure`)
 2. ✅ Doors step (gate sections: after both pillars, deliver timber → doors hang and close the gap) and ✅ beams (Fish + Jeshanah Gate: framing takes beams; drag alone slowly, or a partner takes the other end — tethered pair at carry pace)
-3. ✅ Salvage (3): Jeshanah has no stone pile — 5 burned rubble heaps (3 inside, 2 **outside** the wall) with 4 stones each, refilled at dawn. ✅ Mortar mixing (5): Tower of Ovens + Valley Gate have no mortar pile — lime (bin) + water (clay jars) → stone trough mixes by itself in 4 s (progress bar, stirring paddle) → carry mortar to the wall. ✅ Horn (6)
+3. ✅ Salvage (3): Jeshanah has no stone pile — 5 burned rubble heaps (3 inside, 2 **outside** the wall) with 4 stones each, refilled at dawn, and regrowing one every 20 s during the work so a stretch never runs dry. ✅ Mortar mixing (5): Tower of Ovens + Valley Gate have no mortar pile — lime (bin) + water (clay jars) → stone trough mixes by itself in 4 s (progress bar, stirring paddle) → carry mortar to the wall. ✅ Horn (6)
 4. ✅ Sections 7–12 (first pass, needs playtest):
    - **Dung Gate** `haul`: yard 30 m east, refuse heaps split the route. **Hand-off** (all sections): [G] beside an empty-handed teammate puts the load in their hands
    - **Fountain Gate** `spring`: pressure ×0.55, water jars by the pool near the wall, mixing

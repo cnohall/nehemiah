@@ -28,3 +28,4 @@ android/build/libs/release/
 android/build/assets/
 android/build/assetPackInstallTime/src/main/assets/
 android/build/src/main/assets/
+__pycache__/

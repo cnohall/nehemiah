@@ -15,6 +15,7 @@ const TWIST_NAMES := {
 	"haul": "Long haul", "spring": "The spring", "night": "Night watch", "cramped": "Narrow lanes",
 	"schemes": "Schemes",
 }
+const FOE_NAMES := { "scout": "Scout", "brute": "Brute", "raider": "Raider", "messenger": "Messenger" }
 const ROMAN := ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
 
 var _selected := 0
@@ -23,7 +24,9 @@ var _eyebrow: Label
 var _title: Label
 var _ref: Label
 var _text: Label
-var _meta: Label
+var _twists: HFlowContainer
+var _twist_note: Label
+var _foes: HFlowContainer
 var _marks: VBoxContainer
 var _build_btn: Button
 var _back_btn: Button
@@ -90,12 +93,11 @@ func _select(i: int) -> void:
 	_map.section = i
 	var sec: Dictionary = GameState.SECTIONS[i]
 	var days: Array = sec["days"]
-	_eyebrow.text = "Section %s of %s · Days %d–%d" % [ROMAN[i], ROMAN[ROMAN.size() - 1], days.front(), days.back()]
-	_title.text = sec["name"]
-	_ref.text = "Nehemiah %s" % sec["ref"].trim_prefix("Neh. ")
-	_text.text = StoryData.SECTION_LINES[i]
-	var twists: Array = sec.get("twists", []).map(func(t: String): return TWIST_NAMES.get(t, t))
-	_meta.text = "With: %s" % ", ".join(twists) if not twists.is_empty() else "The plain work: carry, build, defend"
+	_eyebrow.text = tr("Section %s of %s · Days %d–%d") % [ROMAN[i], ROMAN[ROMAN.size() - 1], days.front(), days.back()]
+	_title.text = tr(sec["name"])
+	_ref.text = GameState.long_ref(sec["ref"])
+	_text.text = tr(StoryData.SECTION_LINES[i])
+	_fill_details(i)
 
 	for c in _marks.get_children():
 		c.queue_free()
@@ -116,9 +118,44 @@ func _select(i: int) -> void:
 	_build_btn.text = "Build again" if best >= 0 else "Build this stretch"
 	_lock.visible = not open_
 	if not open_:
-		_lock.text = "Finish the %s first" % GameState.SECTIONS[i - 1]["name"]
+		_lock.text = tr("Finish the %s first") % tr(GameState.SECTIONS[i - 1]["name"])
 	if changed:
 		Sfx.play("tally")
+
+# What the stretch holds: its twists, and the foes who come there. Locked stretches keep
+# their twists to themselves; a foe this player hasn't met yet shows as "?".
+func _fill_details(i: int) -> void:
+	for box: Control in [_twists, _foes]:
+		for c in box.get_children():
+			c.queue_free()
+	var sec: Dictionary = GameState.SECTIONS[i]
+	var twists: Array = sec.get("twists", [])
+	var open_ := bool(_map.unlocked[i])
+	if not open_:
+		_twists.add_child(_chip("? ? ?", false))
+	elif twists.is_empty():
+		_twists.add_child(_chip(tr("The plain work"), false))
+	for t: String in twists if open_ else []:
+		_twists.add_child(_chip(tr(TWIST_NAMES.get(t, t)), true))
+	# What's new here, in a sentence — unless everything is (the finale)
+	var before: Array = GameState.SECTIONS[i - 1].get("twists", []) if i > 0 else []
+	var fresh: Array = twists.filter(func(t): return t not in before)
+	var lines: Array = fresh.map(func(t: String): return tr(GameState.TWIST_INTRO.get(t, "")).format({"horn": "[%s]" % InputMode.key("horn")}))
+	_twist_note.text = "" if not open_ else ("
+".join(lines) if fresh.size() <= 2 else tr("Everything the wall has asked of you, all at once."))
+	_twist_note.visible = not _twist_note.text.is_empty()
+
+	# Once a foe has shown up, it keeps coming (GameState.MET_AT: where each first shows)
+	for k: String in FOE_NAMES.keys().filter(func(k: String): return GameState.MET_AT[k] <= i):
+		var met := GameState.has_met(k)
+		_foes.add_child(_chip(tr(FOE_NAMES[k]) if met else "?", met, true))
+
+func _chip(text: String, strong: bool, foe := false) -> Label:
+	var l := _label(&"Eyebrow", 13, UiStyle.CREAM if strong else UiStyle.INK_SOFT, false, text)
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # already translated
+	var bg: Color = (Color(0.42, 0.12, 0.09) if foe else UiStyle.INK_SOFT) if strong else Color(UiStyle.INK, 0.08)
+	l.add_theme_stylebox_override("normal", UiStyle.box(bg, Vector2(10, 4), 3))
+	return l
 
 func _on_build() -> void:
 	if _map.unlocked[_selected]:
@@ -173,8 +210,23 @@ func _build() -> void:
 	_text.add_theme_constant_override("line_spacing", 6)
 	_text.custom_minimum_size.y = 96
 	column.add_child(_text)
-	_meta = _label(&"Body", 19, UiStyle.INK_SOFT, false)
-	column.add_child(_meta)
+	_twists = HFlowContainer.new()
+	_twists.add_theme_constant_override("h_separation", 8)
+	_twists.add_theme_constant_override("v_separation", 8)
+	column.add_child(_twists)
+	_twist_note = _label(&"Body", 18, UiStyle.INK_SOFT)
+	column.add_child(_twist_note)
+	column.add_child(_gap(6))
+	var foe_row := HBoxContainer.new()
+	foe_row.add_theme_constant_override("separation", 12)
+	column.add_child(foe_row)
+	var foe_head := _label(&"Eyebrow", 13, UiStyle.TERRACOTTA, false, "Foes here")
+	foe_head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	foe_row.add_child(foe_head)
+	_foes = HFlowContainer.new()
+	_foes.add_theme_constant_override("h_separation", 8)
+	_foes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	foe_row.add_child(_foes)
 	column.add_child(_gap(18))
 	column.add_child(_label(&"Eyebrow", 13, UiStyle.TERRACOTTA, false, "Your best here"))
 	_marks = VBoxContainer.new()

@@ -10,7 +10,7 @@ const MAX_TIME      := 2.0
 const IMPACT_RADIUS := 0.9
 const BODY_HEIGHT   := 0.9    # aim at the torso, not the feet
 
-var shooter := 0            # peer id of the thrower — credited if the stone fells an enemy
+var shooter := 0            # worker id (Player.worker_id) of the thrower — credited if the stone fells an enemy
 var _target: Node3D = null
 var _land: Vector3
 var _damage: float = 0.0

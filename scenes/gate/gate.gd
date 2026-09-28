@@ -187,7 +187,7 @@ func _refresh() -> void:
 	BuildWork.reveal(_doors, fill)
 	BuildWork.reveal(_infill, fill)
 	_door_body.get_child(0).set_deferred("disabled", not finished)
-	_footing.visible = _open_for_work() and is_target
+	_footing.visible = _open_for_work() and is_target and not GameState.attract
 	_update_label()
 
 # Two plank leaves with cross battens and a heavy bar across both

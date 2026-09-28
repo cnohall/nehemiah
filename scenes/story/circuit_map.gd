@@ -7,11 +7,14 @@ extends Control
 # the section just finished raises itself along the ring as the reward.
 # `inspect` mode is the night ride of Neh. 2:13-15: every stretch broken, a torch goes
 # out by the Valley Gate, round past the Dung Gate to the Fountain Gate, and back.
+# `finale` mode is the ending: the last stretch rises, then a gold line runs the whole
+# ring from the Sheep Gate back to itself, each stretch lighting as it passes.
 # `picker` mode is the replay map (SectionPicker): every section this player has ever
 # finished stands with its best marks, `section` is the one selected, locked ones fade.
 
 const RISE_TIME    := 1.6
 const RIDE_TIME    := 7.0
+const CLOSE_TIME   := 4.5
 const PULSE_SPEED  := 2.4
 # The night ride: out through the Valley Gate, on to the Fountain Gate, up the torrent
 # valley (Kidron) until the rubble stops the mount, then back the same way
@@ -31,6 +34,9 @@ var section := 0:
 		if _diorama:
 			_diorama.focus_on(section + 0.5)
 var inspect := false
+var finale := false
+## No gate plaques or foes over the land — the credits roll over it
+var quiet := false
 var picker := false
 ## Picker mode, per section: best marks (-1 = never finished) and whether it may be picked
 var best: Array = []
@@ -38,6 +44,7 @@ var unlocked: Array = []
 
 var _rise := 1.0      # 0..1, the previous section raising itself
 var _ride := 0.0      # 0..1 there and back
+var _close := 0.0     # 0..1 finale: the gold line round the ring
 var _time := 0.0
 var _tween: Tween
 var _container: SubViewportContainer
@@ -122,6 +129,11 @@ func _process(delta: float) -> void:
 			glow = 0.35 + 0.55 * pulse if i == section else 0.0
 		elif inspect:
 			_diorama.set_section(i, false)
+		elif finale:
+			_diorama.set_section(i, true, _rise if i == section else 1.0)
+			# Lit as the line passes, then settling to a steady warmth
+			var lit := clampf(_close * CircuitDiorama.GATES.size() - i, 0.0, 1.0)
+			glow = lit * (0.35 + 0.25 * pulse)
 		else:
 			_diorama.set_section(i, i < section, _rise if i == section - 1 else 1.0)
 			glow = 0.3 + 0.5 * pulse if i == section else 0.0
@@ -137,12 +149,19 @@ func play() -> void:
 		_tween.kill()
 	_time = 0.0
 	_rise = 1.0
+	_close = 0.0
 	if _diorama:
-		_diorama.focus_on(-1.0 if inspect else section + 0.5)
+		_diorama.focus_on(-1.0 if inspect or finale else section + 0.5)
 	if inspect:
 		_ride = 0.0
 		_tween = create_tween()
 		_tween.tween_property(self, "_ride", 1.0, RIDE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	elif finale:
+		_rise = 0.0
+		_tween = create_tween()
+		_tween.tween_interval(0.5)
+		_tween.tween_property(self, "_rise", 1.0, RISE_TIME).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_tween.tween_property(self, "_close", 1.0, CLOSE_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	elif section > 0:
 		_rise = 0.0
 		_tween = create_tween()
@@ -166,6 +185,8 @@ func _done(i: int) -> bool:
 		return false
 	if picker:
 		return best[i] >= 0
+	if finale:
+		return i < section or _rise >= 1.0
 	return i < section - 1 or (i == section - 1 and _rise >= 1.0)
 
 func _marks(i: int) -> int:
@@ -187,25 +208,31 @@ func _draw_overlay() -> void:
 	var unit := _unit()
 	o.draw_texture_rect(_edge, Rect2(0, 0, size.x * 0.55, size.y), false)
 
-	# The current / selected stretch: a gold line along the wall, breathing
-	if not inspect:
+	# The current / selected stretch: a gold line along the wall, breathing.
+	# The finale draws it round the whole ring as far as it has closed.
+	var from := 0.0 if finale else float(section)
+	var span := _close * CircuitDiorama.GATES.size() if finale else 1.0
+	if not inspect and span > 0.0:
 		var pulse := 0.5 + 0.5 * sin(_time * PULSE_SPEED)
 		var line := PackedVector2Array()
-		for k in 25:
-			line.append(_project(_diorama.ring_world(section + k / 24.0, CircuitDiorama.WALL_H + 0.3)))
+		var steps := maxi(2, int(span * 24.0))
+		for k in steps + 1:
+			line.append(_project(_diorama.ring_world(from + span * k / steps, CircuitDiorama.WALL_H + 0.3)))
 		# Dark underlay so it reads on the sand, then a bright core
 		o.draw_polyline(line, Color(UiStyle.DUSK, 0.35), unit * 0.02, true)
 		o.draw_polyline(line, Color(UiStyle.GOLD, 0.35 + 0.3 * pulse), unit * 0.012, true)
 		o.draw_polyline(line, Color(1.0, 0.93, 0.72, 0.8 + 0.2 * pulse), unit * 0.005, true)
 
+	if quiet:
+		return
 	var centre := _project(_diorama.unit_to_world(CircuitDiorama.CENTER))
 	var font := UiStyle.CINZEL_SEMI
 	for i in CircuitDiorama.GATES.size():
 		var p := _project(_diorama.ring_world(i, CircuitDiorama.TOWER.y + 0.4))
 		var done := _done(i)
-		var here := not inspect and i == section
+		var here := not inspect and not finale and i == section
 		var locked: bool = picker and not unlocked[i]
-		var label: String = GameState.SECTIONS[i]["name"]
+		var label: String = tr(GameState.SECTIONS[i]["name"])
 		var fs := int(unit * (0.03 if here else 0.021))
 		var mask := _marks(i)
 		var gems := done and mask >= 0
@@ -235,13 +262,22 @@ func _draw_overlay() -> void:
 				MarkGem.draw_gem(o, tl + Vector2(pad.x + tw + gr * 1.6 + k * gr * 2.2, box.y * 0.5), gr, bool(mask & GameState.MARKS[k]))
 
 	# The three who stand against the work, watching from their lands: oxblood chips
-	# with a pennant, so the threat reads at a glance
+	# with a pennant, so the threat reads at a glance. In the finale they fade as the
+	# ring closes: "they lost their confidence" (Neh. 6:16)
+	var fa := 1.0 - _close if finale else 1.0
+	if fa <= 0.0:
+		return
+	_foe_plaque.bg_color = Color(0.36, 0.09, 0.07, 0.92 * fa)
+	_foe_plaque.border_color = Color(0.93, 0.50, 0.38, 0.4 * fa)
+	_foe_plaque.shadow_color = Color(0.08, 0.05, 0.02, 0.35 * fa)
+	var ink := Color(WorldTag.TEXT, WorldTag.TEXT.a * fa)
+	var dim := Color(WorldTag.TEXT_DIM, WorldTag.TEXT_DIM.a * fa)
 	var small := int(unit * 0.021)
 	var tiny := int(unit * 0.016)
 	for foe: Array in FOES:
 		var fp := _project(_diorama.unit_to_world(foe[2]))
-		var who: String = foe[0]
-		var land: String = foe[1]
+		var who: String = tr(foe[0])
+		var land: String = tr(foe[1])
 		var nf := UiStyle.CINZEL_BOLD
 		var lf := UiStyle.SPECTRAL_ITALIC
 		var nw := nf.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
@@ -253,10 +289,10 @@ func _draw_overlay() -> void:
 		o.draw_style_box(_foe_plaque, Rect2(tl, box))
 		# Pennant: a pole and a swallow-tailed flag
 		var fx := tl + Vector2(pad.x, pad.y)
-		o.draw_line(fx + Vector2(flag * 0.15, 0), fx + Vector2(flag * 0.15, small), WorldTag.TEXT_DIM, 1.5, true)
+		o.draw_line(fx + Vector2(flag * 0.15, 0), fx + Vector2(flag * 0.15, small), dim, 1.5, true)
 		o.draw_colored_polygon(PackedVector2Array([fx + Vector2(flag * 0.2, 0), fx + Vector2(flag * 0.85, small * 0.12),
 			fx + Vector2(flag * 0.62, small * 0.3), fx + Vector2(flag * 0.85, small * 0.48), fx + Vector2(flag * 0.2, small * 0.55)]),
-			Color(0.93, 0.36, 0.26))
+			Color(0.93, 0.36, 0.26, fa))
 		var base := tl.y + pad.y + small * 0.8
-		o.draw_string(nf, Vector2(fx.x + flag, base), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small, WorldTag.TEXT)
-		o.draw_string(lf, Vector2(fx.x + flag + nw + small * 0.4, base), land, HORIZONTAL_ALIGNMENT_LEFT, -1, tiny, WorldTag.TEXT_DIM)
+		o.draw_string(nf, Vector2(fx.x + flag, base), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small, ink)
+		o.draw_string(lf, Vector2(fx.x + flag + nw + small * 0.4, base), land, HORIZONTAL_ALIGNMENT_LEFT, -1, tiny, dim)

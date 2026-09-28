@@ -42,6 +42,17 @@ const TWIST_INTRO := {
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
 	"schemes": "Messengers will call you down to Ono — do not go with them",
 }
+## A verse reference in the player's language: short ("Neh. 3:1") for plaques, long
+## ("Nehemiah 3:1") for cards and quotes. Takes either English form.
+func short_ref(ref: String) -> String:
+	return tr("Neh. %s") % _verse_of(ref)
+
+func long_ref(ref: String) -> String:
+	return tr("Nehemiah %s") % _verse_of(ref)
+
+static func _verse_of(ref: String) -> String:
+	return ref.trim_prefix("Neh. ").trim_prefix("Nehemiah ")
+
 # Water Gate night watch (Neh. 4:22-23): the first day of the section is worked in
 # daylight, the rest end in darkness
 const NIGHT_FROM_DAY_IN_SECTION := 1
@@ -52,6 +63,37 @@ const TOTAL_DAYS   := 52
 # rule, to A/B the two in playtests.
 var active_build: bool = not (OS.is_debug_build() and "--instant-build" in OS.get_cmdline_user_args())
 const MAX_BREACHES := 10   # enemies that may reach the inner city before the city falls
+
+# Tower-defence layer (GDD §5.6), each on by default and each switched off from the
+# command line to A/B it in playtests: `-- --no-waves`, `-- --no-sun`, `-- --no-posts`.
+# The host's choice is sent to everyone who joins (send_state_to).
+#   waves — the enemy comes in announced waves over a thinner trickle
+#   sun   — each day has a sun clock; work left at nightfall carries over, and a section
+#           not finished by the stars of its last day is lost
+#   posts — watch posts behind the wall: raise one with timber, feed it sling stones,
+#           and a slinger up top chips at the enemy
+var waves: bool = "--no-waves" not in OS.get_cmdline_user_args()
+var sun: bool = "--no-sun" not in OS.get_cmdline_user_args()
+var posts: bool = "--no-posts" not in OS.get_cmdline_user_args()
+signal rules_changed
+
+# Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
+# whole stretch is the goal, over its days; every day of a section has the same light,
+# the section's par split over its days × slack (1 = the days add up to par; 1.2 by default). A day ends
+# at the stars or when the stretch stands; it must stand by the stars of its last day.
+# TODO: tune from playtests — `-- --sun-slack=1.3` to try another; the DayDirector log
+# prints each day's work time against its daylight.
+var sun_slack := _arg_float("--sun-slack=", 1.2)
+const SUN_SOLO  := 1.25    # a lone worker (and bots) gets a little longer
+const SUN_LOW   := 0.25    # share of daylight left when "the sun is low" warns
+# Why the run was lost: "overrun" (breaches) or "stars" (a section unfinished at nightfall
+# of its last day). Synced before the LOST phase.
+var loss_reason := "overrun"
+# Seconds of daylight today and how much is left (0 total = no clock). Server counts
+# down; clients count along and are corrected now and then (sync_sun).
+var sun_total := 0.0
+var sun_left := 0.0
+signal sun_changed
 
 # Section rating (GDD §6.1): three marks, each earned on its own when the section's
 # last unit stands. Stored per section as a bitmask; -1 = not finished this run.
@@ -102,6 +144,10 @@ var picker_return := -1
 var rating_improved := false
 # Started mid-campaign with `--day=N`: sections are only partly played, so no bests saved
 var _debug_start := false
+# Title screen: the menu's live backdrop — bots play the real game behind it, and
+# like a `--day=N` run nothing it does is saved (no marks, met folk or achievements)
+var attract := false
+var _met := {}             # Friends and Foes: key → true, loaded on first use
 
 # ── Queries ────────────────────────────────────────────────
 
@@ -140,6 +186,26 @@ func new_twists() -> Array:
 	var before: Array = SECTIONS[i - 1].get("twists", []) if i > 0 else []
 	return get_current_section().get("twists", []).filter(func(t): return t not in before)
 
+## Seconds of daylight for each day of the current section
+func day_length() -> float:
+	var t := par_time() / day_in_section(current_day).y * sun_slack
+	return t * (SUN_SOLO if crew_size == 1 else 1.0)
+
+static func _arg_float(prefix: String, default: float) -> float:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with(prefix):
+			return a.trim_prefix(prefix).to_float()
+	return default
+
+## The day's last light is running out
+func sun_low() -> bool:
+	return sun_total > 0.0 and sun_left < sun_total * SUN_LOW
+
+## Today is the last day of its section — nightfall with work left loses the run
+func last_day_of_section() -> bool:
+	var pos := day_in_section(current_day)
+	return pos.x == pos.y - 1
+
 func par_time(section_index := current_section_index) -> float:
 	var sec: Dictionary = SECTIONS[section_index]
 	if sec.has("par"):
@@ -163,6 +229,41 @@ func best_marks(section_index: int) -> int:
 		return -1
 	return cfg.get_value("marks", str(section_index), -1)
 
+# Friends and Foes: the section where each foe first shows (enemies by WaveManager's
+# unlock days, the leaders by their story beat, the messenger by the "schemes" twist)
+const MET_AT := { "scout": 0, "brute": 2, "raider": 4, "sanballat": 2, "tobiah": 3, "geshem": 5, "messenger": 10 }
+
+## Friends and Foes (main menu): who this player has met, kept across runs. Enemies and
+## the messenger count on sight, the three leaders when their story beat plays.
+## Debug builds: `-- --unlock-all` shows everyone.
+func has_met(key: String) -> bool:
+	_load_met()
+	return _met.has(key) or (OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args())
+
+## Every peer records its own; not for `--day=N` runs, like the marks
+func mark_met(key: String) -> void:
+	_load_met()
+	if _met.has(key) or _debug_start:
+		return
+	_met[key] = true
+	var cfg := ConfigFile.new()
+	cfg.load(PROGRESS_PATH)
+	cfg.set_value("met", key, true)
+	cfg.save(PROGRESS_PATH)
+
+func _load_met() -> void:
+	if not _met.is_empty():
+		return
+	_met = { "": true }   # loaded, even when nothing has been met yet
+	var cfg := ConfigFile.new()
+	if cfg.load(PROGRESS_PATH) == OK and cfg.has_section("met"):
+		for k: String in cfg.get_section_keys("met"):
+			_met[k] = true
+	# Progress from before this was tracked: a finished section means its foes were met
+	for k: String in MET_AT:
+		if best_marks(MET_AT[k]) >= 0:
+			_met[k] = true
+
 func is_replay() -> bool:
 	return replay_section >= 0
 
@@ -184,19 +285,60 @@ func set_phase(p: Phase) -> void:
 func set_progress(done: int, total: int) -> void:
 	_apply(current_day, current_section_index, phase, breaches, done, total)
 
+## Server: the run is lost for `reason` ("overrun" | "stars")
+func lose(reason: String) -> void:
+	if is_over():
+		return
+	_apply_loss(reason)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_loss.rpc(reason)
+	set_phase(Phase.LOST)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_loss(reason: String) -> void:
+	_apply_loss(reason)
+
+func _apply_loss(reason: String) -> void:
+	loss_reason = reason
+
+## Server: set today's daylight (total, left); every peer then counts down during WORK
+func set_sun(total: float, left: float) -> void:
+	_apply_sun(total, left)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_sun.rpc(total, left)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_sun(total: float, left: float) -> void:
+	_apply_sun(total, left)
+
+func _apply_sun(total: float, left: float) -> void:
+	sun_total = total
+	sun_left = left
+	sun_changed.emit()
+
+# Every peer: the clock runs while the day's work does
+func _process(delta: float) -> void:
+	if sun_total > 0.0 and phase == Phase.WORK:
+		sun_left = maxf(0.0, sun_left - delta)
+
 func add_breach() -> void:
 	if is_over():
 		return
+	if breaches + 1 >= MAX_BREACHES:
+		_apply_loss("overrun")
+		if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+			_sync_loss.rpc("overrun")
 	var b := breaches + 1
 	_apply(current_day, current_section_index, Phase.LOST if b >= MAX_BREACHES else phase,
 		b, targets_done, targets_total)
 
-## Returns false when there is no next day (campaign won)
-func advance_day() -> bool:
+## Returns false when there is no next day (campaign won). `to_day` jumps ahead (a
+## stretch finished early under the sun clock skips its days to spare).
+func advance_day(to_day := -1) -> bool:
 	if current_day >= TOTAL_DAYS:
 		set_phase(Phase.WON)
 		return false
-	var day := current_day + 1
+	var day := current_day + 1 if to_day < 0 else to_day
 	_apply(day, _section_index_for_day(day), Phase.DAWN, breaches, 0, 0)
 	return true
 
@@ -207,9 +349,12 @@ func reset() -> void:
 	breaches = 0
 	targets_done = 0
 	targets_total = 0
+	loss_reason = "overrun"
+	sun_total = 0.0
+	sun_left = 0.0
 	players.clear()
 	section_marks = _no_marks()
-	_debug_start = false
+	_debug_start = attract
 
 ## Server: a replay starts on its section's first day
 func apply_replay() -> void:
@@ -229,11 +374,20 @@ func apply_debug_start_day() -> void:
 			print("GameState: debug start at day %d" % day)
 			_debug_start = true
 
+## Title screen: the live backdrop opens on a random stretch — any but the night one,
+## whose dark would sit badly under the parchment menu
+func apply_attract_start() -> void:
+	var picks := range(SECTIONS.size()).filter(func(i: int): return not "night" in SECTIONS[i]["twists"])
+	var section: int = picks.pick_random()
+	_apply(SECTIONS[section]["days"][0], section, phase, breaches, targets_done, targets_total)
+
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
+	_sync_rules.rpc_id(peer_id, waves, sun, posts)
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size)
+	_sync_sun.rpc_id(peer_id, sun_total, sun_left)
 	for i in section_marks.size():
 		if section_marks[i] >= 0:
 			_sync_marks.rpc_id(peer_id, i, section_marks[i])
@@ -249,6 +403,13 @@ func rate_section(section_index: int, mask: int) -> void:
 	_apply_marks(section_index, mask)
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		_sync_marks.rpc(section_index, mask)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_rules(w: bool, s: bool, p: bool) -> void:
+	waves = w
+	sun = s
+	posts = p
+	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")
 func _sync_replay(section_index: int) -> void:

@@ -43,6 +43,7 @@ var _keys_btn: Button
 var _keys_page: VBoxContainer
 var _key_buttons := {}      # action → Button
 var _reset: Button
+var _language: OptionButton
 var _listening := ""        # action waiting for a key press, or ""
 var _sheet_tween: Tween
 
@@ -83,6 +84,7 @@ func open() -> void:
 	_music_val.text = "%d%%" % roundi(_music.value)
 	_sfx.set_value_no_signal(Settings.sfx_volume * 100.0)
 	_sfx_val.text = "%d%%" % roundi(_sfx.value)
+	_select_language()
 	_rumble_on.button_pressed    = Settings.rumble
 	_rumble_off.button_pressed   = not Settings.rumble
 	_hold.button_pressed         = not Settings.toggle_charge
@@ -93,7 +95,7 @@ func open() -> void:
 	if Mobile.enabled():
 		_slide_in()
 	else:
-		(_fullscreen if Settings.fullscreen else _windowed).grab_focus()
+		_language.grab_focus()
 
 func close() -> void:
 	_listening = ""
@@ -258,6 +260,33 @@ func _build_extra_rows() -> void:
 	_keys_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_keys_btn.pressed.connect(_show_keys.bind(true))
 	_grid.add_child(_keys_btn)
+	_build_language_row()
+
+# Language sits first: someone who can't read the current one should find it at once
+func _build_language_row() -> void:
+	_add_label("Language")
+	_language = OptionButton.new()
+	# Each language keeps its own name, whatever the UI is showing
+	_language.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_language.get_popup().auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_language.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_language.custom_minimum_size = Vector2(300, 0)
+	for row: Array in Settings.LANGUAGES:
+		_language.add_item(row[1])
+	_language.item_selected.connect(func(i: int):
+		Settings.language = Settings.LANGUAGES[i][0]
+		Settings.apply()
+		Settings.save())
+	_grid.add_child(_language)
+	var label := _grid.get_child(_grid.get_child_count() - 2)
+	_grid.move_child(label, 0)
+	_grid.move_child(_language, 1)
+
+func _select_language() -> void:
+	var current := Settings.current_language()
+	for i in Settings.LANGUAGES.size():
+		if Settings.LANGUAGES[i][0] == current:
+			_language.select(i)
 
 func _segment_row(label: String, a: String, b: String) -> Array[Button]:
 	_add_label(label)

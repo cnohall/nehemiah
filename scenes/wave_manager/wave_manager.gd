@@ -29,6 +29,21 @@ const SURGE_SPREAD        := 1.8
 const SURGE_GAP           := 0.35    # seconds between members of one pack
 const SURGE_TRICKLE_MULT  := 1.8     # the steady stream thins out between surges
 const SURGE_COLOR         := Color(0.86, 0.38, 0.26)
+# Waves everywhere else (GameState.waves, GDD §5.6): the same warn-then-pack rhythm,
+# gentler and further apart than the valley's surges. Pack size grows with the day and
+# the crew; from WAVE_SPLIT_DAY a wave comes at two places at once. Tuned so trickle +
+# waves bring about as many enemies as the plain trickle did — the change is rhythm.
+const WAVE_FIRST          := 18.0
+const WAVE_EVERY_DAY1     := 38.0
+const WAVE_EVERY_DAY52    := 26.0
+const WAVE_WARN           := 5.0     # long enough to stock a watch post or take up a sling
+const WAVE_BASE           := 2
+const WAVE_PER_DAYS       := 10.0    # one more in each pack every 10 days…
+const WAVE_PER_CREW       := 2       # …and one more for every two workers past the first
+const WAVE_SPREAD         := 3.0
+const WAVE_SPLIT_DAY      := 21
+const WAVE_TRICKLE_MULT   := 2.0
+
 # "schemes" twist: messengers to Ono, "four times" a day (Neh. 6:4), one at a time
 const MESSENGER_FIRST     := 12.0
 const MESSENGER_EVERY     := 24.0
@@ -43,18 +58,20 @@ var _day := 1
 var _timer := 0.0
 var _msg_timer := 0.0
 var _surge_timer := 0.0
-var _surge_at := Vector3.ZERO
+var _surge_at: Array[Vector3] = []   # where the warned pack(s) will come in
 var _surge_left := 0       # members of the current pack still to come
 var _surge_gap := 0.0
 var _msg_sent := 0
+
 
 func start(day: int) -> void:
 	_day = day
 	_active = true
 	_timer = FIRST_SPAWN_DELAY
 	_msg_timer = MESSENGER_FIRST
-	_surge_timer = SURGE_FIRST
+	_surge_timer = SURGE_FIRST if GameState.has_twist("horn") else WAVE_FIRST
 	_surge_left = 0
+
 	_msg_sent = 0
 
 func stop() -> void:
@@ -78,15 +95,29 @@ func _interval() -> float:
 	var t := (_day - 1) / float(GameState.TOTAL_DAYS - 1)
 	var base := lerpf(INTERVAL_DAY1, INTERVAL_DAY52, t)
 	# More workers → more pressure (1 player ×1.3 … 4 players ×0.68)
-	var n := maxi(1, players_root.get_child_count())
-	base *= 1.3 / (0.7 + 0.3 * n)
-	base /= GameState.pressure()   # per-section pace (breather / finale)
+	base *= 1.3 / (0.7 + 0.3 * _crew())
+	base /= _pressure()
 	if GameState.has_twist("horn"):
 		base *= SURGE_TRICKLE_MULT
+	elif GameState.waves:
+		base *= WAVE_TRICKLE_MULT
 	return base * randf_range(1.0 - INTERVAL_JITTER, 1.0 + INTERVAL_JITTER)
 
+
+## Per-section pace (breather / finale) times the host's difficulty
+func _pressure() -> float:
+	return GameState.pressure() * Settings.diff()["pace"]
+
+## Workers the enemy is sized to: a person counts whole, a bot by its skill's "crew"
+func _crew() -> float:
+	var n := 0.0
+	for p in players_root.get_children():
+		n += p.brain.skill["crew"] if p.brain != null else 1.0
+	return maxf(1.0, n)
+
+
 func _max_alive() -> int:
-	return mini(MAX_ALIVE_CAP, roundi((MAX_ALIVE_BASE + floori(_day / 3.0)) * GameState.pressure()))
+	return mini(MAX_ALIVE_CAP, roundi((MAX_ALIVE_BASE + floori(_day / 3.0)) * _pressure()))
 
 func _pick_type() -> Enemy.Type:
 	if _day <= BRUTE_UNLOCK_DAY:
@@ -100,33 +131,51 @@ func _pick_type() -> Enemy.Type:
 		return Enemy.Type.BRUTE
 	return Enemy.Type.RAIDER
 
+# Valley Gate surges ("horn") or, everywhere else, waves: a warning, then a pack from
+# the warned spot(s), one after another
 func _tick_surges(delta: float) -> void:
-	if not GameState.has_twist("horn"):
+	var horn := GameState.has_twist("horn")
+	if not horn and not GameState.waves:
 		return
 	if _surge_left > 0:
-		# A pack is coming in, one after another from the warned spot
 		_surge_gap -= delta
 		if _surge_gap <= 0.0:
 			_surge_gap = SURGE_GAP
 			_surge_left -= 1
+			if _surge_at.is_empty():   # never warned (can't happen in play; be safe)
+				_surge_at.append(Vector3(randf_range(-SPAWN_X_HALF, SPAWN_X_HALF), 0.1, SPAWN_Z))
 			if enemies_root.get_child_count() < MAX_ALIVE_CAP:
-				var off := Vector3(randf_range(-SURGE_SPREAD, SURGE_SPREAD), 0, randf_range(-1.0, 1.0))
-				_do_spawn(_pick_type(), _surge_at + off)
+				var spread := SURGE_SPREAD if horn else WAVE_SPREAD
+				var off := Vector3(randf_range(-spread, spread), 0, randf_range(-1.0, 1.0))
+				_do_spawn(_pick_type(), _surge_at[_surge_left % _surge_at.size()] + off)
 		return
+	var warn := SURGE_WARN if horn else WAVE_WARN
 	var was := _surge_timer
 	_surge_timer -= delta
-	if was > SURGE_WARN and _surge_timer <= SURGE_WARN:
-		_surge_at = Vector3(randf_range(-SPAWN_X_HALF, SPAWN_X_HALF), 0.1, SPAWN_Z)
-		_warn_surge.rpc(_surge_at)
+	if was > warn and _surge_timer <= warn:
+		_surge_at.clear()
+		var spots := 2 if not horn and _day >= WAVE_SPLIT_DAY else 1
+		for i in spots:
+			# Two spots: one on each half of the front, so the crew has to split
+			var lo := -SPAWN_X_HALF if spots == 1 or i == 0 else 2.0
+			var hi := SPAWN_X_HALF if spots == 1 or i == 1 else -2.0
+			_surge_at.append(Vector3(randf_range(lo, hi), 0.1, SPAWN_Z))
+		for at in _surge_at:
+			_warn_surge.rpc(at, horn, warn)
 	elif _surge_timer <= 0.0:
-		_surge_left = 3 + floori(_day / 12.0)
 		_surge_gap = 0.0
-		_surge_timer = SURGE_EVERY / GameState.pressure()
+		if horn:
+			_surge_left = roundi((3 + floori(_day / 12.0)) * Settings.diff()["pace"])
+			_surge_timer = SURGE_EVERY / _pressure()
+		else:
+			_surge_left = roundi((WAVE_BASE + floori(_day / WAVE_PER_DAYS) + floori((_crew() - 1.0) / WAVE_PER_CREW)) * _pressure())
+			var t := (_day - 1) / float(GameState.TOTAL_DAYS - 1)
+			_surge_timer = lerpf(WAVE_EVERY_DAY1, WAVE_EVERY_DAY52, t)
 
 @rpc("authority", "call_local", "reliable")
-func _warn_surge(at: Vector3) -> void:
+func _warn_surge(at: Vector3, horn: bool, warn: float) -> void:
 	Sfx.play("alert")
-	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge", SURGE_WARN + 3.0)
+	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else "Wave", warn + 3.0)
 
 func _tick_messengers(delta: float) -> void:
 	if not GameState.has_twist("schemes") or _msg_sent >= MESSENGERS_PER_DAY:

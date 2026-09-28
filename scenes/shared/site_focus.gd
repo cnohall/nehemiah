@@ -36,7 +36,9 @@ static func _refresh() -> void:
 	var any: Node3D = null
 	var fit: Node3D = null
 	for s: Node3D in tree.get_nodes_in_group("build_sites"):
-		if not s.is_target or s.is_complete() or not s.is_visible_in_tree():
+		# The trough has no is_target: it is only in the group while it needs filling
+		if s.get("is_target") == false or s.is_complete() or not s.is_visible_in_tree() \
+				or not WorkFront.is_open(s):
 			continue
 		var d: float = s.distance_to_point(me.global_position)
 		if d < best_any:

@@ -20,6 +20,8 @@ const WALL_REACH        := 1.3    # footprint distance to count as "at the wall"
 const ATTACK_CD         := 1.6
 const STAGGER_TIME      := 0.3    # a sling hit knocks the wind out briefly
 const HITSTOP_TIME      := 0.09   # sprite holds its frame on a hit
+const KNOCK_DECEL       := 40.0   # m/s² a sword shove bleeds off at
+const KNOCK_TAKE        := { Type.SCOUT: 1.0, Type.BRUTE: 0.35, Type.RAIDER: 0.8 }   # share of a shove felt
 const REPATH_INTERVAL   := 0.3
 const SCAN_INTERVAL     := 0.2    # how often to look around for a new worker / wall
 const STUCK_WINDOW      := 0.6    # seconds of no progress before bashing a wall
@@ -85,6 +87,7 @@ var _stuck_origin: Vector3
 var _facing := "down"
 var _busy := false
 var _stagger := 0.0
+var _knock := Vector3.ZERO   # shove velocity, spent over the stagger (sword hits)
 var _last_hitter := 0     # server: peer whose stone hit last (credited in the tally)
 var _fleeing := false
 
@@ -100,6 +103,7 @@ func _ready() -> void:
 	add_child(_bar)
 	add_to_group("enemies")
 	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type]), SCALE[type])
+	GameState.mark_met(_LOOKS[type])
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
 	_goal = Vector3(randf_range(-GOAL_X_SPREAD, GOAL_X_SPREAD), 0.0, GOAL_Z)
@@ -120,7 +124,10 @@ func _physics_process(delta: float) -> void:
 	_attack_timer = maxf(0.0, _attack_timer - delta)
 	if _stagger > 0.0:
 		_stagger -= delta
-		velocity = Vector3.ZERO
+		velocity = _knock
+		if _knock != Vector3.ZERO:
+			move_and_slide()
+			_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECEL * delta)
 		return
 	if _busy:
 		return
@@ -261,7 +268,7 @@ func _attack(victim: Node3D, at: Vector3) -> void:
 	_facing = CharAnim.dir_from_velocity(at - global_position, _facing)
 	_busy = true
 	anim = "thrust_" + _facing
-	victim.take_damage(DAMAGE[type])
+	victim.take_damage(DAMAGE[type] * Settings.diff()["harm"])
 	await _sprite.animation_finished
 	if is_instance_valid(self):
 		_busy = false
@@ -285,8 +292,18 @@ func take_damage(amount: float, by := 0) -> void:
 	health = maxf(health - amount, 0.0)
 	hits += 1
 	_stagger = STAGGER_TIME
+	_knock = Vector3.ZERO
 	if health == 0.0:
 		_die()
+
+## Server: shove back along `dir` by about `dist` metres over the stagger. Call after
+## take_damage (which starts the stagger); brutes barely budge.
+func knock_back(dir: Vector3, dist: float) -> void:
+	if health <= 0.0 or _fleeing:
+		return
+	var flat := Vector3(dir.x, 0.0, dir.z).normalized()
+	# v0 with constant decel stops after dist: v0 = sqrt(2 * decel * dist)
+	_knock = flat * sqrt(2.0 * KNOCK_DECEL * dist * KNOCK_TAKE[type])
 
 # Collapse in place, then free (the spawner despawns it on clients)
 func _die() -> void:

@@ -18,7 +18,7 @@ config/name="Nehemiah: The Wall"
 config/description="Co-op 2-4 player HD-2D isometric action-strategy, 445 BC Jerusalem"
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
 boot_splash/bg_color=Color(0.105, 0.068, 0.044, 1)
 
 [autoload]
@@ -39,6 +39,7 @@ Sfx="*res://scenes/sfx/sfx.gd"
 Settings="*res://scenes/settings/settings.gd"
 InputMode="*res://scenes/input_mode/input_mode.gd"
 Mobile="*res://scenes/mobile/mobile.gd"
+SteamAchievements="*res://scenes/achievements/achievements.gd"
 
 [display]
 
@@ -154,6 +155,10 @@ pause={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":6,"pressure":0.0,"pressed":true,"script":null)
 ]
 }
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/es.po", "res://locale/pt_BR.po", "res://locale/de.po", "res://locale/ko.po")
 
 [rendering]
 

@@ -87,7 +87,7 @@ func _process(_delta: float) -> void:
 	if _dirty:
 		_rebuild()
 	var cam := get_viewport().get_camera_3d()
-	var show := is_visible_in_tree() and cam != null and not text.is_empty() \
+	var show := is_visible_in_tree() and cam != null and not text.is_empty() and not GameState.attract \
 		and not cam.is_position_behind(global_position)
 	_root.visible = show
 	if not show:
@@ -275,7 +275,8 @@ func _hbox(sep: int) -> HBoxContainer:
 
 func _label(t: String, face: String, size: int, color: Color) -> Label:
 	var l := Label.new()
-	l.text = t.to_upper() if face.begins_with("caps") else t
+	var shown := tr(t)   # material names, "Wall": small caps need the translation first
+	l.text = shown.to_upper() if face.begins_with("caps") else shown
 	l.add_theme_font_override("font", _font(face))
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
