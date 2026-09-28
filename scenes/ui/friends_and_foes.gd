@@ -561,7 +561,7 @@ func _build_lineup() -> Control:
 			row.add_child(col)
 			col.add_child(_label(&"Eyebrow", 12, UiStyle.INK_MUTED, false, GROUPS[group]))
 			box = HBoxContainer.new()
-			box.add_theme_constant_override("separation", 8)
+			box.add_theme_constant_override("separation", 16)   # room for longer names (Wasserträger)
 			box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			col.add_child(box)
 		box.add_child(_medal(i))
