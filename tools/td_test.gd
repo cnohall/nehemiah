@@ -116,6 +116,8 @@ func _process(delta: float) -> bool:
 				_check(_tally.get("unfinished", 0) > 0, "nightfall ended the day, %d unfinished" % _tally.get("unfinished", 0))
 				_state = "carried"
 		"carried":
+			if _gs.phase == _gs.Phase.DUSK:
+				_main.director.force_ready()   # the tally waits for the crew now
 			if _gs.phase == _gs.Phase.WORK:
 				_check(_gs.targets_total == 6 and _gs.targets_done < 6, "the whole stretch is still the goal (%d/%d)" % [_gs.targets_done, _gs.targets_total])
 				_check(is_equal_approx(_gs.sun_total, _day1_sun), "every day has the same light (%.0f s)" % _gs.sun_total)

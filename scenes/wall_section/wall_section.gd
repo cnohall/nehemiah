@@ -285,6 +285,11 @@ func is_built() -> bool:
 func is_complete() -> bool:
 	return stage == Stage.MORTARED
 
+## Workers may climb over it (Player: CLIMB). Finished walls only, so a press at a
+## half-built wall never hops you to the wrong side
+func blocks_workers() -> bool:
+	return is_complete()
+
 # ── Day transitions (server) ───────────────────────────────
 
 ## New circuit section: back to bare foundations

@@ -29,10 +29,17 @@ signal host_failed(reason: String)
 signal peer_connected(id: int)
 signal peer_disconnected(id: int)
 signal online_status_changed   # EOS finished (or failed) signing in
+signal crew_info_changed
 
 # Peers whose game scene has loaded. Server-owned synchronizers filter on this so
 # nothing replicates to a client still sitting in the menu (its nodes don't exist yet).
 var _ready_peers: Dictionary = {}
+
+# Who's in the session (playtest 2: "show which players are still part of it, who's
+# ready and who's lagging"). Kept by the server, mirrored to every peer — this autoload
+# exists on a client still loading the game scene, so it hears about itself too.
+# peer_id → { "name": Steam name or "", "loading": game scene not in yet }
+var crew_info: Dictionary = {}
 
 # GodotSteam singleton, or null when the extension is missing / Steam isn't running.
 # Accessed dynamically so the project still runs without the addon.
@@ -226,11 +233,61 @@ func disconnect_session() -> void:
 	_hosting_lobby = false
 	if _eos:
 		_eos.leave()
+	crew_info.clear()
+
+# ── Crew list ──────────────────────────────────────────────
+
+## Server (host / solo): start the list with ourselves, once the game scene is up
+func open_crew() -> void:
+	if multiplayer.is_server():
+		crew_info[multiplayer.get_unique_id()] = { "name": steam_name(), "loading": false }
+		_broadcast_crew()
+
+## A person's Steam name, or "" (no Steam, or not heard yet)
+func name_of(id: int) -> String:
+	return crew_info.get(id, {}).get("name", "")
+
+## Connected, but their game scene hasn't loaded yet
+func is_loading(id: int) -> bool:
+	return crew_info.get(id, {}).get("loading", false)
+
+func loading_peers() -> Array:
+	return crew_info.keys().filter(is_loading)
+
+# Client → server, as soon as the connection is up: who we are
+@rpc("any_peer", "reliable")
+func _hello(display_name: String) -> void:
+	var id := multiplayer.get_remote_sender_id()
+	if multiplayer.is_server() and crew_info.has(id):
+		crew_info[id]["name"] = display_name.left(32)
+		_broadcast_crew()
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_crew_info(info: Dictionary) -> void:
+	crew_info = info
+	crew_info_changed.emit()
+
+func _broadcast_crew() -> void:
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_crew_info.rpc(crew_info)
+	crew_info_changed.emit()
 
 # ── Scene readiness (server) ───────────────────────────────
 
 func mark_peer_ready(id: int) -> void:
 	_ready_peers[id] = true
+	if crew_info.has(id):
+		crew_info[id]["loading"] = false
+		_broadcast_crew()
+
+## Server: everyone is reloading the game scene (Play again) — each peer counts as
+## loading until it asks for the roster again
+func reset_scene_readiness() -> void:
+	_ready_peers.clear()
+	for id: int in crew_info:
+		if id != multiplayer.get_unique_id():
+			crew_info[id]["loading"] = true
+	_broadcast_crew()
 
 func is_peer_ready(id: int) -> bool:
 	return _ready_peers.has(id)
@@ -258,13 +315,19 @@ func add_sync(owner: Node, props: Array[NodePath],
 # ── Signals ────────────────────────────────────────────────
 
 func _on_peer_connected(id: int) -> void:
+	if multiplayer.is_server():
+		crew_info[id] = { "name": "", "loading": true }
+		_broadcast_crew()
 	peer_connected.emit(id)
 
 func _on_peer_disconnected(id: int) -> void:
 	_ready_peers.erase(id)
+	if multiplayer.is_server() and crew_info.erase(id):
+		_broadcast_crew()
 	peer_disconnected.emit(id)
 
 func _on_connected_to_server() -> void:
+	_hello.rpc_id(1, steam_name())
 	lobby_joined.emit(true)
 
 func _on_connection_failed() -> void:

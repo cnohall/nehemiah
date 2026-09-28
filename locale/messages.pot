@@ -153,6 +153,9 @@ msgstr ""
 msgid "Build"
 msgstr ""
 
+msgid "Help up"
+msgstr ""
+
 #: scenes\ui\section_picker.gd:118
 msgid "Build again"
 msgstr ""
@@ -381,6 +384,23 @@ msgstr ""
 #: scenes\story\story_player.gd:341
 msgid "E · Click   Continue          Esc   Skip"
 msgstr ""
+
+msgid "E · Click   Next          Esc   I'm ready"
+msgstr ""
+
+msgid "Hold %s when you're ready"
+msgstr ""
+
+msgid "I'm ready"
+msgstr ""
+
+msgid "Everyone's ready"
+msgstr ""
+
+msgid "Waiting for %d builder"
+msgid_plural "Waiting for %d builders"
+msgstr[0] ""
+msgstr[1] ""
 
 #: scenes\game_state\game_state.gd:42
 msgid "Each priest builds in front of his own house — mind the narrow lanes"
@@ -1702,3 +1722,152 @@ msgstr ""
 msgid "← →  or  Click   Choose          Esc   Back"
 msgstr ""
 
+
+msgid "Pause · menu"
+msgstr ""
+
+msgid "Short of hands? Add bots to the crew."
+msgstr ""
+
+msgid "Paused"
+msgstr ""
+
+msgid "The work waits"
+msgstr ""
+
+msgid "Nothing moves until you resume."
+msgstr ""
+
+msgid "%s · joining…"
+msgstr ""
+
+msgid "%s is joining…"
+msgstr ""
+
+msgid "A builder is joining…"
+msgstr ""
+
+msgid "Down — a crewmate has to help you up"
+msgstr ""
+
+msgid "A finished piece was knocked down — build it back up"
+msgstr ""
+
+msgid "The stretch stands"
+msgstr ""
+
+msgid "%d piece still to finish — look for the amber footing"
+msgid_plural "%d pieces still to finish — look for the amber footings"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Last piece!  %s"
+msgstr ""
+
+msgid "You went down"
+msgstr ""
+
+msgid "%s went down"
+msgstr ""
+
+msgid "Back on your feet"
+msgstr ""
+
+msgid "%s is back on their feet"
+msgstr ""
+
+msgid "Day %d · %d of %d stand"
+msgstr ""
+
+msgid "Day %d · a finished piece knocked back down"
+msgstr ""
+
+msgid "Day %d · they broke through"
+msgstr ""
+
+msgid "Day %d · the day's work is done"
+msgstr ""
+
+msgid "Day %d · the city fell"
+msgstr ""
+
+msgid "Play it again"
+msgstr ""
+
+msgid "Next stretch"
+msgstr ""
+
+msgid "Play again"
+msgstr ""
+
+msgid "Try the stretch again"
+msgstr ""
+
+msgid "The host's pick decides — or most of the crew"
+msgstr ""
+
+msgid "%s — %d of %d"
+msgstr ""
+
+msgid "Waiting for the host or most of the crew"
+msgstr ""
+
+msgid "Learn the Basics"
+msgstr ""
+
+msgid "Leave the practice"
+msgstr ""
+
+msgid "Back to the title"
+msgstr ""
+
+msgid "Step %d of %d"
+msgstr ""
+
+msgid "The Sheep Gate"
+msgstr ""
+
+msgid "Eliashib the high priest and his brothers built here, beside the temple (Neh. 3:1). Learn the work with them.\n{interact} to begin"
+msgstr ""
+
+msgid "Walk"
+msgstr ""
+
+msgid "Walk with {move}"
+msgstr ""
+
+msgid "A quick burst: {dash}. It works while carrying too"
+msgstr ""
+
+msgid "Carry"
+msgstr ""
+
+msgid "Walk up to a stockpile and pick up a load with {interact}. The wall's tag says what it needs"
+msgstr ""
+
+msgid "Deliver"
+msgstr ""
+
+msgid "Take it to the wall on the amber footing and press {interact}. Not needed there? {drop} drops it"
+msgstr ""
+
+msgid "Bring what the wall still asks for. Once it has it all, stand at the wall and work it up with {interact}"
+msgstr ""
+
+msgid "Guard the builders"
+msgstr ""
+
+msgid "An enemy! Hold {throw} to whirl the sling, aim, and let go. Close in, the same button is a sword cut"
+msgstr ""
+
+msgid "Nobody gets up alone"
+msgstr ""
+
+msgid "Your crewmate is down. Go to them and press {interact} to help them up"
+msgstr ""
+
+msgid "That's the work"
+msgstr ""
+
+msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
+msgstr ""

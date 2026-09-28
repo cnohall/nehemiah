@@ -35,8 +35,12 @@ const DOWNED_BAR_COLOR := Color(0.78, 0.30, 0.20)
 const WHIRL_SPIN_MIN   := 9.0     # rad/s at the start of the wind-up…
 const WHIRL_SPIN_MAX   := 24.0    # …and at full charge
 const STAGGER_TIME    := 0.2
-const DOWNED_TIME     := 8.0      # self-revive if no teammate helps
-const REVIVE_HEALTH   := 0.5
+const DOWNED_TIME     := 8.0      # self-revive, only when nobody is left standing to help
+const REVIVE_HEALTH   := 1.0
+# Climbing over a standing wall ([E] against it, nothing else to do)
+const CLIMB_CLEAR     := 0.9      # metres past the far face
+const CLIMB_HEIGHT    := 2.6
+const CLIMB_TIME      := 0.55
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 # Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
 const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
@@ -101,6 +105,7 @@ var carried_kind: String = ""
 var helping_id := 0
 var downed := false
 var slot_color := Color.WHITE   # ring / HUD colour, set by Main
+var _slot := 0                  # crew slot, set by Main (picks the dusk dance)
 var _facing := "down"
 var _is_busy := false
 var _sling_cd := 0.0
@@ -130,6 +135,7 @@ var _move_dir := Vector3.ZERO   # last non-zero move input (pad aim falls back t
 var _led_by: Node3D             # owner: the messenger we're following to Ono
 var _led_time := 0.0
 var _led_server := false        # server: this worker went with a messenger
+var _climbing := false          # owner: mid-hop over a wall
 
 # Replicated: the sling is being whirled (owner writes, every peer shows it)
 var whirling := false:
@@ -201,19 +207,44 @@ func _process(delta: float) -> void:
 	else:
 		_sprite.hold = "" if carried_kind.is_empty() else "front"
 	if downed:
-		# Every peer counts down locally; the server's copy decides the self-revive
-		_down_timer -= delta
-		_hp_bar.show_value(_down_timer / DOWNED_TIME, DOWNED_BAR_COLOR)
-		if multiplayer.is_server() and _down_timer <= 0.0:
-			_set_downed.rpc(false)
+		# A teammate has to raise you. Only with nobody left standing (solo, or the whole
+		# crew down) does the countdown run: every peer counts locally, the server decides.
+		if _nobody_to_raise():
+			_down_timer -= delta
+			_hp_bar.show_value(_down_timer / DOWNED_TIME, DOWNED_BAR_COLOR)
+			if multiplayer.is_server() and _down_timer <= 0.0:
+				_set_downed.rpc(false)
+		else:
+			_hp_bar.show_value(1.0, DOWNED_BAR_COLOR)
+		_update_raise_tag()
 	else:
 		_hp_bar.show_health(health / MAX_HEALTH)
+
+func _nobody_to_raise() -> bool:
+	return get_tree().get_nodes_in_group("players").all(func(p): return p == self or p.downed)
+
+# "Help up [E]" over a downed worker, for everyone but the fallen one — nobody found the
+# revive in playtest 2 without it
+var _raise_tag: WorldTag
+
+func _update_raise_tag() -> void:
+	var show := downed and Player.local != null and Player.local != self and not Player.local.downed
+	if show and _raise_tag == null:
+		_raise_tag = WorldTag.make(WorldTag.Kind.SITE)
+		_raise_tag.position.y = PIP_Y + 0.5
+		add_child(_raise_tag)
+	if _raise_tag != null:
+		_raise_tag.visible = show
+		_raise_tag.pulse = show
+		if show:
+			_raise_tag.text = "Help up  [%s]" % InputMode.key("interact")
 
 func _exit_tree() -> void:
 	if local == self:
 		local = null
 
 func set_slot(slot: int, c: Color) -> void:
+	_slot = slot
 	slot_color = c
 	_sprite.set_look(CharacterRig.worker_look(slot, c))
 	_sprite.set_ring_color(c)
@@ -271,6 +302,7 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		_dash_time = 0.0
 		_cancel_charge()
+		_update_anim()   # else the last run cycle keeps looping on the spot
 		return
 	if _led_by != null:
 		_follow_leader(delta)
@@ -281,6 +313,9 @@ func _physics_process(delta: float) -> void:
 		else:
 			velocity = Vector3.ZERO
 			return
+	if _climbing:
+		velocity = Vector3.ZERO   # the hop's tween moves us, through the wall's collision
+		return
 	if _is_busy:
 		_cancel_charge()  # hit or acting — wind-up is lost
 	_handle_movement(delta)
@@ -477,7 +512,7 @@ func _dash_fx() -> void:
 ## What [E] acts on from `at`, in priority order: [Act, target]. The one rule for both
 ## the focus ring (owner, from replicated state — Overcooked's counter highlight) and
 ## _server_interact, so the ring always shows exactly what the press will do.
-enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE }
+enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB }
 
 func _interact_choice(at: Vector3) -> Array:
 	# Helping a fallen teammate comes first
@@ -489,7 +524,10 @@ func _interact_choice(at: Vector3) -> Array:
 	# Nearest valid thing wins — sections and gate pillars overlap in reach.
 	# Null target = nothing here wants the load.
 	if not carried_kind.is_empty():
-		return [Act.DELIVER, _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))]
+		var dest := _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
+		if dest == null and carried_kind != "beam" and _wall_to_climb(at) != null:
+			return [Act.CLIMB, _wall_to_climb(at)]
+		return [Act.DELIVER, dest]
 	var carrier := _carrier_needing_help(at)
 	if carrier != null:
 		return [Act.HELP, carrier]
@@ -511,7 +549,16 @@ func _interact_choice(at: Vector3) -> Array:
 		return [Act.TAKE_ITEM, item]
 	if pile != null:
 		return [Act.TAKE_PILE, pile]
+	# Last resort: over a standing wall, so nobody is shut out when the stretch closes
+	var wall := _wall_to_climb(at)
+	if wall != null:
+		return [Act.CLIMB, wall]
 	return [Act.NONE, null]
+
+## A wall that blocks workers, within reach of `at` (null = none)
+func _wall_to_climb(at: Vector3) -> Node3D:
+	return _nearest_in_reach("build_sites", at,
+		func(s): return s.has_method("blocks_workers") and s.blocks_workers())
 
 func _update_focus(delta: float) -> void:
 	_focus_poll -= delta
@@ -576,7 +623,10 @@ func _update_anim() -> void:
 		return
 	if speed < 0.1:
 		_sprite.speed_scale = 1.0
-		anim = "idle_" + _facing
+		# The day's work done (or the wall finished): standing still, the crew dances
+		var dancing := GameState.phase in [GameState.Phase.DUSK, GameState.Phase.WON] \
+			and carried_kind.is_empty() and helping_id == 0 and not GameState.attract
+		anim = (CharAnim.DANCES[_slot % CharAnim.DANCES.size()] if dancing else "idle") + "_" + _facing
 		return
 	if not _charging:
 		_facing = CharAnim.dir_from_velocity(velocity, _facing)
@@ -600,6 +650,10 @@ func _play_action(anim_base: String) -> void:
 # ── Interact / Drop ────────────────────────────────────────
 
 func _handle_interact() -> void:
+	# At dusk [E] is held to say you're ready (the tally's ReadyRow), not to pick things up
+	if GameState.phase == GameState.Phase.DUSK and brain == null:
+		_consume("interact")
+		return
 	if _consume("interact"):
 		_server_interact.rpc_id(1, global_position)
 	if _consume("drop"):
@@ -643,6 +697,34 @@ func _server_interact(at: Vector3) -> void:
 			if target.request_pickup():
 				_sfx.rpc("pickup")
 				_set_carried.rpc(target.kind)
+		Act.CLIMB:
+			# The spot mirrored through the wall, stepped clear of its far face
+			var local := target.to_local(at)
+			var far := target.to_global(Vector3(local.x, local.y, -local.z))
+			_climb_over.rpc_id(get_multiplayer_authority(), target.approach_point(far, CLIMB_CLEAR))
+			_sfx.rpc("dash")
+
+# Owner (position is owner-driven): hop over the wall to `dest`
+@rpc("any_peer", "call_local", "reliable")
+func _climb_over(dest: Vector3) -> void:
+	if multiplayer.get_remote_sender_id() != 1 or not is_multiplayer_authority() or _is_busy or _climbing:
+		return
+	_climbing = true
+	_cancel_charge()
+	_dash_time = 0.0
+	_facing = CharAnim.dir_from_velocity(dest - global_position, _facing)
+	anim = "idle_" + _facing
+	_sprite.squash(Vector2(0.9, 1.12))
+	var from := global_position
+	dest.y = from.y
+	var tw := create_tween()
+	tw.tween_method(func(t: float):
+		global_position = from.lerp(dest, t) + Vector3.UP * sin(t * PI) * CLIMB_HEIGHT, 0.0, 1.0, CLIMB_TIME)
+	await tw.finished
+	if is_instance_valid(self):
+		global_position = dest
+		_climbing = false
+		_sprite.squash(Vector2(1.1, 0.9))
 
 # Server: hand the carried load to `dest` (null = nothing near wants it)
 func _deliver(dest: Node3D, at: Vector3) -> void:
@@ -1115,6 +1197,7 @@ func _set_downed(value: bool) -> void:
 		return
 	downed = value
 	_refresh_pip()
+	_update_raise_tag()
 	Sfx.play("downed" if value else "revive", global_position)
 	if value:
 		_down_timer = DOWNED_TIME

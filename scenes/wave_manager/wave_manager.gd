@@ -65,6 +65,8 @@ var _msg_sent := 0
 
 
 func start(day: int) -> void:
+	if GameState.tutorial:
+		return   # Tutorial sends its one scout itself
 	_day = day
 	_active = true
 	_timer = FIRST_SPAWN_DELAY
