@@ -142,6 +142,8 @@ func _tick_surges(delta: float) -> void:
 		if _surge_gap <= 0.0:
 			_surge_gap = SURGE_GAP
 			_surge_left -= 1
+			if _surge_at.is_empty():   # never warned (can't happen in play; be safe)
+				_surge_at.append(Vector3(randf_range(-SPAWN_X_HALF, SPAWN_X_HALF), 0.1, SPAWN_Z))
 			if enemies_root.get_child_count() < MAX_ALIVE_CAP:
 				var spread := SURGE_SPREAD if horn else WAVE_SPREAD
 				var off := Vector3(randf_range(-spread, spread), 0, randf_range(-1.0, 1.0))
