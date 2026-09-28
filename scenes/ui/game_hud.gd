@@ -80,6 +80,10 @@ var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.W
 var _next_line: Label        # day plaque: what to do next, for the local player
 var _next_poll := 0.0
 const NEXT_POLL := 0.25
+const KNOCKED_MS := 4000
+var _knocked_until := 0   # ticks (ms): "Next:" line says a finished piece fell
+var _last_done := 0
+var _last_total := 0
 var _sun_row: HBoxContainer  # day plaque: the sun clock (GameState.sun)
 var _sun_dial: SunDial
 var _sun_time: Label
@@ -351,10 +355,23 @@ func _next_text() -> String:
 	if me == null or not is_instance_valid(me):
 		return ""
 	if me.downed:
-		return "Down — a crewmate can lift you, or wait it out"
+		return "Down — a crewmate has to help you up"
+	if Time.get_ticks_msec() < _knocked_until:
+		return "A finished piece was knocked down — build it back up"
+	var left := GameState.targets_total - GameState.targets_done
 	var site := SiteFocus.site()
 	if site == null:
-		return "The day's stretch is done — keep the wall"
+		# Only "done" when it is (playtest 2: players thought the wall stood and waited
+		# for a day end that never came) — a piece knocked back down still counts
+		if left <= 0:
+			return "The stretch stands"
+		return tr_n("%d piece still to finish — look for the amber footing", "%d pieces still to finish — look for the amber footings", left) % left
+	var line := _site_line(site, me)
+	if left == 1 and not line.is_empty():
+		return tr("Last piece!  %s") % line
+	return line
+
+func _site_line(site: Node3D, me: Player) -> String:
 	# One line per place (not "to the %s"): a translation needs the whole sentence
 	var at_gate := not site.is_in_group("wall_sections")
 	var carry: String = me.carried_kind
@@ -373,7 +390,14 @@ func _next_text() -> String:
 func _material_name(kind: String) -> String:
 	return tr({"beam": "beams"}.get(kind, kind))
 
-func _on_progress_changed(_done: int, _total: int) -> void:
+func _on_progress_changed(done: int, total: int) -> void:
+	# A piece that stood was knocked back down: say so, it no longer counts
+	if GameState.phase == GameState.Phase.WORK and total == _last_total and done < _last_done:
+		_knocked_until = Time.get_ticks_msec() + KNOCKED_MS
+		_flash($Root/DayPlaque, Color(1.0, 0.72, 0.6))
+		_next_poll = 0.0
+	_last_done = done
+	_last_total = total
 	_refresh_progress()
 
 func _refresh_progress() -> void:

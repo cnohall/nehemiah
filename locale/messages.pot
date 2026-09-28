@@ -1659,3 +1659,20 @@ msgstr ""
 
 msgid "A builder is joining…"
 msgstr ""
+
+msgid "Down — a crewmate has to help you up"
+msgstr ""
+
+msgid "A finished piece was knocked down — build it back up"
+msgstr ""
+
+msgid "The stretch stands"
+msgstr ""
+
+msgid "%d piece still to finish — look for the amber footing"
+msgid_plural "%d pieces still to finish — look for the amber footings"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Last piece!  %s"
+msgstr ""

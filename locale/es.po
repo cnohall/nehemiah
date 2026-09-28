@@ -1308,3 +1308,20 @@ msgstr "%s se está uniendo…"
 
 msgid "A builder is joining…"
 msgstr "Un constructor se está uniendo…"
+
+msgid "Down — a crewmate has to help you up"
+msgstr "Caído — un compañero tiene que levantarte"
+
+msgid "A finished piece was knocked down — build it back up"
+msgstr "Derribaron un tramo terminado — vuelve a levantarlo"
+
+msgid "The stretch stands"
+msgstr "El tramo está en pie"
+
+msgid "%d piece still to finish — look for the amber footing"
+msgid_plural "%d pieces still to finish — look for the amber footings"
+msgstr[0] "Falta terminar %d tramo — busca la base ámbar"
+msgstr[1] "Faltan terminar %d tramos — busca las bases ámbar"
+
+msgid "Last piece!  %s"
+msgstr "¡Último tramo!  %s"
