@@ -18,7 +18,7 @@
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 geometry/parsed_geometry_type = 1
-geometry/collision_mask = 9
+geometry/collision_mask = 25
 agent/height = 1.8
 agent/radius = 0.4
 agent/max_slope = 45.0

@@ -66,9 +66,11 @@ func _process(delta: float) -> bool:
 			if not _story_shot and _t > 2.5:
 				_shot("card")
 				_story_shot = true
-				_main.director.force_story_end()
+				_main.director.force_ready()
 		gs.Phase.WORK:
 			_main.director._end_day()
+		gs.Phase.DUSK:
+			_main.director.force_ready()   # the tally waits for the crew now
 		gs.Phase.WON:
 			if _won_t < 0.0:
 				_won_t = 0.0

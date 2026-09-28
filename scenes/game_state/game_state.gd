@@ -140,6 +140,9 @@ var section_marks: Array = _no_marks()
 var replay_section := -1
 # Menu only: reopen the section picker on this section when back from a replay
 var picker_return := -1
+# "Play again" from the end screen: the next run starts on this day (the first day of the
+# stretch that was lost; 1 after a win). -1 = day 1 as usual. Outlives the scene reload.
+var restart_day := -1
 # The last section rated beat this player's saved best (end screen says so)
 var rating_improved := false
 # Started mid-campaign with `--day=N`: sections are only partly played, so no bests saved
@@ -147,6 +150,10 @@ var _debug_start := false
 # Title screen: the menu's live backdrop — bots play the real game behind it, and
 # like a `--day=N` run nothing it does is saved (no marks, met folk or achievements)
 var attract := false
+# "Learn the basics" from the title: a solo practice at the Sheep Gate walked through by
+# Tutorial — no waves, no story, no bots but the one that falls; nothing it does is saved.
+# Set by the menu, cleared when the menu opens again (outlives reset() like replay_section).
+var tutorial := false
 var _met := {}             # Friends and Foes: key → true, loaded on first use
 
 # ── Queries ────────────────────────────────────────────────
@@ -354,13 +361,19 @@ func reset() -> void:
 	sun_left = 0.0
 	players.clear()
 	section_marks = _no_marks()
-	_debug_start = attract
+	_debug_start = attract or tutorial
 
 ## Server: a replay starts on its section's first day
 func apply_replay() -> void:
 	if is_replay():
 		var day: int = SECTIONS[replay_section]["days"][0]
 		_apply(day, replay_section, phase, breaches, targets_done, targets_total)
+
+## Server: a "Play again" run picks up where the last one asked (see restart_day)
+func apply_restart() -> void:
+	if restart_day > 0 and not is_replay():
+		_apply(restart_day, _section_index_for_day(restart_day), phase, breaches, targets_done, targets_total)
+	restart_day = -1
 
 ## Debug builds: `-- --day=N` on the command line starts the campaign at day N
 ## (e.g. 8 for brutes, 20 for raiders). Server only, before day 1 begins.

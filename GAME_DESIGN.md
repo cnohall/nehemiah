@@ -98,6 +98,7 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Controls card shows keys or pad buttons, whichever is in use
 - Gamepad host starts the day from the pause menu ("Begin the work", focused)
 - Join: friends already in a lobby are listed with one-click Join; pause menu opens Steam's invite overlay
+- Playtest feedback (28 Sep 2026): "bit of a learning curve — can't see how to add bots, pause the game". Answer: with no other people connected (solo, or bots only), the menu really pauses and the controls card says "Pause · menu"; online it stays "Menu" and play goes on. The host's difficulty / bots / bot skill rows are in the pause menu too (pad-navigable, work mid-day). While gathering with no bots, the gather panel says "Short of hands? Add bots to the crew." Still open: no tutorial / first-run prompts beyond the controls card and "Next:" line
 
 ### 5.6 Tower-defence layer — ◐ first pass, needs playtest
 Three rules, each on by default and each switched off from the command line to A/B it (`-- --no-waves`, `-- --no-sun`, `-- --no-posts`; the host's choice goes to everyone who joins). Test: `tools/td_test.gd` (run with `--day=4` for the last-day loss).
@@ -108,6 +109,33 @@ Three rules, each on by default and each switched off from the command line to A
 - Bots raise and feed posts: the wall comes first, a post gets what no wall wants (one load at a time), and a post that has run dry gets the next stone. They only raise a new post while the wall is on track (not on the last day, and at least as far along as the days gone by)
 - **Salvage**: rubble heaps also regrow one stone every 20 s during the work (up to their stock), so a stretch can slow down but never run dry ("Digging out more")
 - Open: section rating's "In good time" overlaps the sun now
+
+### 5.7 Playtest 2 Feedback — ✅ built, needs playtest 3
+**28 Sep 2026 — 2 human players, 0 bots.** Tests: `tools/playtest2_test.gd`, `tools/again_test.gd` (offline + `--host`/`--client`), `tools/tutorial_test.gd`
+
+**Waiting for players (one shared widget):**
+- ✅ **Tally card waits for everyone** (important). One ready check in `DayDirector` (`ready_changed`, `mark_ready`, `force_ready`) serves the story cards and the dusk tally. The tally stays up (after a 4 s minimum for the cheer) until every person in the scene is ready; the title screen's bot crew still moves on by itself after 9 s. At dusk [E] no longer picks things up. Still two screens at a section's end (tally, then the story); fold them together only if that still feels clunky
+- ✅ **Ready state** (`ReadyRow`): hold [E] / A (0.6 s, a bar fills) or click to say you're ready; with company, a chip per person (colour, "You" or their trade, a drawn tick when ready), "Waiting for N builders", and the host's "Begin now". In the story, with company, Esc reads "I'm ready" instead of "Skip" (the old skip-vs-continue confusion)
+- ✅ **Loading panel**: `NetworkManager.crew_info` — the server keeps who's in the session (Steam name, still loading or in) and mirrors it to every peer; a client introduces itself on connect. The HUD shows "<name> is joining…" top centre while anyone loads; player cards and ready chips show Steam names (the trade when there's none) and a dimmed "joining" state
+
+**Flow:**
+- ✅ **Section ends when the stretch stands.** Players felt it ran to the end of the day. The code already ends the day the moment the last unit stands (`_on_stage_changed`); the likely culprit was the "Next:" line, which said "The day's stretch is done" whenever the player had no open site, even with pieces left. Now it only says so when it's true, otherwise counts what's left ("2 pieces still to finish — look for the amber footings"), says "Last piece!", and a finished piece knocked back down flashes the day plaque with a line saying so
+- ✅ **Watch posts raised while gathering carried into day 1** (`section_changed` doesn't fire going from gathering to day 1). Posts are now reset at every fresh section's dawn
+- ✅ **Stuck outside a finished wall.** Hung gate doors are on their own collision layer (16), which enemies and the nav bake collide with but workers don't: workers walk through, enemies still can't. Anywhere else, [E] against a finished wall (or sealed infill) with nothing else to do **climbs over** it (either way; carrying is fine, a beam isn't). Only finished walls, so a press at a half-built one never hops you to the wrong side
+
+**Combat:**
+- ✅ **Revive isn't discoverable.** **No self-revive:** a teammate (or bot) has to help you up. A "Help up [E]" tag pulses over a downed worker for everyone else. The 8 s countdown only runs when nobody is left standing (solo, or the whole crew down). Bots will cross the whole site to help (range 16 → 60 m)
+- ✅ **Full health on revive** (`REVIVE_HEALTH` 0.5 → 1.0)
+- ✅ **Breaches deeper into the city**: `BREACH_Z` 13.5 → 21 (goal 15 → 23), well behind the stockpiles, so a runner through a gap can still be chased down
+- ✅ **Bug: running on the spot on the loss / story screen**: input stopped but the animation wasn't updated, so the last run cycle kept looping
+
+**Content:**
+- ✅ **Play again**: `Highlights` grabs a small still at the run's moments (a stretch standing, a wall knocked back, a breach, someone down or helped up, each dusk; 14 kept, the least worth keeping dropped first) and the end screen plays them as a captioned slideshow. Buttons: Try the stretch again (campaign loss: restarts at the lost stretch's first day) / Play again (campaign win) / Play it again + Next stretch (section replay). The host's pick decides, or a majority of the people; Return to Title stays personal. Every peer reloads the game scene together (`DayDirector._restart`); clients re-ask for the roster until the host's new scene answers. A true 3D replay would need recording and re-simulating everything: not now
+- ✅ **More dancing**: standing still at dusk or after the win, each worker dances, one per crew slot — dabke stomp, clapping step, arms-up sway (Neh 12:27, the dedication "with gladness… with singing")
+- ✅ **Optional tutorial**: "Learn the Basics" on the title — a solo practice at the Sheep Gate, the priests' stretch beside the temple (Neh 3:1), in 9 steps that each wait for the player: walk, dash, carry, deliver, build, the sling against one scout, help a fallen crewmate up, then "Let us rise up and build" (Neh 2:18). `GameState.tutorial`: no waves, no story, no sun clock, nothing saved
+
+**Later:**
+- ☐ **Cross-play** between web, mobile and Steam: look into it after the Steam launch. It needs one shared transport (WebRTC or a WebSocket relay via the existing Cloudflare DO); Steam/ENet/EOS don't talk to each other. Keep lobby code from blocking it
 
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:

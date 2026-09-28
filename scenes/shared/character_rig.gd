@@ -479,6 +479,41 @@ func _apply_pose() -> void:
 			lr = -hop * 0.35
 			lean = -0.12 * up
 			head_rx = -0.2 * up
+		"dabke":
+			# Levantine line dance: arms up and out as if linked at the shoulders, a side
+			# shuffle, then a kick and a stomp on the last beat
+			var beat := fmod(_t * fps, n) / n
+			twist = sin(ph) * 0.15
+			al = Vector3(-1.25, 0, 0.95)
+			ar = Vector3(-1.25, 0, -0.95)
+			ll = sin(ph) * 0.2
+			lr = -sin(ph) * 0.2
+			if beat >= 0.5 and beat < 0.8:
+				ll = -0.75 * sin((beat - 0.5) / 0.3 * PI)   # the kick
+			elif beat >= 0.8:
+				body_y = -0.05 * sin((beat - 0.8) / 0.2 * PI)   # the stomp
+			body_y += absf(sin(ph * 2.0)) * 0.04
+			head_rx = 0.06
+		"clap":
+			# Side step and clap in front of the chest, twice a cycle
+			var c := absf(sin(ph * 2.0))
+			al = Vector3(-1.45, 0, lerpf(0.65, -0.12, c))
+			ar = Vector3(-1.45, 0, lerpf(-0.65, 0.12, c))
+			ll = sin(ph) * 0.35
+			lr = -sin(ph) * 0.35
+			body_y = absf(sin(ph)) * 0.08
+			head_ry = sin(ph) * 0.22
+			lean = 0.05
+		"sway":
+			# Both arms up in a V, waving, the body swaying side to side
+			var s := sin(ph)
+			al = Vector3(-2.45 + s * 0.22, 0, 0.6)
+			ar = Vector3(-2.45 - s * 0.22, 0, -0.6)
+			twist = s * 0.45
+			body_y = absf(sin(ph * 2.0)) * 0.05
+			ll = -maxf(0.0, s) * 0.3
+			lr = -maxf(0.0, -s) * 0.3
+			head_rx = -0.15
 		"collapse":
 			var c := ease(k, 2.2)
 			body_rx = -1.45 * c

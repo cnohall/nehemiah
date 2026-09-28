@@ -622,6 +622,9 @@ msgstr "← →  또는  클릭   선택          Esc   뒤로"
 msgid "Build"
 msgstr "건축"
 
+msgid "Help up"
+msgstr "일으키기"
+
 msgid "Hang the doors"
 msgstr "문짝 달기"
 
@@ -717,6 +720,22 @@ msgstr "지금 시작"
 
 msgid "E · Click   Continue          Esc   Skip"
 msgstr "E · 클릭   계속          Esc   건너뛰기"
+
+msgid "E · Click   Next          Esc   I'm ready"
+msgstr "E · 클릭   다음          Esc   준비 완료"
+
+msgid "Hold %s when you're ready"
+msgstr "준비되면 %s 누르고 있기"
+
+msgid "I'm ready"
+msgstr "준비 완료"
+
+msgid "Everyone's ready"
+msgstr "모두 준비됨"
+
+msgid "Waiting for %d builder"
+msgid_plural "Waiting for %d builders"
+msgstr[0] "건축가 %d명을 기다리는 중"
 
 msgid "Section %s of %s · Day %d"
 msgstr "%s/%s 구간 · %d일차"
@@ -1319,3 +1338,151 @@ msgstr "안정된 손, 괜찮은 조준"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "빠르고 정확하며, 일을 두고 지킴"
+
+msgid "Pause · menu"
+msgstr "일시정지 · 메뉴"
+
+msgid "Short of hands? Add bots to the crew."
+msgstr "일손이 부족한가요? 봇을 추가하세요."
+
+msgid "Paused"
+msgstr "일시정지됨"
+
+msgid "The work waits"
+msgstr "작업이 기다립니다"
+
+msgid "Nothing moves until you resume."
+msgstr "계속할 때까지 아무것도 움직이지 않습니다."
+
+msgid "%s · joining…"
+msgstr "%s · 참가 중…"
+
+msgid "%s is joining…"
+msgstr "%s 님이 참가하는 중…"
+
+msgid "A builder is joining…"
+msgstr "건축가가 참가하는 중…"
+
+msgid "Down — a crewmate has to help you up"
+msgstr "쓰러짐 — 동료가 일으켜 줘야 합니다"
+
+msgid "A finished piece was knocked down — build it back up"
+msgstr "완성된 부분이 무너졌습니다 — 다시 쌓으세요"
+
+msgid "The stretch stands"
+msgstr "구간이 완성되었습니다"
+
+msgid "%d piece still to finish — look for the amber footing"
+msgid_plural "%d pieces still to finish — look for the amber footings"
+msgstr[0] "마무리할 부분 %d개 — 호박색 기초를 찾으세요"
+
+msgid "Last piece!  %s"
+msgstr "마지막 부분!  %s"
+
+msgid "You went down"
+msgstr "쓰러졌습니다"
+
+msgid "%s went down"
+msgstr "%s 쓰러짐"
+
+msgid "Back on your feet"
+msgstr "다시 일어섰습니다"
+
+msgid "%s is back on their feet"
+msgstr "%s 다시 일어섬"
+
+msgid "Day %d · %d of %d stand"
+msgstr "%d일차 · %d/%d 완성"
+
+msgid "Day %d · a finished piece knocked back down"
+msgstr "%d일차 · 완성된 부분이 무너짐"
+
+msgid "Day %d · they broke through"
+msgstr "%d일차 · 적이 뚫고 들어옴"
+
+msgid "Day %d · the day's work is done"
+msgstr "%d일차 · 오늘의 일을 마침"
+
+msgid "Day %d · the city fell"
+msgstr "%d일차 · 도성이 함락됨"
+
+msgid "Play it again"
+msgstr "다시 하기"
+
+msgid "Next stretch"
+msgstr "다음 구간"
+
+msgid "Play again"
+msgstr "다시 하기"
+
+msgid "Try the stretch again"
+msgstr "이 구간 다시 도전"
+
+msgid "The host's pick decides — or most of the crew"
+msgstr "호스트의 선택 또는 다수결로 정합니다"
+
+msgid "%s — %d of %d"
+msgstr "%s — %d/%d"
+
+msgid "Waiting for the host or most of the crew"
+msgstr "호스트 또는 다수의 선택을 기다리는 중"
+
+msgid "Learn the Basics"
+msgstr "기본 익히기"
+
+msgid "Leave the practice"
+msgstr "연습 나가기"
+
+msgid "Back to the title"
+msgstr "타이틀로 돌아가기"
+
+msgid "Step %d of %d"
+msgstr "%d/%d 단계"
+
+msgid "The Sheep Gate"
+msgstr "양문"
+
+msgid "Eliashib the high priest and his brothers built here, beside the temple (Neh. 3:1). Learn the work with them.\n{interact} to begin"
+msgstr "대제사장 엘리아십과 그의 형제들이 성전 곁 이곳을 건축했습니다(느 3:1). 그들과 함께 일을 배워 보세요.\n{interact}로 시작"
+
+msgid "Walk"
+msgstr "걷기"
+
+msgid "Walk with {move}"
+msgstr "{move}로 걷기"
+
+msgid "A quick burst: {dash}. It works while carrying too"
+msgstr "짧게 돌진: {dash}. 짐을 들고도 됩니다"
+
+msgid "Carry"
+msgstr "나르기"
+
+msgid "Walk up to a stockpile and pick up a load with {interact}. The wall's tag says what it needs"
+msgstr "자재 더미로 가서 {interact}로 짐을 드세요. 성벽 표지에 필요한 것이 적혀 있습니다"
+
+msgid "Deliver"
+msgstr "전달"
+
+msgid "Take it to the wall on the amber footing and press {interact}. Not needed there? {drop} drops it"
+msgstr "호박색 기초 위 성벽으로 가져가 {interact}를 누르세요. 필요 없으면 {drop}로 내려놓습니다"
+
+msgid "Bring what the wall still asks for. Once it has it all, stand at the wall and work it up with {interact}"
+msgstr "성벽이 아직 요구하는 것을 가져오세요. 다 모이면 성벽 앞에 서서 {interact}로 쌓아 올리세요"
+
+msgid "Guard the builders"
+msgstr "건축가 지키기"
+
+msgid "An enemy! Hold {throw} to whirl the sling, aim, and let go. Close in, the same button is a sword cut"
+msgstr "적이다! {throw}를 누르고 있으면 물매를 돌립니다. 조준하고 놓으세요. 가까이서는 같은 버튼이 칼베기입니다"
+
+msgid "Nobody gets up alone"
+msgstr "혼자 일어서는 사람은 없다"
+
+msgid "Your crewmate is down. Go to them and press {interact} to help them up"
+msgstr "동료가 쓰러졌습니다. 다가가서 {interact}로 일으켜 주세요"
+
+msgid "That's the work"
+msgstr "이것이 일입니다"
+
+msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
+msgstr "나르고, 쌓고, 지키고, 서로 일으켜 주세요.\n“일어나 건축하자.” (느 2:18)"

@@ -5,6 +5,11 @@ extends CanvasLayer
 
 signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDirector)
 signal bots_changed      # host changed Settings.bot_count / bot_skill (Main refits the crew)
+signal ready_pressed         # local player is done with the dusk tally (Main → DayDirector)
+signal begin_now_requested   # host: go on without the ones still at the tally
+signal vote_cast(choice: String)   # end screen: "again" | "next" (Main → DayDirector)
+
+var highlights: Highlights   # the run's stills, set by Main (end-screen reel)
 
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 const BANNER_HOLD   := 3.2
@@ -17,7 +22,8 @@ const BANNER_PAD    := 28.0    # space above and below the banner text
 const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
 const TALLY_H       := 118.0   # …plus the numbers row…
 const CREW_H        := 40.0    # …plus one line per worker's share (multiplayer)
-const MARKS_H       := 64.0    # …plus the section's marks on its last day
+const MARKS_H       := 64.0    # …plus the section's marks on its last day…
+const READY_H       := 56.0    # …plus who's ready to go on
 const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
@@ -33,7 +39,7 @@ const CONTROLS := [
 	["dash", "Dash"],
 	["throw", "Sling — charge, then throw"],
 	["horn", "Horn — call the crew"],   # only in sections with the horn
-	["pause", "Menu"],
+	["pause", "Menu"],   # "Pause · menu" when playing alone (see _refresh_controls)
 ]
 
 @onready var day_number:   Label       = $Root/DayPlaque/VBox/DayRow/DayNumber
@@ -68,23 +74,34 @@ var _pad_lost_note: Label   # pause menu line shown after the pad in use disconn
 var _tally: VBoxContainer
 var _last_tally := {}   # the latest dusk numbers (a replay's end screen shows its marks)
 var _horn_row: Control
+var _pause_what: Label       # controls card: what the pause key does
+var _host_refreshers: Array[Callable] = []   # bot / difficulty rows (gather panel + pause menu)
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
+var _ready_row: ReadyRow      # under the tally: hold [E] to go on, who else is ready
+var _tally_waiting: Array = []   # latest DayDirector ready state for the tally
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 var _next_line: Label        # day plaque: what to do next, for the local player
 var _next_poll := 0.0
 const NEXT_POLL := 0.25
+const KNOCKED_MS := 4000
+var _knocked_until := 0   # ticks (ms): "Next:" line says a finished piece fell
+var _last_done := 0
+var _last_total := 0
 var _sun_row: HBoxContainer  # day plaque: the sun clock (GameState.sun)
 var _sun_dial: SunDial
 var _sun_time: Label
 var _sun_warned := false     # "the sun is low" said once a day
 
 func _ready() -> void:
+	# Keeps running while a solo game is paused (menus, settings, fades)
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
 		UiStyle.ornament(p)
 	_build_player_cards()
 	_build_controls_hint()
 	_build_next_line()
 	_build_sun_row()
+	_build_joining_plaque()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -109,7 +126,20 @@ func _ready() -> void:
 	$Root/GatherPanel/VBox/Begin.focus_mode = Control.FOCUS_NONE
 	_build_gamepad_begin()
 	if is_host:
-		_build_bot_row()
+		_build_bot_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
+		# Also from the menu: mid-day, and reachable on a pad
+		var menu := $Root/PauseMenu/Center/Modal/VBox
+		var at: int = $Root/PauseMenu/Center/Modal/VBox/Settings.get_index()
+		var rule := HSeparator.new()
+		menu.add_child(rule)
+		menu.move_child(rule, at)
+		_build_bot_row(menu, at + 1, true)
+	# Someone joined a paused solo game: the world can't stay frozen for them
+	NetworkManager.peer_connected.connect(func(_id: int):
+		get_tree().paused = false
+		$Root/PauseMenu/Center/Modal/VBox/Hint.text = "The game keeps running for your crew while this is open."
+		_refresh_controls())
+	NetworkManager.peer_disconnected.connect(func(_id: int): _refresh_controls())
 	GameState.crew_changed.connect(_on_crew_changed)
 	_on_crew_changed(GameState.crew_size)
 	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
@@ -159,6 +189,15 @@ func _open_pause() -> void:
 		return
 	pause_menu.show()
 	InputMode.set_menu_open(true)
+	# Alone (solo or with bots) the menu really pauses; online the others play on
+	get_tree().paused = _solo()
+	var vb := $Root/PauseMenu/Center/Modal/VBox
+	vb.get_node("Eyebrow").text = "The work waits" if _solo() else "The work goes on"
+	vb.get_node("Title").text = "Paused" if _solo() else "Menu"
+	vb.get_node("Hint").text = "Nothing moves until you resume." if _solo() \
+		else "The game keeps running for your crew while this is open."
+	for r in _host_refreshers:
+		r.call()
 	UiFx.fade_in(pause_menu, 0.16)
 	_refresh_controls()
 	_pause_begin.visible = multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER
@@ -213,16 +252,25 @@ func _refresh_gather_hint() -> void:
 
 func _close_pause() -> void:
 	pause_menu.hide()
+	get_tree().paused = false
 	gather.modulate.a = 1.0
 	settings.hide()
 	_pad_lost_note.hide()
 	InputMode.set_menu_open(false)
+	for r in _host_refreshers:
+		r.call()
 	_refresh_controls()
 
 func _exit_tree() -> void:
 	InputMode.set_menu_open(false)
+	get_tree().paused = false
+
+# No other people connected (bots don't count): pausing freezes the world
+func _solo() -> bool:
+	return multiplayer.get_peers().is_empty()
 
 func _leave() -> void:
+	get_tree().paused = false
 	NetworkManager.disconnect_session()
 	GameState.reset()
 	get_tree().change_scene_to_file(MENU_SCENE)
@@ -312,10 +360,23 @@ func _next_text() -> String:
 	if me == null or not is_instance_valid(me):
 		return ""
 	if me.downed:
-		return "Down — a crewmate can lift you, or wait it out"
+		return "Down — a crewmate has to help you up"
+	if Time.get_ticks_msec() < _knocked_until:
+		return "A finished piece was knocked down — build it back up"
+	var left := GameState.targets_total - GameState.targets_done
 	var site := SiteFocus.site()
 	if site == null:
-		return "The day's stretch is done — keep the wall"
+		# Only "done" when it is (playtest 2: players thought the wall stood and waited
+		# for a day end that never came) — a piece knocked back down still counts
+		if left <= 0:
+			return "The stretch stands"
+		return tr_n("%d piece still to finish — look for the amber footing", "%d pieces still to finish — look for the amber footings", left) % left
+	var line := _site_line(site, me)
+	if left == 1 and not line.is_empty():
+		return tr("Last piece!  %s") % line
+	return line
+
+func _site_line(site: Node3D, me: Player) -> String:
 	# One line per place (not "to the %s"): a translation needs the whole sentence
 	var at_gate := not site.is_in_group("wall_sections")
 	var carry: String = me.carried_kind
@@ -334,7 +395,14 @@ func _next_text() -> String:
 func _material_name(kind: String) -> String:
 	return tr({"beam": "beams"}.get(kind, kind))
 
-func _on_progress_changed(_done: int, _total: int) -> void:
+func _on_progress_changed(done: int, total: int) -> void:
+	# A piece that stood was knocked back down: say so, it no longer counts
+	if GameState.phase == GameState.Phase.WORK and total == _last_total and done < _last_done:
+		_knocked_until = Time.get_ticks_msec() + KNOCKED_MS
+		_flash($Root/DayPlaque, Color(1.0, 0.72, 0.6))
+		_next_poll = 0.0
+	_last_done = done
+	_last_total = total
 	_refresh_progress()
 
 func _refresh_progress() -> void:
@@ -374,8 +442,20 @@ func _on_breaches_changed(count: int) -> void:
 
 # ── Phase banners / end screen ─────────────────────────────
 
+## DayDirector.ready_changed: who the dusk tally is still waiting on
+func set_ready_state(kind: String, waiting: Array) -> void:
+	if kind != "tally":
+		return
+	_tally_waiting = waiting
+	if _ready_row != null and is_instance_valid(_ready_row):
+		_ready_row.set_waiting(waiting)
+
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	_refresh_progress()
+	# A tally held open for the ready check goes when the dusk does
+	if phase != GameState.Phase.DUSK and _tally != null and _tally.visible:
+		_tally.hide()
+		banner.hide()
 	gather.visible = phase == GameState.Phase.GATHER
 	_refresh_controls()
 	var section := GameState.get_current_section()
@@ -425,6 +505,8 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 	_banner_tween = create_tween()
 	_banner_tween.tween_property(banner, "modulate:a", 1.0, 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_banner_tween.tween_property(banner_sub, "modulate:a", 1.0, 0.5)
+	if hold < 0.0:
+		return   # stays until the phase moves on (the dusk tally)
 	_banner_tween.tween_interval(hold)
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_banner_tween.tween_callback(banner.hide)
@@ -465,10 +547,115 @@ func _show_end(won: bool) -> void:
 		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
 	if GameState.is_replay():
 		_replay_end(won, vb, stats)
+	_build_reel(vb)
+	_build_vote(won, vb)
 	end_screen.show()
 	UiFx.fade_in(end_screen, 0.9)
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
-	vb.get_node("Buttons/MenuButton").grab_focus()
+	var first: Button = vb.get_node("Buttons").get_child(0)
+	first.grab_focus()
+
+# ── End screen: highlight reel + play again ────────────────
+
+const REEL_SIZE  := Vector2(512, 288)
+const REEL_SLIDE := 2.6   # seconds per still
+
+var _reel_tween: Tween
+var _vote_note: Label
+var _vote_buttons := {}   # choice → Button
+
+# The run's stills (Highlights), one after another while the crew decides
+func _build_reel(vb: Control) -> void:
+	var old := vb.get_node_or_null("Reel")
+	if old:
+		old.queue_free()
+	if highlights == null or highlights.shots.is_empty():
+		return
+	var shots: Array = highlights.shots.duplicate()
+	var reel := VBoxContainer.new()
+	reel.name = "Reel"
+	reel.add_theme_constant_override("separation", 6)
+	reel.alignment = BoxContainer.ALIGNMENT_CENTER
+	var frame := PanelContainer.new()
+	frame.add_theme_stylebox_override("panel", UiStyle.bordered(UiStyle.box(UiStyle.DUSK, Vector2(4, 4), 3), UiStyle.RULE, 1))
+	frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	reel.add_child(frame)
+	var pic := TextureRect.new()
+	pic.custom_minimum_size = REEL_SIZE
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	frame.add_child(pic)
+	var caption := Label.new()
+	caption.theme_type_variation = &"Caption"
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	caption.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # captions arrive translated
+	reel.add_child(caption)
+	vb.add_child(reel)
+	vb.move_child(reel, 0)
+	if _reel_tween:
+		_reel_tween.kill()
+	_reel_tween = create_tween().set_loops()
+	for i in shots.size():
+		var shot: Dictionary = shots[i]
+		_reel_tween.tween_callback(func():
+			pic.texture = shot["tex"]
+			caption.text = "%s   ·   %d / %d" % [shot["caption"], i + 1, shots.size()])
+		_reel_tween.tween_property(pic, "modulate:a", 1.0, 0.35).from(0.0)
+		_reel_tween.tween_interval(REEL_SLIDE)
+		_reel_tween.tween_property(pic, "modulate:a", 0.0, 0.35)
+
+# "Play again" / "Next stretch": the host's pick decides, or a majority of the crew
+# (DayDirector.cast_vote). Back to the menu stays each person's own choice.
+func _build_vote(won: bool, vb: Control) -> void:
+	var buttons: HBoxContainer = vb.get_node("Buttons")
+	buttons.add_theme_constant_override("separation", 16)
+	for b in _vote_buttons.values():
+		b.queue_free()
+	_vote_buttons.clear()
+	var choices: Array = []   # [choice, label]
+	if GameState.is_replay():
+		choices.append(["again", "Play it again"])
+		var next := GameState.replay_section + 1
+		if won and next < GameState.SECTIONS.size():
+			choices.append(["next", "Next stretch"])
+	elif won:
+		choices.append(["again", "Play again"])
+	else:
+		choices.append(["again", "Try the stretch again"])
+	for i in choices.size():
+		var b := Button.new()
+		b.text = choices[i][1]
+		b.custom_minimum_size.x = 220
+		b.theme_type_variation = &"PrimaryButton" if i == 0 else &"GhostButton"
+		var choice: String = choices[i][0]
+		b.pressed.connect(func(): vote_cast.emit(choice))
+		buttons.add_child(b)
+		buttons.move_child(b, i)
+		_vote_buttons[choice] = b
+	(vb.get_node("Buttons/MenuButton") as Button).theme_type_variation = &"GhostButton"
+	if _vote_note == null:
+		_vote_note = Label.new()
+		_vote_note.theme_type_variation = &"Caption"
+		_vote_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_vote_note.add_theme_color_override("font_color", UiStyle.INK_MUTED)
+		vb.add_child(_vote_note)
+	_vote_note.text = "" if _solo() else tr("The host's pick decides — or most of the crew")
+
+## DayDirector.votes_changed: how many want what
+func set_votes(votes: Dictionary) -> void:
+	if _vote_note == null:
+		return
+	var people := 1 + multiplayer.get_peers().size()
+	var lines: PackedStringArray = []
+	for choice: String in _vote_buttons:
+		var n := votes.values().count(choice)
+		if n > 0:
+			lines.append(tr("%s — %d of %d") % [tr(_vote_buttons[choice].text), n, people])
+	var mine: String = votes.get(multiplayer.get_unique_id(), "")
+	for choice: String in _vote_buttons:
+		_vote_buttons[choice].disabled = not mine.is_empty()
+	_vote_note.text = "   ·   ".join(lines) + ("\n" + tr("Waiting for the host or most of the crew") if not mine.is_empty() else "")
 
 # A replay is one section: name it, show its three marks, and head back to the map
 func _replay_end(won: bool, vb: Control, stats: Control) -> void:
@@ -558,10 +745,20 @@ func show_tally(stats: Dictionary) -> void:
 	var rated := stats.has("marks")
 	if rated:
 		_tally.add_child(_marks_line(stats))
+	# The tally stays until everyone is ready (playtest 2) — the title screen's crew
+	# has nobody to ask, so there it fades as before
+	var waits := not GameState.attract
+	if waits:
+		_ready_row = ReadyRow.new(false)
+		_ready_row.holdable = true
+		_ready_row.ready_pressed.connect(ready_pressed.emit)
+		_ready_row.begin_now.connect(begin_now_requested.emit)
+		_tally.add_child(_ready_row)
+		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0)
+	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0) + (READY_H if waits else 0.0)
 	_tally.show()
-	_show_banner(title, sub, TALLY_HOLD, true)
+	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
 
 # The section's three marks, each with what earned it (or what it needed)
@@ -660,27 +857,33 @@ func _on_crew_changed(size: int) -> void:
 
 # Host, while gathering: how hard the enemy presses, and bots to fill the empty places —
 # how many, and how good. Each row has a caption saying what the choice means.
-# Mouse only, like Begin (a pad's A is busy picking things up here).
-func _build_bot_row() -> void:
-	var vb := $Root/GatherPanel/VBox
-	var at: int = $Root/GatherPanel/VBox/Begin.get_index()
+# Built twice: in the gather panel (mouse only, like Begin — a pad's A is busy picking
+# things up there) and in the pause menu (focusable, and usable mid-day).
+func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	# Difficulty
-	var diff := _bot_button("")
+	var diff := _bot_button("", in_menu)
 	var diff_about := _host_caption()
 	var diff_row := _host_row([diff])
 	# Bots
 	var label := Label.new()
 	label.theme_type_variation = &"Caption"
-	var fewer := _bot_button("−")
-	var more := _bot_button("+")
-	var skill := _bot_button("")
+	var fewer := _bot_button("−", in_menu)
+	var more := _bot_button("+", in_menu)
+	var skill := _bot_button("", in_menu)
 	var skill_about := _host_caption()
 	var bot_row := _host_row([label, fewer, more, skill])
-	for c in [diff_row, diff_about, bot_row, skill_about]:
+	# Gather panel: point a lone builder at the bots (playtest: nobody found them)
+	var nudge := _host_caption()
+	nudge.text = "Short of hands? Add bots to the crew."
+	nudge.add_theme_color_override("font_color", UiStyle.INK)
+	nudge.visible = false
+	for c in [diff_row, diff_about, nudge, bot_row, skill_about]:
 		vb.add_child(c)
 		vb.move_child(c, at)
 		at += 1
 	var refresh := func():
+		nudge.visible = not in_menu and Settings.bot_count == 0 \
+			and GameState.phase == GameState.Phase.GATHER
 		var d: Dictionary = Settings.diff()
 		diff.text = tr("Difficulty: %s") % tr(d["name"])
 		diff_about.text = tr(d["about"])
@@ -692,11 +895,13 @@ func _build_bot_row() -> void:
 		skill_about.visible = Settings.bot_count > 0
 		fewer.disabled = Settings.bot_count <= 0
 		more.disabled = Settings.bot_count >= NetworkManager.MAX_PLAYERS - 1
+	_host_refreshers.append(refresh)
 	var change := func(count: int, level: int):
 		Settings.bot_count = clampi(count, 0, NetworkManager.MAX_PLAYERS - 1)
 		Settings.bot_skill = level
 		Settings.save()
-		refresh.call()
+		for r in _host_refreshers:
+			r.call()
 		bots_changed.emit()
 	fewer.pressed.connect(func(): change.call(Settings.bot_count - 1, Settings.bot_skill))
 	more.pressed.connect(func(): change.call(Settings.bot_count + 1, Settings.bot_skill))
@@ -705,7 +910,8 @@ func _build_bot_row() -> void:
 	diff.pressed.connect(func():
 		Settings.difficulty = (Settings.difficulty + 1) % Settings.DIFFICULTIES.size()
 		Settings.save()
-		refresh.call())
+		for r in _host_refreshers:
+			r.call())
 	diff.tooltip_text = tr("Click to change")
 	skill.tooltip_text = tr("Click to change")
 	refresh.call()
@@ -725,22 +931,65 @@ func _host_caption() -> Label:
 	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	return l
 
-func _bot_button(text: String) -> Button:
+func _bot_button(text: String, focusable := false) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.theme_type_variation = &"GhostButton"
-	b.focus_mode = Control.FOCUS_NONE
+	b.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
 	return b
+
+# ── Joining ────────────────────────────────────────────────
+
+var _joining: PanelContainer
+var _joining_label: Label
+
+# Top centre, only while someone is still loading in: who, so the rest know to wait
+func _build_joining_plaque() -> void:
+	_joining = PanelContainer.new()
+	_joining.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(18, 8), 0.9))
+	_joining.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$Root.add_child(_joining)
+	_joining.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 18)
+	_joining.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_joining_label = Label.new()
+	_joining_label.theme_type_variation = &"Body"
+	_joining_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_joining_label.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	_joining.add_child(_joining_label)
+	_joining.hide()
+	NetworkManager.crew_info_changed.connect(_refresh_joining)
+	_refresh_joining()
+
+func _refresh_joining() -> void:
+	var lines: PackedStringArray = []
+	for id: int in NetworkManager.loading_peers():
+		var who := NetworkManager.name_of(id)
+		lines.append(tr("%s is joining…") % who if not who.is_empty() else tr("A builder is joining…"))
+	_joining_label.text = "\n".join(lines)
+	var want := not lines.is_empty()
+	if want and not _joining.visible:
+		_joining.show()
+		UiFx.fade_in(_joining, 0.2)
+	elif not want:
+		_joining.hide()
+	# Anchored to its minimum size: re-centre as the text changes
+	_joining.reset_size()
+	_joining.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 18)
 
 # ── Player cards ───────────────────────────────────────────
 
-func set_player_present(slot: int, present: bool, is_local: bool, is_bot := false) -> void:
+## `display` = their Steam name ("" = none); `loading` = still joining (game not loaded)
+func set_player_present(slot: int, present: bool, is_local: bool, is_bot := false,
+		display := "", loading := false) -> void:
 	if slot >= _cards.size():
 		return
 	var card: Dictionary = _cards[slot]
 	card.root.visible = present
 	card.name.text = CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
-	card.who.text = tr("You") if is_local else (tr("Bot") if is_bot else tr("Crew %s") % ROMAN[slot])
+	var who: String = tr("You") if is_local else (tr("Bot") if is_bot \
+		else (display if not display.is_empty() else tr("Crew %s") % ROMAN[slot]))
+	card.who.text = tr("%s · joining…") % who if loading else who
+	card.root.modulate.a = 0.6 if loading else 1.0
 
 func set_player_health(slot: int, frac: float) -> void:
 	if slot >= _cards.size():
@@ -818,6 +1067,8 @@ func _build_controls_hint() -> void:
 		what.add_theme_font_size_override("font_size", 14)
 		what.text = row[1]
 		hb.add_child(what)
+		if row[0] == "pause":
+			_pause_what = what
 		if row[0] == "horn":
 			_horn_row = hb
 	_controls = panel
@@ -832,6 +1083,8 @@ func _refresh_controls() -> void:
 		return
 	if _horn_row != null:
 		_horn_row.visible = GameState.has_twist("horn")
+	if _pause_what != null:
+		_pause_what.text = "Pause · menu" if _solo() else "Menu"
 	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1
 	var want := (early and not GameState.is_over()) or pause_menu.visible
 	if want == _controls.visible:

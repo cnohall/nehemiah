@@ -74,6 +74,13 @@ func _ready() -> void:
 	move_child(_folk, fade.get_index())
 	_folk_btn.pressed.connect(_folk.open)
 	_folk.closed.connect(_folk_btn.grab_focus)
+	# Learn the basics: a solo practice walked through step by step (Tutorial)
+	var learn := join_btn.duplicate() as Button
+	learn.name = "LearnButton"
+	learn.text = "Learn the Basics"
+	menu.add_child(learn)
+	menu.move_child(learn, _sections_btn.get_index() + 1)
+	learn.pressed.connect(_on_learn)
 	# Credits: an entry above Quit; the roll plays over the menu
 	_credits_btn = join_btn.duplicate()
 	_credits_btn.name = "CreditsButton"
@@ -105,6 +112,7 @@ func _ready() -> void:
 	_intro()
 	# Back from a replay: straight to the map, on the stretch just played
 	GameState.replay_section = -1
+	GameState.tutorial = false
 	# Opened from an invite link: join that room right away
 	var invite := NetworkManager.take_invite_code() if NetworkManager.online_available() else ""
 	if not invite.is_empty():
@@ -272,6 +280,13 @@ func _setup_join_copy() -> void:
 func _on_host() -> void:
 	GameState.replay_section = -1
 	_host()
+
+# Solo, offline: no hosting, the game scene runs as its own server
+func _on_learn() -> void:
+	_stop_world()
+	GameState.replay_section = -1
+	GameState.tutorial = true
+	get_tree().change_scene_to_file(GAME_SCENE)
 
 # Opens on the furthest stretch this player may build
 func _open_picker() -> void:

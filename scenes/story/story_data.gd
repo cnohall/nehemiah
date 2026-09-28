@@ -126,4 +126,4 @@ static func slides_for_day(day: int) -> Array:
 
 ## Debug builds: `-- --nostory` skips every card
 static func disabled() -> bool:
-	return OS.is_debug_build() and "--nostory" in OS.get_cmdline_user_args()
+	return GameState.tutorial or (OS.is_debug_build() and "--nostory" in OS.get_cmdline_user_args())

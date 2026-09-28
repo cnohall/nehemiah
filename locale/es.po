@@ -622,6 +622,9 @@ msgstr "← →  o  Clic   Elegir          Esc   Atrás"
 msgid "Build"
 msgstr "Construir"
 
+msgid "Help up"
+msgstr "Levantar"
+
 msgid "Hang the doors"
 msgstr "Colocar las hojas"
 
@@ -717,6 +720,23 @@ msgstr "Empezar ya"
 
 msgid "E · Click   Continue          Esc   Skip"
 msgstr "E · Clic   Continuar          Esc   Saltar"
+
+msgid "E · Click   Next          Esc   I'm ready"
+msgstr "E · Clic   Siguiente          Esc   Estoy listo"
+
+msgid "Hold %s when you're ready"
+msgstr "Mantén %s cuando estés listo"
+
+msgid "I'm ready"
+msgstr "Estoy listo"
+
+msgid "Everyone's ready"
+msgstr "Todos listos"
+
+msgid "Waiting for %d builder"
+msgid_plural "Waiting for %d builders"
+msgstr[0] "Esperando a %d constructor"
+msgstr[1] "Esperando a %d constructores"
 
 msgid "Section %s of %s · Day %d"
 msgstr "Tramo %s de %s · Día %d"
@@ -1327,3 +1347,152 @@ msgstr "Manos firmes, buena puntería"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "Rápido, certero, deja la obra para vigilar"
+
+msgid "Pause · menu"
+msgstr "Pausa · menú"
+
+msgid "Short of hands? Add bots to the crew."
+msgstr "¿Faltan manos? Añade bots al equipo."
+
+msgid "Paused"
+msgstr "En pausa"
+
+msgid "The work waits"
+msgstr "La obra espera"
+
+msgid "Nothing moves until you resume."
+msgstr "Nada se mueve hasta que continúes."
+
+msgid "%s · joining…"
+msgstr "%s · uniéndose…"
+
+msgid "%s is joining…"
+msgstr "%s se está uniendo…"
+
+msgid "A builder is joining…"
+msgstr "Un constructor se está uniendo…"
+
+msgid "Down — a crewmate has to help you up"
+msgstr "Caído — un compañero tiene que levantarte"
+
+msgid "A finished piece was knocked down — build it back up"
+msgstr "Derribaron un tramo terminado — vuelve a levantarlo"
+
+msgid "The stretch stands"
+msgstr "El tramo está en pie"
+
+msgid "%d piece still to finish — look for the amber footing"
+msgid_plural "%d pieces still to finish — look for the amber footings"
+msgstr[0] "Falta terminar %d tramo — busca la base ámbar"
+msgstr[1] "Faltan terminar %d tramos — busca las bases ámbar"
+
+msgid "Last piece!  %s"
+msgstr "¡Último tramo!  %s"
+
+msgid "You went down"
+msgstr "Caíste"
+
+msgid "%s went down"
+msgstr "%s cayó"
+
+msgid "Back on your feet"
+msgstr "De nuevo en pie"
+
+msgid "%s is back on their feet"
+msgstr "%s está de nuevo en pie"
+
+msgid "Day %d · %d of %d stand"
+msgstr "Día %d · %d de %d en pie"
+
+msgid "Day %d · a finished piece knocked back down"
+msgstr "Día %d · derribaron un tramo terminado"
+
+msgid "Day %d · they broke through"
+msgstr "Día %d · se abrieron paso"
+
+msgid "Day %d · the day's work is done"
+msgstr "Día %d · la obra del día está hecha"
+
+msgid "Day %d · the city fell"
+msgstr "Día %d · la ciudad cayó"
+
+msgid "Play it again"
+msgstr "Jugarlo otra vez"
+
+msgid "Next stretch"
+msgstr "Siguiente tramo"
+
+msgid "Play again"
+msgstr "Jugar otra vez"
+
+msgid "Try the stretch again"
+msgstr "Reintentar el tramo"
+
+msgid "The host's pick decides — or most of the crew"
+msgstr "Decide el anfitrión — o la mayoría del equipo"
+
+msgid "%s — %d of %d"
+msgstr "%s — %d de %d"
+
+msgid "Waiting for the host or most of the crew"
+msgstr "Esperando al anfitrión o a la mayoría"
+
+msgid "Learn the Basics"
+msgstr "Aprender lo básico"
+
+msgid "Leave the practice"
+msgstr "Salir de la práctica"
+
+msgid "Back to the title"
+msgstr "Volver al título"
+
+msgid "Step %d of %d"
+msgstr "Paso %d de %d"
+
+msgid "The Sheep Gate"
+msgstr "La Puerta de las Ovejas"
+
+msgid "Eliashib the high priest and his brothers built here, beside the temple (Neh. 3:1). Learn the work with them.\n{interact} to begin"
+msgstr "Eliasib el sumo sacerdote y sus hermanos construyeron aquí, junto al templo (Neh. 3:1). Aprende el trabajo con ellos.\n{interact} para empezar"
+
+msgid "Walk"
+msgstr "Caminar"
+
+msgid "Walk with {move}"
+msgstr "Camina con {move}"
+
+msgid "A quick burst: {dash}. It works while carrying too"
+msgstr "Un impulso rápido: {dash}. También funciona cargando"
+
+msgid "Carry"
+msgstr "Cargar"
+
+msgid "Walk up to a stockpile and pick up a load with {interact}. The wall's tag says what it needs"
+msgstr "Acércate a un acopio y toma una carga con {interact}. La etiqueta del muro dice lo que necesita"
+
+msgid "Deliver"
+msgstr "Entregar"
+
+msgid "Take it to the wall on the amber footing and press {interact}. Not needed there? {drop} drops it"
+msgstr "Llévala al muro sobre la base ámbar y pulsa {interact}. ¿No hace falta ahí? {drop} la suelta"
+
+msgid "Bring what the wall still asks for. Once it has it all, stand at the wall and work it up with {interact}"
+msgstr "Trae lo que el muro aún pide. Cuando lo tenga todo, ponte junto al muro y levántalo con {interact}"
+
+msgid "Guard the builders"
+msgstr "Protege a los constructores"
+
+msgid "An enemy! Hold {throw} to whirl the sling, aim, and let go. Close in, the same button is a sword cut"
+msgstr "¡Un enemigo! Mantén {throw} para girar la honda, apunta y suelta. De cerca, el mismo botón es un tajo de espada"
+
+msgid "Nobody gets up alone"
+msgstr "Nadie se levanta solo"
+
+msgid "Your crewmate is down. Go to them and press {interact} to help them up"
+msgstr "Tu compañero cayó. Ve y pulsa {interact} para levantarlo"
+
+msgid "That's the work"
+msgstr "Ese es el trabajo"
+
+msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
+msgstr "Cargar, construir, proteger y levantarse unos a otros.\n«Levantémonos y edifiquemos.» (Neh. 2:18)"
