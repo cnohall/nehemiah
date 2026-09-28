@@ -954,14 +954,8 @@ msgstr "일꾼 · 셋째 플레이어"
 msgid "The crew · Fourth player"
 msgstr "일꾼 · 넷째 플레이어"
 
-msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt. Every builder kept a sword at his side."
-msgstr "돌을 놓아 성벽을 한 켜씩 쌓아 올립니다. 등에는 돌 바구니, 허리에는 망치를 찼습니다. 건축하는 이마다 허리에 칼을 찼습니다."
 
-msgid "The burden-bearers carried their loads with one hand and held a weapon in the other: water for the mortar, stone and timber for the wall."
-msgstr "짐을 나르는 이들은 한 손으로 일하고 다른 손에는 무기를 잡았습니다. 회반죽에 쓸 물과 성벽에 쓸 돌과 목재를 날랐습니다."
 
-msgid "Lays the beams and hangs the doors of each gate, with their bolts and bars."
-msgstr "들보를 얹고 성문마다 문짝과 빗장과 자물쇠를 답니다."
 
 msgid "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers."
 msgstr "공사는 크고 성벽은 길어 일꾼들이 멀리 흩어져 있습니다. 나팔 소리가 나는 곳으로 모두 모입니다."
@@ -975,8 +969,6 @@ msgstr "누군가 백성의 유익을 구하러 온 것에 몹시 분노합니�
 msgid "The Ammonite · Ammon"
 msgstr "암몬 사람 · 암몬"
 
-msgid "Sanballat's companion, an official from Ammon. He jokes that a fox climbing on the wall would break it down, and sends letters to make Nehemiah afraid."
-msgstr "산발랏의 동료로, 암몬의 관리입니다. 여우 한 마리만 올라가도 성벽이 무너질 거라고 비웃고, 느헤미야를 겁주려고 편지를 보냅니다."
 
 msgid "The Arab · Arabia"
 msgstr "아라비아 사람 · 아라비아"
@@ -987,8 +979,6 @@ msgstr "처음부터 공사를 비웃고, 성을 치려는 음모에 가담하�
 msgid "Sent by Sanballat and Geshem"
 msgstr "산발랏과 게셈이 보낸 자"
 
-msgid "He walks up to a worker with an open letter and an invitation to Ono, and waits. Go with him and you are led away from the wall. Keep working and he gives up."
-msgstr "펼친 편지와 오노로 오라는 초대를 들고 일꾼에게 다가와 기다립니다. 따라가면 성벽에서 멀리 끌려가고, 계속 일하면 그는 포기합니다."
 
 msgid "Messenger"
 msgstr "사자"
@@ -1038,8 +1028,6 @@ msgstr "아직 만나지 못함"
 msgid "Keep building. You will meet them on the wall."
 msgstr "계속 건축하십시오. 성벽에서 만나게 될 것입니다."
 
-msgid "↑ ↓   Choose          Esc   Back"
-msgstr "↑ ↓   선택          Esc   뒤로"
 
 msgid "Foes here"
 msgstr "이곳의 적"
@@ -1049,3 +1037,60 @@ msgstr "기본 작업"
 
 msgid "Everything the wall has asked of you, all at once."
 msgstr "지금까지 성벽이 요구한 모든 것을 한꺼번에."
+
+msgid "Met %d of %d"
+msgstr "만난 인물 %d / %d"
+
+msgid "Friend"
+msgstr "동지"
+
+msgid "Foe"
+msgstr "적"
+
+msgid "Wears this player's colour"
+msgstr "이 플레이어의 색을 입음"
+
+msgid "← →   Choose          Drag   Turn          Esc   Back"
+msgstr "← →   선택          드래그   회전          Esc   뒤로"
+
+msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt."
+msgstr "돌을 놓아 성벽을 한 켜씩 쌓아 올립니다. 등에는 돌 바구니, 허리에는 망치를 찼습니다."
+
+msgid "Water for the mortar, stone and timber for the wall: the burden-bearers keep the builders supplied."
+msgstr "회반죽에 쓸 물, 성벽에 쓸 돌과 목재. 짐꾼들이 건축하는 이들에게 필요한 것을 댑니다."
+
+msgid "Lays the beams and hangs the doors of each gate. The long timbers take two to carry."
+msgstr "들보를 얹고 성문마다 문짝을 답니다. 긴 들보는 둘이 함께 날라야 합니다."
+
+msgid "Sanballat’s companion, an official from Ammon. When jokes fail, he sends letters to make Nehemiah afraid."
+msgstr "산발랏의 동료로, 암몬의 관리입니다. 조롱이 통하지 않자 느헤미야를 겁주려고 편지를 보냅니다."
+
+msgid "He walks up to a worker with an open letter and waits. Go with him and you are led away from the wall. Keep working and he gives up."
+msgstr "펼친 편지를 들고 일꾼에게 다가와 기다립니다. 따라가면 성벽에서 멀리 끌려가고, 계속 일하면 그는 포기합니다."
+
+msgid "“Among the builders, everyone wore his sword at his side, and so built.”"
+msgstr "“건축하는 자는 각각 허리에 칼을 차고 건축하였습니다.”"
+
+msgid "“Everyone with one of his hands did the work, and with the other held his weapon.”"
+msgstr "“각 사람이 한 손으로는 일을 하고 다른 손에는 무기를 잡았습니다.”"
+
+msgid "“They laid its beams, and set up its doors, its bolts, and its bars.”"
+msgstr "“그들이 들보를 얹고 문짝을 달고 자물쇠와 빗장을 갖추었습니다.”"
+
+msgid "“Wherever you hear the sound of the trumpet, rally there to us.”"
+msgstr "“어디서든지 나팔 소리를 들으면 그곳으로 모여 우리에게 오십시오.”"
+
+msgid "“What is this thing that you are doing? Will you rebel against the king?”"
+msgstr "“너희가 하는 이 일이 무엇이냐? 왕을 배반하려느냐?”"
+
+msgid "“Come! Let’s meet together in the villages in the plain of Ono.”"
+msgstr "“오라! 오노 평지의 마을들에서 함께 만나자.”"
+
+msgid "“They will not know or see, until we come in among them.”"
+msgstr "“그들이 알지도 보지도 못하게 하다가 우리가 그들 가운데로 들어가자.”"
+
+msgid "“They all conspired together to come and fight against Jerusalem.”"
+msgstr "“그들이 모두 함께 음모를 꾸며 와서 예루살렘을 치려고 하였습니다.”"
+
+msgid "“…and cause the work to cease.”"
+msgstr "“…공사를 그치게 하자.”"

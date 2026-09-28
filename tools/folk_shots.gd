@@ -7,7 +7,7 @@ extends SceneTree
 
 const PICKS := [0, 1, 5, 7, 8, 9, 10, 11]
 const SECTIONS := [0, 2, 5, 10, 11]
-const HOLD := 20
+const HOLD := 30
 
 var _out := "."
 var _menu: Control
@@ -44,7 +44,7 @@ func _process(_delta: float) -> bool:
 		if _pick >= PICKS.size() + SECTIONS.size():
 			return true
 		if _pick < PICKS.size():
-			_page._buttons[PICKS[_pick]].grab_focus()
+			_page._medals[PICKS[_pick]].grab_focus()
 		else:
 			_menu._picker._select(SECTIONS[_pick - PICKS.size()])
 	return false

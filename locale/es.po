@@ -959,14 +959,8 @@ msgstr "El equipo · Tercer jugador"
 msgid "The crew · Fourth player"
 msgstr "El equipo · Cuarto jugador"
 
-msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt. Every builder kept a sword at his side."
-msgstr "Coloca las piedras y levanta la muralla hilera por hilera, con un cesto de piedras a la espalda y un martillo al cinto. Cada constructor llevaba una espada a su lado."
 
-msgid "The burden-bearers carried their loads with one hand and held a weapon in the other: water for the mortar, stone and timber for the wall."
-msgstr "Los que llevaban cargas trabajaban con una mano y con la otra sostenían un arma: agua para la argamasa, piedra y madera para la muralla."
 
-msgid "Lays the beams and hangs the doors of each gate, with their bolts and bars."
-msgstr "Coloca las vigas y cuelga las puertas de cada entrada, con sus cerrojos y barras."
 
 msgid "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers."
 msgstr "La obra es grande y la muralla larga, y los constructores están dispersos a lo largo de ella. Donde suena el cuerno, el equipo se reúne."
@@ -980,8 +974,6 @@ msgstr "Le enfurece que alguien haya venido a buscar el bien del pueblo. Se burl
 msgid "The Ammonite · Ammon"
 msgstr "El amonita · Amón"
 
-msgid "Sanballat's companion, an official from Ammon. He jokes that a fox climbing on the wall would break it down, and sends letters to make Nehemiah afraid."
-msgstr "Compañero de Sanbalat, un funcionario de Amón. Bromea con que una zorra que subiera a la muralla la derribaría, y envía cartas para asustar a Nehemías."
 
 msgid "The Arab · Arabia"
 msgstr "El árabe · Arabia"
@@ -992,8 +984,6 @@ msgstr "Se ríe de la obra desde el principio, se une al complot contra la ciuda
 msgid "Sent by Sanballat and Geshem"
 msgstr "Enviado por Sanbalat y Guesem"
 
-msgid "He walks up to a worker with an open letter and an invitation to Ono, and waits. Go with him and you are led away from the wall. Keep working and he gives up."
-msgstr "Se acerca a un trabajador con una carta abierta y una invitación a Ono, y espera. Si vas con él, te aleja de la muralla. Si sigues trabajando, se rinde."
 
 msgid "Messenger"
 msgstr "Mensajero"
@@ -1043,8 +1033,6 @@ msgstr "Aún no lo conoces"
 msgid "Keep building. You will meet them on the wall."
 msgstr "Sigue construyendo. Los encontrarás en la muralla."
 
-msgid "↑ ↓   Choose          Esc   Back"
-msgstr "↑ ↓   Elegir          Esc   Atrás"
 
 msgid "Foes here"
 msgstr "Enemigos aquí"
@@ -1054,3 +1042,60 @@ msgstr "El trabajo sencillo"
 
 msgid "Everything the wall has asked of you, all at once."
 msgstr "Todo lo que la muralla te ha pedido, todo a la vez."
+
+msgid "Met %d of %d"
+msgstr "Conocidos: %d de %d"
+
+msgid "Friend"
+msgstr "Amigo"
+
+msgid "Foe"
+msgstr "Enemigo"
+
+msgid "Wears this player's colour"
+msgstr "Lleva el color de este jugador"
+
+msgid "← →   Choose          Drag   Turn          Esc   Back"
+msgstr "← →   Elegir          Arrastrar   Girar          Esc   Atrás"
+
+msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt."
+msgstr "Coloca las piedras y levanta la muralla hilera por hilera, con un cesto de piedras a la espalda y un martillo al cinto."
+
+msgid "Water for the mortar, stone and timber for the wall: the burden-bearers keep the builders supplied."
+msgstr "Agua para la argamasa, piedra y madera para la muralla: los cargadores mantienen abastecidos a los constructores."
+
+msgid "Lays the beams and hangs the doors of each gate. The long timbers take two to carry."
+msgstr "Coloca las vigas y cuelga las puertas de cada entrada. Las vigas largas se cargan entre dos."
+
+msgid "Sanballat’s companion, an official from Ammon. When jokes fail, he sends letters to make Nehemiah afraid."
+msgstr "Compañero de Sanbalat, un funcionario de Amón. Cuando las burlas no funcionan, envía cartas para asustar a Nehemías."
+
+msgid "He walks up to a worker with an open letter and waits. Go with him and you are led away from the wall. Keep working and he gives up."
+msgstr "Se acerca a un trabajador con una carta abierta y espera. Si vas con él, te aleja de la muralla. Si sigues trabajando, se rinde."
+
+msgid "“Among the builders, everyone wore his sword at his side, and so built.”"
+msgstr "“Cada uno de los constructores llevaba su espada ceñida a la cintura, y así edificaban.”"
+
+msgid "“Everyone with one of his hands did the work, and with the other held his weapon.”"
+msgstr "“Cada uno con una mano trabajaba en la obra, y con la otra sostenía el arma.”"
+
+msgid "“They laid its beams, and set up its doors, its bolts, and its bars.”"
+msgstr "“Colocaron sus vigas y pusieron sus puertas, sus cerrojos y sus barras.”"
+
+msgid "“Wherever you hear the sound of the trumpet, rally there to us.”"
+msgstr "“Dondequiera que oigan el sonido de la trompeta, reúnanse allí con nosotros.”"
+
+msgid "“What is this thing that you are doing? Will you rebel against the king?”"
+msgstr "“¿Qué es esto que están haciendo? ¿Se van a rebelar contra el rey?”"
+
+msgid "“Come! Let’s meet together in the villages in the plain of Ono.”"
+msgstr "“¡Ven! Reunámonos en las aldeas de la llanura de Ono.”"
+
+msgid "“They will not know or see, until we come in among them.”"
+msgstr "“No lo sabrán ni lo verán hasta que entremos en medio de ellos.”"
+
+msgid "“They all conspired together to come and fight against Jerusalem.”"
+msgstr "“Todos conspiraron juntos para venir a pelear contra Jerusalén.”"
+
+msgid "“…and cause the work to cease.”"
+msgstr "“…y hacer que cese la obra.”"
