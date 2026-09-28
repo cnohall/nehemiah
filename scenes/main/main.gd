@@ -32,6 +32,7 @@ const PLAYER_COLORS := Palette.CREW
 
 var hud: CanvasLayer = null
 var story: StoryPlayer = null
+var credits: CreditsRoll = null
 var _cam_snapped := false
 var _cam_base := Vector3.ZERO
 var _lead := Vector3.ZERO
@@ -59,6 +60,10 @@ func _ready() -> void:
 	director.story_ended.connect(story.close)
 	story.finished.connect(_on_story_finished)
 	story.start_now_requested.connect(director.force_story_end)
+	# After the ending story: the credits, then the end screen
+	credits = CreditsRoll.new()
+	add_child(credits)
+	credits.finished.connect(hud.show_end.bind(true))
 
 	NetworkManager.peer_connected.connect(_on_peer_connected)
 	NetworkManager.peer_disconnected.connect(_on_peer_disconnected)
@@ -136,7 +141,7 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 func _on_story_finished() -> void:
 	if GameState.phase == GameState.Phase.WON:
 		story.close()
-		hud.show_end(true)
+		credits.play()
 	else:
 		director.finish_reading()
 

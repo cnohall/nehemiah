@@ -1094,3 +1094,48 @@ msgstr "“그들이 모두 함께 음모를 꾸며 와서 예루살렘을 치�
 
 msgid "“…and cause the work to cease.”"
 msgstr "“…공사를 그치게 하자.”"
+
+msgid "Credits"
+msgstr "만든 사람들"
+
+msgid "A Corner Stone Games production"
+msgstr "Corner Stone Games 제작"
+
+msgid "Development"
+msgstr "개발"
+
+msgid "Game design"
+msgstr "게임 디자인"
+
+msgid "Scripture"
+msgstr "성경 본문"
+
+msgid "Sound"
+msgstr "효과음"
+
+msgid "Type"
+msgstr "글꼴"
+
+msgid "Made with"
+msgstr "제작 도구"
+
+msgid "Public domain · ebible.org"
+msgstr "퍼블릭 도메인 · ebible.org"
+
+msgid "Nehemiah 4:14 adapted"
+msgstr "느헤미야 4:14 일부 수정"
+
+msgid "by insydnis · CC-BY 3.0 · opengameart.org"
+msgstr "insydnis 작곡 · CC-BY 3.0 · opengameart.org"
+
+msgid "by yd · CC0 · opengameart.org"
+msgstr "yd 작곡 · CC0 · opengameart.org"
+
+msgid "“Remember me, my God, for good.”"
+msgstr "“나의 하느님, 나를 기억하시어 복을 내려 주십시오.”"
+
+msgid "Thank you for building with us."
+msgstr "함께 건축해 주셔서 감사합니다."
+
+msgid "Hold E   Faster          Esc   Skip"
+msgstr "E 누르고 있기   빠르게          Esc   건너뛰기"

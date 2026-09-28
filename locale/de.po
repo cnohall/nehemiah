@@ -1099,3 +1099,48 @@ msgstr "„Sie verschworen sich alle miteinander, zu kommen und gegen Jerusalem 
 
 msgid "“…and cause the work to cease.”"
 msgstr "„…und dem Werk ein Ende machen.“"
+
+msgid "Credits"
+msgstr "Mitwirkende"
+
+msgid "A Corner Stone Games production"
+msgstr "Eine Produktion von Corner Stone Games"
+
+msgid "Development"
+msgstr "Entwicklung"
+
+msgid "Game design"
+msgstr "Spieldesign"
+
+msgid "Scripture"
+msgstr "Bibeltext"
+
+msgid "Sound"
+msgstr "Klang"
+
+msgid "Type"
+msgstr "Schrift"
+
+msgid "Made with"
+msgstr "Erstellt mit"
+
+msgid "Public domain · ebible.org"
+msgstr "Gemeinfrei · ebible.org"
+
+msgid "Nehemiah 4:14 adapted"
+msgstr "Nehemia 4:14 angepasst"
+
+msgid "by insydnis · CC-BY 3.0 · opengameart.org"
+msgstr "von insydnis · CC-BY 3.0 · opengameart.org"
+
+msgid "by yd · CC0 · opengameart.org"
+msgstr "von yd · CC0 · opengameart.org"
+
+msgid "“Remember me, my God, for good.”"
+msgstr "„Gedenke meiner, mein Gott, zum Guten.“"
+
+msgid "Thank you for building with us."
+msgstr "Danke, dass ihr mit uns gebaut habt."
+
+msgid "Hold E   Faster          Esc   Skip"
+msgstr "E halten   Schneller          Esc   Überspringen"

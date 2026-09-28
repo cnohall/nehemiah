@@ -1099,3 +1099,48 @@ msgstr "“Todos conspiraron juntos para venir a pelear contra Jerusalén.”"
 
 msgid "“…and cause the work to cease.”"
 msgstr "“…y hacer que cese la obra.”"
+
+msgid "Credits"
+msgstr "Créditos"
+
+msgid "A Corner Stone Games production"
+msgstr "Una producción de Corner Stone Games"
+
+msgid "Development"
+msgstr "Desarrollo"
+
+msgid "Game design"
+msgstr "Diseño del juego"
+
+msgid "Scripture"
+msgstr "Texto bíblico"
+
+msgid "Sound"
+msgstr "Sonido"
+
+msgid "Type"
+msgstr "Tipografía"
+
+msgid "Made with"
+msgstr "Hecho con"
+
+msgid "Public domain · ebible.org"
+msgstr "Dominio público · ebible.org"
+
+msgid "Nehemiah 4:14 adapted"
+msgstr "Nehemías 4:14 adaptado"
+
+msgid "by insydnis · CC-BY 3.0 · opengameart.org"
+msgstr "de insydnis · CC-BY 3.0 · opengameart.org"
+
+msgid "by yd · CC0 · opengameart.org"
+msgstr "de yd · CC0 · opengameart.org"
+
+msgid "“Remember me, my God, for good.”"
+msgstr "“Acuérdate de mí, Dios mío, para bien.”"
+
+msgid "Thank you for building with us."
+msgstr "Gracias por construir con nosotros."
+
+msgid "Hold E   Faster          Esc   Skip"
+msgstr "Mantén E   Más rápido          Esc   Saltar"

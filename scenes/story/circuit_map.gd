@@ -35,6 +35,8 @@ var section := 0:
 			_diorama.focus_on(section + 0.5)
 var inspect := false
 var finale := false
+## No gate plaques or foes over the land — the credits roll over it
+var quiet := false
 var picker := false
 ## Picker mode, per section: best marks (-1 = never finished) and whether it may be picked
 var best: Array = []
@@ -221,6 +223,8 @@ func _draw_overlay() -> void:
 		o.draw_polyline(line, Color(UiStyle.GOLD, 0.35 + 0.3 * pulse), unit * 0.012, true)
 		o.draw_polyline(line, Color(1.0, 0.93, 0.72, 0.8 + 0.2 * pulse), unit * 0.005, true)
 
+	if quiet:
+		return
 	var centre := _project(_diorama.unit_to_world(CircuitDiorama.CENTER))
 	var font := UiStyle.CINZEL_SEMI
 	for i in CircuitDiorama.GATES.size():
