@@ -89,7 +89,7 @@ func join(code: String) -> MultiplayerPeer:
 			break
 		await get_tree().create_timer(SEARCH_RETRY).timeout
 	if not found:
-		error = "No room with code %s." % code.to_upper()
+		error = tr("No room with code %s.") % code.to_upper()
 		return null
 	var host_id: String = found[0].owner_product_user_id
 	var peer := EOSGMultiplayerPeer.new()

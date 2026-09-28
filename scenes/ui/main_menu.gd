@@ -270,7 +270,7 @@ func _show_default_status() -> void:
 	elif NetworkManager.online_error().is_empty():
 		net_status.text = "Connecting to online services…"
 	else:
-		net_status.text = "Online unavailable: %s — LAN play only" % NetworkManager.online_error()
+		net_status.text = tr("Online unavailable: %s — LAN play only") % tr(NetworkManager.online_error())
 
 # ── Host ───────────────────────────────────────────────────
 

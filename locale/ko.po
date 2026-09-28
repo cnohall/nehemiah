@@ -1256,3 +1256,78 @@ msgstr "안정된 손, 괜찮은 조준"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "빠르고 정확하며, 일을 두고 지킴"
+
+msgid "Skip"
+msgstr "건너뛰기"
+
+msgid "Tap to continue"
+msgstr "탭하여 계속"
+
+msgid "IP address"
+msgstr "IP 주소"
+
+msgid "Enter the 5-letter room code from the host's screen — or their IP address on the same Wi-Fi."
+msgstr "호스트 화면에 있는 다섯 글자 방 코드를 입력하거나, 같은 Wi-Fi라면 호스트의 IP 주소를 입력하세요."
+
+msgid "Room code or address"
+msgstr "방 코드 또는 주소"
+
+msgid "e.g. KRTWM"
+msgstr "예: KRTWM"
+
+msgid "Online plugin missing"
+msgstr "온라인 플러그인이 없어요"
+
+msgid "Choose a section"
+msgstr "구간 선택"
+
+msgid "Connecting to online services…"
+msgstr "온라인 서비스에 연결하는 중…"
+
+msgid "Could not create an online room."
+msgstr "온라인 방을 만들지 못했어요."
+
+msgid "Could not open the online socket."
+msgstr "온라인 연결을 열지 못했어요."
+
+msgid "Could not publish the room code."
+msgstr "방 코드를 공개하지 못했어요."
+
+msgid "Could not reach the host."
+msgstr "호스트에 연결할 수 없어요."
+
+msgid "Enter a room code or address first."
+msgstr "먼저 방 코드나 주소를 입력하세요."
+
+msgid "Host a room"
+msgstr "방 만들기"
+
+msgid "Join with code"
+msgstr "코드로 참여"
+
+msgid "No room with code %s."
+msgstr "코드 %s인 방이 없어요."
+
+msgid "Online play not configured"
+msgstr "온라인 플레이가 설정되지 않았어요"
+
+msgid "Online services aren't ready — check your connection."
+msgstr "온라인 서비스가 준비되지 않았어요. 연결을 확인하세요."
+
+msgid "Online services failed to start"
+msgstr "온라인 서비스를 시작하지 못했어요"
+
+msgid "Online unavailable: %s — LAN play only"
+msgstr "온라인 사용 불가: %s — 로컬 네트워크 플레이만 가능"
+
+msgid "Online — host for a room code, or join with one"
+msgstr "온라인 — 방을 만들어 코드를 받거나 코드로 참여하세요"
+
+msgid "Opening a room…"
+msgstr "방을 여는 중…"
+
+msgid "Room code — tap to copy"
+msgstr "방 코드 — 탭하여 복사"
+
+msgid "The host didn't answer."
+msgstr "호스트가 응답하지 않았어요."

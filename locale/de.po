@@ -1264,3 +1264,78 @@ msgstr "Ruhige Hände, ordentliches Zielen"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "Schnell, treffsicher, verlässt die Arbeit zum Wachen"
+
+msgid "Skip"
+msgstr "Überspringen"
+
+msgid "Tap to continue"
+msgstr "Tippen zum Fortfahren"
+
+msgid "IP address"
+msgstr "IP-Adresse"
+
+msgid "Enter the 5-letter room code from the host's screen — or their IP address on the same Wi-Fi."
+msgstr "Gib den fünfstelligen Raumcode vom Bildschirm des Hosts ein – oder seine IP-Adresse im selben WLAN."
+
+msgid "Room code or address"
+msgstr "Raumcode oder Adresse"
+
+msgid "e.g. KRTWM"
+msgstr "z. B. KRTWM"
+
+msgid "Online plugin missing"
+msgstr "Online-Plugin fehlt"
+
+msgid "Choose a section"
+msgstr "Abschnitt wählen"
+
+msgid "Connecting to online services…"
+msgstr "Verbinde mit den Online-Diensten…"
+
+msgid "Could not create an online room."
+msgstr "Online-Raum konnte nicht erstellt werden."
+
+msgid "Could not open the online socket."
+msgstr "Online-Verbindung konnte nicht geöffnet werden."
+
+msgid "Could not publish the room code."
+msgstr "Raumcode konnte nicht veröffentlicht werden."
+
+msgid "Could not reach the host."
+msgstr "Der Host ist nicht erreichbar."
+
+msgid "Enter a room code or address first."
+msgstr "Gib zuerst einen Raumcode oder eine Adresse ein."
+
+msgid "Host a room"
+msgstr "Raum eröffnen"
+
+msgid "Join with code"
+msgstr "Mit Code beitreten"
+
+msgid "No room with code %s."
+msgstr "Kein Raum mit dem Code %s."
+
+msgid "Online play not configured"
+msgstr "Online-Spiel nicht eingerichtet"
+
+msgid "Online services aren't ready — check your connection."
+msgstr "Die Online-Dienste sind nicht bereit – prüfe deine Verbindung."
+
+msgid "Online services failed to start"
+msgstr "Die Online-Dienste konnten nicht starten"
+
+msgid "Online unavailable: %s — LAN play only"
+msgstr "Online nicht verfügbar: %s – nur LAN-Spiel"
+
+msgid "Online — host for a room code, or join with one"
+msgstr "Online – eröffne einen Raum für einen Code oder tritt mit einem bei"
+
+msgid "Opening a room…"
+msgstr "Raum wird eröffnet…"
+
+msgid "Room code — tap to copy"
+msgstr "Raumcode – zum Kopieren tippen"
+
+msgid "The host didn't answer."
+msgstr "Der Host hat nicht geantwortet."

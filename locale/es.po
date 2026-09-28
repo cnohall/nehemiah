@@ -1264,3 +1264,78 @@ msgstr "Manos firmes, buena puntería"
 
 msgid "Quick, sure shot, leaves the work to guard"
 msgstr "Rápido, certero, deja la obra para vigilar"
+
+msgid "Skip"
+msgstr "Saltar"
+
+msgid "Tap to continue"
+msgstr "Toca para continuar"
+
+msgid "IP address"
+msgstr "Dirección IP"
+
+msgid "Enter the 5-letter room code from the host's screen — or their IP address on the same Wi-Fi."
+msgstr "Escribe el código de sala de cinco letras de la pantalla del anfitrión, o su dirección IP en la misma red wifi."
+
+msgid "Room code or address"
+msgstr "Código de sala o dirección"
+
+msgid "e.g. KRTWM"
+msgstr "p. ej. KRTWM"
+
+msgid "Online plugin missing"
+msgstr "Falta el complemento en línea"
+
+msgid "Choose a section"
+msgstr "Elegir un tramo"
+
+msgid "Connecting to online services…"
+msgstr "Conectando con los servicios en línea…"
+
+msgid "Could not create an online room."
+msgstr "No se pudo crear la sala en línea."
+
+msgid "Could not open the online socket."
+msgstr "No se pudo abrir la conexión en línea."
+
+msgid "Could not publish the room code."
+msgstr "No se pudo publicar el código de sala."
+
+msgid "Could not reach the host."
+msgstr "No se pudo contactar al anfitrión."
+
+msgid "Enter a room code or address first."
+msgstr "Primero escribe un código de sala o una dirección."
+
+msgid "Host a room"
+msgstr "Crear una sala"
+
+msgid "Join with code"
+msgstr "Unirse con código"
+
+msgid "No room with code %s."
+msgstr "No hay ninguna sala con el código %s."
+
+msgid "Online play not configured"
+msgstr "El juego en línea no está configurado"
+
+msgid "Online services aren't ready — check your connection."
+msgstr "Los servicios en línea no están listos: revisa tu conexión."
+
+msgid "Online services failed to start"
+msgstr "No se pudieron iniciar los servicios en línea"
+
+msgid "Online unavailable: %s — LAN play only"
+msgstr "En línea no disponible: %s. Solo juego en red local"
+
+msgid "Online — host for a room code, or join with one"
+msgstr "En línea: crea una sala para obtener un código o únete con uno"
+
+msgid "Opening a room…"
+msgstr "Abriendo una sala…"
+
+msgid "Room code — tap to copy"
+msgstr "Código de sala: toca para copiar"
+
+msgid "The host didn't answer."
+msgstr "El anfitrión no respondió."
