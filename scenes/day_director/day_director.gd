@@ -9,7 +9,8 @@ extends Node
 # Moving into a new circuit section (Nehemiah 3) resets the wall to bare foundations.
 
 const DAWN_TIME        := 5.0
-const DUSK_TIME        := 9.0   # long enough to read the tally
+const DUSK_TIME        := 9.0   # long enough to read the tally (title screen: nobody to wait for)
+const DUSK_MIN         := 4.0   # the cheer plays out even if everyone is ready at once
 const CELEBRATE_STEP   := 0.12  # seconds between each finished unit's flourish
 const NAV_REBAKE_DELAY := 0.4
 const REPAIR_ON_DAWN   := 0.5   # fraction of lost health restored overnight
@@ -17,8 +18,9 @@ const SUN_RESYNC       := 2.0   # seconds between sun-clock corrections to clien
 
 # Every peer: Main shows/hides the StoryPlayer on these
 signal story_started(day: int)
-signal story_waiting_changed(count: int)
 signal story_ended
+# Every peer: who the story / tally is still waiting on ("story" | "tally" | "" = none)
+signal ready_changed(kind: String, waiting: Array)
 # Every peer: the day's numbers, for the dusk tally card
 signal day_tallied(stats: Dictionary)
 
@@ -36,7 +38,10 @@ var _targets: Array = []   # units that must be finished today
 var _timer := 0.0
 var _nav_rebake_in := -1.0
 var _story_day := 0          # server: last day whose story has played
-var _story_readers := {}     # server: peer_id → true while still reading
+# Server: a ready check between days — the story ("story") or the dusk tally ("tally")
+# waits until every peer in the scene is through. peer_id → true while not yet ready.
+var _wait_kind := ""
+var _waiting := {}
 # Server: today's numbers. "crew" is peer_id → { loads, foes }
 var _stats := {}
 var _breaches_at_dawn := 0
@@ -93,7 +98,8 @@ func _process(delta: float) -> void:
 			_tick_sun(delta)
 		GameState.Phase.DUSK:
 			_timer -= delta
-			if _timer <= 0.0:
+			if _timer <= 0.0 and _waiting.is_empty():
+				_close_wait()
 				# A replay is one section: it ends when that section stands
 				var pos := GameState.day_in_section(GameState.current_day)
 				var done := _section_done()
@@ -204,7 +210,13 @@ func _end_day(nightfall := false) -> void:
 		_rate_section()
 	for id: int in _scene_peers():
 		_tally.rpc_id(id, _stats)
-	_timer = DUSK_TIME
+	# The tally stays up until everyone has read it (playtest 2); the title screen's bot
+	# crew has nobody to wait for
+	if GameState.attract:
+		_timer = DUSK_TIME
+	else:
+		_timer = DUSK_MIN
+		_open_wait("tally")
 
 # Server: the section's last unit stands — one mark each for pace, no breaches, a sound wall
 func _rate_section() -> void:
@@ -255,54 +267,75 @@ func _on_game_over() -> void:
 # Server: everyone present reads; the day begins once they're all through
 func _start_story() -> void:
 	_story_day = GameState.current_day
-	_story_readers.clear()
-	for id: int in _scene_peers():
-		_story_readers[id] = true
 	GameState.set_phase(GameState.Phase.STORY)
 	for id: int in _scene_peers():
 		_show_story.rpc_id(id, _story_day)
-	_broadcast_waiting()
+	_open_wait("story")
 
-## Every peer: the local reader is through (or skipped)
-func finish_reading() -> void:
-	if multiplayer.is_server():
-		_reader_done(1)
-	else:
-		_story_done.rpc_id(1)
-
-## Server: host pressed "Begin now" — don't wait for the slow readers
-func force_story_end() -> void:
-	if multiplayer.is_server() and GameState.phase == GameState.Phase.STORY:
-		_end_story()
+func _end_story() -> void:
+	_close_wait()
+	for id: int in _scene_peers():
+		_hide_story.rpc_id(id)
+	_begin_day()
 
 ## Server: a late joiner sees the story in progress (not waited on)
 func send_story_to(peer_id: int) -> void:
 	if GameState.phase == GameState.Phase.STORY:
 		_show_story.rpc_id(peer_id, _story_day)
-		_set_story_waiting.rpc_id(peer_id, _story_readers.size())
+	if not _wait_kind.is_empty():
+		_set_ready_state.rpc_id(peer_id, _wait_kind, _waiting.keys())
+
+# ── Ready check (story cards, dusk tally) ──────────────────
+
+## Every peer: the local player is through the story / ready to leave the tally
+func mark_ready() -> void:
+	if multiplayer.is_server():
+		_peer_ready(1)
+	else:
+		_ready_from_peer.rpc_id(1)
+
+## Server: host pressed "Begin now" — don't wait for the slow ones
+func force_ready() -> void:
+	if not multiplayer.is_server():
+		return
+	match _wait_kind:
+		"story":
+			if GameState.phase == GameState.Phase.STORY:
+				_end_story()
+		"tally":
+			_waiting.clear()
+			_broadcast_ready()
+
+func _open_wait(kind: String) -> void:
+	_wait_kind = kind
+	_waiting.clear()
+	for id: int in _scene_peers():
+		_waiting[id] = true
+	_broadcast_ready()
+
+func _close_wait() -> void:
+	if _wait_kind.is_empty():
+		return
+	_wait_kind = ""
+	_waiting.clear()
+	_broadcast_ready()
 
 @rpc("any_peer", "reliable")
-func _story_done() -> void:
+func _ready_from_peer() -> void:
 	if multiplayer.is_server():
-		_reader_done(multiplayer.get_remote_sender_id())
+		_peer_ready(multiplayer.get_remote_sender_id())
 
-func _reader_done(id: int) -> void:
-	if GameState.phase != GameState.Phase.STORY or not _story_readers.erase(id):
+func _peer_ready(id: int) -> void:
+	if _wait_kind.is_empty() or not _waiting.erase(id):
 		return
-	if _story_readers.is_empty():
-		_end_story()
+	if _waiting.is_empty() and _wait_kind == "story":
+		_end_story()   # the tally leaves at the end of the dusk (_process)
 	else:
-		_broadcast_waiting()
+		_broadcast_ready()
 
-func _end_story() -> void:
-	_story_readers.clear()
+func _broadcast_ready() -> void:
 	for id: int in _scene_peers():
-		_hide_story.rpc_id(id)
-	_begin_day()
-
-func _broadcast_waiting() -> void:
-	for id: int in _scene_peers():
-		_set_story_waiting.rpc_id(id, _story_readers.size())
+		_set_ready_state.rpc_id(id, _wait_kind, _waiting.keys())
 
 # Host plus every client whose Main scene exists — a peer still loading in has
 # nowhere to receive these RPCs (it catches up via send_story_to)
@@ -315,15 +348,15 @@ func _scene_peers() -> Array[int]:
 
 func _on_peer_left(id: int) -> void:
 	if multiplayer.is_server():
-		_reader_done(id)
+		_peer_ready(id)
 
 @rpc("authority", "call_local", "reliable")
 func _show_story(day: int) -> void:
 	story_started.emit(day)
 
 @rpc("authority", "call_local", "reliable")
-func _set_story_waiting(count: int) -> void:
-	story_waiting_changed.emit(count)
+func _set_ready_state(kind: String, waiting: Array) -> void:
+	ready_changed.emit(kind, waiting)
 
 @rpc("authority", "call_local", "reliable")
 func _hide_story() -> void:

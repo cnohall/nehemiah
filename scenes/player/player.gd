@@ -643,6 +643,10 @@ func _play_action(anim_base: String) -> void:
 # ── Interact / Drop ────────────────────────────────────────
 
 func _handle_interact() -> void:
+	# At dusk [E] is held to say you're ready (the tally's ReadyRow), not to pick things up
+	if GameState.phase == GameState.Phase.DUSK and brain == null:
+		_consume("interact")
+		return
 	if _consume("interact"):
 		_server_interact.rpc_id(1, global_position)
 	if _consume("drop"):

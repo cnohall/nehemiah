@@ -721,6 +721,22 @@ msgstr "지금 시작"
 msgid "E · Click   Continue          Esc   Skip"
 msgstr "E · 클릭   계속          Esc   건너뛰기"
 
+msgid "E · Click   Next          Esc   I'm ready"
+msgstr "E · 클릭   다음          Esc   준비 완료"
+
+msgid "Hold %s when you're ready"
+msgstr "준비되면 %s 누르고 있기"
+
+msgid "I'm ready"
+msgstr "준비 완료"
+
+msgid "Everyone's ready"
+msgstr "모두 준비됨"
+
+msgid "Waiting for %d builder"
+msgid_plural "Waiting for %d builders"
+msgstr[0] "건축가 %d명을 기다리는 중"
+
 msgid "Section %s of %s · Day %d"
 msgstr "%s/%s 구간 · %d일차"
 

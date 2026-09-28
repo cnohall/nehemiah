@@ -366,6 +366,23 @@ msgstr ""
 msgid "E · Click   Continue          Esc   Skip"
 msgstr ""
 
+msgid "E · Click   Next          Esc   I'm ready"
+msgstr ""
+
+msgid "Hold %s when you're ready"
+msgstr ""
+
+msgid "I'm ready"
+msgstr ""
+
+msgid "Everyone's ready"
+msgstr ""
+
+msgid "Waiting for %d builder"
+msgid_plural "Waiting for %d builders"
+msgstr[0] ""
+msgstr[1] ""
+
 #: scenes\game_state\game_state.gd:42
 msgid "Each priest builds in front of his own house — mind the narrow lanes"
 msgstr ""

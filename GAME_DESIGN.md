@@ -114,8 +114,8 @@ Three rules, each on by default and each switched off from the command line to A
 **28 Sep 2026 — 2 human players, 0 bots.** Test: `tools/playtest2_test.gd`
 
 **Waiting for players (one shared widget):**
-- ☐ **Tally card waits for everyone** (important). Today it vanishes after the 9 s dusk. Reuse the story's wait-for-readers flow; on a section's last day the tally becomes the first story card, so there's one screen to confirm, not two
-- ☐ **Ready state**: hold the button to mark ready; each portrait shows a tick. Replaces the separate "Skip" vs "Continue / Begin now", which confused players in co-op: one "Ready (2/3)" button, and the host can hold to force everyone on
+- ✅ **Tally card waits for everyone** (important). One ready check in `DayDirector` (`ready_changed`, `mark_ready`, `force_ready`) serves the story cards and the dusk tally. The tally stays up (after a 4 s minimum for the cheer) until every person in the scene is ready; the title screen's bot crew still moves on by itself after 9 s. At dusk [E] no longer picks things up. Still two screens at a section's end (tally, then the story); fold them together only if that still feels clunky
+- ✅ **Ready state** (`ReadyRow`): hold [E] / A (0.6 s, a bar fills) or click to say you're ready; with company, a chip per person (colour, "You" or their trade, a drawn tick when ready), "Waiting for N builders", and the host's "Begin now". In the story, with company, Esc reads "I'm ready" instead of "Skip" (the old skip-vs-continue confusion)
 - ☐ **Loading panel**: while loading, list the crew (Steam / platform names) and show who's in, who's ready and who's still loading
 
 **Flow:**

@@ -18,7 +18,6 @@ const TEXT_WIDTH  := 1080.0
 var _slides: Array = []
 var _index := -1
 var _done := false
-var _waiting := 0
 
 var _root: Control
 var _frame: Control           # the "camera": art + backdrop, scaled for the drift
@@ -33,9 +32,7 @@ var _verse: Label
 var _ref: Label
 var _page: Label
 var _hint: Label
-var _wait_row: Control
-var _wait_label: Label
-var _start_now: Button
+var _ready_row: ReadyRow
 
 var _slide_tween: Tween
 var _type_tween: Tween
@@ -53,17 +50,23 @@ func play(slides: Array) -> void:
 	_slides = slides
 	_index = -1
 	_done = false
-	_waiting = 0
-	_wait_row.hide()
+	_ready_row.hide()
+	# With company, Esc doesn't skip the day — it says you're through and waits for the rest
+	_hint.text = "E · Click   Next          Esc   I'm ready" if _with_company() \
+		else "E · Click   Continue          Esc   Skip"
 	_hint.show()
 	_root.show()
 	UiFx.fade_in(_root, 0.7)
 	_advance()
 
-## Crew members still reading (from the server); shown once this reader is through
-func set_waiting(count: int) -> void:
-	_waiting = count
-	_refresh_wait()
+## Who's still reading (DayDirector.ready_changed); shown once this reader is through
+func set_ready_state(kind: String, waiting: Array) -> void:
+	if kind == "story":
+		_ready_row.set_waiting(waiting)
+
+func _with_company() -> bool:
+	return get_tree().get_nodes_in_group("players").any(
+		func(p): return not p.is_bot() and p.worker_id() != multiplayer.get_unique_id())
 
 func close() -> void:
 	if not _root.visible:
@@ -194,16 +197,11 @@ func _finish() -> void:
 		_type_tween.kill()
 	_reveal_all()
 	_hint.hide()
-	_refresh_wait()
 	finished.emit()
-
-func _refresh_wait() -> void:
-	var want := _done and _waiting > 0 and _root.visible
-	_wait_row.visible = want
-	if not want:
-		return
-	_wait_label.text = tr_n("Waiting for %d builder still reading", "Waiting for %d builders still reading", _waiting) % _waiting
-	_start_now.visible = multiplayer.is_server()
+	# Who else is still reading — only worth a row with company (the ending's credits
+	# follow straight on, nothing waits there)
+	_ready_row.visible = _with_company() and GameState.phase == GameState.Phase.STORY
+	_ready_row.refresh()
 
 func _kill_tweens() -> void:
 	for tw: Tween in [_slide_tween, _type_tween, _drift_tween]:
@@ -306,21 +304,12 @@ func _build() -> void:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	footer.add_child(spacer)
 
-	_wait_row = HBoxContainer.new()
-	_wait_row.add_theme_constant_override("separation", 20)
-	footer.add_child(_wait_row)
-	_wait_label = _label(&"Caption", 18, Color(UiStyle.CREAM, 0.75), false)
-	_wait_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_wait_row.add_child(_wait_label)
-	_start_now = Button.new()
-	_start_now.theme_type_variation = &"GhostButton"
-	_start_now.text = "Begin now"
-	_start_now.add_theme_color_override("font_color", UiStyle.CREAM)
-	_start_now.pressed.connect(start_now_requested.emit)
-	_wait_row.add_child(_start_now)
+	_ready_row = ReadyRow.new(true)
+	_ready_row.hide()
+	_ready_row.begin_now.connect(start_now_requested.emit)
+	footer.add_child(_ready_row)
 
 	_hint = _label(&"Eyebrow", 13, Color(UiStyle.CREAM, 0.55), false)
-	_hint.text = "E · Click   Continue          Esc   Skip"
 	footer.add_child(_hint)
 
 func _label(variation: StringName, font_size: int, color: Color, wrap := true) -> Label:

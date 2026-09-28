@@ -721,6 +721,23 @@ msgstr "Empezar ya"
 msgid "E · Click   Continue          Esc   Skip"
 msgstr "E · Clic   Continuar          Esc   Saltar"
 
+msgid "E · Click   Next          Esc   I'm ready"
+msgstr "E · Clic   Siguiente          Esc   Estoy listo"
+
+msgid "Hold %s when you're ready"
+msgstr "Mantén %s cuando estés listo"
+
+msgid "I'm ready"
+msgstr "Estoy listo"
+
+msgid "Everyone's ready"
+msgstr "Todos listos"
+
+msgid "Waiting for %d builder"
+msgid_plural "Waiting for %d builders"
+msgstr[0] "Esperando a %d constructor"
+msgstr[1] "Esperando a %d constructores"
+
 msgid "Section %s of %s · Day %d"
 msgstr "Tramo %s de %s · Día %d"
 

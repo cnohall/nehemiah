@@ -6,6 +6,7 @@ extends SceneTree
 # - a worker who falls with nobody else standing gets back up on their own, at full health
 # - [E] at a finished wall from outside climbs the worker over to the inside
 # - hung gate doors are on the enemies-only layer, not one workers collide with
+# - the dusk tally holds until the crew is ready, then the next day begins
 # Exit code 0 = every check passed.
 
 var _main: Node3D
@@ -32,7 +33,7 @@ func _process(delta: float) -> bool:
 		_gs = root.get_node("GameState")
 		_player = _main.get_node("Players").get_child(0)
 	_t += delta
-	if _t > 60.0:
+	if _t > 90.0:
 		_check(false, "timed out in " + _state)
 		return _finish()
 	match _state:
@@ -73,6 +74,22 @@ func _process(delta: float) -> bool:
 				if _gs.has_gate():
 					_check(gate._door_body.collision_layer & 2 == 0 and gate._door_body.collision_layer & _player.collision_mask == 0,
 						"gate doors don't block workers (layer %d)" % gate._door_body.collision_layer)
+				_main.director._end_day()
+				_mark = _t
+				_state = "tally"
+		"tally":
+			# Long past the old 9 s dusk: still waiting, until this player says ready
+			if _t - _mark > 12.0:
+				_check(_gs.phase == _gs.Phase.DUSK, "tally waits for the crew (phase %d)" % _gs.phase)
+				_main.director.mark_ready()
+				_mark = _t
+				_state = "after_ready"
+		"after_ready":
+			if _gs.phase != _gs.Phase.DUSK:
+				_check(_t - _mark < 1.0, "ready → the next day (%.1f s)" % (_t - _mark))
+				return _finish()
+			if _t - _mark > 3.0:
+				_check(false, "still at dusk after ready")
 				return _finish()
 	return false
 

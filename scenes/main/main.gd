@@ -64,10 +64,13 @@ func _ready() -> void:
 	story = StoryPlayer.new()
 	add_child(story)
 	director.story_started.connect(func(day: int): story.play(StoryData.slides_for_day(day)))
-	director.story_waiting_changed.connect(story.set_waiting)
+	director.ready_changed.connect(story.set_ready_state)
+	director.ready_changed.connect(hud.set_ready_state)
+	hud.ready_pressed.connect(director.mark_ready)
+	hud.begin_now_requested.connect(director.force_ready)
 	director.story_ended.connect(story.close)
 	story.finished.connect(_on_story_finished)
-	story.start_now_requested.connect(director.force_story_end)
+	story.start_now_requested.connect(director.force_ready)
 	# After the ending story: the credits, then the end screen
 	credits = CreditsRoll.new()
 	add_child(credits)
@@ -192,7 +195,7 @@ func _on_story_finished() -> void:
 		story.close()
 		credits.play()
 	else:
-		director.finish_reading()
+		director.mark_ready()
 
 # The finishing blow lands heavy: a breath of slow motion, then back to speed
 func _slowmo() -> void:

@@ -38,8 +38,8 @@ func _process(delta: float) -> bool:
 	if _frame == 3:
 		_main.director.begin()
 	match gs.phase:
-		gs.Phase.STORY:
-			_main.director.force_story_end()
+		gs.Phase.STORY, gs.Phase.DUSK:
+			_main.director.force_ready()
 		gs.Phase.WORK:
 			_main.director._end_day()
 		gs.Phase.WON:

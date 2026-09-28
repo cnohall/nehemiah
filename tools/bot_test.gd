@@ -81,8 +81,8 @@ func _process(delta: float) -> bool:
 					b._target.needs(p.carried_kind) if is_instance_valid(b._target) and b._target.has_method("needs") else "?"])
 		print("  phase=%d done=%d/%d breaches=%d" % [gs.phase, gs.targets_done, gs.targets_total, gs.breaches])
 	match gs.phase:
-		gs.Phase.STORY:
-			_main.director.force_story_end()
+		gs.Phase.STORY, gs.Phase.DUSK:
+			_main.director.force_ready()
 		gs.Phase.WON:
 			print("PASS: %s stands — %d breaches, %.0f s" % [gs.SECTIONS[_section]["name"], gs.breaches, _t])
 			return _finish(0)
@@ -122,8 +122,8 @@ func _network(_delta: float) -> bool:
 		if players.size() - bots.size() >= 2 and gs.phase == gs.Phase.GATHER:
 			print("Host: client in, %d bots — beginning" % bots.size())
 			_main.director.begin()
-		if gs.phase == gs.Phase.STORY:
-			_main.director.force_story_end()
+		if gs.phase in [gs.Phase.STORY, gs.Phase.DUSK]:
+			_main.director.force_ready()
 		if _t > 70.0:
 			return _finish(0)
 		return false

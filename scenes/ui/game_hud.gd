@@ -5,6 +5,8 @@ extends CanvasLayer
 
 signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDirector)
 signal bots_changed      # host changed Settings.bot_count / bot_skill (Main refits the crew)
+signal ready_pressed         # local player is done with the dusk tally (Main → DayDirector)
+signal begin_now_requested   # host: go on without the ones still at the tally
 
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 const BANNER_HOLD   := 3.2
@@ -17,7 +19,8 @@ const BANNER_PAD    := 28.0    # space above and below the banner text
 const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
 const TALLY_H       := 118.0   # …plus the numbers row…
 const CREW_H        := 40.0    # …plus one line per worker's share (multiplayer)
-const MARKS_H       := 64.0    # …plus the section's marks on its last day
+const MARKS_H       := 64.0    # …plus the section's marks on its last day…
+const READY_H       := 56.0    # …plus who's ready to go on
 const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
@@ -71,6 +74,8 @@ var _horn_row: Control
 var _pause_what: Label       # controls card: what the pause key does
 var _host_refreshers: Array[Callable] = []   # bot / difficulty rows (gather panel + pause menu)
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
+var _ready_row: ReadyRow      # under the tally: hold [E] to go on, who else is ready
+var _tally_waiting: Array = []   # latest DayDirector ready state for the tally
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 var _next_line: Label        # day plaque: what to do next, for the local player
 var _next_poll := 0.0
@@ -407,8 +412,20 @@ func _on_breaches_changed(count: int) -> void:
 
 # ── Phase banners / end screen ─────────────────────────────
 
+## DayDirector.ready_changed: who the dusk tally is still waiting on
+func set_ready_state(kind: String, waiting: Array) -> void:
+	if kind != "tally":
+		return
+	_tally_waiting = waiting
+	if _ready_row != null and is_instance_valid(_ready_row):
+		_ready_row.set_waiting(waiting)
+
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	_refresh_progress()
+	# A tally held open for the ready check goes when the dusk does
+	if phase != GameState.Phase.DUSK and _tally != null and _tally.visible:
+		_tally.hide()
+		banner.hide()
 	gather.visible = phase == GameState.Phase.GATHER
 	_refresh_controls()
 	var section := GameState.get_current_section()
@@ -458,6 +475,8 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 	_banner_tween = create_tween()
 	_banner_tween.tween_property(banner, "modulate:a", 1.0, 0.5).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_banner_tween.tween_property(banner_sub, "modulate:a", 1.0, 0.5)
+	if hold < 0.0:
+		return   # stays until the phase moves on (the dusk tally)
 	_banner_tween.tween_interval(hold)
 	_banner_tween.tween_property(banner, "modulate:a", 0.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_banner_tween.tween_callback(banner.hide)
@@ -591,10 +610,20 @@ func show_tally(stats: Dictionary) -> void:
 	var rated := stats.has("marks")
 	if rated:
 		_tally.add_child(_marks_line(stats))
+	# The tally stays until everyone is ready (playtest 2) — the title screen's crew
+	# has nobody to ask, so there it fades as before
+	var waits := not GameState.attract
+	if waits:
+		_ready_row = ReadyRow.new(false)
+		_ready_row.holdable = true
+		_ready_row.ready_pressed.connect(ready_pressed.emit)
+		_ready_row.begin_now.connect(begin_now_requested.emit)
+		_tally.add_child(_ready_row)
+		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0)
+	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0) + (READY_H if waits else 0.0)
 	_tally.show()
-	_show_banner(title, sub, TALLY_HOLD, true)
+	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
 
 # The section's three marks, each with what earned it (or what it needed)
