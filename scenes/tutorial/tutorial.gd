@@ -180,3 +180,18 @@ func _build() -> void:
 	_leave.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_leave.pressed.connect(func(): _main.hud._leave())
 	vb.add_child(_leave)
+	if Mobile.enabled():
+		_compact_for_phone()
+
+# Phones: the dp-sized theme (CanvasLayers don't inherit the root's), a narrower, smaller
+# plaque tucked under the one-row day plaque, clear of the stick and the buttons
+func _compact_for_phone() -> void:
+	_panel.theme = Mobile.theme
+	_panel.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(16, 8), 0.93))
+	_panel.custom_minimum_size.x = 440
+	_text.custom_minimum_size.x = 410
+	_title.add_theme_font_size_override("font_size", 20)
+	_text.add_theme_font_size_override("font_size", 14)
+	_count.add_theme_font_size_override("font_size", 11)
+	var ins := Mobile.safe_insets()
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, int(56 + ins.y))
