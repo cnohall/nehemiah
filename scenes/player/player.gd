@@ -105,6 +105,7 @@ var carried_kind: String = ""
 var helping_id := 0
 var downed := false
 var slot_color := Color.WHITE   # ring / HUD colour, set by Main
+var _slot := 0                  # crew slot, set by Main (picks the dusk dance)
 var _facing := "down"
 var _is_busy := false
 var _sling_cd := 0.0
@@ -242,6 +243,7 @@ func _exit_tree() -> void:
 		local = null
 
 func set_slot(slot: int, c: Color) -> void:
+	_slot = slot
 	slot_color = c
 	_sprite.set_look(CharacterRig.worker_look(slot, c))
 	_sprite.set_ring_color(c)
@@ -620,7 +622,10 @@ func _update_anim() -> void:
 		return
 	if speed < 0.1:
 		_sprite.speed_scale = 1.0
-		anim = "idle_" + _facing
+		# The day's work done (or the wall finished): standing still, the crew dances
+		var dancing := GameState.phase in [GameState.Phase.DUSK, GameState.Phase.WON] \
+			and carried_kind.is_empty() and helping_id == 0 and not GameState.attract
+		anim = (CharAnim.DANCES[_slot % CharAnim.DANCES.size()] if dancing else "idle") + "_" + _facing
 		return
 	if not _charging:
 		_facing = CharAnim.dir_from_velocity(velocity, _facing)

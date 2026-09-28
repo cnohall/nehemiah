@@ -25,7 +25,14 @@ const ANIM_CFG: Dictionary = {
 	"collapse":  { "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 10.0 },
 	# Day's work done: two hops with both arms thrown up
 	"cheer":     { "cycle": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "loop": false, "fps": 10.0 },
+	# Dusk, standing still after the cheer — one dance per crew slot (Neh. 12:27, the wall
+	# dedicated "with gladness… with singing"): dabke stomp, clapping step, arms-up sway
+	"dabke":     { "cycle": [0, 1, 2, 3, 4, 5, 6, 7], "loop": true,  "fps": 8.0  },
+	"clap":      { "cycle": [0, 1, 2, 3, 4, 5, 6, 7], "loop": true,  "fps": 8.0  },
+	"sway":      { "cycle": [0, 1, 2, 3, 4, 5, 6, 7], "loop": true,  "fps": 6.0  },
 }
+
+const DANCES := ["dabke", "clap", "sway"]
 
 ## Map a 3D velocity vector to a facing using the isometric camera axes.
 ## Returns current_dir unchanged when velocity is negligible (preserves facing).
