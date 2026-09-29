@@ -38,6 +38,8 @@ const ROLL := [
 	["small", "by insydnis · CC-BY 3.0 · opengameart.org", ""],
 	["name", "“Desert theme”", ""],
 	["small", "by yd · CC0 · opengameart.org", ""],
+	["name", "AlkaKrab", ""],
+	["small", "“Desert Fantasy Ambient” · alkakrab.itch.io", ""],
 	["role", "Sound", ""],
 	["name", "Kenney", ""],
 	["small", "kenney.nl · CC0", ""],

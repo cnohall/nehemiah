@@ -85,13 +85,27 @@ const MUSIC := "res://assets/audio/music/"
 const MUSIC_FADE := 2.5
 const MUSIC_BASE_DB := -6.0     # sits under the effects
 const DUCK_DB := -10.0          # while a jingle plays
+# mood: [[file, volume_db], …] — each time a mood comes back it picks another track,
+# so 52 days don't wear one loop thin. alkakrab/ is gitignored (its license bars
+# redistribution in a public repo): a clean checkout just has fewer tracks.
 var _music_defs := {
-	"calm": ["calm_caravan", 0.0],             # "Desert theme" by yd — CC0
-	"work": ["work_desert_of_dreams", -2.0],   # "Caryil, The Desert of Dreams" by insydnis — CC-BY 3.0
+	"calm": [
+		["calm_caravan", 0.0],                        # "Desert theme" by yd — CC0
+		["alkakrab/calm_dunes_of_silence", 0.0],      # AlkaKrab, Desert Fantasy Ambient
+		["alkakrab/calm_canyon_echoes", 0.0],
+		["alkakrab/calm_sunblade_horizon", 0.0],
+	],
+	"work": [
+		["work_desert_of_dreams", -2.0],              # "Caryil, The Desert of Dreams" by insydnis — CC-BY 3.0
+		["alkakrab/work_ash_and_oasis", 0.0],
+		["alkakrab/work_scorchlight_mirage", 0.0],
+		["alkakrab/work_whispers_in_the_sand", 0.0],
+	],
 }
 var _music_a: AudioStreamPlayer
 var _music_b: AudioStreamPlayer
 var _music_mood := ""
+var _music_last := {}   # mood → index last played, so a mood never repeats back to back
 var _music_tween: Tween
 var _duck_tween: Tween
 
@@ -128,9 +142,15 @@ func _ready() -> void:
 	_listener = AudioListener3D.new()
 	add_child(_listener)
 	for mood: String in _music_defs:
-		var s: AudioStreamOggVorbis = load(MUSIC + _music_defs[mood][0] + ".ogg")
-		s.loop = true
-		_streams["music_" + mood] = [s]
+		var tracks := []   # [stream, volume_db]
+		for def: Array in _music_defs[mood]:
+			var path: String = MUSIC + def[0] + ".ogg"
+			if not ResourceLoader.exists(path):
+				continue
+			var s: AudioStreamOggVorbis = load(path)
+			s.loop = true
+			tracks.append([s, def[1]])
+		_streams["music_" + mood] = tracks
 	_music_a = _music_player()
 	_music_b = _music_player()
 	GameState.phase_changed.connect(_on_phase)
@@ -243,11 +263,16 @@ func play_music(mood: String) -> void:
 	if _music_tween:
 		_music_tween.kill()
 	_music_tween = create_tween().set_parallel()
-	if not mood.is_empty():
-		incoming.stream = _streams["music_" + mood][0]
+	var tracks: Array = _streams.get("music_" + mood, [])
+	if not tracks.is_empty():
+		var i := randi() % tracks.size()
+		if tracks.size() > 1 and i == _music_last.get(mood, -1):
+			i = (i + 1) % tracks.size()
+		_music_last[mood] = i
+		incoming.stream = tracks[i][0]
 		incoming.volume_db = -60.0
 		incoming.play()
-		_music_tween.tween_property(incoming, "volume_db", MUSIC_BASE_DB + _music_defs[mood][1], MUSIC_FADE)
+		_music_tween.tween_property(incoming, "volume_db", MUSIC_BASE_DB + tracks[i][1], MUSIC_FADE)
 	_music_tween.tween_property(outgoing, "volume_db", -60.0, MUSIC_FADE)
 	_music_tween.chain().tween_callback(outgoing.stop)
 
