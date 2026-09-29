@@ -79,6 +79,13 @@ func _ready() -> void:
 	menu.add_child(learn)
 	menu.move_child(learn, _sections_btn.get_index() + 1)
 	learn.pressed.connect(_on_learn)
+	# Walk the City: the Festival of Booths, a sandbox with no clock and no enemy
+	var walk := join_btn.duplicate() as Button
+	walk.name = "FestivalButton"
+	walk.text = "Walk the City"
+	menu.add_child(walk)
+	menu.move_child(walk, learn.get_index() + 1)
+	walk.pressed.connect(_on_festival)
 	# Credits: an entry above Quit; the roll plays over the menu
 	_credits_btn = join_btn.duplicate()
 	_credits_btn.name = "CreditsButton"
@@ -108,6 +115,7 @@ func _ready() -> void:
 	# Back from a replay: straight to the map, on the stretch just played
 	GameState.replay_section = -1
 	GameState.tutorial = false
+	GameState.festival = false
 	if GameState.picker_return >= 0:
 		_picker.open(GameState.picker_return)
 		GameState.picker_return = -1
@@ -247,6 +255,13 @@ func _on_learn() -> void:
 	_stop_world()
 	GameState.replay_section = -1
 	GameState.tutorial = true
+	get_tree().change_scene_to_file(GAME_SCENE)
+
+# Solo, offline, like the practice: the city at the Festival of Booths
+func _on_festival() -> void:
+	_stop_world()
+	GameState.replay_section = -1
+	GameState.festival = true
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 # Opens on the furthest stretch this player may build

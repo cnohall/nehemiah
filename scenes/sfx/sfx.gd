@@ -26,6 +26,9 @@ var _defs := {
 	"deposit_water":  [_n("impactSoft_medium_%03d", 0, 5), -4.0, 0.6, 0.7],
 	"mix_done":       [_n("impactPlank_medium_%03d", 0, 5), -6.0, 1.1, 1.25],
 	"deposit_beam":   [_n("impactWood_heavy_%03d", 0, 5), -2.0, 0.85, 0.95],
+	"deposit_branch": [["cloth1", "cloth2", "cloth3", "cloth4"], -3.0, 0.8, 0.95],
+	"deposit_portion": [_n("impactSoft_medium_%03d", 0, 5), -4.0, 1.05, 1.2],
+	"work_branch":    [_n("impactWood_medium_%03d", 0, 5), -9.0, 1.3, 1.5],
 	"build":          [_n("impactPlank_medium_%03d", 0, 5), 0.0, 0.8, 0.95],
 	# One strike of the working loop, by what is being worked
 	"work_wood":      [_n("impactWood_medium_%03d", 0, 5), -8.0, 1.15, 1.35],
@@ -209,7 +212,7 @@ func _on_phase(phase: int) -> void:
 			play_jingle("day_start")
 			play_music("calm")
 		GameState.Phase.WORK:
-			play_music("work")
+			play_music("calm" if GameState.festival else "work")   # a feast day, not a work day
 		GameState.Phase.DUSK:
 			play_jingle("day_done")
 			play_music("calm")

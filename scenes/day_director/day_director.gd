@@ -83,6 +83,7 @@ func _ready() -> void:
 func start() -> void:
 	GameState.reset()
 	GameState.apply_replay()
+	GameState.apply_festival()
 	GameState.apply_debug_start_day()
 	GameState.apply_restart()   # after --day=N: a restart picks its own day
 

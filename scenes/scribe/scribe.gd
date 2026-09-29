@@ -63,7 +63,7 @@ func _refresh() -> void:
 	_sheet.update_minimum_size()
 	_sheet.queue_redraw()
 	_scroll.visible = GameState.phase in [GameState.Phase.DAWN, GameState.Phase.WORK, GameState.Phase.DUSK] \
-		and not GameState.tutorial
+		and not GameState.free_play()
 
 # A piece stood (or fell): write it up, look up, say it
 func _on_progress(done: int, total: int) -> void:

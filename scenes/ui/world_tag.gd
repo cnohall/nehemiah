@@ -16,7 +16,7 @@ extends Node3D
 # SCROLL: parchment too, holding a `custom` Control instead of parsed text.
 enum Kind { SITE, STATION, TOAST, NOTE, SHOUT, SCROLL }
 
-const MATERIALS := ["stone", "wood", "mortar", "lime", "water", "beam", "beams", "rubble"]
+const MATERIALS := ["stone", "wood", "mortar", "lime", "water", "beam", "beams", "rubble", "branch", "portion"]
 const LAYER := 1
 const BG       := Color(0.20, 0.14, 0.10, 0.92)
 const BG_EDGE  := Color(0.93, 0.80, 0.55, 0.28)
@@ -28,6 +28,8 @@ const POINTER  := Vector2(16, 9)
 const EDGE_MARGIN := 10.0
 const PULSE_AMOUNT := 0.07
 const DIM := 0.5   # alpha for a site tag that isn't where the next delivery goes
+const SHOUT_WRAP_CHARS := 56   # a shout longer than this wraps…
+const SHOUT_WIDTH := 460.0     # …at this width
 
 static var _layer: CanvasLayer
 static var _fonts: Dictionary = {}
@@ -307,6 +309,10 @@ func _label(t: String, face: String, size: int, color: Color) -> Label:
 	l.add_theme_constant_override("line_spacing", -4)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# A long call (a verse read out) wraps instead of running across the screen
+	if kind == Kind.SHOUT and shown.length() > SHOUT_WRAP_CHARS:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = SHOUT_WIDTH
 	return l
 
 static func _font(face: String) -> Font:

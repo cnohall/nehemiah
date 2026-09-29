@@ -119,6 +119,9 @@ func _ready() -> void:
 		if GameState.tutorial:
 			fit_bots(0)
 			add_child(Tutorial.new(self))
+		elif GameState.festival:
+			fit_bots(0)
+			add_child(Festival.new(self))
 		else:
 			fit_bots()
 	else:

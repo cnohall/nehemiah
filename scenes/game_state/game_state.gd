@@ -154,6 +154,11 @@ var attract := false
 # Tutorial — no waves, no story, no bots but the one that falls; nothing it does is saved.
 # Set by the menu, cleared when the menu opens again (outlives reset() like replay_section).
 var tutorial := false
+# "Walk the City" from the title: the Festival of Booths (Neh. 8) after the wall is done —
+# a solo sandbox at the Water Gate, the whole wall standing, no enemy, no clock. Festival
+# runs it. Set by the menu like `tutorial`; nothing it does is saved.
+var festival := false
+const FESTIVAL_SECTION := 8   # the Water Gate: "the broad place before the water gate" (Neh. 8:1)
 var _met := {}             # Friends and Foes: key → true, loaded on first use
 
 # ── Queries ────────────────────────────────────────────────
@@ -281,6 +286,10 @@ func is_unlocked(section_index: int) -> bool:
 		return true
 	return OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args()
 
+## A practice or the festival: no waves, no story, nothing saved
+func free_play() -> bool:
+	return tutorial or festival
+
 func is_over() -> bool:
 	return phase == Phase.WON or phase == Phase.LOST
 
@@ -361,13 +370,19 @@ func reset() -> void:
 	sun_left = 0.0
 	players.clear()
 	section_marks = _no_marks()
-	_debug_start = attract or tutorial
+	_debug_start = attract or tutorial or festival
 
 ## Server: a replay starts on its section's first day
 func apply_replay() -> void:
 	if is_replay():
 		var day: int = SECTIONS[replay_section]["days"][0]
 		_apply(day, replay_section, phase, breaches, targets_done, targets_total)
+
+## Server: the festival is held at the Water Gate, on its first (daylit) day
+func apply_festival() -> void:
+	if festival:
+		var day: int = SECTIONS[FESTIVAL_SECTION]["days"][0]
+		_apply(day, FESTIVAL_SECTION, phase, breaches, targets_done, targets_total)
 
 ## Server: a "Play again" run picks up where the last one asked (see restart_day)
 func apply_restart() -> void:

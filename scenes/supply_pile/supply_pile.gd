@@ -36,6 +36,8 @@ const COLORS := {
 	"beam":   Color(0.46, 0.31, 0.17),
 	"lime":   Color(0.92, 0.91, 0.86),
 	"water":  Color(0.66, 0.40, 0.26),
+	"branch": Color(0.46, 0.33, 0.20),
+	"portion": Color(0.62, 0.47, 0.26),
 }
 
 func _ready() -> void:
@@ -75,6 +77,10 @@ func _ready() -> void:
 			_build_lime(rng)
 		"water":
 			_build_water(rng)
+		"branch":
+			_build_boughs(rng)
+		"portion":
+			_build_food(rng)
 	GameState.section_changed.connect(_refresh_active.unbind(1))
 	_refresh_active()
 
@@ -245,6 +251,26 @@ func _build_water(rng: RandomNumberGenerator) -> void:
 		mouth.bottom_radius = 0.11
 		mouth.height = 0.12
 		_add(mouth, COLORS["water"].darkened(0.1), Vector3(x, 0.2 + h + 0.02, 0), Vector3.ZERO)
+
+# Festival (Neh. 8:15): cut boughs of olive, myrtle and palm heaped on the ground
+func _build_boughs(rng: RandomNumberGenerator) -> void:
+	for i in 7:
+		var bough := DroppedItem.build_prop("branch")
+		bough.position = Vector3(rng.randf_range(-0.6, 0.6), 0.22 + (i / 3) * 0.14, rng.randf_range(-0.6, 0.6))
+		bough.rotation.y = rng.randf() * TAU
+		bough.scale = Vector3.ONE * rng.randf_range(1.1, 1.4)
+		_visual.add_child(bough)
+
+# Festival (Neh. 8:10): a trestle table of baskets — bread, figs — to send out
+func _build_food(rng: RandomNumberGenerator) -> void:
+	_add(_box(Vector3(1.9, 0.08, 0.9)), COLORS["wood"].lightened(0.1), Vector3(0, 0.62, 0), Vector3.ZERO)
+	for sx: float in [-0.8, 0.8]:
+		_add(_box(Vector3(0.1, 0.55, 0.8)), COLORS["wood"].darkened(0.1), Vector3(sx, 0.34, 0), Vector3.ZERO)
+	for i in 3:
+		var basket := DroppedItem.build_prop("portion")
+		basket.position = Vector3(-0.6 + i * 0.6, 0.76, rng.randf_range(-0.12, 0.12))
+		basket.scale = Vector3.ONE * 1.3
+		_visual.add_child(basket)
 
 func _build_stones(rng: RandomNumberGenerator) -> void:
 	# Loose cut blocks, stacked in two rough layers

@@ -360,7 +360,7 @@ func _process(delta: float) -> void:
 		return
 	_next_poll = NEXT_POLL
 	# The practice points the way itself (Tutorial); two voices would talk over each other
-	var text := "" if GameState.tutorial else _next_text()
+	var text := "" if GameState.free_play() else _next_text()
 	var line := _next_caption if _style_world else _next_line
 	(_next_line if _style_world else _next_caption).visible = false
 	line.visible = not text.is_empty()
@@ -369,7 +369,7 @@ func _process(delta: float) -> void:
 # Plaques, or the world telling it (the setting can change mid-game from the menu)
 func _apply_style() -> void:
 	_style_world = Settings.diegetic_hud
-	var plaques := not _style_world and not GameState.tutorial and not end_screen.visible
+	var plaques := not _style_world and not GameState.free_play() and not end_screen.visible
 	$Root/DayPlaque.visible = plaques
 	threat.visible = plaques
 	_next_poll = 0.0
@@ -515,7 +515,7 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 					sub += "\n" + tr("The last day of this stretch — it must stand before the stars appear")
 				else:
 					sub += "\n" + tr("%d of %d stand — %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
-			if not GameState.tutorial:
+			if not GameState.free_play():
 				_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
 			# The campaign's ending story plays first; Main calls show_end after it
@@ -1127,7 +1127,7 @@ func _refresh_controls() -> void:
 		_horn_row.visible = GameState.has_twist("horn")
 	if _pause_what != null:
 		_pause_what.text = "Pause · menu" if _solo() else "Menu"
-	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1
+	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1 or GameState.festival
 	var want := (early and not GameState.is_over()) or pause_menu.visible
 	if want == _controls.visible:
 		return

@@ -27,7 +27,7 @@ var _last_done := 0
 var _last_breaches := 0
 
 func _ready() -> void:
-	if GameState.attract or GameState.tutorial or DisplayServer.get_name() == "headless":
+	if GameState.attract or GameState.free_play() or DisplayServer.get_name() == "headless":
 		set_process(false)
 		return
 	GameState.progress_changed.connect(_on_progress)

@@ -511,7 +511,7 @@ func _dash_fx() -> void:
 ## What [E] acts on from `at`, in priority order: [Act, target]. The one rule for both
 ## the focus ring (owner, from replicated state — Overcooked's counter highlight) and
 ## _server_interact, so the ring always shows exactly what the press will do.
-enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB }
+enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK }
 
 func _interact_choice(at: Vector3) -> Array:
 	# Helping a fallen teammate comes first
@@ -541,6 +541,12 @@ func _interact_choice(at: Vector3) -> Array:
 		var d := _reach_dist(messenger, at)
 		if [site, item, pile].all(func(o): return o == null or _reach_dist(o, at) >= d):
 			return [Act.MESSENGER, messenger]
+	# Townsfolk to talk to (the festival): when nearer than any work
+	var folk := _nearest_in_reach("folk", at, func(_f): return true)
+	if folk != null:
+		var d := _reach_dist(folk, at)
+		if [site, item, pile].all(func(o): return o == null or _reach_dist(o, at) >= d):
+			return [Act.TALK, folk]
 	if site != null:
 		return [Act.WORK, site]
 	# Whichever is closer: something lying on the ground, or a stockpile
@@ -678,6 +684,8 @@ func _server_interact(at: Vector3) -> void:
 			_tell("Holding the other end — {interact} to let go")
 		Act.DELIVER:
 			_deliver(target, at)
+		Act.TALK:
+			target.talk(self)
 		Act.MESSENGER:
 			target.accept(self)
 			get_tree().call_group("day_director", "note_ono")
