@@ -62,7 +62,7 @@ const FEASTS := {
 	},
 	0: {
 		"temple": true,
-		"booths": [[Vector3(40.6, 0.1, 11.8), "in the courts of God's house"], [Vector3(-8.0, 0.1, 9.5), "in the broad place of the Sheep Gate"]],
+		"booths": [[Vector3(41.1, 0.1, 9.3), "in the courts of God's house"], [Vector3(-8.0, 0.1, 9.5), "in the broad place of the Sheep Gate"]],
 		"branches": [Vector3(-4.0, 0.1, -11.0), Vector3(8.0, 0.1, -10.0)],
 		"portion": Vector3(6.0, 0.1, 9.0),
 		"hungry": [[Vector3(9.5, 0.1, 22.6), "elder"]],
@@ -179,10 +179,10 @@ func _north_up_yaw(district: int) -> float:
 	return roundf(yaw / (PI * 0.5)) * PI * 0.5
 
 ## Along the wall at the same depth — but at the Sheep Gate's east end the temple court
-## fills the ground, so in by the lane between it and the wall
+## fills the ground up to the wall, so in along the street before its gate
 func _arrival_z(dir: int, z: float) -> float:
 	if _district == 0 and dir < 0:
-		return 2.0
+		return Temple.COURT.end.y + 1.6
 	return clampf(z, 2.5, 12.0)
 
 func _enter(district: int) -> void:
@@ -277,7 +277,7 @@ func _build_district() -> void:
 	for i in builders.size():
 		var row: Array = builders[i]
 		_folk(_root, row[0], row[1], Palette.DYES[(d + i) % Palette.DYES.size()], BUILDER_AT[i % BUILDER_AT.size()],
-			[[row[2], row[3]]])
+			[[row[2], row[3]]]).wander = 1.2
 	if not feast.get("platform", false):
 		_add_townsfolk(_root, d)
 	_add_signs(_root)
@@ -348,22 +348,26 @@ func _add_water_gate_people(root: Node3D) -> void:
 		["Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared.", "Neh. 8:10"],
 		["Don’t be grieved, for the joy of Yahweh is your strength.", "Neh. 8:10"],
 	])
-	_folk(root, "A Levite", "priest", Palette.WELD, Vector3(-3.0, 0.1, 11.2), [
+	var levite := _folk(root, "A Levite", "priest", Palette.WELD, Vector3(-3.0, 0.1, 11.2), [
 		["We read in the book distinctly, and give the sense, so that everyone understands.", "see Neh. 8:8"],
 		["Hold your peace, for the day is holy. Don’t be grieved.", "Neh. 8:11"],
 	])
-	_folk(root, "Meremoth the priest", "priest", Palette.MUREX, Vector3(-19.0, 0.1, 11.0), [
+	levite.wander = 1.5
+	var meremoth := _folk(root, "Meremoth the priest", "priest", Palette.MUREX, Vector3(-19.0, 0.1, 11.0), [
 		["I repaired the wall from the door of Eliashib's house to its end.", "see Neh. 3:21"],
 		["They're building shelters in the courts of God's house too — round the wall at the Sheep Gate.", "see Neh. 8:16"],
 	])
+	meremoth.wander = 2.0
 	_folk(root, "The gatekeeper", "man", Palette.INDIGO, Vector3(-9.0, 0.1, 2.6), [
 		["Out through the gate for branches — olive, myrtle, palm. Go to the mount.", "see Neh. 8:15"],
 		["The gates stay open today. Nobody is coming to fight.", ""],
 	])
 	for i in 2:
-		_folk(root, "", "child", Palette.DYES[i + 1], Vector3(4.5 + i * 1.3, 0.1, 3.6 + i * 0.4), [
+		var kid := _folk(root, "", "child", Palette.DYES[i + 1], Vector3(4.5 + i * 1.3, 0.1, 3.6 + i * 0.4), [
 			["We're going out for palm branches!", ""],
-		]).size_scale = 0.62
+		])
+		kid.size_scale = 0.62
+		kid.wander = 2.5
 	# The crowd in the broad place, listening
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 818
@@ -378,13 +382,14 @@ func _add_water_gate_people(root: Node3D) -> void:
 			f.size_scale = 0.62
 
 func _add_temple_people(root: Node3D) -> void:
-	_folk(root, "A priest at the altar", "priest", Palette.INDIGO, Vector3(35.0, 0.1, 10.6), [
+	var keeper := _folk(root, "A priest at the altar", "priest", Palette.INDIGO, Vector3(34.6, 0.1, 9.6), [
 		["We will not forsake the house of our God.", "Neh. 10:39"],
 		["Fire shall be kept burning on the altar continually; it shall not go out.", "Lev. 6:13"],
 	])
-	_folk(root, "", "priest", Palette.WELD, Vector3(33.0, 0.1, 15.2), [
+	keeper.wander = 1.0
+	_folk(root, "", "priest", Palette.WELD, Vector3(33.6, 0.1, 13.8), [
 		["Go up into the court — there's a shelter to put up by the altar.", "see Neh. 8:16"],
-	])
+	]).wander = 2.0
 
 # A few people about the stretch, glad of the day
 func _add_townsfolk(root: Node3D, d: int) -> void:
@@ -396,6 +401,7 @@ func _add_townsfolk(root: Node3D, d: int) -> void:
 		var f := _folk(root, "", kind, Palette.DYES[rng.randi() % Palette.DYES.size()], at,
 			[TOWNSFOLK[(d + i) % TOWNSFOLK.size()]])
 		f.facing = ["down", "left", "right", "up"][rng.randi() % 4]
+		f.wander = 3.0
 		if kind == "child":
 			f.size_scale = 0.62
 

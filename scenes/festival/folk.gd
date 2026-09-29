@@ -11,6 +11,10 @@ signal fed(folk: Folk)
 
 const TALK_REACH := 1.4   # added to the player's reach: they stand a little apart
 const HOLD       := 4.2
+const WALK_SPEED := 1.1
+const PAUSE      := Vector2(2.0, 6.0)   # seconds stood still between strolls
+const CLAP_TIME  := 3.0   # after the cheer, then back to standing
+const NEAR       := 2.4   # someone this close: stop and let them talk
 
 ## Shown in the journal when met
 var who := ""
@@ -24,6 +28,8 @@ var size_scale := 0.9
 var facing := "down"
 var radius := 0.0          # a speaker on a platform is reached from its edge
 var sitting := false
+## Strolls about where they were set down, up to this far (m); 0 stays put
+var wander := 0.0
 
 var is_target := false
 var met := false
@@ -31,6 +37,12 @@ var _next := 0
 var _rig: CharacterRig
 var _shout: Shout
 var _tag: WorldTag
+var _anim := ""
+var _home := Vector3.ZERO
+var _goal := Vector3.ZERO
+var _moving := false
+var _rest := 0.0
+var _glad := false   # cheering / clapping: stand for it
 
 func _ready() -> void:
 	add_to_group("folk")
@@ -40,7 +52,9 @@ func _ready() -> void:
 	add_child(_rig)
 	_rig.setup(look, size_scale)
 	_rig.set_ring_color(Color(0, 0, 0, 0))
-	_rig.play(("sway_" if sitting else "idle_") + facing)
+	_play(("sway_" if sitting else "idle_") + facing)
+	_home = global_position
+	_rest = randf_range(0.5, PAUSE.y)
 	_shout = Shout.make_shout()
 	_shout.position = Vector3(0, 2.7 * size_scale / 0.9, 0)
 	_shout.clamp_to_screen = false
@@ -52,14 +66,69 @@ func _ready() -> void:
 		_tag.text = "%s\nPortion 0/1" % tr("Nothing prepared")
 		add_child(_tag)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _tag != null:
 		var near := Player.local != null and distance_to_point(Player.local.global_position) < 7.0
 		_tag.visible = hungry and not _shout.is_speaking()
 		_tag.modulate.a = 1.0 if near else WorldTag.DIM
+	_stroll(delta)
+
+# A few steps somewhere near home, a pause, again — but never while talking or glad
+func _stroll(delta: float) -> void:
+	if wander <= 0.0 or sitting or _glad:
+		return
+	var me := Player.local
+	var close := me != null and is_instance_valid(me) and distance_to_point(me.global_position) < NEAR - TALK_REACH
+	if _shout.is_speaking() or close:
+		if _moving:
+			_moving = false
+			_play("idle_" + facing)
+		return
+	if not _moving:
+		_rest -= delta
+		if _rest <= 0.0:
+			_rest = randf_range(PAUSE.x, PAUSE.y)
+			_moving = _pick_goal()
+		return
+	var to := _goal - global_position
+	to.y = 0.0
+	var step := WALK_SPEED * delta
+	if to.length() <= step:
+		global_position = Vector3(_goal.x, global_position.y, _goal.z)
+		_moving = false
+		_play("idle_" + facing)
+		return
+	var dir := to.normalized()
+	global_position += dir * step
+	facing = CharAnim.dir_from_velocity(dir, facing)
+	_play("walk_" + facing)
+
+# Somewhere within `wander` of home with a clear line to it (houses, walls, booths)
+func _pick_goal() -> bool:
+	var space := get_world_3d().direct_space_state
+	var from := global_position + Vector3.UP * 0.6
+	for _try in 4:
+		var g := _home + Vector3(randf_range(-wander, wander), 0.0, randf_range(-wander, wander))
+		g.y = global_position.y
+		var d := g - global_position
+		if d.length() < 0.8:
+			continue
+		var q := PhysicsRayQueryParameters3D.create(from, from + d + d.normalized() * 0.5)
+		if space.intersect_ray(q).is_empty():
+			_goal = g
+			return true
+	return false
+
+func _play(anim: String) -> void:
+	if anim != _anim:
+		_anim = anim
+		_rig.play(anim)
 
 ## Player (server): [E] beside them
-func talk(_by: Node3D) -> void:
+func talk(by: Node3D) -> void:
+	if not _glad and by != null:
+		facing = CharAnim.dir_from_velocity(by.global_position - global_position, facing)
+		_play(("sway_" if sitting else "idle_") + facing)
 	var line: Array
 	if hungry:
 		line = ["Nothing is prepared in my house for the feast.", ""]
@@ -104,10 +173,17 @@ func deposit(kind: String, _amount: int) -> bool:
 		return false
 	hungry = false
 	remove_from_group("build_sites")
-	_rig.play("cheer_" + facing)
+	# A cheer, some clapping, then back to standing about
+	_glad = true
+	_moving = false
+	_play("cheer_" + facing)
 	get_tree().create_timer(1.4).timeout.connect(func():
-		if is_instance_valid(_rig):
-			_rig.play("clap_" + facing))
+		if is_instance_valid(self):
+			_play("clap_" + facing))
+	get_tree().create_timer(1.4 + CLAP_TIME).timeout.connect(func():
+		if is_instance_valid(self):
+			_glad = false
+			_play("idle_" + facing))
 	say(fed_line)
 	fed.emit(self)
 	return true

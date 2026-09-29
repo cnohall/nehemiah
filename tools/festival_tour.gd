@@ -40,7 +40,7 @@ func _process(delta: float) -> bool:
 	var gs: Node = root.get_node("GameState")
 	if _phase == 0 and k > 0.1:
 		_phase = 1
-		_me().global_position = Vector3(38.0, 0.1, 6.0)
+		_me().global_position = Vector3(38.0, 0.1, 14.0 if gs.current_section_index == 0 else 6.0)   # the temple court fills the east end there
 	elif _phase == 1 and k > 0.6:
 		_phase = 2
 		_shot("%02d_%d_arrive" % [leg, gs.current_section_index])
