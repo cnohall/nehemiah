@@ -587,6 +587,7 @@ func _show_end(won: bool) -> void:
 		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
 	if GameState.is_replay():
 		_replay_end(won, vb, stats)
+	_build_end_map(won)
 	_build_reel(vb)
 	_build_vote(won, vb)
 	end_screen.show()
@@ -594,6 +595,45 @@ func _show_end(won: bool) -> void:
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
 	var first: Button = vb.get_node("Buttons").get_child(0)
 	first.grab_focus()
+
+# ── End screen: the scribe's map ───────────────────────────
+
+var _end_map: CircuitMap
+
+# The run's map, worn by it (CircuitMap `aged`), fills the screen behind a parchment
+# column on the left that holds the words, the reel and the choices. A win closes the
+# ring (finale); otherwise the stretch reached pulses.
+func _build_end_map(won: bool) -> void:
+	if _end_map == null:
+		var scrim: ColorRect = $Root/EndScreen/Scrim
+		scrim.color.a = 0.0
+		_end_map = CircuitMap.new()
+		_end_map.aged = true
+		_end_map.paper = true
+		_end_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		end_screen.add_child(_end_map)
+		end_screen.move_child(_end_map, scrim.get_index() + 1)
+		_end_map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var column := TextureRect.new()
+		var tex := GradientTexture2D.new()
+		var g := Gradient.new()
+		g.set_color(0, Color(UiStyle.PARCHMENT, 0.97))
+		g.set_color(1, Color(UiStyle.PARCHMENT, 0.0))
+		g.add_point(0.72, Color(UiStyle.PARCHMENT, 0.9))   # after the ends: it takes index 1
+		tex.gradient = g
+		column.texture = tex
+		column.stretch_mode = TextureRect.STRETCH_SCALE
+		column.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		end_screen.add_child(column)
+		end_screen.move_child(column, _end_map.get_index() + 1)
+		column.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+		column.anchor_right = 0.56
+		var center: Control = $Root/EndScreen/Center
+		center.anchor_right = 0.48
+	_end_map.finale = won and not GameState.is_replay()
+	_end_map.section = GameState.replay_section if GameState.is_replay() else GameState.current_section_index
+	_end_map.play()
 
 # ── End screen: highlight reel + play again ────────────────
 

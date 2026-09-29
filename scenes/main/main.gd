@@ -259,6 +259,7 @@ func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
 # ── Wall cam ───────────────────────────────────────────────
 
 func _on_day_tallied(stats: Dictionary) -> void:
+	GameState.chronicle_day(stats)
 	if stats.has("names") and not GameState.attract:
 		_play_wall_cam(stats["names"])
 

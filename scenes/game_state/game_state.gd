@@ -134,6 +134,10 @@ var crew_size: int = 1
 # peer_id → { "role": String }
 var players: Dictionary = {}
 var section_marks: Array = _no_marks()
+# The run as the scribe's map remembers it (CircuitMap `aged`), per section: breaches,
+# pieces knocked down, days worked till the stars, finished late / with days to spare.
+# Every peer writes its own from what it already sees (state changes, the dusk tally).
+var chronicle: Array = _no_chronicle()
 # Replay: the host picked one section from the map (SectionPicker) — the run plays just
 # that section and ends when it stands. -1 = the full campaign. Set by the menu before
 # hosting, synced to clients; reset() leaves it alone (it outlives the game scene).
@@ -370,6 +374,7 @@ func reset() -> void:
 	sun_left = 0.0
 	players.clear()
 	section_marks = _no_marks()
+	chronicle = _no_chronicle()
 	_debug_start = attract or tutorial or festival
 
 ## Server: a replay starts on its section's first day
@@ -459,6 +464,23 @@ func _apply_marks(section_index: int, mask: int) -> void:
 		cfg.save(PROGRESS_PATH)
 	section_rated.emit(section_index, mask)
 
+func _no_chronicle() -> Array:
+	var a := []
+	for i in SECTIONS.size():
+		a.append({ "breaches": 0, "knocked": 0, "nightfalls": 0, "days": 0, "done": false, "late": false, "spare": 0 })
+	return a
+
+## Every peer, at each dusk (Main): the day goes into the chronicle
+func chronicle_day(stats: Dictionary) -> void:
+	var c: Dictionary = chronicle[current_section_index]
+	c["days"] += 1
+	if stats.get("unfinished", 0) > 0:
+		c["nightfalls"] += 1
+	if stats.has("marks"):
+		c["done"] = true
+		c["late"] = stats.get("section_time", 0.0) > stats.get("par", INF)
+		c["spare"] = stats.get("spare", 0)
+
 func _no_marks() -> Array:
 	var a := []
 	a.resize(SECTIONS.size())
@@ -501,6 +523,12 @@ func _set_state(day: int, section: int, p: Phase, b: int, done: int, total: int)
 	var phase_new := p != phase
 	var breach_new := b != breaches
 	var progress_new := done != targets_done or total != targets_total
+	# Into the chronicle: one got through; a standing piece knocked back down
+	if section >= 0 and section < chronicle.size():
+		if b > breaches and not attract:
+			chronicle[section]["breaches"] += b - breaches
+		if total == targets_total and done < targets_done and p == Phase.WORK:
+			chronicle[section]["knocked"] += 1
 	current_day = day
 	current_section_index = section
 	phase = p

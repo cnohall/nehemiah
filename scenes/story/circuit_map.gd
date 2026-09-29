@@ -11,6 +11,10 @@ extends Control
 # ring from the Sheep Gate back to itself, each stretch lighting as it passes.
 # `picker` mode is the replay map (SectionPicker): every section this player has ever
 # finished stands with its best marks, `section` is the one selected, locked ones fade.
+# `aged`: the scribe's working map, worn by the run (GameState.chronicle) — its edges
+# darken and scorch as the days go by, it gets folded, an ink blot marks each stretch
+# where the enemy got in, a lamp-oil ring the stretches worked till the stars or past
+# their time, and a note in the scribe's hand beside each stretch reached.
 
 const RISE_TIME    := 1.6
 const RIDE_TIME    := 7.0
@@ -38,6 +42,9 @@ var finale := false
 ## No gate plaques or foes over the land — the credits roll over it
 var quiet := false
 var picker := false
+var aged := false
+## A parchment wash under the text column instead of the dark one (end screen)
+var paper := false
 ## Picker mode, per section: best marks (-1 = never finished) and whether it may be picked
 var best: Array = []
 var unlocked: Array = []
@@ -80,7 +87,7 @@ func _ready() -> void:
 	# A wash from the left edge, so the text column reads over the land: parchment
 	# under the picker's ink text, dark under the story's cream text
 	_edge = GradientTexture2D.new()
-	var wash := UiStyle.PARCHMENT if picker else UiStyle.DUSK
+	var wash := UiStyle.PARCHMENT if picker or paper else UiStyle.DUSK
 	var e := Gradient.new()
 	e.set_color(0, Color(wash, 0.92))
 	e.set_color(1, Color(wash, 0.0))
@@ -231,6 +238,8 @@ func _draw_overlay() -> void:
 	var unit := _unit()
 	o.draw_texture_rect(_edge, Rect2(0, 0, size.x * 0.55, size.y), false)
 	var next := next_section() if picker else -1
+	if aged and not picker and not inspect:
+		_draw_age(o, unit)
 
 	# Picker: stretches not yet built are traced where they will stand, dashed on the
 	# ground — the next one in amber, marching; locked ones faint
@@ -352,3 +361,92 @@ func _draw_overlay() -> void:
 		var base := tl.y + pad.y + small * 0.8
 		o.draw_string(nf, Vector2(fx.x + flag, base), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small, ink)
 		o.draw_string(lf, Vector2(fx.x + flag + nw + small * 0.4, base), land, HORIZONTAL_ALIGNMENT_LEFT, -1, tiny, dim)
+
+# ── Age (the scribe's map, worn by the run) ────────────────
+
+const INK_BLOT  := Color(0.13, 0.08, 0.05, 0.8)
+const OIL_RING  := Color(0.46, 0.29, 0.12)
+const SCORCH    := Color(0.30, 0.17, 0.07)
+const NOTE_INK  := Color(0.20, 0.12, 0.07, 0.85)
+
+func _draw_age(o: Control, unit: float) -> void:
+	var age := 1.0 if finale else clampf(float(GameState.current_day) / GameState.TOTAL_DAYS, 0.0, 1.0)
+	var reached := GameState.SECTIONS.size() if finale else mini(section + 1, GameState.SECTIONS.size())
+	# Edges: darkening in bands, deeper as the days go by
+	var bands := 14
+	var w := unit * 0.012
+	for k in bands:
+		var a := (0.05 + 0.3 * age) * pow(1.0 - float(k) / bands, 2.0)
+		o.draw_rect(Rect2(Vector2(k * w, k * w), size - Vector2(k * w, k * w) * 2.0), Color(SCORCH, a), false, w)
+	# Folds: once a third of the way round, again at two thirds
+	if reached >= 4:
+		_crease(o, Vector2(size.x * 0.62, 0), Vector2(size.x * 0.62, size.y))
+	if reached >= 8:
+		_crease(o, Vector2(0, size.y * 0.5), Vector2(size.x, size.y * 0.5))
+	var centre := _project(_diorama.unit_to_world(CircuitDiorama.CENTER))
+	for i in reached:
+		var c: Dictionary = GameState.chronicle[i]
+		var p := _project(_diorama.ring_world(i + 0.5, 0.0))
+		var out := (p - centre).normalized()
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 4200 + i
+		# A lamp-oil ring where the lamp stood through a long day's work
+		if c["nightfalls"] > 0 or c["late"]:
+			var rc := p + out * unit * 0.07 + Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * unit * 0.02
+			var rr := unit * rng.randf_range(0.04, 0.05)
+			o.draw_circle(rc, rr, Color(OIL_RING, 0.07))
+			o.draw_arc(rc, rr, 0.0, TAU, 48, Color(OIL_RING, 0.32), unit * 0.005, true)
+			o.draw_arc(rc, rr * 0.93, 0.4, TAU - 0.9, 40, Color(OIL_RING, 0.18), unit * 0.003, true)
+			if c["nightfalls"] > 1:
+				o.draw_arc(rc + Vector2(rr * 0.35, rr * 0.2), rr * 0.96, 0.0, TAU, 48, Color(OIL_RING, 0.2), unit * 0.004, true)
+		# An ink blot where the enemy got in — bigger for more
+		if c["breaches"] > 0:
+			_blot(o, p + out * unit * 0.035, unit * (0.012 + 0.009 * sqrt(float(c["breaches"]))), rng)
+		if not quiet:
+			_note(o, p - out * unit * 0.06, _note_for(c), unit, rng)
+
+# Where the sheet was folded: a pale ridge with a shadow along one side
+func _crease(o: Control, a: Vector2, b: Vector2) -> void:
+	var n := (b - a).orthogonal().normalized()
+	o.draw_line(a + n * 2.0, b + n * 2.0, Color(SCORCH, 0.16), 3.0, true)
+	o.draw_line(a, b, Color(1.0, 0.97, 0.9, 0.22), 2.0, true)
+
+func _blot(o: Control, c: Vector2, r: float, rng: RandomNumberGenerator) -> void:
+	var pts := PackedVector2Array()
+	var n := 16
+	for k in n:
+		var a := TAU * k / n
+		pts.append(c + Vector2(cos(a), sin(a)) * r * rng.randf_range(0.72, 1.25))
+	o.draw_colored_polygon(pts, INK_BLOT)
+	for k in 5:
+		var a := rng.randf() * TAU
+		o.draw_circle(c + Vector2(cos(a), sin(a)) * r * rng.randf_range(1.5, 2.4), r * rng.randf_range(0.08, 0.2), INK_BLOT)
+
+## What the scribe wrote beside a stretch (one or two short lines)
+func _note_for(c: Dictionary) -> PackedStringArray:
+	var lines := PackedStringArray()
+	if c["breaches"] > 0:
+		lines.append(tr_n("%d got in", "%d got in", c["breaches"]) % c["breaches"])
+	elif c["done"]:
+		lines.append(tr("none got in"))
+	if c["nightfalls"] > 0:
+		lines.append(tr("worked till the stars"))
+	elif c["spare"] > 0:
+		lines.append(tr_n("%d day to spare", "%d days to spare", c["spare"]) % c["spare"])
+	elif c["knocked"] > 0:
+		lines.append(tr("rebuilt what fell"))
+	return lines
+
+# Italic, a little aslant, like a hand in the margin
+func _note(o: Control, at: Vector2, lines: PackedStringArray, unit: float, rng: RandomNumberGenerator) -> void:
+	if lines.is_empty():
+		return
+	var fs := int(unit * 0.018)
+	var font := UiStyle.SPECTRAL_ITALIC
+	o.draw_set_transform(at, rng.randf_range(-0.09, 0.02), Vector2.ONE)
+	for k in lines.size():
+		var tw := font.get_string_size(lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var at_line := Vector2(-tw * 0.5, k * fs * 1.1)
+		o.draw_string_outline(font, at_line, lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(UiStyle.PARCHMENT, 0.55))
+		o.draw_string(font, at_line, lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, NOTE_INK)
+	o.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

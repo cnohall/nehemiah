@@ -132,6 +132,7 @@ func _show_slide(slide: Dictionary) -> void:
 		_map.section = slide["map"]
 		_map.inspect = slide.get("inspect", false)
 		_map.finale = slide.get("finale", false)
+		_map.aged = true   # the scribe's map, worn by the run so far
 		_map.play()
 	elif has_art:
 		_art.texture = load(art_path)
