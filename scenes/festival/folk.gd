@@ -30,6 +30,8 @@ var radius := 0.0          # a speaker on a platform is reached from its edge
 var sitting := false
 ## Strolls about where they were set down, up to this far (m); 0 stays put
 var wander := 0.0
+## Faces this world yaw exactly rather than one of the four ways (NAN: off); see face()
+var face_yaw := NAN
 
 var is_target := false
 var met := false
@@ -53,6 +55,7 @@ func _ready() -> void:
 	_rig.setup(look, size_scale)
 	_rig.set_ring_color(Color(0, 0, 0, 0))
 	_play(("sway_" if sitting else "idle_") + facing)
+	_rig.hold_yaw = face_yaw
 	_home = global_position
 	_rest = randf_range(0.5, PAUSE.y)
 	_shout = Shout.make_shout()
@@ -99,6 +102,7 @@ func _stroll(delta: float) -> void:
 		_play("idle_" + facing)
 		return
 	var dir := to.normalized()
+	_hold(NAN)
 	global_position += dir * step
 	facing = CharAnim.dir_from_velocity(dir, facing)
 	_play("walk_" + facing)
@@ -119,6 +123,19 @@ func _pick_goal() -> bool:
 			return true
 	return false
 
+## Turn to face a ground point, exactly
+func face(point: Vector3) -> void:
+	var d := point - global_position if is_inside_tree() else point - position
+	if Vector2(d.x, d.z).length_squared() < 0.0001:
+		return
+	facing = CharAnim.dir_from_velocity(d, facing)
+	_hold(atan2(d.x, d.z))
+
+func _hold(yaw: float) -> void:
+	face_yaw = yaw
+	if _rig != null:
+		_rig.hold_yaw = yaw
+
 func _play(anim: String) -> void:
 	if anim != _anim:
 		_anim = anim
@@ -126,8 +143,8 @@ func _play(anim: String) -> void:
 
 ## Player (server): [E] beside them
 func talk(by: Node3D) -> void:
-	if not _glad and by != null:
-		facing = CharAnim.dir_from_velocity(by.global_position - global_position, facing)
+	if not _glad and by != null and radius == 0.0:   # not a speaker up on a platform
+		face(by.global_position)
 		_play(("sway_" if sitting else "idle_") + facing)
 	var line: Array
 	if hungry:
@@ -237,6 +254,10 @@ static func look_for(kind: String, dye: Color, seed_value: int) -> Dictionary:
 		"elder":
 			l.merge({"beard": "long", "hair": Color(0.82, 0.80, 0.76), "hat": "wrap",
 				"hat_color": Palette.UNDYED.lightened(0.1), "long_robe": true}, true)
+		"governor":   # Nehemiah: the king's cupbearer, dressed for the court he came from
+			l.merge({"beard": "full", "hair": Color(0.32, 0.28, 0.26), "hat": "wrap", "hat_color": Palette.SAFFRON,
+				"band": Palette.MUREX, "robe": Palette.MUREX.lerp(Palette.UNDYED, 0.35), "long_robe": true,
+				"vest": Palette.SAFFRON}, true)
 		"priest":
 			l.merge({"beard": "long", "hat": "wrap", "hat_color": Color(0.97, 0.96, 0.92), "band": Palette.INDIGO,
 				"robe": Color(0.95, 0.93, 0.88), "long_robe": true, "vest": Palette.INDIGO}, true)

@@ -4,9 +4,8 @@ extends Control
 # Where you are on the wall, for Walk the City: a small north-up plan of the circuit
 # (CircuitDiorama.ring_unit — true to the city's shape) with the stretch you're on in
 # gold and a dot where you stand along it, and beside it a compass needle pointing to
-# true north as it lies in the view. The site is always laid out the same way (outside
-# the wall up-screen), so north turns as you go round: at the Sheep Gate it's up, at the
-# Fountain Gate it's behind you.
+# true north as it lies in the view. Walk the City turns the view north-up on every
+# stretch, so the needle stands up and the wall on screen lies as the gold does here.
 
 const MAP := 132.0        # px, the plan's square
 const PAD := 14.0         # px, clear round the ring inside it
@@ -37,12 +36,12 @@ static func frame(i: int) -> Array[Vector2]:
 	out = (out - along * out.dot(along)).normalized()
 	return [along, out]
 
-## True north on the site: world x runs along the stretch toward the next gate, world -z
-## is outside the wall
+## True north on the site: world x runs along the stretch toward the next gate times
+## Festival.FLOW, world -z is outside the wall
 static func north_on_site(i: int) -> Vector3:
 	var f := frame(i)
 	var n := Vector2(0, -1)
-	return Vector3(n.dot(f[0]), 0.0, -n.dot(f[1]))
+	return Vector3(n.dot(f[0]) * Festival.FLOW, 0.0, -n.dot(f[1]))
 
 func _draw() -> void:
 	_draw_plan()
@@ -69,7 +68,7 @@ func _draw_plan() -> void:
 		draw_circle(_fit * CircuitDiorama.ring_unit(g), 2.5, UiStyle.INK)
 	var me := Player.local
 	if me != null and is_instance_valid(me):
-		var t := clampf(inverse_lerp(-SITE_HALF_X, SITE_HALF_X, me.global_position.x), 0.0, 1.0)
+		var t := clampf(inverse_lerp(-SITE_HALF_X, SITE_HALF_X, me.global_position.x * Festival.FLOW), 0.0, 1.0)
 		var at: Vector2 = _fit * CircuitDiorama.ring_unit(district + t)
 		draw_circle(at, 5.5, UiStyle.TERRACOTTA)
 		draw_arc(at, 5.5, 0.0, TAU, 16, UiStyle.CREAM, 1.5, true)

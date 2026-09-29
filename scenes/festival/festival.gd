@@ -18,13 +18,17 @@ extends CanvasLayer
 # Tutorial): the game scene is its own server.
 
 const START := 8   # the Water Gate
-const PLATFORM := Vector3(1.0, 0.1, 5.2)
+const PLATFORM := Vector3(1.0, 0.1, 9.0)   # well in from the wall: the crowd gathers on its camera side
 const PLATFORM_SIZE := Vector3(3.2, 1.1, 2.0)
 const VISIT_POLL := 0.2
 # Walking off the end of a stretch: past EDGE_X you go on to the next; you arrive ARRIVE_X in
 const EDGE_X   := 41.5
 const ARRIVE_X := 38.5
 const SIGN_X   := 40.0
+## Which way round the wall a step toward +x takes you: -1, so the next gate of Neh. 3
+## lies toward -x. With the outside of the wall at -z, that makes each stretch a true
+## turn of the map, not its mirror — north-up, the wall lies on screen as on the map.
+const FLOW := -1
 const FADE     := 0.3
 # The feast is kept when these are done ("There was very great gladness", 8:17)
 const BOOTH_GOAL  := 5
@@ -57,7 +61,7 @@ const FEASTS := {
 		"booths": [[Vector3(-7.0, 0.1, 9.5), "in the broad place of the Water Gate"], [Vector3(-17.0, 0.1, 9.0), "in a courtyard"],
 			[Vector3(14.0, 0.1, 6.0), "in a courtyard"], [Vector3(7.0, 0.1, 24.0), "by the well"]],
 		"branches": [Vector3(-9.0, 0.1, -10.5), Vector3(3.0, 0.1, -10.0), Vector3(15.0, 0.1, -12.0)],
-		"portion": Vector3(8.0, 0.1, 8.5),
+		"portion": Vector3(-6.0, 0.1, 13.5),
 		"hungry": [[Vector3(-9.5, 0.1, 22.6), "elder"], [Vector3(18.0, 0.1, 25.2), "woman"]],
 	},
 	0: {
@@ -118,6 +122,7 @@ func _ready() -> void:
 	# One frame in: the day director is set up, the player spawned
 	await get_tree().process_frame
 	_main.director.begin()
+	get_tree().call_group("watch_posts", "_refresh")   # GameState.posts is off: no posts, no footings
 	_raise_the_wall()
 	_clear_the_yard()
 	_build_fade()
@@ -151,8 +156,9 @@ func _process(delta: float) -> void:
 
 # ── Round the wall ─────────────────────────────────────────
 
+## The stretch off the end of this one on the +x (dir 1) or -x (dir -1) side
 func _neighbour(dir: int) -> int:
-	return posmod(_district + dir, GameState.SECTIONS.size())
+	return posmod(_district + dir * FLOW, GameState.SECTIONS.size())
 
 func _travel(dir: int, z: float) -> void:
 	_traveling = true
@@ -169,14 +175,11 @@ func _travel(dir: int, z: float) -> void:
 	tw.tween_property(_fade, "color:a", 0.0, FADE)
 	_traveling = false
 
-# Turn the view so true north is up-screen, as on a map of the city — in quarter turns,
-# since the crew face the four ways the view has always shown (north ends up within 45°
-# of up; the compass shows it exactly)
+# Turn the view so true north is straight up-screen, as on a map of the city
 const SCREEN_UP := Vector3(-0.70710678, 0.0, -0.70710678)   # the game's view: away from the camera
 
 func _north_up_yaw(district: int) -> float:
-	var yaw := SCREEN_UP.signed_angle_to(RingCompass.north_on_site(district), Vector3.UP)
-	return roundf(yaw / (PI * 0.5)) * PI * 0.5
+	return SCREEN_UP.signed_angle_to(RingCompass.north_on_site(district), Vector3.UP)
 
 ## Along the wall at the same depth — but at the Sheep Gate's east end the temple court
 ## fills the ground up to the wall, so in along the street before its gate
@@ -307,10 +310,20 @@ func _add_signs(root: Node3D) -> void:
 		tag.text = ("%s  →" % gate) if dir > 0 else ("←  %s" % gate)
 		post.add_child(tag)
 
-# Ezra's platform of wood (8:4), facing the broad place
+# Which way the people gather from Ezra's platform: toward the camera, so the readers
+# face it over the crowd's heads ("in the sight of all the people", 8:5) — but never out
+# across the wall
+func _crowd_dir() -> Vector3:
+	var d := -SCREEN_UP.rotated(Vector3.UP, _north_up_yaw(_district))
+	d.z = maxf(d.z, -0.6)
+	return d.normalized()
+
+# Ezra's platform of wood (8:4), its rail and lectern toward the people
 func _build_platform(root: Node3D) -> void:
 	var body := StaticBody3D.new()
 	body.position = PLATFORM
+	var d := _crowd_dir()
+	body.rotation.y = atan2(d.x, d.z)
 	root.add_child(body)
 	var parts := WatchPost._Parts.new()
 	var s := PLATFORM_SIZE
@@ -331,23 +344,31 @@ func _build_platform(root: Node3D) -> void:
 # ── The people ─────────────────────────────────────────────
 
 func _add_water_gate_people(root: Node3D) -> void:
+	var d := _crowd_dir()
+	var turn := Basis(Vector3.UP, atan2(d.x, d.z))   # the platform's own frame
+	var ahead := PLATFORM + d * 20.0                 # what the readers look out over
 	var top := PLATFORM + Vector3(0, PLATFORM_SIZE.y + 0.07, 0)
-	var ezra := _folk(root, "Ezra the scribe", "scribe", Palette.MUREX, top + Vector3(0, 0, 0.2), [
+	var ezra := _folk(root, "Ezra the scribe", "scribe", Palette.MUREX, top + turn * Vector3(0, 0, 0.2), [
 		["You shall take on the first day the fruit of majestic trees, branches of palm trees, and boughs of thick trees, and willows of the brook; and you shall rejoice before Yahweh your God seven days.", "Lev. 23:40"],
 		["You shall dwell in temporary shelters for seven days.", "Lev. 23:42"],
 		["Go out to the mountain, and get olive branches, branches of wild olive, myrtle branches, palm branches, and branches of thick trees, to make temporary shelters, as it is written.", "Neh. 8:15"],
 	])
 	ezra.radius = 1.4
+	ezra.face(ahead)
 	ezra.spoken.connect(func(_f):
 		_heard = true
 		_refresh())
 	for sx: float in [-1.0, 1.0]:
-		_folk(root, "", "priest", Palette.INDIGO, top + Vector3(sx * 1.1, 0, -0.35), []).radius = 1.4
-	_folk(root, "Nehemiah the governor", "elder", Palette.SAFFRON, PLATFORM + Vector3(3.2, 0, 1.4), [
+		var priest := _folk(root, "", "priest", Palette.INDIGO, top + turn * Vector3(sx * 1.1, 0, -0.35), [])
+		priest.radius = 1.4
+		priest.face(ahead)
+	# Nehemiah before the platform, on the city side, with the Levites (8:9)
+	var nehemiah := _folk(root, "Nehemiah the governor", "governor", Palette.SAFFRON, PLATFORM + turn * Vector3(-2.2, 0, 1.3), [
 		["Today is holy to Yahweh your God. Don’t mourn, nor weep.", "Neh. 8:9"],
 		["Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared.", "Neh. 8:10"],
 		["Don’t be grieved, for the joy of Yahweh is your strength.", "Neh. 8:10"],
 	])
+	nehemiah.face(ahead)
 	var levite := _folk(root, "A Levite", "priest", Palette.WELD, Vector3(-3.0, 0.1, 11.2), [
 		["We read in the book distinctly, and give the sense, so that everyone understands.", "see Neh. 8:8"],
 		["Hold your peace, for the day is holy. Don’t be grieved.", "Neh. 8:11"],
@@ -363,21 +384,22 @@ func _add_water_gate_people(root: Node3D) -> void:
 		["The gates stay open today. Nobody is coming to fight.", ""],
 	])
 	for i in 2:
-		var kid := _folk(root, "", "child", Palette.DYES[i + 1], Vector3(4.5 + i * 1.3, 0.1, 3.6 + i * 0.4), [
+		var kid := _folk(root, "", "child", Palette.DYES[i + 1], Vector3(-1.5 + i * 1.3, 0.1, 14.0 + i * 0.4), [
 			["We're going out for palm branches!", ""],
 		])
 		kid.size_scale = 0.62
 		kid.wander = 2.5
-	# The crowd in the broad place, listening
+	# The crowd in the broad place, turned to the platform
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 818
 	for i in 14:
 		var row := i / 5
-		var at := PLATFORM + Vector3(-4.0 + (i % 5) * 2.0 + rng.randf_range(-0.4, 0.4), 0.0, 3.6 + row * 1.6 + rng.randf_range(-0.3, 0.3))
+		var across := -3.0 + (i % 5) * 1.5 + rng.randf_range(-0.3, 0.3)
+		var at := PLATFORM + turn * Vector3(across, 0.0, 3.0 + row * 1.5 + rng.randf_range(-0.25, 0.25))
 		var kind: String = ["man", "woman", "elder", "man", "woman", "child"][rng.randi() % 6]
 		var f := _folk(root, "", kind, Palette.DYES[rng.randi() % Palette.DYES.size()], at,
 			[["Amen, Amen!", "Neh. 8:6"]] if i % 2 == 0 else [["We've listened since early morning.", "see Neh. 8:3"]])
-		f.facing = "up"
+		f.face(PLATFORM)
 		if kind == "child":
 			f.size_scale = 0.62
 
