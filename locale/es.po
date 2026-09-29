@@ -1513,3 +1513,35 @@ msgstr "Equipo y dificultad"
 
 msgid "Touch and hold to go faster"
 msgstr "Mantén pulsado para ir más rápido"
+
+# Tutorial: calls floated over what to go to
+
+msgid "Drag on the left to walk"
+msgstr "Arrastra a la izquierda para caminar"
+
+msgid "Walk  {move}"
+msgstr "Caminar  {move}"
+
+msgid "Dash  {dash}"
+msgstr "Impulso  {dash}"
+
+msgid "Pick up  {interact}"
+msgstr "Recoger  {interact}"
+
+msgid "Deliver  {interact}"
+msgstr "Entregar  {interact}"
+
+msgid "Not needed here  {drop}"
+msgstr "Aquí no hace falta  {drop}"
+
+msgid "Build  {interact}"
+msgstr "Construir  {interact}"
+
+msgid "Sling it  {throw}"
+msgstr "Lanza  {throw}"
+
+msgid "Help up  {interact}"
+msgstr "Levantar  {interact}"
+
+msgid "Here"
+msgstr "Aquí"

@@ -111,6 +111,10 @@ func _ready() -> void:
 	_build_next_line()
 	_build_sun_row()
 	_build_joining_plaque()
+	# The practice has no day to count or waves to warn of; its own plaque says the step
+	if GameState.tutorial:
+		$Root/DayPlaque.hide()
+		$Root/ThreatPlaque.hide()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -374,7 +378,8 @@ func _process(delta: float) -> void:
 	if _next_poll > 0.0 or _next_line == null:
 		return
 	_next_poll = NEXT_POLL
-	var text := _next_text()
+	# The practice points the way itself (Tutorial); two voices would talk over each other
+	var text := "" if GameState.tutorial else _next_text()
 	_next_line.visible = not text.is_empty()
 	_next_line.text = text
 	if _next_box != null:
@@ -505,7 +510,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 					sub += "\n" + tr("The last day of this stretch — it must stand before the stars appear")
 				else:
 					sub += "\n" + tr("%d of %d stand — %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
-			_show_banner(tr("Day %d") % GameState.current_day, sub)
+			if not GameState.tutorial:
+				_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
 			# The campaign's ending story plays first; Main calls show_end after it
 			if not StoryData.plays_ending():

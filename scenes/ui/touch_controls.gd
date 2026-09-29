@@ -28,6 +28,9 @@ const IDLE_ALPHA   := 0.82     # resting buttons: solid enough to read, the worl
 ## later) and is reset on the next press.
 static var aiming := false
 static var aim_vec := Vector2.ZERO
+## A control the tutorial is asking for right now ("interact", "sling", "dash", "drop",
+## or "move" for the stick): it breathes a bright ring so the thumb knows where to go
+static var hint := ""
 
 # Controls that, while visible, own the screen (pause menu, end screen …)
 var blockers: Array[Control] = []
@@ -81,7 +84,7 @@ func _process(_delta: float) -> void:
 	var me := Player.local
 	var cooling := me != null and is_instance_valid(me) \
 		and (me.sling_cooldown() > 0.0 or me.dash_cooldown() > 0.0 or me.sling_charge() >= 0.0)
-	var active := not _touches.is_empty() or aiming or cooling
+	var active := not _touches.is_empty() or aiming or cooling or not hint.is_empty()
 	if active or _was_active:
 		queue_redraw()
 	_was_active = active
@@ -218,6 +221,7 @@ func _draw() -> void:
 		draw_circle(knob + Vector2(0, 2), KNOB_RADIUS, Color(UiStyle.DUSK, 0.18))
 		draw_circle(knob, KNOB_RADIUS, Color(UiStyle.PARCHMENT, 0.92))
 	_draw_aim_guide()
+	_draw_hint(held)
 	# Sling drag: aim line first, so the button sits over its root
 	if aiming and aim_vec != Vector2.ZERO:
 		var p: Vector2 = _buttons.sling.pos
@@ -260,6 +264,26 @@ func _draw() -> void:
 			var w := font.get_string_size(b.label.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 			draw_string(font, b.pos + Vector2(-w * 0.5, glyph * 0.5 + 8.0), b.label.to_upper(),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(ink, 0.9))
+
+# The tutorial's ask: a ring breathing out from the button, or — for "move", where
+# there is no button until the thumb lands — a ghost stick whose knob drifts outward
+func _draw_hint(held: Array) -> void:
+	if hint.is_empty():
+		return
+	var s := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.006)
+	if hint == "move":
+		if held.has("stick"):
+			return
+		var c := Vector2(_safe.position.x + EDGE + STICK_RADIUS + 40.0, _safe.end.y - EDGE - STICK_RADIUS - 30.0)
+		draw_circle(c, STICK_RADIUS, Color(UiStyle.DUSK, 0.14))
+		draw_arc(c, STICK_RADIUS, 0, TAU, 64, Color(UiStyle.CREAM, 0.35 + 0.35 * s), 2.0, true)
+		draw_circle(c + Vector2(0.0, -1.0) * STICK_RADIUS * 0.55 * s, KNOB_RADIUS, Color(UiStyle.PARCHMENT, 0.5 + 0.3 * s))
+		return
+	var b: Dictionary = _buttons.get(hint, {})
+	if b.is_empty() or held.has(hint):
+		return
+	draw_arc(b.pos, b.r + 6.0 + 10.0 * s, 0, TAU, 48, Color(UiStyle.AMBER, 0.9 - 0.6 * s), 4.0, true)
+	draw_arc(b.pos, b.r + 4.0, 0, TAU, 48, Color(UiStyle.CREAM, 0.9), 2.0, true)
 
 # While winding up, a dotted line on the ground from the thrower to the landing ring —
 # the thumb covers the button, so the aim has to read out in the world
