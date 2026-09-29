@@ -66,7 +66,8 @@ func _process(delta: float) -> bool:
 			if _t - _mark > 1.5:
 				var vb: Control = _main.hud.get_node("Root/EndScreen/Center/VBox")
 				_check(_main.hud.end_screen.visible, "end screen up")
-				_check(vb.get_node_or_null("Reel") != null, "highlight reel on the end screen")
+				# (phones hang the reel beside the verdict rather than in the column)
+				_check(vb.get_node_or_null("Reel") != null or _main.hud.get("_reel") != null, "highlight reel on the end screen")
 				var first: Button = vb.get_node("Buttons").get_child(0)
 				_check(first.text == "Try the stretch again", "first button: %s" % first.text)
 				var out := Array(OS.get_cmdline_user_args()).filter(func(a): return not a.begins_with("--"))

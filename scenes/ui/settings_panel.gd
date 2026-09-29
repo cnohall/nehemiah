@@ -3,13 +3,16 @@ extends Control
 # Modal settings sheet, shared by the title screen and the in-game menu.
 # Writes straight through to the Settings autoload; Esc / Done closes.
 # A second page, "Keys", rebinds the keyboard / mouse (built in code).
-# Phones: a full-height side sheet from the right (Material side sheet) with audio
-# only — no window/vsync/keys choices — plus the credits; tap outside or back closes.
+# Phones: a full-height side sheet from the right (Material side sheet): language,
+# screen shake and audio — no window/vsync/keys choices — then the version and the
+# credits; tap outside or back closes.
 
 signal closed
 
-const SHEET_WIDTH := 380.0
-const CREDITS := "Music: “The Desert of Dreams” by insydnis (CC-BY 3.0) · “Desert theme” by yd (CC0)\nSound effects: Kenney.nl (CC0)"
+const SHEET_WIDTH := 420.0   # room for German labels beside a slider
+
+## Phones: Settings › About rolls the credits through this, when the screen has them
+var on_credits := Callable()
 
 @onready var _windowed:   Button = %Windowed
 @onready var _fullscreen: Button = %Fullscreen
@@ -46,6 +49,7 @@ var _reset: Button
 var _language: OptionButton
 var _listening := ""        # action waiting for a key press, or ""
 var _sheet_tween: Tween
+var _credits_btn: Button
 
 func _ready() -> void:
 	hide()
@@ -62,13 +66,14 @@ func _ready() -> void:
 	_sfx.value_changed.connect(_on_sfx)
 	_sfx.drag_ended.connect(func(_changed): Settings.save())
 	_done.pressed.connect(close)
-	var desktop_rows := _grid.get_child_count()
 	_build_extra_rows()
 	_build_keys_page()
 	if Mobile.enabled():
 		# Rumble, hold/toggle sling and key rebinding are pad / keyboard things
-		for i in range(desktop_rows, _grid.get_child_count()):
-			_grid.get_child(i).hide()
+		for b: Control in [_rumble_on, _hold, _keys_btn]:
+			var row := b if b == _keys_btn else b.get_parent() as Control
+			row.hide()
+			_grid.get_child(row.get_index() - 1).hide()   # its label
 		_build_side_sheet()
 
 func open() -> void:
@@ -93,6 +98,7 @@ func open() -> void:
 	show()
 	UiFx.fade_in(self, 0.18)
 	if Mobile.enabled():
+		_credits_btn.visible = on_credits.is_valid()
 		_slide_in()
 	else:
 		_language.grab_focus()
@@ -188,33 +194,49 @@ func _build_side_sheet() -> void:
 	close_btn.pressed.connect(close)
 	head.add_child(close_btn)
 
-	# Audio only: phones are always fullscreen and vsync'd
+	# No display rows: phones are always fullscreen and vsync'd
 	for n in ["DisplayLabel", "DisplayRow", "VsyncLabel", "VsyncRow"]:
 		vbox.get_node("Grid/" + n).hide()
-	var grid := vbox.get_node("Grid") as GridContainer
-	grid.add_theme_constant_override("h_separation", 20)
-	grid.add_theme_constant_override("v_separation", 4)
+	_grid.add_theme_constant_override("h_separation", 20)
+	_grid.add_theme_constant_override("v_separation", 4)
 	for slider: HSlider in [_volume, _music, _sfx]:
-		slider.custom_minimum_size = Vector2(150, 48)   # the whole row is the target
+		slider.custom_minimum_size = Vector2(130, 48)   # the whole row is the target
 	for b: Button in [_shake_on, _shake_off]:
-		b.custom_minimum_size = Vector2(75, 48)   # the pair spans a slider's width
+		b.custom_minimum_size = Vector2(65, 48)   # the pair spans a slider's width
 	_done.get_parent().hide()
+	_language.custom_minimum_size.x = 0
+	_language.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	# Credits, moved off the title screen
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(spacer)
-	var about := Label.new()
-	about.theme_type_variation = &"Eyebrow"
-	about.text = "About"
-	vbox.add_child(about)
-	var credits := Label.new()
-	credits.theme_type_variation = &"Caption"
-	credits.add_theme_font_size_override("font_size", 13)
-	credits.text = CREDITS
-	credits.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	credits.custom_minimum_size.x = SHEET_WIDTH - 48.0   # a wrap width from the start
-	vbox.add_child(credits)
+	# The rows scroll under the fixed header on a short screen; at their foot, the
+	# version and the credits (off the title screen on phones)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+	vbox.move_child(scroll, _grid.get_index())
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 14)
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(rows)
+	_grid.reparent(rows)
+	var version := Label.new()
+	version.theme_type_variation = &"Caption"
+	version.add_theme_font_size_override("font_size", 12)
+	version.add_theme_color_override("font_color", UiStyle.INK_MUTED)
+	version.text = "v%s" % ProjectSettings.get_setting("application/config/version", "")
+	version.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	version.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	version.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var about := HBoxContainer.new()
+	about.add_theme_constant_override("separation", 12)
+	rows.add_child(about)
+	about.add_child(version)
+	_credits_btn = Button.new()
+	_credits_btn.theme_type_variation = &"GhostButton"
+	_credits_btn.text = "Credits"
+	_credits_btn.focus_mode = Control.FOCUS_NONE
+	_credits_btn.pressed.connect(func(): on_credits.call())
+	about.add_child(_credits_btn)
 
 	# Tap outside the sheet closes it
 	$Scrim.gui_input.connect(func(e: InputEvent):

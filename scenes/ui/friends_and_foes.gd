@@ -73,6 +73,7 @@ const SWAY_SPEED := 0.55
 const DRAG_TURN  := 0.012     # rad per pixel dragged
 const MOVE_HOLD  := 1.3       # seconds a looping signature move plays
 const MEDAL      := 92.0
+const MEDAL_PHONE := 50.0
 const SUN_X      := 0.84      # of the plate's width: off to the side, clear of the head
 # The backdrop runs this far past each side of the plate, so its wall reads chunkier
 const BACKDROP_BLEED := 0.125
@@ -125,8 +126,18 @@ var _quote: Label
 var _text: Label
 var _extra: VBoxContainer
 var _back_btn: Button
+# Phones: the page in phone type — the plate and the text side by side over a lineup of
+# small medals (no names under them; the one picked is named large above)
+var _m := false
+var _medal_d := MEDAL
 
 func _ready() -> void:
+	_m = Mobile.enabled()
+	if _m:
+		theme = Mobile.theme
+		# The whole cast in one row across the screen: 12 medals, 11 gaps, the divider
+		var w := get_viewport_rect().size.x - 40.0 - Mobile.safe_insets().x - Mobile.safe_insets().z
+		_medal_d = clampf((w - 29.0 - 11.0 * 8.0) / ENTRIES.size(), 36.0, MEDAL_PHONE)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var sh := Shader.new()
@@ -260,40 +271,42 @@ func _fill_extra(e: Dictionary, known: bool, where: String) -> void:
 		row.add_theme_constant_override("separation", 12)
 		var sw := ColorRect.new()
 		sw.color = Palette.CREW[e["slot"]]
-		sw.custom_minimum_size = Vector2(18, 18)
+		sw.custom_minimum_size = Vector2(14, 14) if _m else Vector2(18, 18)
 		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(sw)
-		row.add_child(_label(&"Eyebrow", 13, UiStyle.INK_SOFT, false, "Wears this player's colour"))
+		row.add_child(_label(&"Eyebrow", 11 if _m else 13, UiStyle.INK_SOFT, false, "Wears this player's colour"))
 		_extra.add_child(row)
 	if e.has("enemy"):
 		var t := _enemy_type(e)
 		# Against the fastest, toughest, hardest-hitting of the three
 		var grid := GridContainer.new()
 		grid.columns = 2
-		grid.add_theme_constant_override("h_separation", 24)
-		grid.add_theme_constant_override("v_separation", 10)
-		grid.add_child(_label(&"Eyebrow", 13, UiStyle.INK_SOFT, false, "Speed"))
+		grid.add_theme_constant_override("h_separation", 16 if _m else 24)
+		grid.add_theme_constant_override("v_separation", 4 if _m else 10)
+		var fs := 11 if _m else 13
+		grid.add_child(_label(&"Eyebrow", fs, UiStyle.INK_SOFT, false, "Speed"))
 		grid.add_child(_meter(Enemy.SPEED[t] / Enemy.SPEED[Enemy.Type.RAIDER]))
-		grid.add_child(_label(&"Eyebrow", 13, UiStyle.INK_SOFT, false, "Toughness"))
+		grid.add_child(_label(&"Eyebrow", fs, UiStyle.INK_SOFT, false, "Toughness"))
 		grid.add_child(_meter(Enemy.HEALTH[t] / Enemy.HEALTH[Enemy.Type.BRUTE]))
-		grid.add_child(_label(&"Eyebrow", 13, UiStyle.INK_SOFT, false, "Strength"))
+		grid.add_child(_label(&"Eyebrow", fs, UiStyle.INK_SOFT, false, "Strength"))
 		grid.add_child(_meter(Enemy.DAMAGE[t] / Enemy.DAMAGE[Enemy.Type.BRUTE]))
 		_extra.add_child(grid)
 	if not where.is_empty():
-		var l := _label(&"Eyebrow", 13, UiStyle.INK_MUTED, false, where)
+		var l := _label(&"Eyebrow", 11 if _m else 13, UiStyle.INK_MUTED, false, where)
 		l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # already translated
 		_extra.add_child(l)
 
 func _meter(share: float) -> Control:
+	var step := 24.0 if _m else 34.0
 	var m := Control.new()
-	m.custom_minimum_size = Vector2(5 * 34, 12)
+	m.custom_minimum_size = Vector2(5 * step, 12)
 	m.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var filled := clampi(roundi(share * 5.0), 1, 5)
 	m.draw.connect(func():
 		for k in 5:
 			var sb := UiStyle.box(OXBLOOD if k < filled else Color(UiStyle.INK, 0.1), Vector2.ZERO, 3)
-			m.draw_style_box(sb, Rect2(k * 34, 1, 28, 10)))
+			m.draw_style_box(sb, Rect2(k * step, 2, step - 6.0, 8)))
 	return m
 
 static func _enemy_type(e: Dictionary) -> Enemy.Type:
@@ -349,19 +362,20 @@ func _build() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side: String in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 140)
-	margin.add_theme_constant_override("margin_top", 56)
-	margin.add_theme_constant_override("margin_bottom", 36)
+	var ins := Mobile.safe_insets() if _m else Vector4.ZERO
+	margin.add_theme_constant_override("margin_left", int(16 + ins.x) if _m else 140)
+	margin.add_theme_constant_override("margin_right", int(24 + ins.z) if _m else 140)
+	margin.add_theme_constant_override("margin_top", int(6 + ins.y) if _m else 56)
+	margin.add_theme_constant_override("margin_bottom", int(10 + ins.w) if _m else 36)
 	add_child(margin)
 	var page := VBoxContainer.new()
-	page.add_theme_constant_override("separation", 22)
+	page.add_theme_constant_override("separation", 6 if _m else 22)
 	page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(page)
 
 	page.add_child(_build_header())
 	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 80)
+	body.add_theme_constant_override("separation", 24 if _m else 80)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	page.add_child(body)
@@ -369,6 +383,8 @@ func _build() -> void:
 	body.add_child(_build_info())
 	page.add_child(_build_lineup())
 	_wire_focus()
+	if _m:
+		return   # keys and drag hints are for the desk; a phone just taps and drags
 
 	var hint := _label(&"Eyebrow", 12, UiStyle.INK_MUTED, false, "← →   Choose          Drag   Turn          Esc   Back")
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -376,10 +392,16 @@ func _build() -> void:
 
 func _build_header() -> Control:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 28)
+	row.add_theme_constant_override("separation", 6 if _m else 28)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var head := _label(&"Heading", 34, UiStyle.INK, false, "Friends and Foes")
-	head.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 4))
+	if _m:
+		# Back first, as every phone page: an arrow top-left
+		var back := UiIcons.button("back", "Back", 48.0, &"FlatIconButton")
+		back.pressed.connect(close)
+		row.add_child(back)
+	var head := _label(&"Heading", 20 if _m else 34, UiStyle.INK, false, "Friends and Foes")
+	head.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 3 if _m else 4))
+	head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(head)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -390,12 +412,12 @@ func _build_header() -> Control:
 	tally.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	tally.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(tally)
-	_count = _label(&"Eyebrow", 13, UiStyle.INK_SOFT, false)
+	_count = _label(&"Eyebrow", 11 if _m else 13, UiStyle.INK_SOFT, false)
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_count.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
 	tally.add_child(_count)
 	_count_bar = Control.new()
-	_count_bar.custom_minimum_size = Vector2(180, 4)
+	_count_bar.custom_minimum_size = Vector2(120 if _m else 180, 4)
 	_count_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_count_bar.draw.connect(func():
 		var w := _count_bar.size.x
@@ -409,13 +431,14 @@ func _build_header() -> Control:
 	_back_btn.pressed.connect(close)
 	_back_btn.mouse_entered.connect(_back_btn.grab_focus)
 	row.add_child(_back_btn)
+	_back_btn.visible = not _m
 	return row
 
 ## Arched window: sky, hills and the wall behind, the figure in front. The arch is
 ## drawn once as the clip mask and again on top as the frame.
 func _build_plate() -> Control:
 	_plate = Control.new()
-	_plate.custom_minimum_size = Vector2(540, 0)
+	_plate.custom_minimum_size = Vector2(210 if _m else 540, 0)
 	_plate.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_plate.mouse_filter = Control.MOUSE_FILTER_PASS
 	_plate.mouse_default_cursor_shape = Control.CURSOR_DRAG
@@ -541,31 +564,31 @@ func _build_info() -> Control:
 	# Hung from a fixed line level with the shoulder of the arch, so the name stays put
 	# from one entry to the next however long the text runs
 	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 12)
+	info.add_theme_constant_override("separation", 6 if _m else 12)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.alignment = BoxContainer.ALIGNMENT_BEGIN
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info.add_child(_gap(120))
-	_eyebrow = _label(&"Eyebrow", 14, UiStyle.TERRACOTTA, false)
+	info.add_child(_gap(4 if _m else 120))
+	_eyebrow = _label(&"Eyebrow", 11 if _m else 14, UiStyle.TERRACOTTA, _m)
 	_eyebrow.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
 	info.add_child(_eyebrow)
-	_title = _label(&"Heading", 68, UiStyle.INK, false)
-	_title.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 6))
+	_title = _label(&"Heading", 30 if _m else 68, UiStyle.INK, false)
+	_title.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 3 if _m else 6))
 	info.add_child(_title)
 	var meta := HBoxContainer.new()
 	meta.add_theme_constant_override("separation", 14)
 	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.add_child(meta)
-	_tag = _label(&"Eyebrow", 12, UiStyle.CREAM, false)
+	_tag = _label(&"Eyebrow", 11 if _m else 12, UiStyle.CREAM, false)
 	_tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	meta.add_child(_tag)
-	_ref = _label(&"Eyebrow", 14, UiStyle.INK_SOFT, false)
+	_ref = _label(&"Eyebrow", 12 if _m else 14, UiStyle.INK_SOFT, false)
 	_ref.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	meta.add_child(_ref)
-	info.add_child(_gap(8))
+	info.add_child(_gap(2 if _m else 8))
 	# The verse, in their own words: set large, hung on a gold rule
 	var quote_row := HBoxContainer.new()
-	quote_row.add_theme_constant_override("separation", 22)
+	quote_row.add_theme_constant_override("separation", 12 if _m else 22)
 	quote_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.add_child(quote_row)
 	var rule := ColorRect.new()
@@ -573,22 +596,33 @@ func _build_info() -> Control:
 	rule.custom_minimum_size = Vector2(3, 0)
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	quote_row.add_child(rule)
-	_quote = _label(&"Verse", 32, UiStyle.INK)
-	_quote.add_theme_constant_override("line_spacing", 4)
+	_quote = _label(&"Verse", 17 if _m else 32, UiStyle.INK)
+	_quote.add_theme_constant_override("line_spacing", 2 if _m else 4)
 	_quote.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	quote_row.add_child(_quote)
-	info.add_child(_gap(8))
-	_text = _label(&"Body", 22, UiStyle.INK_SOFT)
-	_text.add_theme_constant_override("line_spacing", 5)
-	_text.custom_minimum_size.x = TEXT_W
-	_text.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	info.add_child(_gap(2 if _m else 8))
+	_text = _label(&"Body", 14 if _m else 22, UiStyle.INK_SOFT)
+	_text.add_theme_constant_override("line_spacing", 2 if _m else 5)
+	if _m:
+		_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		_text.custom_minimum_size.x = TEXT_W
+		_text.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	info.add_child(_text)
-	info.add_child(_gap(6))
+	info.add_child(_gap(2 if _m else 6))
 	_extra = VBoxContainer.new()
-	_extra.add_theme_constant_override("separation", 12)
+	_extra.add_theme_constant_override("separation", 6 if _m else 12)
 	_extra.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.add_child(_extra)
-	return info
+	if not _m:
+		return info
+	# Phones: the text scrolls in its column when an entry runs longer than the plate
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	scroll.add_child(info)
+	return scroll
 
 ## The cast along the foot of the page: a portrait medallion each, crew then foes
 func _build_lineup() -> Control:
@@ -605,14 +639,14 @@ func _build_lineup() -> Control:
 			if box != null:
 				var div := ColorRect.new()
 				div.color = UiStyle.RULE
-				div.custom_minimum_size = Vector2(1, MEDAL)
+				div.custom_minimum_size = Vector2(1, _medal_d)
 				div.size_flags_vertical = Control.SIZE_SHRINK_END
 				div.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				row.add_child(_gap_x(28))
+				row.add_child(_gap_x(14 if _m else 28))
 				row.add_child(div)
-				row.add_child(_gap_x(28))
+				row.add_child(_gap_x(14 if _m else 28))
 			var col := VBoxContainer.new()
-			col.add_theme_constant_override("separation", 18)   # room for the picked one to rise
+			col.add_theme_constant_override("separation", 10 if _m else 18)   # room for the picked one to rise
 			col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			row.add_child(col)
 			# Group title with a hairline run out across the group
@@ -620,7 +654,7 @@ func _build_lineup() -> Control:
 			head.add_theme_constant_override("separation", 14)
 			head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			col.add_child(head)
-			head.add_child(_label(&"Eyebrow", 13, UiStyle.INK_SOFT, false, GROUPS[group]))
+			head.add_child(_label(&"Eyebrow", 11 if _m else 13, UiStyle.INK_SOFT, false, GROUPS[group]))
 			var hair := ColorRect.new()
 			hair.color = UiStyle.RULE
 			hair.custom_minimum_size = Vector2(0, 1)
@@ -629,7 +663,7 @@ func _build_lineup() -> Control:
 			hair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			head.add_child(hair)
 			box = HBoxContainer.new()
-			box.add_theme_constant_override("separation", 16)   # room for longer names (Wasserträger)
+			box.add_theme_constant_override("separation", 8 if _m else 16)   # room for longer names (Wasserträger)
 			box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			col.add_child(box)
 		box.add_child(_medal(i))
@@ -656,17 +690,18 @@ func _medal(i: int) -> Control:
 	m.focus_entered.connect(_select.bind(i))
 	m.mouse_entered.connect(m.grab_focus)
 	var disc := Control.new()
-	disc.custom_minimum_size = Vector2(MEDAL, MEDAL)
+	var d := _medal_d
+	disc.custom_minimum_size = Vector2(d, d)
 	disc.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	disc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	disc.pivot_offset = Vector2(MEDAL * 0.5, MEDAL)   # grows upward, clear of its name
+	disc.pivot_offset = Vector2(d * 0.5, d)   # grows upward, clear of its name
 	disc.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
 	disc.draw.connect(func():
 		var c := disc.size * 0.5
 		var tint: Color = OXBLOOD if foe else UiStyle.OLIVE
-		disc.draw_circle(c, MEDAL * 0.5, tint.lerp(UiStyle.PARCHMENT, 0.72))
+		disc.draw_circle(c, d * 0.5, tint.lerp(UiStyle.PARCHMENT, 0.72))
 		# Kept inside the disc: whatever the disc draws is also its clip mask
-		disc.draw_circle(c + Vector2(0, MEDAL * 0.16), MEDAL * 0.34, tint.lerp(UiStyle.PARCHMENT, 0.58)))
+		disc.draw_circle(c + Vector2(0, d * 0.16), d * 0.34, tint.lerp(UiStyle.PARCHMENT, 0.58)))
 	m.add_child(disc)
 	var box := SubViewportContainer.new()
 	box.stretch = true
@@ -703,14 +738,16 @@ func _medal(i: int) -> Control:
 	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ring.draw.connect(func():
 		var here := i == _selected
-		ring.draw_arc(ring.size * 0.5, MEDAL * 0.5 - (2.5 if here else 1.0), 0, TAU, 64,
-			UiStyle.GOLD if here else Color(UiStyle.INK, 0.3), 5.0 if here else 1.5, true))
+		var w := (3.5 if _m else 5.0) if here else 1.5
+		ring.draw_arc(ring.size * 0.5, d * 0.5 - w * 0.5, 0, TAU, 64,
+			UiStyle.GOLD if here else Color(UiStyle.INK, 0.3), w, true))
 	disc.add_child(ring)
 	var name_l := _label(&"Eyebrow", 12, UiStyle.INK_SOFT, false)
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_l.custom_minimum_size.x = MEDAL + 4
+	name_l.custom_minimum_size.x = d + 4
 	name_l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
 	m.add_child(name_l)
+	name_l.visible = not _m
 	m.set_meta("box", box)
 	m.set_meta("name", name_l)
 	# The one picked stands a little forward: larger, gold rim, its name in terracotta

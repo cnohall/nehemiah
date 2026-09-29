@@ -82,6 +82,10 @@ const UI_MAX_BOOST := 1.35
 
 func _fit_ui() -> void:
 	var win := get_tree().root
+	if Mobile.enabled():
+		# Phones size the UI in dp (Mobile); a boost on top would outgrow a 720p screen
+		win.content_scale_factor = 1.0
+		return
 	var s := minf(win.size.x / 1920.0, win.size.y / 1080.0)
 	win.content_scale_factor = clampf(UI_MIN_SCALE / s, 1.0, UI_MAX_BOOST) if s > 0.0 else 1.0
 

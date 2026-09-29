@@ -170,7 +170,7 @@ func play() -> void:
 
 ## Picker: the section whose gate or stretch is under `point` (local), or -1
 func section_at(point: Vector2) -> int:
-	var reach := _unit() * 0.06
+	var reach := maxf(_unit() * 0.06, 28.0 if Mobile.enabled() else 0.0)   # a fingertip, on phones
 	var hit := -1
 	for i in CircuitDiorama.GATES.size():
 		for t: float in [float(i), i + 0.5]:
@@ -195,6 +195,11 @@ func _marks(i: int) -> int:
 ## Font scale: the old map square, so text sizes match the story card
 func _unit() -> float:
 	return minf(size.y * 0.72, size.x * 0.42)
+
+## Plaque text: phones see the map at a third of a monitor's height, so its names are
+## set larger than the map itself scales — held to a readable floor
+func _text(share: float, floor_px: float) -> int:
+	return int(maxf(_unit() * share, floor_px) if Mobile.enabled() else _unit() * share)
 
 ## World point → this control's local coordinates
 func _project(p: Vector3) -> Vector2:
@@ -233,7 +238,7 @@ func _draw_overlay() -> void:
 		var here := not inspect and not finale and i == section
 		var locked: bool = picker and not unlocked[i]
 		var label: String = tr(GameState.SECTIONS[i]["name"])
-		var fs := int(unit * (0.03 if here else 0.021))
+		var fs := _text(0.03, 15.0) if here else _text(0.021, 11.0)
 		var mask := _marks(i)
 		var gems := done and mask >= 0
 		# A small parchment plaque: the name, and the marks earned there beside it
@@ -272,8 +277,8 @@ func _draw_overlay() -> void:
 	_foe_plaque.shadow_color = Color(0.08, 0.05, 0.02, 0.35 * fa)
 	var ink := Color(WorldTag.TEXT, WorldTag.TEXT.a * fa)
 	var dim := Color(WorldTag.TEXT_DIM, WorldTag.TEXT_DIM.a * fa)
-	var small := int(unit * 0.021)
-	var tiny := int(unit * 0.016)
+	var small := _text(0.021, 11.0)
+	var tiny := _text(0.016, 9.0)
 	for foe: Array in FOES:
 		var fp := _project(_diorama.unit_to_world(foe[2]))
 		var who: String = tr(foe[0])

@@ -1,7 +1,8 @@
 extends Node
 
 # Phone/tablet presentation layer (autoload `Mobile`). Inert on desktop unless run
-# with `-- --touch`, which previews the phone layout at a Pixel-sized dp height.
+# with `-- --touch`, which previews the phone layout at a Pixel-sized dp height
+# (`--dp=N` for another height).
 #
 # - UI units = Android dp: the root content scale is set from screen density, so a
 #   48-unit button is a 48dp touch target on any phone (Material's minimum).
@@ -59,6 +60,9 @@ func _rescale() -> void:
 	if win.y <= 0.0:
 		return
 	var dp_h := PREVIEW_DP_H
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--dp="):   # preview another screen: 360 small phone, 600 tablet
+			dp_h = a.trim_prefix("--dp=").to_float()
 	if OS.has_feature("mobile"):
 		var dpi := DisplayServer.screen_get_dpi()
 		var density := dpi / 160.0 if dpi > 0 else DisplayServer.screen_get_scale()

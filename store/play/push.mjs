@@ -5,16 +5,21 @@
 //
 //   --dry-run        validate and print the plan, touch nothing
 //   --no-images      push listing text only
-//   --bundle=PATH    upload this .aab and put it on --track as a draft release
+//   --bundle=PATH    upload this .aab and put it on --track as a release
 //   --track=alpha    alpha = closed testing, internal = internal testing
+//   --status=draft   draft (default) waits for a click in Play Console; completed
+//                    sends it straight to review and out to the track's testers
 //   --inspect        print what Play holds, change nothing
+//
+// Release notes ("What's new") come from metadata/<locale>/release_notes.txt when
+// present (500 characters at most).
 //
 // No dependencies: signs the service-account JWT with node:crypto and talks to
 // the REST API with fetch. Everything happens inside one edit, committed at the
 // end; any failure deletes the edit so nothing is half-applied.
 //
-// The app is still a draft on Play, so releases can only be created as drafts:
-// "Send for review" / "Start rollout" stays a click in Play Console.
+// While the app was still a draft on Play, releases could only be created as drafts;
+// since the first closed test went out, --status=completed works too.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -31,13 +36,14 @@ const TEXT = { title: ["title.txt", 30], shortDescription: ["short_description.t
 const IMAGE_SETS = ["phoneScreenshots", "sevenInchScreenshots", "tenInchScreenshots"];
 const IMAGE_SINGLES = ["featureGraphic", "icon"];
 
-const args = { dryRun: false, images: true, bundle: null, track: "alpha", inspect: false };
+const args = { dryRun: false, images: true, bundle: null, track: "alpha", status: "draft", inspect: false };
 for (const a of process.argv.slice(2)) {
 	if (a === "--dry-run") args.dryRun = true;
 	else if (a === "--no-images") args.images = false;
 	else if (a === "--inspect") args.inspect = true;
 	else if (a.startsWith("--bundle=")) args.bundle = a.slice(9);
 	else if (a.startsWith("--track=")) args.track = a.slice(8);
+	else if (a.startsWith("--status=")) args.status = a.slice(9);
 	else throw new Error(`unknown argument: ${a}`);
 }
 
@@ -55,6 +61,9 @@ function readLocale(locale) {
 		const n = count(listing[field]);
 		if (n === 0 || n > limit) errors.push(`${field} is ${n} chars (1-${limit})`);
 	}
+	const notes = path.join(dir, "release_notes.txt");
+	const releaseNotes = fs.existsSync(notes) ? fs.readFileSync(notes, "utf8").replace(/\r\n/g, "\n").trim() : "";
+	if (count(releaseNotes) > 500) errors.push(`release notes are ${count(releaseNotes)} chars (max 500)`);
 	const images = {};
 	const imgDir = path.join(dir, "images");
 	for (const set of IMAGE_SETS) {
@@ -69,7 +78,7 @@ function readLocale(locale) {
 		const p = path.join(imgDir, `${single}.png`);
 		if (fs.existsSync(p)) images[single] = [p];
 	}
-	return { locale, listing, images, errors };
+	return { locale, listing, images, releaseNotes, errors };
 }
 
 async function token(keyFile) {
@@ -136,6 +145,9 @@ if (problems.length) {
 	process.exit(1);
 }
 if (args.bundle && !fs.existsSync(args.bundle)) throw new Error(`bundle not found: ${args.bundle}`);
+if (!["draft", "completed"].includes(args.status)) throw new Error(`--status must be draft or completed`);
+const releaseNotes = payloads.filter((p) => p.releaseNotes).map((p) => ({ language: p.locale, text: p.releaseNotes }));
+if (args.bundle) console.log(`release: ${args.track}, ${args.status}, notes in ${releaseNotes.map((n) => n.language).join(" ") || "(none)"}`);
 if (args.dryRun) { console.log("\ndry run, nothing sent"); process.exit(0); }
 
 const keyFile = process.env.PLAY_KEY_JSON;
@@ -169,9 +181,10 @@ try {
 		const { versionCode } = await call("POST", `${UPLOAD}/edits/${edit}/bundles?uploadType=media`, { file: args.bundle, type: "application/octet-stream" });
 		console.log(`bundle versionCode ${versionCode}`);
 		await call("PUT", `${API}/edits/${edit}/tracks/${args.track}`, {
-			json: { track: args.track, releases: [{ name: String(versionCode), versionCodes: [String(versionCode)], status: "draft" }] },
+			json: { track: args.track, releases: [{ name: String(versionCode), versionCodes: [String(versionCode)], status: args.status,
+				...(releaseNotes.length ? { releaseNotes } : {}) }] },
 		});
-		console.log(`track ${args.track}: draft release ${versionCode}`);
+		console.log(`track ${args.track}: ${args.status} release ${versionCode}`);
 	}
 
 	await call("POST", `${API}/edits/${edit}:commit`);

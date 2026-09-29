@@ -117,7 +117,27 @@ static func build_theme(mobile := false) -> Theme:
 	_buttons(t, mobile)
 	_panels(t, mobile)
 	_inputs(t, mobile)
+	_scrollbars(t)
 	return t
+
+# Slim ink rail, no track: the scroll reads as part of the page, not an OS widget
+static func _scrollbars(t: Theme) -> void:
+	for type: String in ["VScrollBar", "HScrollBar"]:
+		var v := type == "VScrollBar"
+		var track := StyleBoxEmpty.new()
+		if v:
+			track.content_margin_left = 6
+		else:
+			track.content_margin_top = 6
+		t.set_stylebox("scroll", type, track)
+		t.set_stylebox("scroll_focus", type, track)
+		for st: Array in [["grabber", 0.22], ["grabber_highlight", 0.36], ["grabber_pressed", 0.5]]:
+			var g := box(Color(INK, st[1]), Vector2.ZERO, 3)
+			g.content_margin_left = 2 if v else 8
+			g.content_margin_right = 2 if v else 8
+			g.content_margin_top = 8 if v else 2
+			g.content_margin_bottom = 8 if v else 2
+			t.set_stylebox(st[0], type, g)
 
 static func _label(t: Theme, type: String, font: Font, size: int, color: Color) -> void:
 	t.set_type_variation(type, "Label")

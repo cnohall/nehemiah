@@ -11,7 +11,11 @@ const _PATHS := {
 	close    = '<path d="M6 6l12 12M18 6 6 18" stroke="#FFF" stroke-width="2.2" stroke-linecap="round"/>',
 	backspace = '<path d="M9 5h10.5A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5H9l-6-7z" stroke="#FFF" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M11.5 9.5l5 5M16.5 9.5l-5 5" stroke="#FFF" stroke-width="2" stroke-linecap="round"/>',
 	copy     = '<rect x="8.5" y="8.5" width="11" height="12" rx="1.5" stroke="#FFF" stroke-width="2" fill="none"/><path d="M5.5 15.5V5a1.5 1.5 0 0 1 1.5-1.5h8.5" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round"/>',
-	check    = '<path d="M5 12.5l4.5 4.5L19 7.5" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+	# Folded map (the section picker)
+	map      = '<path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z" stroke="#FFF" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M9 4v13.5M15 6.5V20" stroke="#FFF" stroke-width="2"/>',
+	# Two figures, head and shoulders (Friends and Foes)
+	people   = '<circle cx="9" cy="8" r="3.4" stroke="#FFF" stroke-width="2" fill="none"/><path d="M2.5 20c.5-3.7 3.2-6 6.5-6s6 2.3 6.5 6" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M15.5 4.9a3.2 3.2 0 0 1 0 6.2M18 14.5c1.9.8 3.2 2.8 3.5 5.5" stroke="#FFF" stroke-width="2" fill="none" stroke-linecap="round"/>',
+	check    ='<path d="M5 12.5l4.5 4.5L19 7.5" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 	# Touch actions
 	# A slung stone in flight, speed lines trailing it
 	sling    = '<circle cx="16" cy="8" r="4.6" fill="#FFF"/><path d="M3.5 20.5l7-7M2.5 14l4.5-4.5M10 21.5l4.5-4.5" stroke="#FFF" stroke-width="2.4" stroke-linecap="round"/>',

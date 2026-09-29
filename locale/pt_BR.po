@@ -1507,3 +1507,9 @@ msgstr "Esse é o trabalho"
 
 msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
 msgstr "Carregar, construir, proteger e levantar uns aos outros.\n“Levantemo-nos e edifiquemos.” (Nee. 2:18)"
+
+msgid "Crew and difficulty"
+msgstr "Equipe e dificuldade"
+
+msgid "Touch and hold to go faster"
+msgstr "Toque e segure para acelerar"

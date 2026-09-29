@@ -1,0 +1,7 @@
+Menus feitos para o celular:
+• Nova tela inicial: crie uma sala, entre ou aprenda o básico; Trechos e Amigos e inimigos a um toque
+• Amigos e inimigos, o mapa de trechos e os créditos agora cabem no celular
+• Menu do jogo mais curto: equipe e dificuldade numa página própria
+• A tela de reunião deixa o mundo à vista
+• Configurações: o controle de efeitos voltou; créditos e versão ali mesmo
+• O texto não transborda mais em celulares menores

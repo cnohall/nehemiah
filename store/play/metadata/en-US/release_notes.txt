@@ -1,0 +1,7 @@
+Menus made for phones:
+• New title screen: host, join or learn the basics up front; Sections and Friends and Foes one tap away
+• Friends and Foes, the section map and the credits now fit phone screens
+• Shorter game menu: crew and difficulty on their own page
+• Gather screen keeps the world in view
+• Settings: sound effects slider is back, credits and version under Settings
+• Text no longer outgrows smaller phones

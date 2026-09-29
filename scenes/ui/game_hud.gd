@@ -79,6 +79,8 @@ var _last_tally := {}   # the latest dusk numbers (a replay's end screen shows i
 var _horn_row: Control
 var _pause_what: Label       # controls card: what the pause key does
 var _host_refreshers: Array[Callable] = []   # bot / difficulty rows (gather panel + pause menu)
+var _host_page: VBoxContainer   # phones: the menu's bot / difficulty rows, on a page of their own
+var _hidden_for_host: Array[Control] = []
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _ready_row: ReadyRow      # under the tally: hold [E] to go on, who else is ready
 var _tally_waiting: Array = []   # latest DayDirector ready state for the tally
@@ -143,6 +145,8 @@ func _ready() -> void:
 		menu.add_child(rule)
 		menu.move_child(rule, at)
 		_build_bot_row(menu, at + 1, true)
+		if Mobile.enabled():
+			_build_host_page(menu, at)
 	# Someone joined a paused solo game: the world can't stay frozen for them
 	NetworkManager.peer_connected.connect(func(_id: int):
 		get_tree().paused = false
@@ -151,7 +155,10 @@ func _ready() -> void:
 	NetworkManager.peer_disconnected.connect(func(_id: int): _refresh_controls())
 	GameState.crew_changed.connect(_on_crew_changed)
 	_on_crew_changed(GameState.crew_size)
-	settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
+	if Mobile.enabled():
+		_compact_pause_menu()   # no focus ring on touch: nothing to hand focus back to
+	else:
+		settings.closed.connect($Root/PauseMenu/Center/Modal/VBox/Settings.grab_focus)
 	_pad_lost_note = Label.new()
 	_pad_lost_note.theme_type_variation = &"Caption"
 	_pad_lost_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -213,11 +220,12 @@ func _open_pause() -> void:
 	UiFx.fade_in(pause_menu, 0.16)
 	_refresh_controls()
 	# (phones tap the gather panel's own Begin; the menu wouldn't fit it)
+	_show_host_page(false)
 	_pause_begin.visible = multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER 		and (InputMode.using_pad or not Mobile.enabled())
 	# The menu carries "Begin the work" now; don't show the gather banner's copy behind it
 	gather.modulate.a = 0.0
 	# One primary action at a time
-	$Root/PauseMenu/Center/Modal/VBox/Resume.theme_type_variation = 			$Root/PauseMenu/Center/Modal/VBox/Settings.theme_type_variation if _pause_begin.visible else &"PrimaryButton"
+	$Root/PauseMenu/Center/Modal/VBox/Resume.theme_type_variation = &"GhostButton" if _pause_begin.visible else &"PrimaryButton"
 	if not Mobile.enabled():   # no focus ring on touch
 		(_pause_begin if _pause_begin.visible else $Root/PauseMenu/Center/Modal/VBox/Resume).grab_focus()
 
@@ -265,6 +273,7 @@ func _refresh_gather_hint() -> void:
 		_gather_hint.text = tr("or press %s to begin") % InputMode.key("pause")
 
 func _close_pause() -> void:
+	_show_host_page(false)
 	pause_menu.hide()
 	get_tree().paused = false
 	gather.modulate.a = 1.0
@@ -579,16 +588,22 @@ func _show_end(won: bool) -> void:
 
 const REEL_SIZE  := Vector2(512, 288)
 const REEL_SLIDE := 2.6   # seconds per still
+const REEL_PHONE := 0.38  # phones: the reel's column, as a share of the screen width
 
+var _reel: Control
 var _reel_tween: Tween
 var _vote_note: Label
 var _vote_buttons := {}   # choice → Button
 
 # The run's stills (Highlights), one after another while the crew decides
+# Phones: too short to stack it over the verdict, so it takes a column on the left
 func _build_reel(vb: Control) -> void:
-	var old := vb.get_node_or_null("Reel")
-	if old:
-		old.queue_free()
+	if _reel:
+		_reel.queue_free()
+		_reel = null
+	var phone := Mobile.enabled()
+	var center := $Root/EndScreen/Center as Control
+	center.anchor_left = 0.0
 	if highlights == null or highlights.shots.is_empty():
 		return
 	var shots: Array = highlights.shots.duplicate()
@@ -602,6 +617,9 @@ func _build_reel(vb: Control) -> void:
 	reel.add_child(frame)
 	var pic := TextureRect.new()
 	pic.custom_minimum_size = REEL_SIZE
+	if phone:   # fills its column, at most ~0.6 of the monitor size
+		var col := get_viewport().get_visible_rect().size.x * REEL_PHONE - Mobile.safe_insets().x - 40.0
+		pic.custom_minimum_size = REEL_SIZE * minf(col / REEL_SIZE.x, 0.62)
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	frame.add_child(pic)
@@ -611,8 +629,18 @@ func _build_reel(vb: Control) -> void:
 	caption.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	caption.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # captions arrive translated
 	reel.add_child(caption)
-	vb.add_child(reel)
-	vb.move_child(reel, 0)
+	_reel = reel
+	if phone:
+		caption.add_theme_font_size_override("font_size", 12)
+		$Root/EndScreen.add_child(reel)
+		reel.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+		reel.anchor_right = REEL_PHONE
+		reel.offset_left = Mobile.safe_insets().x + 16.0
+		reel.offset_right = 0.0
+		center.anchor_left = REEL_PHONE
+	else:
+		vb.add_child(reel)
+		vb.move_child(reel, 0)
 	if _reel_tween:
 		_reel_tween.kill()
 	_reel_tween = create_tween().set_loops()
@@ -629,7 +657,7 @@ func _build_reel(vb: Control) -> void:
 # (DayDirector.cast_vote). Back to the menu stays each person's own choice.
 func _build_vote(won: bool, vb: Control) -> void:
 	var buttons: HBoxContainer = vb.get_node("Buttons")
-	buttons.add_theme_constant_override("separation", 16)
+	buttons.add_theme_constant_override("separation", 8 if Mobile.enabled() else 16)
 	for b in _vote_buttons.values():
 		b.queue_free()
 	_vote_buttons.clear()
@@ -646,7 +674,7 @@ func _build_vote(won: bool, vb: Control) -> void:
 	for i in choices.size():
 		var b := Button.new()
 		b.text = choices[i][1]
-		b.custom_minimum_size.x = 220
+		b.custom_minimum_size.x = 0 if Mobile.enabled() else 220
 		b.theme_type_variation = &"PrimaryButton" if i == 0 else &"GhostButton"
 		var choice: String = choices[i][0]
 		b.pressed.connect(func(): vote_cast.emit(choice))
@@ -868,6 +896,9 @@ func _stat(value: String, caption: String) -> Control:
 	l.text = caption
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
+	if Mobile.enabled():
+		n.add_theme_font_size_override("font_size", 26)
+		l.add_theme_font_size_override("font_size", 11)
 	v.add_child(n)
 	v.add_child(l)
 	return v
@@ -897,7 +928,22 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	nudge.text = "Short of hands? Add bots to the crew."
 	nudge.add_theme_color_override("font_color", UiStyle.INK)
 	nudge.visible = false
-	for c in [diff_row, diff_about, nudge, bot_row, skill_about]:
+	var rows: Array[Control] = [diff_row, diff_about, nudge, bot_row, skill_about]
+	var summary: Button = null
+	if not in_menu and Mobile.enabled():
+		# Phones: the gather panel keeps the world in view — one line saying how the crew
+		# is set, which opens the game menu's crew page to change it
+		var tucked := VBoxContainer.new()
+		tucked.visible = false
+		for c in [diff_row, diff_about, bot_row, skill_about]:
+			tucked.add_child(c)
+		summary = _bot_button("")
+		summary.pressed.connect(func():
+			Mobile.haptic()
+			_open_pause()
+			_show_host_page(true))
+		rows = [nudge, summary, tucked]
+	for c in rows:
 		vb.add_child(c)
 		vb.move_child(c, at)
 		at += 1
@@ -913,6 +959,8 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 		skill_about.text = tr(sk["about"])
 		skill.visible = Settings.bot_count > 0
 		skill_about.visible = Settings.bot_count > 0
+		if summary:
+			summary.text = diff.text + "  ·  " + label.text
 		fewer.disabled = Settings.bot_count <= 0
 		more.disabled = Settings.bot_count >= NetworkManager.MAX_PLAYERS - 1
 	_host_refreshers.append(refresh)
@@ -935,6 +983,51 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	diff.tooltip_text = tr("Click to change")
 	skill.tooltip_text = tr("Click to change")
 	refresh.call()
+
+# Phones: the game menu is too short for the crew rows under Resume, so they go on a
+# second page behind one button — the rule and the five rows from _build_bot_row, then Back
+func _build_host_page(menu: VBoxContainer, at: int) -> void:
+	_host_page = VBoxContainer.new()
+	_host_page.add_theme_constant_override("separation", 8)
+	_host_page.visible = false
+	var rows := menu.get_children().slice(at + 1, at + 6)
+	menu.get_child(at).queue_free()   # the rule: the page has its own heading
+	menu.add_child(_host_page)
+	menu.move_child(_host_page, at)
+	for r: Control in rows:
+		r.reparent(_host_page)
+	var back := Button.new()
+	back.text = "Back"
+	back.theme_type_variation = &"GhostButton"
+	back.focus_mode = Control.FOCUS_NONE
+	back.pressed.connect(_show_host_page.bind(false))
+	_host_page.add_child(back)
+	var open := Button.new()
+	open.text = "Crew and difficulty"
+	open.theme_type_variation = &"GhostButton"
+	open.focus_mode = Control.FOCUS_NONE
+	open.pressed.connect(_show_host_page.bind(true))
+	menu.add_child(open)
+	menu.move_child(open, _host_page.get_index())
+
+func _show_host_page(on: bool) -> void:
+	if _host_page == null or _host_page.visible == on:
+		return
+	var vb := $Root/PauseMenu/Center/Modal/VBox
+	if on:
+		Mobile.haptic()
+		_hidden_for_host.clear()
+		for c: Control in vb.get_children():
+			if c.visible and c not in [vb.get_node("Eyebrow"), vb.get_node("Title"), _pad_lost_note]:
+				c.hide()
+				_hidden_for_host.append(c)
+		vb.get_node("Title").text = "Crew"
+	else:
+		for c in _hidden_for_host:
+			c.show()
+		_hidden_for_host.clear()
+		vb.get_node("Title").text = "Paused" if _solo() else "Menu"
+	_host_page.visible = on
 
 func _host_row(children: Array) -> HBoxContainer:
 	var row := HBoxContainer.new()
@@ -1390,25 +1483,43 @@ func _apply_mobile_layout(alerts: OffscreenAlerts) -> void:
 
 	# End screen
 	var vb := $Root/EndScreen/Center/VBox as VBoxContainer
-	vb.custom_minimum_size.x = 560
+	vb.custom_minimum_size.x = 480   # fits beside the reel's column
+	(vb.get_node("Buttons/MenuButton") as Button).custom_minimum_size.x = 0
 	vb.add_theme_constant_override("separation", 8)
 	vb.get_node("Eyebrow").add_theme_font_size_override("font_size", 12)
-	vb.get_node("Title").add_theme_font_size_override("font_size", 40)
-	vb.get_node("Message").add_theme_font_size_override("font_size", 16)
-	vb.get_node("Stats").add_theme_constant_override("separation", 40)
-	vb.get_node("StatsGap").custom_minimum_size.y = 6
-	vb.get_node("ButtonGap").custom_minimum_size.y = 8
+	vb.get_node("Title").add_theme_font_size_override("font_size", 28)
+	vb.get_node("Title").autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vb.get_node("Message").add_theme_font_size_override("font_size", 15)
+	vb.get_node("Stats").add_theme_constant_override("separation", 20)
+	vb.get_node("StatsGap").custom_minimum_size.y = 0
+	vb.get_node("ButtonGap").custom_minimum_size.y = 4
 	vb.get_node("Rule").custom_minimum_size.x = 260
 
-	# Game menu — narrower
-	$Root/PauseMenu/Center/Modal.custom_minimum_size.x = 340
-	$Root/PauseMenu/Center/Modal/VBox/Hint.custom_minimum_size.x = 280
-	$Root/PauseMenu/Center/Modal/VBox.add_theme_constant_override("separation", 10)
 
 	# Edge pointers stay clear of the plaques and the action cluster
 	alerts.margin_side = 40.0 + maxf(s.x, s.z)
 	alerts.margin_top = top + 90.0
 	alerts.margin_bottom = 60.0 + s.w
+
+# Phones: the game menu, compact — Settings and Leave share a row, so it fits a 360dp
+# screen. Runs last in _ready: the rows it moves are wired up by path before it.
+func _compact_pause_menu() -> void:
+	var pm := $Root/PauseMenu/Center/Modal/VBox as VBoxContainer
+	$Root/PauseMenu/Center/Modal.custom_minimum_size.x = 420
+	pm.get_node("Hint").custom_minimum_size.x = 0
+	pm.get_node("Hint").add_theme_font_size_override("font_size", 14)
+	pm.get_node("Gap").hide()
+	pm.add_theme_constant_override("separation", 8)
+	var pair := HBoxContainer.new()
+	pair.name = "Pair"
+	pair.add_theme_constant_override("separation", 8)
+	pm.add_child(pair)
+	for n: String in ["Settings", "Leave"]:
+		var b := pm.get_node(n) as Button
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.focus_mode = Control.FOCUS_NONE
+		b.reparent(pair)
+	pm.get_node("Resume").focus_mode = Control.FOCUS_NONE
 
 # ── Steam invite ───────────────────────────────────────────
 

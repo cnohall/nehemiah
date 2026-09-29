@@ -45,6 +45,7 @@ var _world_tween: Tween
 var _mobile := false
 var _slots: Array[Label] = []
 var _code_sheet: Control
+var _bar: BoxContainer   # phones: the pills top right
 var _code_vb: VBoxContainer
 var _ip_mode := false
 var _last_key_ms := -1000
@@ -137,6 +138,8 @@ func _exit_tree() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and not host_btn.disabled:
 		_show_default_status()
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _bar:
+		_fit_bar.call_deferred()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if join_panel.visible and _code_sheet and _code_sheet.visible and event is InputEventKey \
@@ -295,6 +298,8 @@ func _on_learn() -> void:
 
 # Opens on the furthest stretch this player may build
 func _open_picker() -> void:
+	if host_btn.disabled:
+		return   # a room is already opening (the phone's Sections pill stays tappable)
 	var last := 0
 	for i in GameState.SECTIONS.size():
 		if GameState.is_unlocked(i):
@@ -438,48 +443,68 @@ func _on_settings() -> void:
 
 # ── Phone layout ───────────────────────────────────────────
 
-# Title lockup left, two big actions under it (host = filled, join = tonal),
-# settings as an icon top-right. No Quit — Android back leaves from here.
+# Title lockup left with the three ways into a game under it (host = filled, join and
+# the practice = tonal). The pages you browse — the section map, Friends and Foes,
+# settings — sit as pills top-right. The credits roll from Settings › About.
+# No Quit — Android back leaves from here.
 func _mobile_layout() -> void:
 	var s := Mobile.safe_insets()
 	var content := $Content as MarginContainer
 	content.add_theme_constant_override("margin_left", int(40 + s.x))
-	content.add_theme_constant_override("margin_top", int(20 + s.y))
+	content.add_theme_constant_override("margin_top", int(16 + s.y))
 	content.add_theme_constant_override("margin_right", int(24 + s.z))
-	content.add_theme_constant_override("margin_bottom", int(20 + s.w))
+	content.add_theme_constant_override("margin_bottom", int(16 + s.w))
 	$Content/Column/Eyebrow.add_theme_font_size_override("font_size", 12)
+	$Content/Column/Title.add_theme_constant_override("line_spacing", -10)
 	$Content/Column/SubRow/Subtitle.add_theme_font_size_override("font_size", 22)
 	$Content/Column/SubRow/Rule.custom_minimum_size.x = 120
-	$Content/Column/MenuGap.custom_minimum_size.y = 14
-	$Content/Column/StatusGap.custom_minimum_size.y = 10
-	net_status.custom_minimum_size.x = 300
-	net_status.add_theme_font_size_override("font_size", 13)
+	$Content/Column/StatusGap.custom_minimum_size.y = 8
+	net_status.custom_minimum_size.x = 420
+	net_status.add_theme_font_size_override("font_size", 12)
 
-	menu.custom_minimum_size.x = 280
+	menu.custom_minimum_size.x = 300
 	host_btn.theme_type_variation = &"PrimaryButton"
 	host_btn.text = "Host a room"
 	join_btn.theme_type_variation = &"GhostButton"
 	join_btn.text = "Join with code"
-	_sections_btn.theme_type_variation = &"GhostButton"
-	_sections_btn.text = "Choose a section"
+	var learn := menu.get_node("LearnButton") as Button
+	learn.theme_type_variation = &"GhostButton"
+	menu.move_child(learn, join_btn.get_index() + 1)
 	menu.add_theme_constant_override("separation", 8)
-	for b: Button in [host_btn, _sections_btn, join_btn]:
+	for b: Button in [host_btn, join_btn, learn]:
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(Mobile.haptic)
-	settings_btn.hide()
-	quit_btn.hide()
-	$Credits.hide()   # lives in Settings › About on phones
+	for b: Button in [settings_btn, quit_btn, _sections_btn, _folk_btn, _credits_btn]:
+		b.hide()
+	$Credits.hide()
 
+	# Top right: Sections · Friends and Foes · settings — in a row, or stacked down the
+	# right edge when the row would run into the title (narrow screens, long languages)
+	_bar = BoxContainer.new()
+	_bar.add_theme_constant_override("separation", 8)
+	add_child(_bar)
+	move_child(_bar, verse.get_index())
+	for p: Button in [_pill("map", "Sections", _open_picker), _pill("people", "Friends and Foes", _folk.open)]:
+		p.size_flags_horizontal = Control.SIZE_SHRINK_END
+		_bar.add_child(p)
 	var gear := UiIcons.button("tune", "Settings")
+	gear.size_flags_horizontal = Control.SIZE_SHRINK_END
 	gear.pressed.connect(_on_settings)
-	add_child(gear)
-	move_child(gear, verse.get_index())
-	gear.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	gear.offset_left = -(48 + 20 + s.z)
-	gear.offset_right = -(20 + s.z)
-	gear.offset_top = 20 + s.y
-	gear.offset_bottom = 68 + s.y
+	gear.pressed.connect(Mobile.haptic)
+	_bar.add_child(gear)
+	_bar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_bar.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	resized.connect(_fit_bar)
+	_fit_bar.call_deferred()
+	UiFx.stagger(_bar.get_children(), 0.45, 0.06, 0.8)
+	# No focus ring on touch: the pages close back to the menu as it was
+	_picker.closed.disconnect(_sections_btn.grab_focus)
+	_folk.closed.disconnect(_folk_btn.grab_focus)
+	_credits.finished.disconnect(_credits_btn.grab_focus)
+	settings.on_credits = func():
+		settings.close()
+		_credits.play()
 
 	# Verse: bottom-right, right-aligned over a soft parchment glow from the corner.
 	# The art behind it is the wall itself; the glow (like the title-side veil)
@@ -521,6 +546,48 @@ func _mobile_layout() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 	_build_code_sheet()
+
+func _fit_bar() -> void:
+	# Short screens: the eyebrow goes and the title steps down, so the menu keeps its
+	# full-size buttons
+	var short := size.y < 390.0
+	$Content/Column/Eyebrow.visible = not short
+	$Content/Column/Title.add_theme_font_size_override("font_size", 44 if short else 52)
+	$Content/Column/MenuGap.custom_minimum_size.y = 8 if short else 12
+	var s := Mobile.safe_insets()
+	var title_end := 40.0 + s.x + ($Content/Column/Title as Control).get_combined_minimum_size().x
+	_bar.vertical = false
+	_bar.vertical = size.x - (20.0 + s.z) - _bar.get_combined_minimum_size().x < title_end + 24.0
+	var m := _bar.get_combined_minimum_size()
+	_bar.offset_right = -(20.0 + s.z)
+	_bar.offset_left = _bar.offset_right - m.x
+	_bar.offset_top = 16.0 + s.y
+	_bar.offset_bottom = _bar.offset_top + m.y
+
+# Parchment pill with an icon: legible over the live world behind it
+func _pill(icon: String, text: String, action: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.icon = UiIcons.get_icon(icon, 20.0)
+	b.add_theme_constant_override("h_separation", 8)
+	b.custom_minimum_size.y = 48
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 2))
+	b.add_theme_font_size_override("font_size", 13)
+	var normal := UiStyle.bordered(UiStyle.box(Color(UiStyle.PARCHMENT, 0.92), Vector2(16, 0), 24), Color(UiStyle.RULE, 0.9), 1, 2)
+	var pressed := UiStyle.bordered(UiStyle.box(UiStyle.PARCHMENT_DEEP, Vector2(16, 0), 24), UiStyle.TERRACOTTA, 1, 1)
+	for st: String in ["normal", "hover", "focus", "disabled"]:
+		b.add_theme_stylebox_override(st, normal)
+	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_stylebox_override("hover_pressed", pressed)
+	for c: String in ["font_color", "font_hover_color", "font_focus_color", "icon_normal_color", "icon_hover_color", "icon_focus_color"]:
+		b.add_theme_color_override(c, UiStyle.INK)
+	for c: String in ["font_pressed_color", "font_hover_pressed_color", "icon_pressed_color", "icon_hover_pressed_color"]:
+		b.add_theme_color_override(c, UiStyle.TERRACOTTA_DEEP)
+	b.pressed.connect(func():
+		Mobile.haptic()
+		action.call())
+	return b
 
 # Room codes are 5 letters from a 24-letter alphabet, so an in-game keypad beats
 # the system keyboard: no IME covering half the landscape screen, no system bars

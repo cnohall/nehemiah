@@ -1497,3 +1497,9 @@ msgstr "이것이 일입니다"
 
 msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
 msgstr "나르고, 쌓고, 지키고, 서로 일으켜 주세요.\n“일어나 건축하자.” (느 2:18)"
+
+msgid "Crew and difficulty"
+msgstr "작업단과 난이도"
+
+msgid "Touch and hold to go faster"
+msgstr "길게 누르면 빨라집니다"

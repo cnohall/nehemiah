@@ -1,0 +1,7 @@
+Menús pensados para el celular:
+• Nueva pantalla de título: crea una sala, únete o aprende lo básico; Tramos y Amigos y enemigos a un toque
+• Amigos y enemigos, el mapa de tramos y los créditos ahora caben en el celular
+• Menú de juego más corto: equipo y dificultad en su propia página
+• La pantalla de reunión deja ver el mundo
+• Ajustes: vuelve el control de efectos; créditos y versión ahí mismo
+• El texto ya no se desborda en celulares pequeños
