@@ -7,15 +7,18 @@
 
 Cooperative 2–4 player HD-2D isometric action-strategy set in 455 BCE Jerusalem. Players embody the workers and guards of Nehemiah's rebuilding effort, racing to reconstruct the city wall in 52 days while repelling Sanballat's and Tobiah's increasingly desperate forces. Tone: urgent and collaborative — think Overcooked meets tower defense, grounded in Biblical history.
 
-**Core loop per day:**
-1. Day begins — enemies spawn in waves
-2. Players fight, carry materials, and build walls simultaneously — deliver a stage's loads, then stand at the wall and work it up (§5.4)
-3. Day ends when all wall sections for that day are complete (sprint model)
+**Core loop** (sun clock, §5.6): the campaign is 12 stretches of wall (§6), each worked over its days (~4).
+1. Dawn — enemies come in a trickle plus announced waves
+2. Players fight, carry materials and build at the same time: deliver a stage's loads, then stand at the wall and work it up (§5.4). The stretch goes up in build order (the work front)
+3. A day ends when the sun sets ("till the stars appeared", Neh 4:21) or when the whole stretch stands; days left over are skipped and the next stretch starts tomorrow
 
 **Platform:** desktop (Steam) first, built so a console / mobile port stays cheap: every action works on keyboard + mouse and on a gamepad, UI is navigable by pad, button hints follow the device in use (`InputMode`).
 
-**Win condition:** Complete the wall section on day 52
-**Loss condition:** The enemies break through the wall and reach the inner city
+**Win condition:** The last stretch (Miphkad Gate) stands by day 52 and the circuit is closed
+**Loss conditions:**
+- 10 enemies get into the inner city over the run (`GameState.MAX_BREACHES`, a wrecker pours through a wall knocked back to bare foundation, or a runner goes through a gap)
+- Nightfall on a stretch's last day with it unfinished ("The stars appeared")
+- Either way: "Try the stretch again" restarts at that stretch's first day
 
 ---
 
@@ -38,15 +41,18 @@ Debug: run with `-- --day=N` (debug builds) to start at a later day and see brut
 
 ## 3. Structures
 
-Just one type of structure so far
+1. **Wall units** (`WallSection`) — stages: framing (timber; beams on beam stretches) → courses (stone) → mortar. Each stage: deliver the loads, then work it up by hand (§5.4). Enemies batter them back down a stage at a time. Broad Wall's are double-thick (§6.3)
+2. **Gates** (`Gate`) — two pillars built like wall units, then the **doors step**: deliver timber, work it → doors hang and close the gap. Workers pass through hung doors, enemies don't. Stretches with no gate seal the opening with stone instead
+3. **Watch posts** (`WatchPost`, §5.6) — two behind the wall; raise with timber, feed with stone for the slinger on top. Bare again each new stretch
+4. **Mortar trough** (`Trough`, mixing stretches) — not built: lime + water in → mortar out after 4 s
 
-1. Wall sections - required materials to build, wood, stones, and mortar
+Supply: stockpiles in the yard (timber, stone, mortar; per stretch some are replaced by rubble heaps, lime bins and water jars — §6.3). Dropped loads stay on the ground.
 
 ---
 
 ## 4. Historical Notes
 
-- Wall circuit: Nehemiah 3, clockwise from Sheep Gate
+- Wall circuit: Nehemiah 3 order from the Sheep Gate (north-east) — west along the north, down the west side, east along the south, up the east side back to the Miphkad Gate: counterclockwise on a north-up map
 - 52 days: Nehemiah 6:15 (Elul 25, 455 BCE)
 - Enemy leaders: Sanballat the Horonite, Tobiah the Ammonite, Geshem the Arab
 - Persian king: Artaxerxes I; his 20th year (Neh 2:1) = 455 BCE, per Watch Tower chronology (secular dating puts it at 445). Use BCE, not BC
@@ -166,15 +172,16 @@ Keep the earthy palette, borrow Overcooked's readability:
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |
 |---|---|---|
-| Different enemy types | Needed for variety across 52 days | Low — add incrementally |
-| Ballistas mounted on the wall | Tower-defense layer, a way to spend materials | May let players skip combat |
+| Enemies that attack the work itself, one at a time: **saboteur** (raids the yard, scatters loads; Neh 4:11) → **archer** (stays outside, hits builders on the scaffold; 4:17) | Variety across 52 days; makes guarding the yard / builders a real job | Low — add incrementally |
 | Civilians (women, children) inside the city | Raises stakes, fits Neh 4:13 | Adds AI work |
 | Player roles | More reason to coordinate | Could fragment co-op; Overcooked has no roles |
 | Prep days (gather materials, craft weapons) | Rhythm between sections | Slows pacing |
 | Stand on a tile to spawn builders/fighters (mobile-ad style) | Addictive progression hook | Can drift toward an idle game |
 | Medkits / healing | Survivability | Low priority |
 
-**Suggested order:** wall damage → second enemy type → ballistas
+Done and removed from the table: wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6).
+
+**Suggested order:** playtest 3 first (§5.6–5.8 are all first pass) → saboteur → archer
 
 ---
 
