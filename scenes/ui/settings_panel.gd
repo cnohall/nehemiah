@@ -30,6 +30,8 @@ const KEY_ROWS := [
 ]
 
 var _rumble_on: Button
+var _world_hud: Button
+var _plaque_hud: Button
 var _rumble_off: Button
 var _hold: Button
 var _toggle_mode: Button
@@ -74,6 +76,8 @@ func open() -> void:
 	_select_language()
 	_rumble_on.button_pressed    = Settings.rumble
 	_rumble_off.button_pressed   = not Settings.rumble
+	_world_hud.button_pressed    = Settings.diegetic_hud
+	_plaque_hud.button_pressed   = not Settings.diegetic_hud
 	_hold.button_pressed         = not Settings.toggle_charge
 	_toggle_mode.button_pressed  = Settings.toggle_charge
 	_show_keys(false)
@@ -149,6 +153,11 @@ func _build_extra_rows() -> void:
 	_rumble_off = pair[1]
 	_rumble_on.pressed.connect(_toggle.bind("rumble", true))
 	_rumble_off.pressed.connect(_toggle.bind("rumble", false))
+	pair = _segment_row("Day info", "In the world", "Plaques")
+	_world_hud = pair[0]
+	_plaque_hud = pair[1]
+	_world_hud.pressed.connect(_toggle.bind("diegetic_hud", true))
+	_plaque_hud.pressed.connect(_toggle.bind("diegetic_hud", false))
 	pair = _segment_row("Sling", "Hold", "Toggle")
 	_hold = pair[0]
 	_toggle_mode = pair[1]

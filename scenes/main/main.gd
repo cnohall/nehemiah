@@ -49,6 +49,9 @@ var _mood_tween: Tween
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	# The day's record and its threats, kept in the world (diegetic HUD)
+	add_child(Scribe.new())
+	add_child(Watchmen.new())
 	if GameState.attract:
 		_start_attract()
 		return

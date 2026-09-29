@@ -91,6 +91,11 @@ var _sun_row: HBoxContainer  # day plaque: the sun clock (GameState.sun)
 var _sun_dial: SunDial
 var _sun_time: Label
 var _sun_warned := false     # "the sun is low" said once a day
+# Diegetic HUD (Settings.diegetic_hud): no plaques — the sun tells the time, the scribe
+# keeps the record, the watchmen call the threats. The "Next:" line stays, as a caption
+# low on the screen.
+var _next_caption: Label
+var _style_world := false
 
 func _ready() -> void:
 	# Keeps running while a solo game is paused (menus, settings, fades)
@@ -100,12 +105,12 @@ func _ready() -> void:
 	_build_player_cards()
 	_build_controls_hint()
 	_build_next_line()
+	_build_next_caption()
 	_build_sun_row()
 	_build_joining_plaque()
 	# The practice has no day to count or waves to warn of; its own plaque says the step
-	if GameState.tutorial:
-		$Root/DayPlaque.hide()
-		$Root/ThreatPlaque.hide()
+	_style_world = not Settings.diegetic_hud   # forces the first _apply_style
+	_apply_style()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -345,6 +350,8 @@ func _refresh_sun() -> void:
 			if GameState.last_day_of_section() else tr("What isn't built by the stars waits for tomorrow"), 2.2)
 
 func _process(delta: float) -> void:
+	if _style_world != Settings.diegetic_hud:
+		_apply_style()
 	if _sun_row != null:
 		_refresh_sun()
 	_next_poll -= delta
@@ -353,8 +360,36 @@ func _process(delta: float) -> void:
 	_next_poll = NEXT_POLL
 	# The practice points the way itself (Tutorial); two voices would talk over each other
 	var text := "" if GameState.tutorial else _next_text()
-	_next_line.visible = not text.is_empty()
-	_next_line.text = text
+	var line := _next_caption if _style_world else _next_line
+	(_next_line if _style_world else _next_caption).visible = false
+	line.visible = not text.is_empty()
+	line.text = text
+
+# Plaques, or the world telling it (the setting can change mid-game from the menu)
+func _apply_style() -> void:
+	_style_world = Settings.diegetic_hud
+	var plaques := not _style_world and not GameState.tutorial and not end_screen.visible
+	$Root/DayPlaque.visible = plaques
+	threat.visible = plaques
+	_next_poll = 0.0
+
+# Low and centred, clear of the crew cards and the controls card: ink-rimmed text over
+# the world, no panel
+func _build_next_caption() -> void:
+	_next_caption = Label.new()
+	_next_caption.add_theme_font_override("font", UiStyle.WORLD_FONT)
+	_next_caption.add_theme_font_size_override("font_size", 22)
+	_next_caption.add_theme_color_override("font_color", UiStyle.CREAM)
+	_next_caption.add_theme_color_override("font_outline_color", Color(UiStyle.DUSK, 0.92))
+	_next_caption.add_theme_constant_override("outline_size", 9)
+	_next_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_next_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_next_caption.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
+	_next_caption.visible = false
+	$Root.add_child(_next_caption)
+	_next_caption.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 36)
+	_next_caption.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_next_caption.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 func _next_text() -> String:
 	if GameState.phase != GameState.Phase.WORK:
