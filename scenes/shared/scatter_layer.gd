@@ -47,10 +47,17 @@ const OPENING      := Color(0.18, 0.13, 0.09)
 const FOOTING      := Color(0.70, 0.66, 0.58)   # rough limestone course at the foot of a house
 const BEAM_COLOR   := Color(0.42, 0.28, 0.16)
 const AWNINGS      := [Palette.INDIGO, Palette.MADDER, Palette.INDIGO, Palette.SAFFRON, Palette.UNDYED]
+const LAMPLIGHT    := Color(1.0, 0.58, 0.2)   # a clay oil lamp behind the window, at dusk
 
 var _rng := RandomNumberGenerator.new()
 # Instances collected by kind, flushed into one MultiMesh each at the end
 var _batches := {}
+# Window glows, lit by DayLight at dusk (set_lamps); built in _flush, in a fixed shuffled
+# order so they come on one by one, the same on every peer
+var _lamp_spots: Array[Transform3D] = []
+var _lamps: MultiMesh
+var _halos: MultiMesh   # the soft glow round each lit window, same order
+static var _halo_mat: StandardMaterial3D
 
 func _ready() -> void:
 	_rng.seed = 42
@@ -388,6 +395,7 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 		var ux := (w - uw) * 0.5 * (1.0 if _rng.randf() < 0.5 else -1.0)
 		_add("block", Transform3D(Basis.from_scale(Vector3(uw, uh, ud)), c + Vector3(ux, h + uh * 0.5, 0)), tint.lightened(0.03))
 		_add("opening", Transform3D(Basis.from_scale(Vector3(0.06, 0.4, 0.4)), c + Vector3(ux + uw * 0.5 + 0.02, h + uh * 0.6, 0)), OPENING)
+		_lamp_spots.append(Transform3D(Basis.from_scale(Vector3(0.02, 0.32, 0.32)), c + Vector3(ux + uw * 0.5 + 0.055, h + uh * 0.6, 0)))
 		top = h + uh
 	# Door on the street face; north faces are the ones the camera sees
 	var face := -1.0 if faces_north else 1.0
@@ -445,6 +453,7 @@ func _door(at: Vector3, face: float) -> void:
 # Small window on the +x face: opening, lintel, sill
 func _window(at: Vector3) -> void:
 	_add("opening", Transform3D(Basis.from_scale(Vector3(0.08, 0.5, 0.5)), at + Vector3(0.02, 0, 0)), OPENING)
+	_lamp_spots.append(Transform3D(Basis.from_scale(Vector3(0.02, 0.4, 0.4)), at + Vector3(0.065, 0, 0)))
 	_add("timber", Transform3D(Basis.from_scale(Vector3(0.16, 0.12, 0.78)), at + Vector3(0.06, 0.33, 0)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.16, 0.07, 0.66)), at + Vector3(0.06, -0.3, 0)), _vary(FOOTING, 0.03))
 
@@ -587,6 +596,71 @@ func _flush() -> void:
 		if kind in ["pebble", "patch", "slab", "blade", "bed", "chip"]:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
+	_build_lamps()
+
+func _build_lamps() -> void:
+	_lamps = null
+	_halos = null
+	if _lamp_spots.is_empty():
+		return
+	# Own RNG: the layout's _rng must not shift
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4021 + _lamp_spots.size()
+	var order := _lamp_spots.duplicate()
+	for i in range(order.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var t: Transform3D = order[i]
+		order[i] = order[j]
+		order[j] = t
+	var colors: Array[Color] = []
+	var halo_xf: Array[Transform3D] = []
+	var halo_colors: Array[Color] = []
+	for xf: Transform3D in order:
+		colors.append(LAMPLIGHT.darkened(rng.randf_range(0.0, 0.15)))
+		# A quad in the wall's plane (+x face), a little proud of it
+		halo_xf.append(Transform3D(Basis(Vector3.UP, PI * 0.5).scaled(Vector3.ONE * xf.basis.get_scale().y * 3.2), xf.origin + Vector3(0.04, 0, 0)))
+		halo_colors.append(Color(LAMPLIGHT, rng.randf_range(0.35, 0.5)))
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	var mmi := _multimesh(Chunky.unit_block(), order, colors, mat)
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_lamps = mmi.multimesh
+	_lamps.visible_instance_count = 0
+	var halo := _multimesh(QuadMesh.new(), halo_xf, halo_colors, _lamp_halo_material())
+	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_halos = halo.multimesh
+	_halos.visible_instance_count = 0
+	_lamp_spots.clear()
+	add_to_group("window_lamps")
+
+static func _lamp_halo_material() -> StandardMaterial3D:
+	if _halo_mat:
+		return _halo_mat
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 1))
+	grad.set_color(1, Color(1, 1, 1, 0))
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	tex.width = 64
+	tex.height = 64
+	_halo_mat = StandardMaterial3D.new()
+	_halo_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_halo_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_halo_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_halo_mat.vertex_color_use_as_albedo = true
+	_halo_mat.albedo_texture = tex
+	_halo_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _halo_mat
+
+## DayLight: light `share` (0 … 1) of the windows
+func set_lamps(share: float) -> void:
+	if _lamps:
+		_lamps.visible_instance_count = roundi(share * _lamps.instance_count)
+		_halos.visible_instance_count = _lamps.visible_instance_count
 
 # Chunky look: bevelled blocks, faceted foliage and rock
 func _material_for(kind: String) -> Material:

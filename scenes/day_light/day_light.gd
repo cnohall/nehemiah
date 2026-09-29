@@ -30,12 +30,17 @@ const SUN_LOW_ELEV := 22.0    # at the stars — low, long shadows, still readab
 const SUN_BEARING  := 140.0   # the scene's sun, south-west of the site…
 const SUN_SWING    := 38.0    # …turning toward the west over the day
 const SUN_ARC_RATE := 0.5     # how fast it swings back up at a new dawn
+# Lamps in the windows (ScatterLayer, group "window_lamps"): lit one by one as evening
+# comes on (Neh. 4:21 "till the stars appeared"), all of them once night falls
+const LAMPS_FROM := 0.3       # evening at which the first is lit …
+const LAMPS_ALL  := 0.95      # … and the last
 
 @onready var _sun: DirectionalLight3D = get_parent().get_node("Sun")
 @onready var _env: Environment = get_parent().get_node("WorldEnvironment").environment
 
 var darkness := 0.0
 var evening := 0.0
+var lamps := 0.0   # 0 … 1: share of the windows lit (read by Birds too)
 var _target := 0.0
 var _day := {}   # daylight values to return to
 var _lamp_poll := 0.0
@@ -113,6 +118,8 @@ func _apply() -> void:
 
 func _update_lamps() -> void:
 	var k := darkness * darkness * (3.0 - 2.0 * darkness)
+	lamps = maxf(smoothstep(LAMPS_FROM, LAMPS_ALL, evening), k)
+	get_tree().call_group("window_lamps", "set_lamps", lamps)
 	for p: Node3D in get_tree().get_nodes_in_group("players"):
 		var lamp: OmniLight3D = p.get_node_or_null("Lamp")
 		if lamp == null:
