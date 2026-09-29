@@ -20,7 +20,8 @@ func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if not a.begins_with("--"):
 			_out = a
-	root.size = Vector2i(1280, 720)
+	if not OS.get_cmdline_user_args().has("--touch"):
+		root.size = Vector2i(1280, 720)
 	root.get_node("GameState").tutorial = true
 	_main = load("res://scenes/main/main.tscn").instantiate()
 	root.add_child(_main)
@@ -49,7 +50,11 @@ func _process(delta: float) -> bool:
 		print("  step %d: %s" % [i, _tut._title.text])
 		if i == 1 and _out != "":
 			root.get_texture().get_image().save_png(_out + "/tutorial.png")
+	var was := _step_since
 	_step_since += delta
+	# Every step as the player first sees it: plaque, guide tag, button pulse
+	if _out != "" and was < 0.4 and _step_since >= 0.4 and _tut._between <= 0.0:
+		root.get_texture().get_image().save_png(_out + "/tutorial_%d.png" % i)
 	if _tut._between > 0.0 or _step_since < 0.5:
 		return false
 	var me: Node3D = _main.players_root.get_node(str(root.multiplayer.get_unique_id()))
