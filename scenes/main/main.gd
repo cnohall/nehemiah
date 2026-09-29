@@ -52,6 +52,7 @@ func _ready() -> void:
 	# The day's record and its threats, kept in the world (diegetic HUD)
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
+	add_child(Taunts.new())
 	if GameState.attract:
 		_start_attract()
 		return
