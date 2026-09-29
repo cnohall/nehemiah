@@ -613,6 +613,15 @@ msgstr "먼저 완성하세요: %s"
 msgid "Choose a stretch of wall"
 msgstr "성벽 구간을 고르세요"
 
+msgid "Next"
+msgstr "다음"
+
+msgid "%d of %d stretches standing · %d of %d marks"
+msgstr "%d/%d 구간 완성 · 휘장 %d/%d"
+
+msgid "All %d stretches standing · %d of %d marks"
+msgstr "%d 구간 모두 완성 · 휘장 %d/%d"
+
 msgid "Your best here"
 msgstr "이 구간 최고 기록"
 

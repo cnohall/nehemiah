@@ -613,6 +613,15 @@ msgstr "Vollende zuerst: %s"
 msgid "Choose a stretch of wall"
 msgstr "Wähle einen Mauerabschnitt"
 
+msgid "Next"
+msgstr "Als Nächstes"
+
+msgid "%d of %d stretches standing · %d of %d marks"
+msgstr "%d von %d Abschnitten stehen · %d von %d Abzeichen"
+
+msgid "All %d stretches standing · %d of %d marks"
+msgstr "Alle %d Abschnitte stehen · %d von %d Abzeichen"
+
 msgid "Your best here"
 msgstr "Deine Bestleistung"
 

@@ -613,6 +613,15 @@ msgstr "Primeiro termine: %s"
 msgid "Choose a stretch of wall"
 msgstr "Escolha um trecho da muralha"
 
+msgid "Next"
+msgstr "Próximo"
+
+msgid "%d of %d stretches standing · %d of %d marks"
+msgstr "%d de %d trechos de pé · %d de %d marcas"
+
+msgid "All %d stretches standing · %d of %d marks"
+msgstr "Todos os %d trechos de pé · %d de %d marcas"
+
 msgid "Your best here"
 msgstr "Seu recorde aqui"
 

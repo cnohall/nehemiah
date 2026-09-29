@@ -16,7 +16,9 @@ const TWIST_NAMES := {
 	"schemes": "Schemes",
 }
 const FOE_NAMES := { "scout": "Scout", "brute": "Brute", "raider": "Raider", "messenger": "Messenger" }
-const ROMAN := ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+const COLUMN_W := 520
+const TITLE_SIZE := 58
+const ROMAN :=["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
 
 var _selected := 0
 var _map: CircuitMap
@@ -31,6 +33,8 @@ var _marks: VBoxContainer
 var _build_btn: Button
 var _back_btn: Button
 var _lock: Label
+var _progress: Label
+var _progress_bar: Control
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -44,6 +48,7 @@ func open(section_index := 0) -> void:
 	for i in GameState.SECTIONS.size():
 		_map.best.append(GameState.best_marks(i))
 		_map.unlocked.append(GameState.is_unlocked(i))
+	_update_progress()
 	show()
 	UiFx.fade_in(self, 0.35)
 	_select(clampi(section_index, 0, GameState.SECTIONS.size() - 1))
@@ -95,6 +100,12 @@ func _select(i: int) -> void:
 	var days: Array = sec["days"]
 	_eyebrow.text = tr("Section %s of %s · Days %d–%d") % [ROMAN[i], ROMAN[ROMAN.size() - 1], days.front(), days.back()]
 	_title.text = tr(sec["name"])
+	# One line, shrunk to fit: a long name (or its translation) mustn't widen the column
+	var font := _title.get_theme_font("font")
+	var fs := TITLE_SIZE
+	while fs > 32 and font.get_string_size(_title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > COLUMN_W:
+		fs -= 2
+	_title.add_theme_font_size_override("font_size", fs)
 	_ref.text = GameState.long_ref(sec["ref"])
 	_text.text = tr(StoryData.SECTION_LINES[i])
 	_fill_details(i)
@@ -114,7 +125,11 @@ func _select(i: int) -> void:
 		_marks.add_child(row)
 
 	var open_ := bool(_map.unlocked[i])
+	# A locked stretch's button can't hold focus (its gold ring would read as pressable)
+	if not open_ and _build_btn.has_focus():
+		_back_btn.grab_focus()
 	_build_btn.disabled = not open_
+	_build_btn.focus_mode = Control.FOCUS_ALL if open_ else Control.FOCUS_NONE
 	_build_btn.text = "Build again" if best >= 0 else "Build this stretch"
 	_lock.visible = not open_
 	if not open_:
@@ -157,6 +172,42 @@ func _chip(text: String, strong: bool, foe := false) -> Label:
 	l.add_theme_stylebox_override("normal", UiStyle.box(bg, Vector2(10, 4), 3))
 	return l
 
+func _update_progress() -> void:
+	var n := GameState.SECTIONS.size()
+	var standing := 0
+	var marks := 0
+	for b: int in _map.best:
+		if b >= 0:
+			standing += 1
+			for m: int in GameState.MARKS:
+				marks += int(bool(b & m))
+	var total := n * GameState.MARKS.size()
+	if standing == n:
+		_progress.text = tr("All %d stretches standing · %d of %d marks") % [n, marks, total]
+	else:
+		_progress.text = tr("%d of %d stretches standing · %d of %d marks") % [standing, n, marks, total]
+	_progress_bar.queue_redraw()
+
+# One segment per stretch: standing ones amber (gold with every mark), the next outlined
+func _draw_progress() -> void:
+	var c := _progress_bar
+	var n := GameState.SECTIONS.size()
+	var w := c.size.x / n
+	var next := _map.next_section()
+	var all_marks: int = GameState.MARKS.reduce(func(a, m): return a | m, 0)
+	for i in n:
+		var r := Rect2(i * w + 1.5, 0, w - 3.0, c.size.y)
+		var b: int = _map.best[i]
+		if b == all_marks:   # every mark: full amber with a tick of terracotta beneath
+			c.draw_rect(r, UiStyle.AMBER)
+			c.draw_rect(Rect2(r.position.x, r.end.y + 2.0, r.size.x, 2.0), UiStyle.TERRACOTTA)
+		elif b >= 0:
+			c.draw_rect(r, Color(UiStyle.AMBER, 0.55))
+		elif i == next:
+			c.draw_rect(r, UiStyle.AMBER, false, 1.5)
+		else:
+			c.draw_rect(r, Color(UiStyle.INK, 0.12))
+
 func _on_build() -> void:
 	if _map.unlocked[_selected]:
 		hide()
@@ -187,16 +238,31 @@ func _build() -> void:
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
-	column.custom_minimum_size.x = 620
+	# Narrow enough that the text stays clear of the gate plaques on the west wall
+	column.custom_minimum_size.x = COLUMN_W
 	column.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(column)
 
 	column.add_child(_label(&"Eyebrow", 15, UiStyle.TERRACOTTA, false, "Choose a stretch of wall"))
-	column.add_child(_gap(28))
+	# How far round the circuit this player has come: a segment per stretch, and a tally
+	var progress := HBoxContainer.new()
+	progress.add_theme_constant_override("separation", 14)
+	progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(progress)
+	_progress_bar = Control.new()
+	_progress_bar.custom_minimum_size = Vector2(12 * 16, 8)
+	_progress_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_progress_bar.draw.connect(_draw_progress)
+	progress.add_child(_progress_bar)
+	_progress = _label(&"Body", 16, UiStyle.INK_SOFT, false)
+	_progress.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # already translated
+	progress.add_child(_progress)
+	column.add_child(_gap(20))
 	_eyebrow = _label(&"Eyebrow", 14, UiStyle.INK_SOFT, false)
 	column.add_child(_eyebrow)
-	_title = _label(&"Heading", 58, UiStyle.INK, false)
+	_title = _label(&"Heading", TITLE_SIZE, UiStyle.INK, false)
 	_title.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 5))
 	column.add_child(_title)
 	_ref = _label(&"Eyebrow", 14, UiStyle.TERRACOTTA, false)

@@ -55,6 +55,7 @@ var _edge: GradientTexture2D
 var _plaque := _make_plaque(false)
 var _plaque_here := _make_plaque(true)
 var _foe_plaque := _make_foe_plaque()
+var _next_tab := _make_next_tab()
 
 func _ready() -> void:
 	_container = SubViewportContainer.new()
@@ -111,6 +112,21 @@ func _make_foe_plaque() -> StyleBoxFlat:
 	sb.bg_color = Color(0.36, 0.09, 0.07, 0.92)
 	sb.border_color = Color(0.93, 0.50, 0.38, 0.4)
 	return sb
+
+func _make_next_tab() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.set_corner_radius_all(4)
+	sb.anti_aliasing = true
+	sb.bg_color = UiStyle.AMBER
+	sb.shadow_color = Color(0.08, 0.05, 0.02, 0.35)
+	sb.shadow_size = 3
+	sb.shadow_offset = Vector2(0, 1)
+	return sb
+
+# A small padlock: shackle arc over a body, centred at `c`, `r` half its width
+static func _draw_lock(o: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	o.draw_arc(c + Vector2(0, -r * 0.55), r * 0.62, PI, TAU, 12, col, maxf(1.5, r * 0.3), true)
+	o.draw_rect(Rect2(c + Vector2(-r, -r * 0.6), Vector2(r * 2.0, r * 1.5)), col)
 
 func _layout() -> void:
 	_container.position = Vector2.ZERO
@@ -180,6 +196,13 @@ func section_at(point: Vector2) -> int:
 				hit = i
 	return hit
 
+## Picker: the first open stretch not yet finished — where the campaign carries on (-1: all done)
+func next_section() -> int:
+	for i in best.size():
+		if best[i] < 0 and unlocked[i]:
+			return i
+	return -1
+
 func _done(i: int) -> bool:
 	if inspect:
 		return false
@@ -207,6 +230,26 @@ func _draw_overlay() -> void:
 	var o := _overlay
 	var unit := _unit()
 	o.draw_texture_rect(_edge, Rect2(0, 0, size.x * 0.55, size.y), false)
+	var next := next_section() if picker else -1
+
+	# Picker: stretches not yet built are traced where they will stand, dashed on the
+	# ground — the next one in amber, marching; locked ones faint
+	if picker:
+		for i in CircuitDiorama.GATES.size():
+			if best[i] >= 0:
+				continue
+			var is_next := i == next
+			var col := Color(1.0, 0.78, 0.35) if is_next else Color(WorldTag.TEXT, 0.75 if unlocked[i] else 0.5)
+			var w := unit * (0.008 if is_next else 0.005)
+			var steps := 24
+			var phase := fposmod(_time * 1.5, 2.0) if is_next else 0.0
+			for k in steps:
+				if (k + int(phase)) % 2 == 1:
+					continue
+				var a := _project(_diorama.ring_world(i + float(k) / steps, 1.0))
+				var b := _project(_diorama.ring_world(i + float(k + 1) / steps, 1.0))
+				o.draw_line(a, b, Color(UiStyle.DUSK, 0.45), w * 2.0, true)
+				o.draw_line(a, b, col, w, true)
 
 	# The current / selected stretch: a gold line along the wall, breathing.
 	# The finale draws it round the whole ring as far as it has closed.
@@ -238,10 +281,11 @@ func _draw_overlay() -> void:
 		var gems := done and mask >= 0
 		# A small parchment plaque: the name, and the marks earned there beside it
 		var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var gr := fs * 0.32
-		var gw := gr * 2.2 * GameState.MARKS.size() + gr * 0.6 if gems else 0.0
+		var gr := fs * 0.4
+		var gw := gr * 2.3 * GameState.MARKS.size() + gr * 0.6 if gems else 0.0
+		var lw := fs * 0.9 if locked else 0.0     # a padlock before the name
 		var pad := Vector2(fs * 0.5, fs * 0.3)
-		var box := Vector2(tw + gw + pad.x * 2.0, fs + pad.y * 2.0)
+		var box := Vector2(lw + tw + gw + pad.x * 2.0, fs + pad.y * 2.0)
 		var out := (p - centre).normalized()
 		var anchor := p + out * unit * 0.026
 		var tl: Vector2
@@ -256,10 +300,22 @@ func _draw_overlay() -> void:
 		sb.bg_color = Color(WorldTag.BG, alpha)
 		o.draw_style_box(sb, Rect2(tl, box))
 		var text_col: Color = Color(1.0, 0.86, 0.55) if here else (WorldTag.TEXT if done else (Color(WorldTag.TEXT_DIM, 0.6) if locked else WorldTag.TEXT_DIM))
-		o.draw_string(font, tl + Vector2(pad.x, pad.y + fs * 0.8), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, text_col)
+		if locked:
+			_draw_lock(o, tl + Vector2(pad.x + fs * 0.3, box.y * 0.5 + fs * 0.08), fs * 0.3, text_col)
+		o.draw_string(font, tl + Vector2(pad.x + lw, pad.y + fs * 0.8), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, text_col)
 		if gems:
 			for k in GameState.MARKS.size():
-				MarkGem.draw_gem(o, tl + Vector2(pad.x + tw + gr * 1.6 + k * gr * 2.2, box.y * 0.5), gr, bool(mask & GameState.MARKS[k]))
+				MarkGem.draw_gem(o, tl + Vector2(pad.x + tw + gr * 1.5 + k * gr * 2.3, box.y * 0.5), gr, bool(mask & GameState.MARKS[k]))
+		# The next stretch to build: an amber tab riding on the plaque, bobbing
+		if i == next:
+			var ns := tr("Next")
+			var nfs := int(unit * 0.02)
+			var nw := UiStyle.CINZEL_BOLD.get_string_size(ns, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x
+			var bob := 2.0 * sin(_time * 3.0)
+			var tab := Rect2(tl + Vector2(fs * 0.3, -nfs * 1.25 + bob), Vector2(nw + nfs, nfs * 1.35))
+			o.draw_style_box(_next_tab, tab)
+			o.draw_string(UiStyle.CINZEL_BOLD, tab.position + Vector2(nfs * 0.5, nfs * 1.0), ns,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, nfs, UiStyle.INK)
 
 	# The three who stand against the work, watching from their lands: oxblood chips
 	# with a pennant, so the threat reads at a glance. In the finale they fade as the
