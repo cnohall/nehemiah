@@ -213,6 +213,11 @@ All required for Coming Soon unless marked. No review scores/awards/"wishlist no
 | Screenshots | 1920×1080, min 5 (aim 8–10) | Gameplay only, no UI mockups |
 | Trailer *(strongly recommended)* | 1920×1080 MP4, 30–90 s | First 5 s = gameplay, not logos |
 
+**Generated:** `store/steam/capsules/` (all sizes above, plus `community_icon.jpg` from `icon.png`) via
+`node store/steam/render.mjs`, cropping the 4K no-HUD render `store/steam/key_art.png` from
+`Godot --path . --script res://tools/capsule_shots.gd -- --nostory store/steam`.
+Screenshots: `store/steam/screenshots/01–09` (upload in that order).
+
 ### Screenshot shot list (render via `tools/*_shots.gd`)
 1. 4-player crew at Sheep Gate wall, raider inbound (hero shot)
 2. Carry chain — builders passing loads at Dung Gate
