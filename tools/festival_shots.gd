@@ -6,6 +6,7 @@ extends SceneTree
 # Not headless — needs the GPU.
 
 var _out := ""
+var _lang := ""
 var _main: Node3D
 var _t := 0.0
 var _step := 0
@@ -36,10 +37,7 @@ const SCRIPT := [
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--lang="):
-			# Through Settings (not saved), so the autoloads' apply() doesn't undo it
-			var settings := root.get_node("Settings")
-			settings.language = a.trim_prefix("--lang=")
-			settings.apply()
+			_lang = a.trim_prefix("--lang=")
 		elif not a.begins_with("--"):
 			_out = a
 	root.size = Vector2i(1920, 1080)
@@ -50,6 +48,12 @@ func _initialize() -> void:
 
 func _process(delta: float) -> bool:
 	_frame += 1
+	if _frame == 1 and not _lang.is_empty():
+		# After Settings.apply() in the autoloads; the journal re-reads it on the first refresh
+		TranslationServer.set_locale(_lang)
+		var festival := _main.find_child("Festival", true, false)
+		if festival != null and festival.has_method("_refresh"):
+			festival._refresh()
 	if _frame < 3:
 		return false
 	_t += delta
