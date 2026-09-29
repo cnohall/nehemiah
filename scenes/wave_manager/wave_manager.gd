@@ -65,7 +65,7 @@ var _msg_sent := 0
 
 
 func start(day: int) -> void:
-	if GameState.tutorial:
+	if GameState.free_play():
 		return   # Tutorial sends its one scout itself
 	_day = day
 	_active = true
@@ -178,6 +178,7 @@ func _tick_surges(delta: float) -> void:
 func _warn_surge(at: Vector3, horn: bool, warn: float) -> void:
 	Sfx.play("alert")
 	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else "Wave", warn + 3.0)
+	get_tree().call_group("watchmen", "warn_wave", at, horn)
 
 func _tick_messengers(delta: float) -> void:
 	if not GameState.has_twist("schemes") or _msg_sent >= MESSENGERS_PER_DAY:

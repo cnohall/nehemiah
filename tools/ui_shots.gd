@@ -64,7 +64,7 @@ func _process(delta: float) -> bool:
 				root.get_texture().get_image().save_png("%s/%s%s.png" % [_out, s[2], "_pad" if _pad else ""])
 			"focus_menu":
 				var f := root.gui_get_focus_owner()
-				print("menu focus: ", f.name if f else "<none>")
+				print("menu focus: ", String(f.name) if f else "<none>")
 			"start_game":
 				# Out of the tree now, so the menu hands back GameState.attract before Main reads it
 				var menu := current_scene

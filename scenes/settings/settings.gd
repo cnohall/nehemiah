@@ -11,6 +11,9 @@ var volume := 0.8   # master bus, linear 0..1
 var music_volume := 0.6   # Music bus (created here), linear 0..1
 var sfx_volume := 0.8     # SFX bus (created here) — effects + jingles, linear 0..1
 var screen_shake := true
+# Day, progress and threats told by the world (sun, scribe, watchmen) — false brings
+# back the day plaque and the threat plaque
+var diegetic_hud := true
 var rumble := true
 var toggle_charge := false   # sling: press to start, press again to throw (instead of hold)
 # Keyboard / mouse rebinds: action → {"key": physical keycode} or {"mouse": button index}.
@@ -56,6 +59,7 @@ func _ready() -> void:
 		music_volume = cfg.get_value("audio", "music_volume", music_volume)
 		sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 		screen_shake = cfg.get_value("display", "screen_shake", screen_shake)
+		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
 		rumble = cfg.get_value("controls", "rumble", rumble)
 		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
@@ -111,6 +115,7 @@ func save() -> void:
 	cfg.set_value("display", "fullscreen", fullscreen)
 	cfg.set_value("display", "vsync", vsync)
 	cfg.set_value("display", "screen_shake", screen_shake)
+	cfg.set_value("display", "diegetic_hud", diegetic_hud)
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
@@ -168,7 +173,7 @@ func _add_font_fallbacks() -> void:
 # ── Bindings ───────────────────────────────────────────────
 
 ## First keyboard / mouse event on an action (what the hints show and rebinding replaces)
-static func primary_event(action: String) -> InputEvent:
+func primary_event(action: String) -> InputEvent:
 	for e in InputMap.action_get_events(action):
 		if e is InputEventKey or e is InputEventMouseButton:
 			return e

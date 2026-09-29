@@ -153,17 +153,26 @@ theme_type_variation = &"MenuItem"
 text = "Join Game"
 alignment = 0
 
-[node name="SettingsButton" type="Button" parent="Content/Column/Menu"]
+[node name="MoreGap" type="Control" parent="Content/Column"]
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
-theme_type_variation = &"MenuItem"
-text = "Settings"
-alignment = 0
+mouse_filter = 2
 
-[node name="QuitButton" type="Button" parent="Content/Column/Menu"]
+[node name="More" type="HBoxContainer" parent="Content/Column"]
 layout_mode = 2
-theme_type_variation = &"MenuItem"
+theme_override_constants/separation = 6
+
+[node name="SettingsButton" type="Button" parent="Content/Column/More"]
+layout_mode = 2
+theme_type_variation = &"GhostButton"
+theme_override_font_sizes/font_size = 18
+text = "Settings"
+
+[node name="QuitButton" type="Button" parent="Content/Column/More"]
+layout_mode = 2
+theme_type_variation = &"GhostButton"
+theme_override_font_sizes/font_size = 18
 text = "Quit"
-alignment = 0
 
 [node name="StatusGap" type="Control" parent="Content/Column"]
 custom_minimum_size = Vector2(0, 24)

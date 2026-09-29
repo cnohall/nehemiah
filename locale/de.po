@@ -613,6 +613,15 @@ msgstr "Vollende zuerst: %s"
 msgid "Choose a stretch of wall"
 msgstr "Wähle einen Mauerabschnitt"
 
+msgid "Next"
+msgstr "Als Nächstes"
+
+msgid "%d of %d stretches standing · %d of %d marks"
+msgstr "%d von %d Abschnitten stehen · %d von %d Abzeichen"
+
+msgid "All %d stretches standing · %d of %d marks"
+msgstr "Alle %d Abschnitte stehen · %d von %d Abzeichen"
+
 msgid "Your best here"
 msgstr "Deine Bestleistung"
 
@@ -1123,8 +1132,8 @@ msgstr "„…und dem Werk ein Ende machen.“"
 msgid "Credits"
 msgstr "Mitwirkende"
 
-msgid "A Corner Stone Games production"
-msgstr "Eine Produktion von Corner Stone Games"
+msgid "A Takiko Games production"
+msgstr "Eine Produktion von Takiko Games"
 
 msgid "Development"
 msgstr "Entwicklung"
@@ -1528,3 +1537,9 @@ msgstr "Aufhelfen  {interact}"
 
 msgid "Here"
 msgstr "Hier"
+
+msgid "D-Pad   Choose          %s   Build          %s   Back"
+msgstr "Steuerkreuz   Wählen          %s   Bauen          %s   Zurück"
+
+msgid "Locked"
+msgstr "Gesperrt"

@@ -27,6 +27,15 @@ const PLAYER_COLORS := Palette.CREW
 const ATTRACT_LEAD     := 6.0    # metres the camera sits left of the crew, so they land right of the menu
 const ATTRACT_SMOOTH   := 0.35   # a slow, drifting follow — never a snap to one worker's dash
 const ROSTER_RETRY     := 1.5    # seconds between a client's asks for the roster
+# Wall cam: when a stretch stands, the camera runs along it end to end and each piece
+# shows the name of the one who carried most to it, cut into the stone (the tally waits)
+const WALL_CAM_TIME  := 3.2
+const WALL_CAM_SIZE  := 11.0
+const WALL_CAM_FROM  := -21.0
+const WALL_CAM_TO    := 21.0
+const WALL_CAM_Z     := 1.5
+const CARVE_COLOR    := Color(0.33, 0.31, 0.35)
+const CARVE_LIGHT    := Color(0.93, 0.92, 0.95)
 
 @onready var players_root: Node3D           = $Players
 @onready var enemies_root: Node3D           = $Enemies
@@ -46,6 +55,8 @@ var _hud_timer := 0.0
 var _day_sun_color: Color
 var _day_sun_energy: float
 var _mood_tween: Tween
+var _wall_cam: Tween
+var _carvings: Array[Label3D] = []   # names on their tablets
 
 func _ready() -> void:
 	if OS.has_feature("web"):   # WebGL: vignette only, no screen-texture tilt-shift
@@ -53,6 +64,10 @@ func _ready() -> void:
 		mat.shader = preload("res://scenes/main/vignette_web.gdshader")
 		$PostFX/Vignette.material = mat
 	add_to_group("camera_rig")
+	# The day's record and its threats, kept in the world (diegetic HUD)
+	add_child(Scribe.new())
+	add_child(Watchmen.new())
+	add_child(Taunts.new())
 	if GameState.attract:
 		_start_attract()
 		return
@@ -67,6 +82,8 @@ func _ready() -> void:
 	hud.begin_requested.connect(director.begin)
 	hud.bots_changed.connect(fit_bots)
 	director.day_tallied.connect(hud.show_tally)
+	director.day_tallied.connect(_on_day_tallied)
+	GameState.section_changed.connect(_clear_carvings.unbind(1))
 	director.day_tallied.connect(SteamAchievements.on_day_tallied)
 	_day_sun_color = sun.light_color
 	_day_sun_energy = sun.light_energy
@@ -106,6 +123,9 @@ func _ready() -> void:
 		if GameState.tutorial:
 			fit_bots(0)
 			add_child(Tutorial.new(self))
+		elif GameState.festival:
+			fit_bots(0)
+			add_child(Festival.new(self))
 		else:
 			fit_bots()
 	else:
@@ -158,7 +178,8 @@ func _frame_crew(delta: float) -> void:
 	mid /= crew.size()
 	var right := Vector3(camera.global_basis.x.x, 0.0, camera.global_basis.x.z).normalized()
 	var p := mid - right * ATTRACT_LEAD
-	var desired := Vector3(p.x + CAM_OFFSET.x, CAM_OFFSET.y, p.z + CAM_OFFSET.z)
+	var desired := p + _cam_offset()
+	desired.y = CAM_OFFSET.y
 	if not _cam_snapped:
 		_cam_base = desired
 		_cam_snapped = true
@@ -168,13 +189,14 @@ func _frame_crew(delta: float) -> void:
 
 func _follow_local_player(delta: float) -> void:
 	var local_player := Player.local
-	if local_player == null:
+	if local_player == null or (_wall_cam != null and _wall_cam.is_running()):
 		return
 	var vel: Vector3 = local_player.velocity
 	var lead := Vector3(vel.x, 0.0, vel.z) * LOOK_AHEAD
 	_lead = _lead.lerp(lead.limit_length(LOOK_AHEAD_MAX), minf(1.0, delta * LOOK_AHEAD_EASE))
 	var p := local_player.global_position + _lead
-	var desired := Vector3(p.x + CAM_OFFSET.x, CAM_OFFSET.y, p.z + CAM_OFFSET.z)
+	var desired := p + _cam_offset()
+	desired.y = CAM_OFFSET.y
 	if not _cam_snapped:
 		# Snap on first frame instead of swooping in from the scene origin
 		_cam_base = desired
@@ -182,6 +204,24 @@ func _follow_local_player(delta: float) -> void:
 	else:
 		_cam_base = _cam_base.lerp(desired, delta * CAM_SMOOTH)
 	camera.global_position = _cam_base + _shake_offset(delta)
+
+## Walk the City: turn the view about the vertical (radians), so north can sit up-screen
+## as it does on a map. Movement turns with it (Player.view_yaw). 0 = the game's view.
+var view_yaw := 0.0
+
+func set_view_yaw(yaw: float) -> void:
+	view_yaw = yaw
+	Player.view_yaw = yaw
+	var target := Vector3.ZERO
+	if Player.local != null and is_instance_valid(Player.local):
+		target = Player.local.global_position
+	target.y = 0.0
+	camera.global_position = target + _cam_offset()
+	camera.look_at(target, Vector3.UP)
+	_cam_snapped = false
+
+func _cam_offset() -> Vector3:
+	return CAM_OFFSET.rotated(Vector3.UP, view_yaw)
 
 ## Local screen shake — hits, crumbling walls. Amount adds up, capped at 1.
 func shake(amount: float) -> void:
@@ -239,6 +279,95 @@ func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
 	_mood_tween.tween_property(sun, "light_color", sun_color, LIGHT_FADE)
 	_mood_tween.tween_property(sun, "light_energy", sun_energy, LIGHT_FADE)
 	_mood_tween.tween_property(camera, "size", cam_size, LIGHT_FADE)
+
+# ── Wall cam ───────────────────────────────────────────────
+
+func _on_day_tallied(stats: Dictionary) -> void:
+	GameState.chronicle_day(stats)
+	if stats.has("names") and not GameState.attract:
+		_play_wall_cam(stats["names"])
+
+# End to end along the finished stretch, low and close; each name is cut into its piece
+# as the camera comes to it. Then the follow camera eases back from where it ended.
+func _play_wall_cam(names: Array) -> void:
+	_clear_carvings()
+	var units := WorkFront.UNIT_ORDER
+	var crew := _sorted_players()
+	for i in mini(names.size(), units.size()):
+		var who := _carved_name(int(names[i]), crew)
+		if who.is_empty():
+			continue
+		var unit: Node3D = $Wall.get_node(units[i])
+		var label := _carve(who, unit)
+		# Cut as the camera passes: the dolly's progress at this piece's x
+		var at := inverse_lerp(WALL_CAM_FROM, WALL_CAM_TO, unit.global_position.x)
+		var tw := label.create_tween().set_ignore_time_scale(true)
+		tw.tween_interval(0.25 + at * WALL_CAM_TIME * 0.85)
+		tw.tween_property(label.get_parent(), "scale:y", 1.0, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(label, "modulate:a", 1.0, 0.35)
+		tw.tween_callback(Sfx.play.bind("build", label.global_position))
+	if _wall_cam:
+		_wall_cam.kill()
+	var start := Vector3(WALL_CAM_FROM, 0.0, WALL_CAM_Z) + _cam_offset()
+	var end := Vector3(WALL_CAM_TO, 0.0, WALL_CAM_Z) + _cam_offset()
+	_wall_cam = create_tween().set_ignore_time_scale(true)
+	_wall_cam.tween_property(camera, "global_position", start, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_wall_cam.parallel().tween_property(camera, "size", WALL_CAM_SIZE, 0.35)
+	_wall_cam.tween_property(camera, "global_position", end, WALL_CAM_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_wall_cam.tween_callback(func():
+		_cam_base = camera.global_position
+		_mood_tween = create_tween()
+		_mood_tween.tween_property(camera, "size", DUSK_CAM_SIZE, 0.8).set_trans(Tween.TRANS_SINE))
+
+## A worker's name for the stone: their Steam name, else their trade (bots, LAN)
+func _carved_name(id: int, crew: Array) -> String:
+	if id == 0:
+		return ""
+	var steam := NetworkManager.name_of(id)
+	if not steam.is_empty() and not Player.is_bot_id(id):
+		return steam
+	for slot in crew.size():
+		if int(crew[slot].name) == id:
+			return tr(CharacterRig.TRADES[slot % CharacterRig.TRADES.size()])
+	return ""
+
+# A dedication tablet set into the city face of the piece, chest high, the name cut in.
+# Stands proud of the rough courses so no stone hides it; it rises into place when cut.
+func _carve(text: String, unit: Node3D) -> Label3D:
+	var face := 0.5
+	var col := unit.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if col != null and col.shape is BoxShape3D:
+		face = col.position.z + (col.shape as BoxShape3D).size.z * 0.5
+	var tablet := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(maxf(1.4, text.length() * 0.3 + 0.5), 0.62, 0.1)
+	tablet.mesh = box
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = CARVE_LIGHT.darkened(0.08)
+	mat.roughness = 0.95
+	tablet.material_override = mat
+	tablet.position = Vector3(unit.global_position.x, 1.45, face + 0.28)
+	tablet.scale = Vector3(1.0, 0.001, 1.0)
+	add_child(tablet)
+	var l := Label3D.new()
+	l.text = text
+	l.font = UiStyle.CINZEL_BOLD
+	l.font_size = 56
+	l.pixel_size = 0.0085
+	l.modulate = Color(CARVE_COLOR, 0.0)
+	l.outline_size = 0
+	l.shaded = false
+	l.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	l.position = Vector3(0.0, 0.0, 0.06)
+	tablet.add_child(l)
+	_carvings.append(l)
+	return l
+
+func _clear_carvings() -> void:
+	for l in _carvings:
+		if is_instance_valid(l):
+			l.get_parent().queue_free()   # the tablet, name and all
+	_carvings.clear()
 
 # ── HUD ────────────────────────────────────────────────────
 
@@ -370,6 +499,7 @@ func _request_roster() -> void:
 	for p in players_root.get_children():
 		p.send_status_to(caller)
 	GameState.send_state_to(caller)
+	$Breakables.send_state_to(caller)   # after GameState, so the caller has laid out the same section
 	director.send_story_to(caller)
 
 @rpc("authority", "reliable")

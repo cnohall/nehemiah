@@ -12,9 +12,11 @@ extends Node3D
 #   "Build  [E]"             → text with the key drawn as a keycap
 # Lines split on newlines; segments within a line on double spaces or " · ".
 
-enum Kind { SITE, STATION, TOAST, NOTE }
+# SHOUT: a call from someone in the world (watchmen, the scribe) — parchment, ink text.
+# SCROLL: parchment too, holding a `custom` Control instead of parsed text.
+enum Kind { SITE, STATION, TOAST, NOTE, SHOUT, SCROLL }
 
-const MATERIALS := ["stone", "wood", "mortar", "lime", "water", "beam", "beams", "rubble"]
+const MATERIALS := ["stone", "wood", "mortar", "lime", "water", "beam", "beams", "rubble", "branch", "portion"]
 const LAYER := 1
 const BG       := Color(0.20, 0.14, 0.10, 0.92)
 const BG_EDGE  := Color(0.93, 0.80, 0.55, 0.28)
@@ -26,6 +28,8 @@ const POINTER  := Vector2(16, 9)
 const EDGE_MARGIN := 10.0
 const PULSE_AMOUNT := 0.07
 const DIM := 0.5   # alpha for a site tag that isn't where the next delivery goes
+const SHOUT_WRAP_CHARS := 56   # a shout longer than this wraps…
+const SHOUT_WIDTH := 460.0     # …at this width
 
 static var _layer: CanvasLayer
 static var _fonts: Dictionary = {}
@@ -42,6 +46,13 @@ var modulate := Color.WHITE
 var screen_lift := 0.0
 ## A gentle breathing scale — the one tag that says "here next"
 var pulse := false
+## Slide in from the screen edge when the spot is off-screen (false: just hide)
+var clamp_to_screen := true
+## Drawn instead of the parsed text (Kind.SCROLL)
+var custom: Control:
+	set(value):
+		custom = value
+		_dirty = true
 
 var _root: Control
 var _panel: PanelContainer
@@ -82,10 +93,10 @@ func _process(_delta: float) -> void:
 	if _dirty:
 		_rebuild()
 	var cam := get_viewport().get_camera_3d()
-	var show := is_visible_in_tree() and cam != null and not text.is_empty() and not GameState.attract \
-		and not cam.is_position_behind(global_position)
-	_root.visible = show
-	if not show:
+	var shown := is_visible_in_tree() and cam != null and (not text.is_empty() or custom != null) \
+		and not GameState.attract and not cam.is_position_behind(global_position)
+	_root.visible = shown
+	if not shown:
 		return
 	# Already in the stretched 2D base space the overlay draws in (canvas_items stretch)
 	# — as OffscreenAlerts uses it. An extra window transform here only cancelled out at
@@ -98,6 +109,9 @@ func _process(_delta: float) -> void:
 	# Keep the tag on screen: slide it in from the edge, pointer hidden while it's off its mark
 	var area := vp.get_visible_rect().size
 	var at := want.clamp(Vector2(EDGE_MARGIN, EDGE_MARGIN), area - sz - Vector2(EDGE_MARGIN, EDGE_MARGIN))
+	if not clamp_to_screen and not at.is_equal_approx(want):
+		_root.visible = false
+		return
 	_root.position = at.round()
 	if _pointer != null:
 		_pointer.modulate.a = 1.0 if at.is_equal_approx(want) else 0.0
@@ -119,15 +133,17 @@ func _build() -> void:
 	_panel = PanelContainer.new()
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = BG
+	sb.bg_color = _bg()
 	sb.set_corner_radius_all(9 if kind != Kind.TOAST else 14)
-	sb.border_color = BG_EDGE
+	sb.border_color = UiStyle.RULE if _paper() else BG_EDGE
 	sb.set_border_width_all(1)
 	sb.border_width_top = 2
 	sb.shadow_color = Color(0.08, 0.05, 0.02, 0.35)
 	sb.shadow_size = 6
 	sb.shadow_offset = Vector2(0, 3)
-	var pad := Vector2(12, 7) if kind == Kind.SITE else Vector2(10, 5)
+	var pad := Vector2(12, 7) if kind in [Kind.SITE, Kind.SHOUT] else Vector2(10, 5)
+	if kind == Kind.SCROLL:
+		pad = Vector2(20, 6)   # room for the rolled ends
 	sb.content_margin_left = pad.x
 	sb.content_margin_right = pad.x
 	sb.content_margin_top = pad.y
@@ -148,13 +164,29 @@ func _build() -> void:
 		_pointer.draw.connect(func():
 			var w := POINTER.x
 			var h := POINTER.y
-			_pointer.draw_colored_polygon(PackedVector2Array([Vector2(0, -1), Vector2(w, -1), Vector2(w * 0.5, h)]), BG))
+			_pointer.draw_colored_polygon(PackedVector2Array([Vector2(0, -1), Vector2(w, -1), Vector2(w * 0.5, h)]), _bg()))
 		_root.add_child(_pointer)
+
+func _paper() -> bool:
+	return kind == Kind.SHOUT or kind == Kind.SCROLL
+
+func _bg() -> Color:
+	return Color(UiStyle.PARCHMENT, 0.96) if _paper() else BG
+
+func _ink() -> Color:
+	return UiStyle.INK if _paper() else TEXT
 
 func _rebuild() -> void:
 	_dirty = false
 	for c in _box.get_children():
-		c.free()
+		if c != custom:
+			c.free()
+	if custom != null:
+		if custom.get_parent() != _box:
+			if custom.get_parent() != null:
+				custom.get_parent().remove_child(custom)
+			_box.add_child(custom)
+		return
 	for line in text.split("\n", false):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -233,12 +265,12 @@ func _rich(seg: String) -> Control:
 	for m in rx.search_all(seg):
 		var before := seg.substr(at, m.get_start() - at).strip_edges()
 		if not before.is_empty():
-			row.add_child(_label(before, "italic" if kind == Kind.NOTE else "medium", 18, TEXT))
+			row.add_child(_label(before, "italic" if kind == Kind.NOTE else "medium", 18, _ink()))
 		row.add_child(_keycap(m.get_string(1)))
 		at = m.get_end()
 	var rest := seg.substr(at).strip_edges()
 	if not rest.is_empty():
-		row.add_child(_label(rest, "italic" if kind == Kind.NOTE else "medium", 18, TEXT))
+		row.add_child(_label(rest, "italic" if kind == Kind.NOTE else "medium", 18, _ink()))
 	return row
 
 func _keycap(k: String) -> Control:
@@ -277,6 +309,10 @@ func _label(t: String, face: String, size: int, color: Color) -> Label:
 	l.add_theme_constant_override("line_spacing", -4)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# A long call (a verse read out) wraps instead of running across the screen
+	if kind == Kind.SHOUT and shown.length() > SHOUT_WRAP_CHARS:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = SHOUT_WIDTH
 	return l
 
 static func _font(face: String) -> Font:

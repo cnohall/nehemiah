@@ -613,6 +613,15 @@ msgstr "Primero termina: %s"
 msgid "Choose a stretch of wall"
 msgstr "Elige un tramo de la muralla"
 
+msgid "Next"
+msgstr "Siguiente"
+
+msgid "%d of %d stretches standing · %d of %d marks"
+msgstr "%d de %d tramos en pie · %d de %d marcas"
+
+msgid "All %d stretches standing · %d of %d marks"
+msgstr "Los %d tramos en pie · %d de %d marcas"
+
 msgid "Your best here"
 msgstr "Tu récord aquí"
 
@@ -1123,8 +1132,8 @@ msgstr "“…y hacer que cese la obra.”"
 msgid "Credits"
 msgstr "Créditos"
 
-msgid "A Corner Stone Games production"
-msgstr "Una producción de Corner Stone Games"
+msgid "A Takiko Games production"
+msgstr "Una producción de Takiko Games"
 
 msgid "Development"
 msgstr "Desarrollo"
@@ -1528,3 +1537,9 @@ msgstr "Levantar  {interact}"
 
 msgid "Here"
 msgstr "Aquí"
+
+msgid "D-Pad   Choose          %s   Build          %s   Back"
+msgstr "Cruceta   Elegir          %s   Construir          %s   Atrás"
+
+msgid "Locked"
+msgstr "Bloqueado"

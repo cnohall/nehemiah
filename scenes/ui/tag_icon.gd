@@ -29,6 +29,8 @@ func _draw() -> void:
 		"mortar": _tub(o, s)
 		"lime":   _sack(o, s)
 		"water":  _jar(o, s)
+		"branch": _bough(o, s)
+		"portion": _basket(o, s)
 
 func _p(o: Vector2, s: float, x: float, y: float) -> Vector2:
 	return o + Vector2(x, y) * s
@@ -108,3 +110,16 @@ func _jar(o: Vector2, s: float) -> void:
 	_poly(PackedVector2Array([_p(o, s, 0.38, 0.32), _p(o, s, 0.62, 0.32), _p(o, s, 0.6, 0.16), _p(o, s, 0.4, 0.16)]), clay.darkened(0.1))
 	_poly(_ellipse(_p(o, s, 0.5, 0.16), Vector2(s * 0.13, s * 0.05)), clay.darkened(0.25))
 	draw_colored_polygon(_ellipse(_p(o, s, 0.5, 0.16), Vector2(s * 0.09, s * 0.032)), Color(0.36, 0.62, 0.82))
+
+func _bough(o: Vector2, s: float) -> void:
+	var wood := Color(0.50, 0.34, 0.20)
+	draw_line(_p(o, s, 0.14, 0.8), _p(o, s, 0.84, 0.24), wood, maxf(2.0, s * 0.07), true)
+	for c: Vector2 in [Vector2(0.3, 0.58), Vector2(0.48, 0.5), Vector2(0.62, 0.34), Vector2(0.44, 0.7), Vector2(0.72, 0.46)]:
+		_poly(_ellipse(_p(o, s, c.x, c.y), Vector2(s * 0.12, s * 0.07)), Palette.LEAF.lightened(0.1))
+
+func _basket(o: Vector2, s: float) -> void:
+	var reed := Color(0.70, 0.54, 0.30)
+	_poly(PackedVector2Array([_p(o, s, 0.12, 0.5), _p(o, s, 0.88, 0.5), _p(o, s, 0.76, 0.86), _p(o, s, 0.24, 0.86)]), reed)
+	draw_line(_p(o, s, 0.18, 0.66), _p(o, s, 0.82, 0.66), reed.darkened(0.35), 1.5, true)
+	_poly(_ellipse(_p(o, s, 0.38, 0.44), Vector2(s * 0.2, s * 0.12)), Color(0.86, 0.62, 0.32))
+	_poly(_ellipse(_p(o, s, 0.64, 0.42), Vector2(s * 0.17, s * 0.11)), Color(0.80, 0.56, 0.28))

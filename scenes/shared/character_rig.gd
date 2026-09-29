@@ -75,6 +75,9 @@ var speed_scale := 1.0
 var hold := ""
 ## Sling: world yaw faced while winding up / throwing (free aim, not the 4-way facing)
 var aim_yaw := 0.0
+## Stand facing this world yaw instead of the animation's four ways (NAN: off) — people
+## at the festival turned toward whoever they're listening to
+var hold_yaw := NAN
 ## Sling: angle of the whirling stone, so the hand circles in step with it
 var whirl_phase := 0.0
 
@@ -315,6 +318,8 @@ func _update_facing(delta: float) -> void:
 		_last_pos = pos
 		_has_last = true
 	var want := atan2(target.x, target.z)
+	if not is_nan(hold_yaw):
+		want = hold_yaw
 	if _base == "windup" or _base == "slash" or _base == "sword":
 		want = aim_yaw   # the sling faces its target, any angle
 	elif _base == "build":
@@ -625,7 +630,6 @@ func _build(look: Dictionary) -> void:
 
 	var skin: Color = look["skin"]
 	var robe: Color = look["robe"]
-	var trim: Color = look["trim"]
 	var hair: Color = look["hair"]
 
 	_body = _pivot(self, Vector3.ZERO)

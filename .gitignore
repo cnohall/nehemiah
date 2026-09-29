@@ -27,3 +27,7 @@ worker/.wrangler/
 worker/.dev.vars
 
 __pycache__/
+
+# Licensed music: AlkaKrab's license bars redistribution in a public repo — keep local, ship in builds
+assets/audio/music/alkakrab/
+assets/audio/music/*.zip

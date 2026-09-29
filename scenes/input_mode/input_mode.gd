@@ -87,7 +87,7 @@ func key(action: String) -> String:
 		if using_pad:
 			return tr("L Stick")
 		return "".join(["move_north", "move_west", "move_south", "move_east"].map(
-			func(a: String) -> String: return key_label(a)))
+			func(m: String) -> String: return key_label(m)))
 	var a: String = ACTION.get(action, action)
 	var label := _pad_label(a) if using_pad else key_label(a)
 	if action == "throw" and not Settings.toggle_charge:
@@ -130,7 +130,6 @@ static func _kind_of(joy_name: String) -> Pad:
 			return Pad.NINTENDO
 	return Pad.XBOX
 
-## Keyboard / mouse label for an InputMap action ("E", "Click", "Z" on AZERTY)
 ## Keyboard / mouse label for an InputMap action: "E", "Click", "Z" on AZERTY
 func key_label(action: String) -> String:
 	var e := Settings.primary_event(action)

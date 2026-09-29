@@ -71,8 +71,8 @@ func ping(at: Vector3, color: Color, text: String, seconds: float) -> void:
 
 # Disc pinned to the screen edge, arrow pointing at the off-screen target
 func _pointer(target: Vector2, color: Color, text: String, pulse: float) -> void:
-	var size := get_viewport_rect().size
-	var box := Rect2(MARGIN_SIDE, MARGIN_TOP, size.x - MARGIN_SIDE * 2.0, size.y - MARGIN_TOP - MARGIN_BOTTOM)
+	var vp_size := get_viewport_rect().size
+	var box := Rect2(MARGIN_SIDE, MARGIN_TOP, vp_size.x - MARGIN_SIDE * 2.0, vp_size.y - MARGIN_TOP - MARGIN_BOTTOM)
 	var centre := box.get_center()
 	var dir := (target - centre).normalized()
 	# Push out from the box centre until we hit its edge

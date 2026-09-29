@@ -24,6 +24,7 @@ const SWORD_DAMAGE    := 20.0     # scout 2 cuts, raider 3, brute 5
 const SWORD_COOLDOWN  := 0.45
 const SWORD_KNOCKBACK := 1.3      # metres a scout is shoved (brutes feel ~a third)
 const SWORD_HIT_FRAME := 2        # frame of the "sword" anim where the blade lands
+const POT_REACH       := 1.0      # a jar or basket this close (no foe about) takes the cut instead
 const AIM_ASSIST_DEG   := 18.0   # enemies inside this cone of the aim get homed on
 const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
@@ -227,15 +228,15 @@ func _nobody_to_raise() -> bool:
 var _raise_tag: WorldTag
 
 func _update_raise_tag() -> void:
-	var show := downed and Player.local != null and Player.local != self and not Player.local.downed
-	if show and _raise_tag == null:
+	var shown := downed and Player.local != null and Player.local != self and not Player.local.downed
+	if shown and _raise_tag == null:
 		_raise_tag = WorldTag.make(WorldTag.Kind.SITE)
 		_raise_tag.position.y = PIP_Y + 0.5
 		add_child(_raise_tag)
 	if _raise_tag != null:
-		_raise_tag.visible = show
-		_raise_tag.pulse = show
-		if show:
+		_raise_tag.visible = shown
+		_raise_tag.pulse = shown
+		if shown:
 			_raise_tag.text = "Help up  [%s]" % InputMode.key("interact")
 
 func _exit_tree() -> void:
@@ -329,8 +330,12 @@ func _physics_process(delta: float) -> void:
 
 ## Screen-space stick / keys → ground direction. Keys give length 1; a stick can be
 ## pushed part-way for a slower walk.
+## Walk the City turns the view so north sits up-screen (Main.set_view_yaw); the stick
+## turns with it. 0 everywhere else.
+static var view_yaw := 0.0
+
 static func screen_to_ground(v: Vector2) -> Vector3:
-	return SCREEN_RIGHT * v.x + SCREEN_DOWN * v.y
+	return (SCREEN_RIGHT * v.x + SCREEN_DOWN * v.y).rotated(Vector3.UP, view_yaw)
 
 # Remember presses for a moment, so one made during a pickup / throw animation still counts
 func _buffer_input(delta: float) -> void:
@@ -476,6 +481,8 @@ func _facing_vector() -> Vector3:
 # Owner → everyone: puff of dust + stretch so a dash reads on every screen
 @rpc("authority", "call_local", "unreliable")
 func _dash_fx() -> void:
+	if multiplayer.is_server():
+		get_tree().call_group("breakable_set", "note_dash", self)   # anything run through breaks
 	_sprite.squash(Vector2(0.92, 1.08))
 	Sfx.play("dash", global_position)
 	var p := CPUParticles3D.new()
@@ -511,7 +518,7 @@ func _dash_fx() -> void:
 ## What [E] acts on from `at`, in priority order: [Act, target]. The one rule for both
 ## the focus ring (owner, from replicated state — Overcooked's counter highlight) and
 ## _server_interact, so the ring always shows exactly what the press will do.
-enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB }
+enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK }
 
 func _interact_choice(at: Vector3) -> Array:
 	# Helping a fallen teammate comes first
@@ -541,6 +548,12 @@ func _interact_choice(at: Vector3) -> Array:
 		var d := _reach_dist(messenger, at)
 		if [site, item, pile].all(func(o): return o == null or _reach_dist(o, at) >= d):
 			return [Act.MESSENGER, messenger]
+	# Townsfolk to talk to (the festival): when nearer than any work
+	var folk := _nearest_in_reach("folk", at, func(_f): return true)
+	if folk != null:
+		var d := _reach_dist(folk, at)
+		if [site, item, pile].all(func(o): return o == null or _reach_dist(o, at) >= d):
+			return [Act.TALK, folk]
 	if site != null:
 		return [Act.WORK, site]
 	# Whichever is closer: something lying on the ground, or a stockpile
@@ -678,6 +691,8 @@ func _server_interact(at: Vector3) -> void:
 			_tell("Holding the other end — {interact} to let go")
 		Act.DELIVER:
 			_deliver(target, at)
+		Act.TALK:
+			target.talk(self)
 		Act.MESSENGER:
 			target.accept(self)
 			get_tree().call_group("day_director", "note_ono")
@@ -697,8 +712,8 @@ func _server_interact(at: Vector3) -> void:
 				_set_carried.rpc(target.kind)
 		Act.CLIMB:
 			# The spot mirrored through the wall, stepped clear of its far face
-			var local := target.to_local(at)
-			var far := target.to_global(Vector3(local.x, local.y, -local.z))
+			var here := target.to_local(at)
+			var far := target.to_global(Vector3(here.x, here.y, -here.z))
 			_climb_over.rpc_id(get_multiplayer_authority(), target.approach_point(far, CLIMB_CLEAR))
 			_sfx.rpc("dash")
 
@@ -730,7 +745,7 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 		var why := _why_not_needed(at)
 		_tell(why[0], why[1])
 		return
-	get_tree().call_group("day_director", "note_load", worker_id())
+	get_tree().call_group("day_director", "note_load", worker_id(), dest)
 	_sfx.rpc("deposit_" + carried_kind)
 	_set_carried.rpc("")
 	if dest.can_build():
@@ -851,6 +866,10 @@ func _handle_attack(delta: float) -> void:
 			if foe != null:
 				_swing_sword(foe)
 				return
+			var pot := _pot_in_reach()
+			if pot != null:
+				_swing_sword(pot)
+				return
 			_charging = true
 			_charge = 0.0
 			whirling = true
@@ -912,7 +931,16 @@ func _foe_in_sword_reach() -> Node3D:
 			best = enemy
 	return best
 
-## Owner: cut at the nearest foe; the server works out who the blade catches
+# A jar or basket at arm's length — only when no foe is in sling range, so a pot at
+# your feet never steals a throw
+func _pot_in_reach() -> Node3D:
+	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
+		if global_position.distance_to(enemy.global_position) < SLING_MAX_RANGE:
+			return null
+	var pots := get_tree().get_first_node_in_group("breakable_set")
+	return pots.piece_in_reach(global_position, POT_REACH) if pots else null
+
+## Owner: cut at the nearest foe (or jar); the server works out what the blade catches
 func _swing_sword(foe: Node3D) -> void:
 	_sling_cd = SWORD_COOLDOWN
 	_face_aim(foe.global_position)
@@ -938,6 +966,9 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 			continue
 		enemy.take_damage(SWORD_DAMAGE, worker_id())
 		enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
+		hit = true
+	var pots := get_tree().get_first_node_in_group("breakable_set")
+	if pots and pots.smash_arc(at, fwd, SWORD_REACH + 0.4, SWORD_ARC_DEG):
 		hit = true
 	_sword_fx.rpc(hit)
 

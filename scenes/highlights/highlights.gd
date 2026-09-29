@@ -27,7 +27,7 @@ var _last_done := 0
 var _last_breaches := 0
 
 func _ready() -> void:
-	if GameState.attract or GameState.tutorial or DisplayServer.get_name() == "headless":
+	if GameState.attract or GameState.free_play() or DisplayServer.get_name() == "headless":
 		set_process(false)
 		return
 	GameState.progress_changed.connect(_on_progress)
@@ -109,5 +109,5 @@ func _trim() -> void:
 		shots.remove_at(worst)
 
 func _who(p: Player) -> String:
-	var name := NetworkManager.name_of(p.worker_id())
-	return name if not name.is_empty() else tr(CharacterRig.TRADES[p._slot % CharacterRig.TRADES.size()])
+	var who := NetworkManager.name_of(p.worker_id())
+	return who if not who.is_empty() else tr(CharacterRig.TRADES[p._slot % CharacterRig.TRADES.size()])

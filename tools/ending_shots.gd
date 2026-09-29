@@ -3,6 +3,7 @@ extends SceneTree
 # The ending story (StoryData.ENDING): the ring closing, then the two closing cards.
 #   Godot --path . --write-movie <dir>/f.png --fixed-fps 10 --quit-after 260 --script res://tools/ending_shots.gd
 # Frames 0–119 are the finale map (rise ~20, ring closes by ~70); every 70 after, the next card.
+# At another --fixed-fps, pass `-- --scale=K` (fps / 10) to keep the same timing (trailer: 3).
 
 const FIRST_FRAMES := 120
 const FRAMES_PER := 70
@@ -22,7 +23,11 @@ func _process(_delta: float) -> bool:
 		var gs := root.get_node("GameState")
 		for i in 12:
 			gs.section_marks[i] = [7, 5, 3, 1, 6, 0][i % 6]
-	var start := 0 if _slide == 0 else FIRST_FRAMES + (_slide - 1) * FRAMES_PER
+	var k := 1
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--scale="):
+			k = a.trim_prefix("--scale=").to_int()
+	var start := 0 if _slide == 0 else (FIRST_FRAMES + (_slide - 1) * FRAMES_PER) * k
 	if _frame == start:
 		if _slide >= ending.size():
 			return true
