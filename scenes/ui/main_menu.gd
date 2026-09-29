@@ -26,10 +26,11 @@ var _world_tween: Tween
 @onready var backdrop:      TextureRect = $Backdrop
 @onready var column:        Control  = $Content/Column
 @onready var menu:          Control  = $Content/Column/Menu
+@onready var more:          Control  = $Content/Column/More
 @onready var host_btn:      Button   = $Content/Column/Menu/HostButton
 @onready var join_btn:      Button   = $Content/Column/Menu/JoinButton
-@onready var settings_btn:  Button   = $Content/Column/Menu/SettingsButton
-@onready var quit_btn:      Button   = $Content/Column/Menu/QuitButton
+@onready var settings_btn:  Button   = $Content/Column/More/SettingsButton
+@onready var quit_btn:      Button   = $Content/Column/More/QuitButton
 @onready var net_status:    Label    = $Content/Column/NetStatus
 @onready var verse:         Control  = $Verse
 @onready var join_panel:    Control  = $JoinPanel
@@ -61,12 +62,13 @@ func _ready() -> void:
 	move_child(_picker, fade.get_index())
 	_picker.chosen.connect(_on_section_chosen)
 	_picker.closed.connect(_sections_btn.grab_focus)
-	# Friends and Foes: an entry under the sections, the page over everything
-	_folk_btn = join_btn.duplicate()
+	# Big entries start a game; everything else sits in the small row under them
+	# Friends and Foes: first in the small row, the page over everything
+	_folk_btn = settings_btn.duplicate()
 	_folk_btn.name = "FolkButton"
 	_folk_btn.text = "Friends and Foes"
-	menu.add_child(_folk_btn)
-	menu.move_child(_folk_btn, _sections_btn.get_index() + 1)
+	more.add_child(_folk_btn)
+	more.move_child(_folk_btn, 0)
 	_folk = FriendsAndFoes.new()
 	add_child(_folk)
 	move_child(_folk, fade.get_index())
@@ -77,7 +79,7 @@ func _ready() -> void:
 	learn.name = "LearnButton"
 	learn.text = "Learn the Basics"
 	menu.add_child(learn)
-	menu.move_child(learn, _sections_btn.get_index() + 1)
+	menu.move_child(learn, join_btn.get_index() + 1)
 	learn.pressed.connect(_on_learn)
 	# Walk the City: the Festival of Booths, a sandbox with no clock and no enemy
 	var walk := join_btn.duplicate() as Button
@@ -86,12 +88,12 @@ func _ready() -> void:
 	menu.add_child(walk)
 	menu.move_child(walk, learn.get_index() + 1)
 	walk.pressed.connect(_on_festival)
-	# Credits: an entry above Quit; the roll plays over the menu
-	_credits_btn = join_btn.duplicate()
+	# Credits: in the small row before Quit; the roll plays over the menu
+	_credits_btn = settings_btn.duplicate()
 	_credits_btn.name = "CreditsButton"
 	_credits_btn.text = "Credits"
-	menu.add_child(_credits_btn)
-	menu.move_child(_credits_btn, quit_btn.get_index())
+	more.add_child(_credits_btn)
+	more.move_child(_credits_btn, quit_btn.get_index())
 	_credits = CreditsRoll.new()
 	add_child(_credits)
 	_credits_btn.pressed.connect(_credits.play)
@@ -106,9 +108,11 @@ func _ready() -> void:
 	NetworkManager.lobby_created.connect(_on_lobby_created)
 	NetworkManager.lobby_joined.connect(_on_lobby_joined)
 	NetworkManager.host_failed.connect(_on_host_failed)
+	_style_more()
 	# Mouse and keyboard share one highlight: hovering an entry focuses it
-	for b: Button in menu.get_children():
-		b.mouse_entered.connect(b.grab_focus)
+	for b in menu.get_children() + more.get_children():
+		if b is Button:
+			b.mouse_entered.connect(b.grab_focus)
 	join_panel.hide()
 	_show_default_status()
 	_intro()
@@ -138,13 +142,41 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ── Presentation ───────────────────────────────────────────
 
+# The small row reads as text, not buttons: no box, an amber underline on focus,
+# a dot between entries; the first lines up with the big entries' text
+func _style_more() -> void:
+	var btns := more.get_children()
+	for i in btns.size():
+		var b: Button = btns[i]
+		var pad_l := 22.0 if i == 0 else 8.0
+		var plain := StyleBoxFlat.new()
+		plain.bg_color = Color(0, 0, 0, 0)
+		plain.set_content_margin_all(6)
+		plain.content_margin_left = pad_l
+		plain.content_margin_right = 8
+		plain.border_width_bottom = 2
+		plain.border_color = Color(0, 0, 0, 0)
+		var lit := plain.duplicate() as StyleBoxFlat
+		lit.border_color = UiStyle.TERRACOTTA
+		for st in ["normal", "disabled"]:
+			b.add_theme_stylebox_override(st, plain)
+		for st in ["hover", "pressed", "hover_pressed", "focus"]:
+			b.add_theme_stylebox_override(st, lit)
+		if i > 0:
+			var dot := Label.new()
+			dot.text = "·"
+			dot.theme_type_variation = &"Caption"
+			dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			more.add_child(dot)
+			more.move_child(dot, b.get_index())
+
 func _intro() -> void:
 	fade.show()
 	var tw := create_tween()
 	tw.tween_property(fade, "color:a", 0.0, 0.9).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(fade.hide)
-	UiFx.stagger(column.get_children().filter(func(c): return c != menu), 0.7, 0.09, 0.25)
-	UiFx.stagger(menu.get_children(), 0.45, 0.06, 0.65)
+	UiFx.stagger(column.get_children().filter(func(c): return c != menu and c != more), 0.7, 0.09, 0.25)
+	UiFx.stagger(menu.get_children() + more.get_children(), 0.45, 0.06, 0.65)
 	UiFx.fade_in(verse, 1.0, 1.0)
 	host_btn.grab_focus()
 	# Backdrop moves on a Node2D rig: Control positions snap to whole pixels
