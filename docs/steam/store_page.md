@@ -7,7 +7,7 @@ Facts mirror GAME_DESIGN.md v0.6 and nehemiah-website `src/lib/dictionaries/en.t
 
 ## 0. Before the page exists (user-only, needs login)
 
-1. partner.steamgames.com → sign up as **Corner Stone Games** (company or individual).
+1. partner.steamgames.com → sign up as **Takiko Games** (company or individual).
 2. Fill tax interview + bank info (identity verification can take days).
 3. Pay Steam Direct fee ($100, recouped after $1,000 gross) → get the **App ID**.
 4. Swap App ID in `scenes/network_manager/network_manager.gd` (`STEAM_APP_ID := 480`) and any `steam_appid.txt`.
@@ -21,8 +21,8 @@ Facts mirror GAME_DESIGN.md v0.6 and nehemiah-website `src/lib/dictionaries/en.t
 | Field | Value |
 |---|---|
 | App name | **Nehemiah: The Wall** (matches `project.godot`; plain "Nehemiah" is hard to find in search) |
-| Developer | Corner Stone Games |
-| Publisher | Corner Stone Games |
+| Developer | Takiko Games |
+| Publisher | Takiko Games |
 | Franchise | — |
 | Release date | Coming soon |
 | Website | https://www.nehemiahgame.com |

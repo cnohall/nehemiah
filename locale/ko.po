@@ -1126,8 +1126,8 @@ msgstr "“…공사를 그치게 하자.”"
 msgid "Credits"
 msgstr "만든 사람들"
 
-msgid "A Corner Stone Games production"
-msgstr "Corner Stone Games 제작"
+msgid "A Takiko Games production"
+msgstr "Takiko Games 제작"
 
 msgid "Development"
 msgstr "개발"

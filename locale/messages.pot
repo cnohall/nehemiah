@@ -80,7 +80,7 @@ msgid "455 BCE  ·  Jerusalem"
 msgstr ""
 
 #: scenes\story\credits_roll.gd:23
-msgid "A Corner Stone Games production"
+msgid "A Takiko Games production"
 msgstr ""
 
 #: scenes\ui\game_hud.gd:971

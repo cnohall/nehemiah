@@ -1132,8 +1132,8 @@ msgstr "„…und dem Werk ein Ende machen.“"
 msgid "Credits"
 msgstr "Mitwirkende"
 
-msgid "A Corner Stone Games production"
-msgstr "Eine Produktion von Corner Stone Games"
+msgid "A Takiko Games production"
+msgstr "Eine Produktion von Takiko Games"
 
 msgid "Development"
 msgstr "Entwicklung"

@@ -1132,8 +1132,8 @@ msgstr "“…y hacer que cese la obra.”"
 msgid "Credits"
 msgstr "Créditos"
 
-msgid "A Corner Stone Games production"
-msgstr "Una producción de Corner Stone Games"
+msgid "A Takiko Games production"
+msgstr "Una producción de Takiko Games"
 
 msgid "Development"
 msgstr "Desarrollo"

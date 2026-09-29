@@ -13,14 +13,16 @@ const FAST       := 5.0      # × while held
 const START_HOLD := 1.4      # seconds before the roll starts moving
 const END_HOLD   := 5.0      # the closing verse stays this long once it's up
 const COLUMN     := 760.0
+const STUDIO_LOGO: Texture2D = preload("res://assets/brand/takiko_mark.png")
 
 # [kind, text, detail]. Kinds: title, subtitle, role (a heading), name, small (licence
-# lines), gap, verse, ref, thanks. Names and titles of works stay as written.
+# lines), gap, logo (the studio's), verse, ref, thanks. Names and titles of works stay as written.
 const ROLL := [
 	["title", "Nehemiah", ""],
 	["subtitle", "The Wall", ""],
 	["gap", "", ""],
-	["small", "A Corner Stone Games production", ""],
+	["logo", "", ""],
+	["small", "A Takiko Games production", ""],
 	["gap", "", ""],
 	["role", "Development", ""],
 	["name", "Chris Nohall", ""],
@@ -177,6 +179,16 @@ func _line(kind: String, text: String) -> Control:
 		g.custom_minimum_size.y = 90
 		g.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		return g
+	if kind == "logo":
+		var logo := TextureRect.new()
+		logo.texture = STUDIO_LOGO
+		logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+		# Sized to the texture and shrunk to the left, so its edge lines up with the text
+		logo.custom_minimum_size = Vector2(180.0 * STUDIO_LOGO.get_width() / STUDIO_LOGO.get_height(), 180)
+		logo.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return logo
 	# One line each. The verse and the thanks may wrap (Korean runs long), so they get
 	# the column's width up front: a wrapped label left to measure itself at zero width
 	# comes out thousands of pixels tall, and the column never shrinks back from that
