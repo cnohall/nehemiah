@@ -43,6 +43,11 @@ var _defs := {
 	# Builder's sword (Neh. 4:18): the swing, higher and brighter than an enemy's
 	"sword":          [["knifeSlice", "knifeSlice2"], -6.0, 1.15, 1.35],
 	"sling_miss":     [_n("impactGeneric_light_%03d", 0, 5), -8.0, 0.8, 1.0],
+	# Breakable props (Breakable): a clay jar shattering, its water, a reed basket crushed
+	"shatter":        [_n("shatter_%03d", 0, 4), -6.0, 0.85, 1.15],
+	"splash":         [_n("splash_%03d", 0, 3), -10.0, 0.9, 1.1],
+	"basket_crush":   [_n("impactPlank_medium_%03d", 0, 5), -8.0, 1.45, 1.7],
+	"pot_knock":      [_n("impactGeneric_light_%03d", 0, 5), -16.0, 1.5, 1.8],
 	"hurt":           [_n("impactSoft_heavy_%03d", 0, 5), -2.0, 0.9, 1.1],
 	"downed":         [_n("impactPunch_heavy_%03d", 0, 5), 0.0, 0.6, 0.7],
 	"revive":         [["clothBelt", "clothBelt2"], 0.0, 0.9, 1.0],

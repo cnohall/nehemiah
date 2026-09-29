@@ -27,9 +27,14 @@ const WALL_STRIP := Rect2(-23.0, -2.8, 46.0, 5.6)
 const SPAWN_STRIP := Rect2(-20.0, -16.0, 40.0, 4.0)
 const CLEARANCE := 1.2   # around piles, the trough, rubble heaps and the respawn point
 
+signal rebuilt
+
 var _body: StaticBody3D
 var _built := -1
 var _keep_clear: Array[Vector2] = []
+## Where this section's landmarks set out breakable jars and baskets: [kind, position].
+## Read by Breakables after `rebuilt`.
+var props: Array = []
 
 func _ready() -> void:
 	GameState.section_changed.connect(_rebuild.unbind(1))
@@ -40,6 +45,7 @@ func _rebuild() -> void:
 	if index == _built:
 		return
 	_built = index
+	props.clear()
 	for c in get_children():
 		remove_child(c)
 		c.queue_free()
@@ -65,6 +71,25 @@ func _rebuild() -> void:
 		"market":      _market()
 	_flush()
 	_apply_ground(ground)
+	rebuilt.emit()
+
+## Worker spots the section must leave clear (respawn point, piles, build sites, heaps)
+func keep_clear() -> Array[Vector2]:
+	return _keep_clear
+
+## True if (x,z) `p` lies within `pad` of a solid landmark
+func blocks(p: Vector2, pad: float) -> bool:
+	if _body == null:
+		return false
+	for shape: CollisionShape3D in _body.get_children():
+		var half := (shape.shape as BoxShape3D).size * 0.5
+		var local := shape.transform.affine_inverse() * Vector3(p.x, shape.transform.origin.y, p.y)
+		if absf(local.x) < half.x + pad and absf(local.z) < half.z + pad:
+			return true
+	return false
+
+func _prop(kind: String, at: Vector3) -> void:
+	props.append([kind, Vector3(at.x, 0.0, at.z)])
 
 # Everything a worker has to reach, as the SectionStage laid it out for this section
 func _collect_keep_clear() -> void:
@@ -159,6 +184,14 @@ func _stall(c: Vector3, w: float, d: float, goods: String) -> void:
 				_add("pebble", Transform3D(_yaw().scaled(Vector3(1.2, 0.5, 1.2)), at), Color(0.86, 0.68, 0.30))
 			_:
 				_add("jar", Transform3D(Basis.from_scale(Vector3(1.1, 0.6, 1.1)), at + Vector3(0, 0.1, 0)), CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])
+	# Stock that didn't fit on the table, set down beside the stall
+	match goods:
+		"jars":
+			_prop("store", c + Vector3(w * 0.5 + 0.55, 0, 0.3))
+			_prop("jar", c + Vector3(w * 0.5 + 0.5, 0, -0.45))
+			_prop("jar", c + Vector3(-w * 0.5 - 0.5, 0, 0.1))
+		"fish":
+			_prop("basket", c + Vector3(-w * 0.5 - 0.55, 0, 0.2))
 
 # Tree with a small solid trunk (the canopy is walked under)
 func _tree(at: Vector3, fig := false) -> void:
@@ -251,7 +284,8 @@ func _fish_market() -> void:
 	_stall(Vector3(15.5, 0, 6.2), 3.0, 2.2, "fish")
 	_stall(Vector3(13.0, 0, 10.2), 3.2, 2.2, "jars")
 	for p: Vector3 in [Vector3(8.4, 0, 8.2), Vector3(17.8, 0, 8.8)]:
-		_add("jar", Transform3D(Basis.from_scale(Vector3(1.6, 0.9, 1.6)), p + Vector3(0, 0.2, 0)), _vary(REED_COLOR, 0.04))
+		_prop("basket", p)
+		_prop("basket", p + Vector3(0.7, 0, 0.35))
 
 const REED_COLOR := Color(0.58, 0.47, 0.28)
 
@@ -293,6 +327,7 @@ func _ovens(g: Dictionary) -> void:
 		_add("opening", Transform3D(Basis.from_scale(Vector3(0.5, 0.45, 0.06)), c + Vector3(0, 0.35, 0.86)), Color(0.9, 0.42, 0.14))
 		_collider(c, Vector3(1.8, 1.4, 1.8))
 		_smoke(c + Vector3(0, 1.3, 0))
+		_prop("basket", c + Vector3(-1.5, 0, 0.9))   # figs set out beside the baking
 		var wood := c + Vector3(1.8, 0, 0.6)
 		for i in 5:
 			_add("trunk", Transform3D(Basis(Vector3.RIGHT, PI / 2) * Basis.from_scale(Vector3(0.7, 1.1, 0.7)), wood + Vector3(0, 0.1 + (i % 2) * 0.16, (i - 2) * 0.17)), _vary(WOOD, 0.05))
@@ -348,6 +383,10 @@ func _garden(g: Dictionary) -> void:
 	water.material_override = mat
 	water.position = pool + Vector3(0, 0.3, 0)
 	add_child(water)
+	# Water jars left by the pool steps, and by the far rim
+	for off: Vector3 in [Vector3(pw * 0.5 + 0.8, 0, 1.9), Vector3(pw * 0.5 + 1.5, 0, 2.2), Vector3(pw * 0.5 + 2.6, 0, 1.8),
+			Vector3(-pw * 0.5 - 0.7, 0, -1.2), Vector3(-pw * 0.5 - 0.7, 0, -0.5)]:
+		_prop("jar", pool + off)
 	# Stairs going down from the City of David (3:15), beside the pool
 	for i in 5:
 		_add("slab", Transform3D(Basis.from_scale(Vector3(2.4, 0.12, 0.5)), pool + Vector3(pw * 0.5 + 1.6, 0.06 + (4 - i) * 0.02, -1.0 + i * 0.5)), _vary(PAVING_COLOR, 0.03))
@@ -394,7 +433,9 @@ func _low_house(c: Vector3, w: float, d: float) -> void:
 	_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.15, 0.22, d + 0.15)), c + Vector3(0, h + 0.1, 0)), tint.darkened(0.06))
 	_dress_walls(c, w, h, d)
 	# Door toward the wall — "in front of his own house"
-	_door(c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), 0, -d * 0.5), -1.0)
+	var door := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), 0, -d * 0.5)
+	_door(door, -1.0)
+	_prop("jar", door + Vector3(0.75, 0, -0.45))   # a water jar by the step
 	if _rng.randf() < 0.6:
 		var rug := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), h + 0.22, 0)
 		_add("block", Transform3D(_yaw_small() * Basis.from_scale(Vector3(minf(w * 0.5, 1.8), 0.04, 1.2)), rug), CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])
@@ -406,7 +447,10 @@ func _kidron(g: Dictionary) -> void:
 	for row in 2:
 		for i in 5:
 			var x := 7.0 + i * 3.6 + row * 1.8 + _rng.randf_range(-0.5, 0.5)
-			_tree(Vector3(x, 0, -6.5 - row * 3.6 + _rng.randf_range(-0.4, 0.4)))
+			var at := Vector3(x, 0, -6.5 - row * 3.6 + _rng.randf_range(-0.4, 0.4))
+			_tree(at)
+			if row == 0 and i % 2 == 0:
+				_prop("basket", at + Vector3(0.9, 0, 0.7))   # olives picked into it
 	for x: float in [-20.0, -16.5]:
 		_tree(Vector3(x, 0, -7.5))
 

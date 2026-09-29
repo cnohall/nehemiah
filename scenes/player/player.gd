@@ -24,6 +24,7 @@ const SWORD_DAMAGE    := 20.0     # scout 2 cuts, raider 3, brute 5
 const SWORD_COOLDOWN  := 0.45
 const SWORD_KNOCKBACK := 1.3      # metres a scout is shoved (brutes feel ~a third)
 const SWORD_HIT_FRAME := 2        # frame of the "sword" anim where the blade lands
+const POT_REACH       := 1.0      # a jar or basket this close (no foe about) takes the cut instead
 const AIM_ASSIST_DEG   := 18.0   # enemies inside this cone of the aim get homed on
 const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
@@ -480,6 +481,8 @@ func _facing_vector() -> Vector3:
 # Owner → everyone: puff of dust + stretch so a dash reads on every screen
 @rpc("authority", "call_local", "unreliable")
 func _dash_fx() -> void:
+	if multiplayer.is_server():
+		get_tree().call_group("breakable_set", "note_dash", self)   # anything run through breaks
 	_sprite.squash(Vector2(0.92, 1.08))
 	Sfx.play("dash", global_position)
 	var p := CPUParticles3D.new()
@@ -863,6 +866,10 @@ func _handle_attack(delta: float) -> void:
 			if foe != null:
 				_swing_sword(foe)
 				return
+			var pot := _pot_in_reach()
+			if pot != null:
+				_swing_sword(pot)
+				return
 			_charging = true
 			_charge = 0.0
 			whirling = true
@@ -924,7 +931,16 @@ func _foe_in_sword_reach() -> Node3D:
 			best = enemy
 	return best
 
-## Owner: cut at the nearest foe; the server works out who the blade catches
+# A jar or basket at arm's length — only when no foe is in sling range, so a pot at
+# your feet never steals a throw
+func _pot_in_reach() -> Node3D:
+	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
+		if global_position.distance_to(enemy.global_position) < SLING_MAX_RANGE:
+			return null
+	var pots := get_tree().get_first_node_in_group("breakable_set")
+	return pots.piece_in_reach(global_position, POT_REACH) if pots else null
+
+## Owner: cut at the nearest foe (or jar); the server works out what the blade catches
 func _swing_sword(foe: Node3D) -> void:
 	_sling_cd = SWORD_COOLDOWN
 	_face_aim(foe.global_position)
@@ -950,6 +966,9 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 			continue
 		enemy.take_damage(SWORD_DAMAGE, worker_id())
 		enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
+		hit = true
+	var pots := get_tree().get_first_node_in_group("breakable_set")
+	if pots and pots.smash_arc(at, fwd, SWORD_REACH + 0.4, SWORD_ARC_DEG):
 		hit = true
 	_sword_fx.rpc(hit)
 

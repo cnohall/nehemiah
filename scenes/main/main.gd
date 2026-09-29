@@ -495,6 +495,7 @@ func _request_roster() -> void:
 	for p in players_root.get_children():
 		p.send_status_to(caller)
 	GameState.send_state_to(caller)
+	$Breakables.send_state_to(caller)   # after GameState, so the caller has laid out the same section
 	director.send_story_to(caller)
 
 @rpc("authority", "reliable")
