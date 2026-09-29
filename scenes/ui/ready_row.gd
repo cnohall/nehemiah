@@ -77,17 +77,17 @@ func refresh() -> void:
 	if people.size() > 1:
 		for entry: Array in people:
 			_chips.add_child(_chip(entry[0], entry[1], entry[2]))
-	var ready := is_local_ready()
+	var readied := is_local_ready()
 	var key := InputMode.key("interact")
-	if not ready:
+	if not readied:
 		_prompt.text = tr("Hold %s when you're ready") % key if holdable else tr("I'm ready")
 	elif _waiting.is_empty():
 		_prompt.text = tr("Everyone's ready")
 	else:
 		_prompt.text = tr_n("Waiting for %d builder", "Waiting for %d builders", _waiting.size()) % _waiting.size()
-	_prompt.disabled = ready
-	_begin.visible = multiplayer.is_server() and ready and not _waiting.is_empty()
-	_fill.visible = holdable and not ready
+	_prompt.disabled = readied
+	_begin.visible = multiplayer.is_server() and readied and not _waiting.is_empty()
+	_fill.visible = holdable and not readied
 
 func _process(delta: float) -> void:
 	if not holdable or not is_visible_in_tree() or is_local_ready():
@@ -129,7 +129,7 @@ func _people() -> Array:
 
 func _chip(id: int, color: Color, who: String) -> Control:
 	# Someone still loading in isn't waited on, but isn't ready either
-	var ready := not id in _waiting and not NetworkManager.is_loading(id)
+	var readied := not id in _waiting and not NetworkManager.is_loading(id)
 	var chip := HBoxContainer.new()
 	chip.add_theme_constant_override("separation", 8)
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -148,12 +148,12 @@ func _chip(id: int, color: Color, who: String) -> Control:
 	var tick_color := UiStyle.GOLD if _dark else UiStyle.OLIVE
 	var ring_color := _muted_color()
 	mark.draw.connect(func():
-		if ready:
+		if readied:
 			mark.draw_polyline(PackedVector2Array([Vector2(2, 8.5), Vector2(6.5, 13), Vector2(14, 3.5)]), tick_color, 2.5, true)
 		else:
 			mark.draw_arc(Vector2(8, 8), 5.5, 0.0, TAU, 20, ring_color, 1.5, true))
 	chip.add_child(mark)
-	chip.modulate.a = 1.0 if ready else 0.7
+	chip.modulate.a = 1.0 if readied else 0.7
 	return chip
 
 func _enter_tree() -> void:

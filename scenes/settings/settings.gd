@@ -169,7 +169,7 @@ func _add_font_fallbacks() -> void:
 # ── Bindings ───────────────────────────────────────────────
 
 ## First keyboard / mouse event on an action (what the hints show and rebinding replaces)
-static func primary_event(action: String) -> InputEvent:
+func primary_event(action: String) -> InputEvent:
 	for e in InputMap.action_get_events(action):
 		if e is InputEventKey or e is InputEventMouseButton:
 			return e

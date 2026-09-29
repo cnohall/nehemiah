@@ -109,5 +109,5 @@ func _trim() -> void:
 		shots.remove_at(worst)
 
 func _who(p: Player) -> String:
-	var name := NetworkManager.name_of(p.worker_id())
-	return name if not name.is_empty() else tr(CharacterRig.TRADES[p._slot % CharacterRig.TRADES.size()])
+	var who := NetworkManager.name_of(p.worker_id())
+	return who if not who.is_empty() else tr(CharacterRig.TRADES[p._slot % CharacterRig.TRADES.size()])

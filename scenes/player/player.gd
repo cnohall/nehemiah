@@ -227,15 +227,15 @@ func _nobody_to_raise() -> bool:
 var _raise_tag: WorldTag
 
 func _update_raise_tag() -> void:
-	var show := downed and Player.local != null and Player.local != self and not Player.local.downed
-	if show and _raise_tag == null:
+	var shown := downed and Player.local != null and Player.local != self and not Player.local.downed
+	if shown and _raise_tag == null:
 		_raise_tag = WorldTag.make(WorldTag.Kind.SITE)
 		_raise_tag.position.y = PIP_Y + 0.5
 		add_child(_raise_tag)
 	if _raise_tag != null:
-		_raise_tag.visible = show
-		_raise_tag.pulse = show
-		if show:
+		_raise_tag.visible = shown
+		_raise_tag.pulse = shown
+		if shown:
 			_raise_tag.text = "Help up  [%s]" % InputMode.key("interact")
 
 func _exit_tree() -> void:
@@ -709,8 +709,8 @@ func _server_interact(at: Vector3) -> void:
 				_set_carried.rpc(target.kind)
 		Act.CLIMB:
 			# The spot mirrored through the wall, stepped clear of its far face
-			var local := target.to_local(at)
-			var far := target.to_global(Vector3(local.x, local.y, -local.z))
+			var here := target.to_local(at)
+			var far := target.to_global(Vector3(here.x, here.y, -here.z))
 			_climb_over.rpc_id(get_multiplayer_authority(), target.approach_point(far, CLIMB_CLEAR))
 			_sfx.rpc("dash")
 

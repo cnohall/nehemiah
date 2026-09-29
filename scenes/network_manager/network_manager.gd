@@ -231,7 +231,7 @@ func gate_sync(sync: MultiplayerSynchronizer) -> void:
 	sync.add_visibility_filter(is_peer_ready)
 
 ## Server → clients replication of `props` on `owner`, as a gated "Sync" child
-func add_sync(owner: Node, props: Array[NodePath],
+func add_sync(target: Node, props: Array[NodePath],
 		mode := SceneReplicationConfig.REPLICATION_MODE_ALWAYS, interval := 0.1) -> MultiplayerSynchronizer:
 	var cfg := SceneReplicationConfig.new()
 	for prop in props:
@@ -242,7 +242,7 @@ func add_sync(owner: Node, props: Array[NodePath],
 	sync.replication_interval = interval
 	sync.replication_config = cfg
 	gate_sync(sync)
-	owner.add_child(sync)
+	target.add_child(sync)
 	return sync
 
 # ── Signals ────────────────────────────────────────────────
@@ -279,14 +279,14 @@ func _init_steam() -> void:
 		# Extension didn't load: DLLs missing next to the exe, or blocked by AV
 		_steam_error = "Steam plugin failed to load"
 		return
-	var steam := Engine.get_singleton("Steam")
+	var singleton := Engine.get_singleton("Steam")
 	# embed_callbacks = true: GodotSteam pumps run_callbacks() itself each frame
-	var res: Dictionary = steam.steamInitEx(STEAM_APP_ID, true)
+	var res: Dictionary = singleton.steamInitEx(STEAM_APP_ID, true)
 	if res.get("status", -1) != 0:
 		_steam_error = "%s (code %d)" % [res.get("verbal", "?"), res.get("status", -1)]
 		print("NetworkManager: Steam unavailable (%s) — LAN only" % _steam_error)
 		return
-	_steam = steam
+	_steam = singleton
 	if _steam.has_method("initRelayNetworkAccess"):
 		# Warm up the relay network now so the first connection isn't slow
 		_steam.initRelayNetworkAccess()
@@ -330,9 +330,9 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 		disconnect_session()
 		lobby_joined.emit(false)
 		return
-	var owner: int = _steam.getLobbyOwner(lobby_id)
+	var lobby_owner: int = _steam.getLobbyOwner(lobby_id)
 	var peer: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
-	var err: int = peer.create_client(owner, 0)
+	var err: int = peer.create_client(lobby_owner, 0)
 	if err != OK:
 		disconnect_session()
 		lobby_joined.emit(false)

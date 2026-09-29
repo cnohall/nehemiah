@@ -313,12 +313,12 @@ func _build() -> void:
 	_hint = _label(&"Eyebrow", 13, Color(UiStyle.CREAM, 0.55), false)
 	footer.add_child(_hint)
 
-func _label(variation: StringName, font_size: int, color: Color, wrap := true) -> Label:
+func _label(variation: StringName, font_size: int, color: Color, wrapped := true) -> Label:
 	var l := Label.new()
 	l.theme_type_variation = variation
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	if wrap:
+	if wrapped:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l

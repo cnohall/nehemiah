@@ -288,11 +288,11 @@ func _trough() -> Node3D:
 ## kind → loads still to bring for the site's next stage
 func _missing(site: Node3D) -> Dictionary:
 	if "mortar_ready" in site:
-		var need := {}
+		var want := {}
 		for kind: String in ["lime", "water"]:
 			if site.needs(kind):
-				need[kind] = 1
-		return need
+				want[kind] = 1
+		return want
 	if site.has_method("cost_for") and site.get("pending") is Dictionary:
 		var out := {}
 		var cost: Dictionary = site.cost_for(site.stage + 1)
@@ -435,7 +435,7 @@ func _goes_to_ono(messenger: Node3D) -> bool:
 		_ono[messenger] = randf() < skill["ono"]
 	return _ono[messenger]
 
-func _follow_carrier(delta: float) -> void:
+func _follow_carrier(_delta: float) -> void:
 	var carrier := _p._beam_partner()
 	if carrier == null:
 		return

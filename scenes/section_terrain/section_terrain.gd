@@ -259,7 +259,7 @@ const REED_COLOR := Color(0.58, 0.47, 0.28)
 func _ruins(g: Dictionary) -> void:
 	g["tint"] = Color(0.42, 0.37, 0.33)
 	g["tint_amount"] = 0.16
-	for c: Vector3 in [Vector3(-20.0, 0, 8.5), Vector3(19.5, 0, 9.5), Vector3(5.5, 0, 5.6), Vector3(-18.0, 0, -7.5)]:
+	for c: Vector3 in [Vector3(-20.0, 0, 8.5), Vector3(19.5, 0, 9.5), Vector3(4.0, 0, 6.2), Vector3(-18.0, 0, -7.5)]:
 		var w := _rng.randf_range(3.2, 4.2)
 		var d := _rng.randf_range(2.6, 3.2)
 		var tint := _vary(HOUSE_COLORS[0], 0.03).lerp(SOOT, 0.35)
@@ -314,7 +314,7 @@ func _refuse(g: Dictionary) -> void:
 	g["tint"] = Color(0.45, 0.40, 0.35)
 	g["tint_amount"] = 0.12
 	g["outside_shade"] = 0.4
-	for c: Vector3 in [Vector3(10.0, 0, 6.5), Vector3(14.5, 0, 10.5), Vector3(18.5, 0, 5.0), Vector3(22.5, 0, 10.0)]:
+	for c: Vector3 in [Vector3(10.0, 0, 6.5), Vector3(14.5, 0, 10.5), Vector3(18.5, 0, 5.0), Vector3(21.5, 0, 10.5)]:
 		var s := Vector3(_rng.randf_range(2.6, 3.2), _rng.randf_range(0.9, 1.2), _rng.randf_range(2.2, 2.8))
 		_add("boulder", Transform3D(_yaw().scaled(s * Vector3(0.95, 1.0, 0.95)), c + Vector3(0, 0.1, 0)), _vary(Color(0.42, 0.36, 0.30), 0.04))
 		for i in 6:   # potsherds
@@ -364,7 +364,7 @@ func _garden(g: Dictionary) -> void:
 # Water Gate (3:26): the Ophel slope — torches for the night watch (Neh. 4:22), boulders outside
 func _ophel(g: Dictionary) -> void:
 	g["outside_shade"] = 0.45
-	for x: float in [-17.0, -9.0, -0.5, 8.0, 16.5]:
+	for x: float in [-17.0, -10.5, -0.5, 10.0, 16.5]:
 		_torch(Vector3(x, 0, 3.6))
 	for p: Vector3 in [Vector3(-11.0, 0, 9.5), Vector3(18.5, 0, 9.0), Vector3(-10.0, 0, -4.2), Vector3(4.0, 0, -4.2), Vector3(14.0, 0, -4.2)]:
 		_torch(p)

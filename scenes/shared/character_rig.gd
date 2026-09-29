@@ -613,7 +613,6 @@ func _build(look: Dictionary) -> void:
 
 	var skin: Color = look["skin"]
 	var robe: Color = look["robe"]
-	var trim: Color = look["trim"]
 	var hair: Color = look["hair"]
 
 	_body = _pivot(self, Vector3.ZERO)

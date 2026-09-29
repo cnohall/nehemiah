@@ -87,7 +87,7 @@ func key(action: String) -> String:
 		if using_pad:
 			return tr("L Stick")
 		return "".join(["move_north", "move_west", "move_south", "move_east"].map(
-			func(a: String) -> String: return key_label(a)))
+			func(m: String) -> String: return key_label(m)))
 	var a: String = ACTION.get(action, action)
 	var label := _pad_label(a) if using_pad else key_label(a)
 	if action == "throw" and not Settings.toggle_charge:
@@ -130,12 +130,13 @@ static func _kind_of(joy_name: String) -> Pad:
 			return Pad.NINTENDO
 	return Pad.XBOX
 
-## Keyboard / mouse label for an InputMap action ("E", "Click", "Z" on AZERTY)
 ## Keyboard / mouse label for an InputMap action: "E", "Click", "Z" on AZERTY
 func key_label(action: String) -> String:
 	var e := Settings.primary_event(action)
 	if e is InputEventKey:
-		var k := DisplayServer.keyboard_get_label_from_physical(e.physical_keycode)
+		# The headless server (dedicated host, test harnesses) has no keyboard layout to ask
+		var k := KEY_NONE if DisplayServer.get_name() == "headless" \
+			else DisplayServer.keyboard_get_label_from_physical(e.physical_keycode)
 		var s := OS.get_keycode_string(k if k != KEY_NONE else e.physical_keycode)
 		return "Esc" if s == "Escape" else s
 	if e is InputEventMouseButton:

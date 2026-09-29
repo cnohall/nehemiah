@@ -66,9 +66,9 @@ func _paint() -> void:
 	var wash := _wash(at + ACROSS * 1.1 + Vector3(0.0, -0.005, 0.0))
 	var label := _flat(tr(row[0]), UiStyle.WORLD_FONT, 64, at, VERTICAL_ALIGNMENT_TOP)
 	label.outline_size = 8   # thick, smeared strokes
-	var sign := _flat("— %s, %s" % [tr(row[1]), GameState.short_ref(row[2])], UiStyle.CINZEL_BOLD, 34,
+	var byline := _flat("— %s, %s" % [tr(row[1]), GameState.short_ref(row[2])], UiStyle.CINZEL_BOLD, 34,
 		at - ACROSS * 0.25, VERTICAL_ALIGNMENT_BOTTOM)
-	_painted.append({ "parts": parts, "label": label, "sign": sign, "wash": wash })
+	_painted.append({ "parts": parts, "label": label, "sign": byline, "wash": wash })
 
 # A rough patch of whitewash slapped on the ground, soft at the edges
 func _wash(at: Vector3) -> MeshInstance3D:
