@@ -1480,3 +1480,312 @@ msgstr "Steuerkreuz   Wählen          %s   Bauen          %s   Zurück"
 
 msgid "Locked"
 msgstr "Gesperrt"
+
+msgid "The Festival of Booths"
+msgstr "Das Laubhüttenfest"
+
+msgid "The wall is finished. No clock, no enemy — walk the city."
+msgstr "Die Mauer ist fertig. Keine Uhr, kein Feind — geh durch die Stadt."
+
+msgid "Walk up to people and press %s to talk"
+msgstr "Geh zu den Leuten und drück %s, um zu reden"
+
+msgid "Walk the City"
+msgstr "Stadtrundgang"
+
+msgid "Neh. 8  ·  The seventh month"
+msgstr "Neh 8  ·  Der siebte Monat"
+
+msgid "Hear Ezra read the Law at the Water Gate"
+msgstr "Hör Esra das Gesetz am Wassertor vorlesen"
+
+msgid "Build booths with branches from the mount — %d of %d"
+msgstr "Bau Laubhütten mit Zweigen vom Berg — %d von %d"
+
+msgid "Send portions to those with nothing prepared — %d of %d"
+msgstr "Schick Anteile an die, für die nichts bereitet ist — %d von %d"
+
+msgid "Meet the people who built the wall — %d of %d"
+msgstr "Triff die Leute, die die Mauer gebaut haben — %d von %d"
+
+msgid "Go up to the house of God, by the Sheep Gate"
+msgstr "Geh hinauf zum Haus Gottes, beim Schaftor"
+
+msgid "Walk the wall round — %d of %d gates"
+msgstr "Geh die Mauer ganz ab — %d von %d Toren"
+
+msgid "There was very great gladness"
+msgstr "Die Freude war sehr groß"
+
+msgid "%s  ·  Stay as long as you like"
+msgstr "%s  ·  Bleib, so lange du magst"
+
+msgid "%s  ·  walk off either end of the wall to go on round"
+msgstr "%s  ·  geh an einem Ende der Mauer hinaus, um die Runde fortzusetzen"
+
+msgid "The house of God"
+msgstr "Das Haus Gottes"
+
+msgid "“We will not forsake the house of our God.”  (%s)"
+msgstr "„Wir werden das Haus unseres Gottes nicht vernachlässigen.“  (%s)"
+
+msgid "A booth"
+msgstr "Eine Laubhütte"
+
+msgid "Branch"
+msgstr "Zweig"
+
+msgid "Portion"
+msgstr "Anteil"
+
+msgid "Nothing prepared"
+msgstr "Nichts bereitet"
+
+msgid "see %s"
+msgstr "vgl. %s"
+
+msgid "This booth stands"
+msgstr "Diese Laubhütte steht"
+
+msgid "The booth wants branches — from the olive trees outside the wall"
+msgstr "Die Laubhütte braucht Zweige — von den Ölbäumen vor der Mauer"
+
+msgid "Branches enough — {interact} to build it"
+msgstr "Genug Zweige — {interact} zum Bauen"
+
+msgid "They're after bread, not that"
+msgstr "Sie wollen Brot, nicht das"
+
+msgid "They have plenty now"
+msgstr "Sie haben jetzt genug"
+
+msgid "Nothing is prepared in my house for the feast."
+msgstr "In meinem Haus ist nichts für das Fest bereitet."
+
+msgid "Blessings on you — the joy of Yahweh is our strength today."
+msgstr "Sei gesegnet — die Freude an Jahwe ist heute unsere Stärke."
+
+msgid "Then Eliashib the high priest rose up with his brothers the priests, and they built the sheep gate."
+msgstr "Da machte sich der Hohepriester Eljaschib mit seinen Brüdern, den Priestern, auf, und sie bauten das Schaftor."
+
+msgid "The sons of Hassenaah built the fish gate. They laid its beams, and set up its doors, its bolts, and its bars."
+msgstr "Die Söhne Senaas bauten das Fischtor. Sie legten seine Balken und setzten seine Türen, Schlösser und Riegel ein."
+
+msgid "Joiada the son of Paseah and Meshullam the son of Besodeiah repaired the old gate."
+msgstr "Jojada, der Sohn Paseachs, und Meschullam, der Sohn Besodjas, besserten das alte Tor aus."
+
+msgid "Next to him, Uzziel the son of Harhaiah, goldsmiths, made repairs."
+msgstr "Neben ihm besserte Usiël aus, der Sohn Harhajas, von den Goldschmieden."
+
+msgid "Next to him, Hananiah, one of the perfumers, made repairs, and they fortified Jerusalem even to the wide wall."
+msgstr "Neben ihm besserte Hananja aus, einer der Salbenmischer, und sie befestigten Jerusalem bis an die Breite Mauer."
+
+msgid "Malchijah the son of Harim and Hasshub the son of Pahathmoab repaired another portion and the tower of the furnaces."
+msgstr "Malkija, der Sohn Harims, und Haschub, der Sohn Pahat-Moabs, besserten ein weiteres Stück aus und den Ofenturm."
+
+msgid "Next to him, Shallum the son of Hallohesh, the ruler of half the district of Jerusalem, he and his daughters made repairs."
+msgstr "Neben ihm besserte Schallum aus, der Sohn Halloheschs, der Vorsteher des halben Bezirks von Jerusalem, er und seine Töchter."
+
+msgid "Hanun and the inhabitants of Zanoah repaired the valley gate."
+msgstr "Hanun und die Bewohner von Sanoach besserten das Taltor aus."
+
+msgid "Malchijah the son of Rechab, the ruler of the district of Beth Haccherem, repaired the dung gate."
+msgstr "Malkija, der Sohn Rechabs, der Vorsteher des Bezirks Bet-Kerem, besserte das Misttor aus."
+
+msgid "Shallun the son of Colhozeh, the ruler of the district of Mizpah, repaired the spring gate."
+msgstr "Schallun, der Sohn Kol-Hoses, der Vorsteher des Bezirks Mizpa, besserte das Quelltor aus."
+
+msgid "Nehemiah the son of Azbuk, the ruler of half the district of Beth Zur, made repairs to the place opposite the tombs of David, and to the pool that was made."
+msgstr "Nehemia, der Sohn Asbuks, der Vorsteher des halben Bezirks von Bet-Zur, besserte aus bis gegenüber den Gräbern Davids und bis an den angelegten Teich."
+
+msgid "Now the temple servants lived in Ophel, to the place opposite the water gate toward the east, and the tower that stands out."
+msgstr "Die Tempeldiener wohnten auf dem Ofel, bis gegenüber dem Wassertor im Osten und dem vorspringenden Turm."
+
+msgid "Above the horse gate, the priests made repairs, everyone across from his own house."
+msgstr "Oberhalb des Rosstors besserten die Priester aus, jeder gegenüber seinem Haus."
+
+msgid "After him, Shemaiah the son of Shecaniah, the keeper of the east gate, made repairs."
+msgstr "Nach ihm besserte Schemaja aus, der Sohn Schechanjas, der Hüter des Osttors."
+
+msgid "Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner."
+msgstr "Malkija, einer der Goldschmiede, besserte aus bis zum Haus der Tempeldiener und der Händler, gegenüber dem Mifkad-Tor, und bis zum Aufstieg an der Ecke."
+
+msgid "The wall is finished — in fifty-two days!"
+msgstr "Die Mauer ist fertig — in zweiundfünfzig Tagen!"
+
+msgid "Have you been out to the mount for branches?"
+msgstr "Warst du schon draußen am Berg, Zweige holen?"
+
+msgid "Every one of us on his own roof, in a shelter of boughs."
+msgstr "Jeder von uns auf seinem eigenen Dach, in einer Hütte aus Zweigen."
+
+msgid "Not since the days of Joshua has it been kept like this."
+msgstr "Seit den Tagen Josuas ist es nicht mehr so gefeiert worden."
+
+msgid "Walk the whole wall round — every gate stands."
+msgstr "Geh die ganze Mauer ab — jedes Tor steht."
+
+msgid "You shall take on the first day the fruit of majestic trees, branches of palm trees, and boughs of thick trees, and willows of the brook; and you shall rejoice before Yahweh your God seven days."
+msgstr "Am ersten Tag sollt ihr Früchte von prächtigen Bäumen nehmen, Palmzweige, Zweige von dicht belaubten Bäumen und Bachweiden, und ihr sollt euch sieben Tage vor Jahwe, eurem Gott, freuen."
+
+msgid "You shall dwell in temporary shelters for seven days."
+msgstr "Sieben Tage sollt ihr in Laubhütten wohnen."
+
+msgid "Go out to the mountain, and get olive branches, branches of wild olive, myrtle branches, palm branches, and branches of thick trees, to make temporary shelters, as it is written."
+msgstr "Geht hinaus auf den Berg und holt Ölzweige, Zweige vom wilden Ölbaum, Myrtenzweige, Palmzweige und Zweige von dicht belaubten Bäumen, um Laubhütten zu machen, wie geschrieben steht."
+
+msgid "Lev. 23:40"
+msgstr "Lev 23:40"
+
+msgid "Lev. 23:42"
+msgstr "Lev 23:42"
+
+msgid "Lev. 6:13"
+msgstr "Lev 6:13"
+
+msgid "Today is holy to Yahweh your God. Don’t mourn, nor weep."
+msgstr "Heute ist ein heiliger Tag für Jahwe, euren Gott. Trauert nicht und weint nicht."
+
+msgid "Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared."
+msgstr "Geht, esst Fettes, trinkt Süßes und schickt Anteile denen, für die nichts bereitet ist."
+
+msgid "Don’t be grieved, for the joy of Yahweh is your strength."
+msgstr "Seid nicht bekümmert, denn die Freude an Jahwe ist eure Stärke."
+
+msgid "We read in the book distinctly, and give the sense, so that everyone understands."
+msgstr "Wir lesen deutlich aus dem Buch vor und erklären den Sinn, damit alle es verstehen."
+
+msgid "Hold your peace, for the day is holy. Don’t be grieved."
+msgstr "Seid still, denn der Tag ist heilig. Seid nicht bekümmert."
+
+msgid "I repaired the wall from the door of Eliashib's house to its end."
+msgstr "Ich habe die Mauer ausgebessert, von der Tür von Eljaschibs Haus bis zu seinem Ende."
+
+msgid "They're building shelters in the courts of God's house too — round the wall at the Sheep Gate."
+msgstr "Auch in den Höfen des Hauses Gottes bauen sie Hütten — die Mauer entlang am Schaftor."
+
+msgid "Out through the gate for branches — olive, myrtle, palm. Go to the mount."
+msgstr "Raus durchs Tor, Zweige holen — Ölbaum, Myrte, Palme. Geh auf den Berg."
+
+msgid "The gates stay open today. Nobody is coming to fight."
+msgstr "Heute bleiben die Tore offen. Niemand kommt zum Kämpfen."
+
+msgid "We're going out for palm branches!"
+msgstr "Wir holen Palmzweige!"
+
+msgid "Amen, Amen!"
+msgstr "Amen, Amen!"
+
+msgid "We've listened since early morning."
+msgstr "Wir hören schon seit dem frühen Morgen zu."
+
+msgid "We will not forsake the house of our God."
+msgstr "Wir werden das Haus unseres Gottes nicht vernachlässigen."
+
+msgid "Fire shall be kept burning on the altar continually; it shall not go out."
+msgstr "Das Feuer soll ständig auf dem Altar brennen; es soll nicht erlöschen."
+
+msgid "Go up into the court — there's a shelter to put up by the altar."
+msgstr "Geh hinauf in den Hof — am Altar ist eine Hütte aufzustellen."
+
+msgid "What is this thing that you are doing? Will you rebel against the king?"
+msgstr "Was ist das, was ihr da tut? Wollt ihr euch gegen den König auflehnen?"
+
+msgid "What are these feeble Jews doing? … Will they revive the stones out of the heaps of rubbish, since they are burned?"
+msgstr "Was machen diese schwachen Juden? … Wollen sie die Steine aus den Schutthaufen wieder lebendig machen, die doch verbrannt sind?"
+
+msgid "What they are building, if a fox climbed up it, he would break down their stone wall."
+msgstr "Was sie da bauen — wenn ein Fuchs hinaufstiege, würde er ihre Steinmauer einreißen."
+
+msgid "Will they fortify themselves? Will they sacrifice? Will they finish in a day?"
+msgstr "Wollen sie sich verschanzen? Wollen sie opfern? Werden sie an einem Tag fertig?"
+
+msgid "You and the Jews intend to rebel. Because of that, you are building the wall."
+msgstr "Du und die Juden, ihr plant einen Aufstand. Deshalb baust du die Mauer."
+
+msgid "Sanballat's letter"
+msgstr "Sanballats Brief"
+
+msgid "Day %d  ·  %s"
+msgstr "Tag %d  ·  %s"
+
+msgid "A piece has fallen — raise it again!"
+msgstr "Ein Stück ist gefallen — bau es wieder auf!"
+
+msgid "The stretch stands!"
+msgstr "Der Abschnitt steht!"
+
+msgid "One piece left!"
+msgstr "Noch ein Stück!"
+
+msgid "%d of %d stand"
+msgstr "%d von %d stehen"
+
+msgid "Got through"
+msgstr "Durchgekommen"
+
+msgid "%d got in"
+msgid_plural "%d got in"
+msgstr[0] "%d kam hinein"
+msgstr[1] "%d kamen hinein"
+
+msgid "none got in"
+msgstr "keiner kam hinein"
+
+msgid "worked till the stars"
+msgstr "bis zu den Sternen gearbeitet"
+
+msgid "%d day to spare"
+msgid_plural "%d days to spare"
+msgstr[0] "%d Tag übrig"
+msgstr[1] "%d Tage übrig"
+
+msgid "rebuilt what fell"
+msgstr "Eingestürztes wieder aufgebaut"
+
+msgid "The sun is low!"
+msgstr "Die Sonne steht tief!"
+
+msgid "from the west"
+msgstr "von Westen"
+
+msgid "from the east"
+msgstr "von Osten"
+
+msgid "straight at the gate"
+msgstr "direkt aufs Tor"
+
+msgid "Up the valley — %s!"
+msgstr "Das Tal herauf — %s!"
+
+msgid "They're coming — %s!"
+msgstr "Sie kommen — %s!"
+
+msgid "A brute at the wall — bring him down!"
+msgstr "Ein Grobian an der Mauer — holt ihn runter!"
+
+msgid "They're battering the wall!"
+msgstr "Sie rennen gegen die Mauer an!"
+
+msgid "A brute! He'll batter the wall"
+msgstr "Ein Grobian! Er wird gegen die Mauer anrennen"
+
+msgid "Raiders — quick ones, mind the gaps!"
+msgstr "Plünderer — schnelle, achtet auf die Lücken!"
+
+msgid "One got into the city!  %d of %d"
+msgstr "Einer ist in die Stadt gelangt!  %d von %d"
+
+msgid "One got in — %d more and the city falls!"
+msgid_plural "One got in — %d more and the city falls!"
+msgstr[0] "Einer ist drin — noch %d, und die Stadt fällt!"
+msgstr[1] "Einer ist drin — noch %d, und die Stadt fällt!"
+
+msgid "Day info"
+msgstr "Tagesanzeige"
+
+msgid "In the world"
+msgstr "In der Welt"
+
+msgid "Plaques"
+msgstr "Tafeln"

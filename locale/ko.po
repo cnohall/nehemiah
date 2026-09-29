@@ -1470,3 +1470,309 @@ msgstr "방향키   선택          %s   건축          %s   뒤로"
 
 msgid "Locked"
 msgstr "잠김"
+
+msgid "The Festival of Booths"
+msgstr "초막절"
+
+msgid "The wall is finished. No clock, no enemy — walk the city."
+msgstr "성벽이 완성되었습니다. 시간 제한도 적도 없습니다 — 성을 거닐어 보세요."
+
+msgid "Walk up to people and press %s to talk"
+msgstr "사람들에게 다가가 %s 키를 눌러 대화하세요"
+
+msgid "Walk the City"
+msgstr "성 거닐기"
+
+msgid "Neh. 8  ·  The seventh month"
+msgstr "느 8장  ·  일곱째 달"
+
+msgid "Hear Ezra read the Law at the Water Gate"
+msgstr "수문 앞에서 에스라가 율법을 낭독하는 것을 듣기"
+
+msgid "Build booths with branches from the mount — %d of %d"
+msgstr "산에서 가져온 가지로 초막 짓기 — %d/%d"
+
+msgid "Send portions to those with nothing prepared — %d of %d"
+msgstr "아무것도 준비하지 못한 이들에게 몫 보내기 — %d/%d"
+
+msgid "Meet the people who built the wall — %d of %d"
+msgstr "성벽을 쌓은 사람들 만나기 — %d/%d"
+
+msgid "Go up to the house of God, by the Sheep Gate"
+msgstr "양문 곁 하느님의 집에 올라가기"
+
+msgid "Walk the wall round — %d of %d gates"
+msgstr "성벽 한 바퀴 돌기 — 성문 %d/%d"
+
+msgid "There was very great gladness"
+msgstr "크게 기뻐하였다"
+
+msgid "%s  ·  Stay as long as you like"
+msgstr "%s  ·  마음껏 머무르세요"
+
+msgid "%s  ·  walk off either end of the wall to go on round"
+msgstr "%s  ·  성벽 어느 쪽 끝으로든 걸어 나가면 한 바퀴 계속 돕니다"
+
+msgid "The house of God"
+msgstr "하느님의 집"
+
+msgid "“We will not forsake the house of our God.”  (%s)"
+msgstr "“우리가 우리 하느님의 집을 저버리지 않겠습니다.”  (%s)"
+
+msgid "A booth"
+msgstr "초막"
+
+msgid "Branch"
+msgstr "가지"
+
+msgid "Portion"
+msgstr "몫"
+
+msgid "Nothing prepared"
+msgstr "준비된 것 없음"
+
+msgid "see %s"
+msgstr "%s 참조"
+
+msgid "This booth stands"
+msgstr "이 초막은 다 지었어요"
+
+msgid "The booth wants branches — from the olive trees outside the wall"
+msgstr "초막에는 가지가 필요해요 — 성벽 밖 올리브나무에서"
+
+msgid "Branches enough — {interact} to build it"
+msgstr "가지가 충분해요 — {interact} 눌러 짓기"
+
+msgid "They're after bread, not that"
+msgstr "그게 아니라 빵이 필요해요"
+
+msgid "They have plenty now"
+msgstr "이제 넉넉히 있어요"
+
+msgid "Nothing is prepared in my house for the feast."
+msgstr "우리 집에는 명절에 먹을 것이 하나도 없어요."
+
+msgid "Blessings on you — the joy of Yahweh is our strength today."
+msgstr "복 받으세요 — 오늘은 여호와를 기뻐하는 것이 우리의 힘이에요."
+
+msgid "Then Eliashib the high priest rose up with his brothers the priests, and they built the sheep gate."
+msgstr "대제사장 엘리아십이 그의 형제 제사장들과 함께 일어나 양문을 건축하였다."
+
+msgid "The sons of Hassenaah built the fish gate. They laid its beams, and set up its doors, its bolts, and its bars."
+msgstr "하스나아 자손은 어문을 건축하였다. 그들은 들보를 얹고 문짝과 자물쇠와 빗장을 달았다."
+
+msgid "Joiada the son of Paseah and Meshullam the son of Besodeiah repaired the old gate."
+msgstr "바세아의 아들 요야다와 브소드야의 아들 므술람은 옛 문을 보수하였다."
+
+msgid "Next to him, Uzziel the son of Harhaiah, goldsmiths, made repairs."
+msgstr "그다음은 금장색 할해야의 아들 웃시엘이 보수하였다."
+
+msgid "Next to him, Hananiah, one of the perfumers, made repairs, and they fortified Jerusalem even to the wide wall."
+msgstr "그다음은 향품 장수 하나냐가 보수하였고, 그들이 넓은 성벽까지 예루살렘을 견고하게 하였다."
+
+msgid "Malchijah the son of Harim and Hasshub the son of Pahathmoab repaired another portion and the tower of the furnaces."
+msgstr "하림의 아들 말기야와 바핫모압의 아들 핫숩은 다른 구간과 화덕 망대를 보수하였다."
+
+msgid "Next to him, Shallum the son of Hallohesh, the ruler of half the district of Jerusalem, he and his daughters made repairs."
+msgstr "그다음은 예루살렘 지역의 절반을 다스리는 할로헤스의 아들 살룸과 그의 딸들이 보수하였다."
+
+msgid "Hanun and the inhabitants of Zanoah repaired the valley gate."
+msgstr "하눈과 사노아 주민들은 골짜기 문을 보수하였다."
+
+msgid "Malchijah the son of Rechab, the ruler of the district of Beth Haccherem, repaired the dung gate."
+msgstr "벧학게렘 지역을 다스리는 레갑의 아들 말기야는 분문을 보수하였다."
+
+msgid "Shallun the son of Colhozeh, the ruler of the district of Mizpah, repaired the spring gate."
+msgstr "미스바 지역을 다스리는 골호세의 아들 살룬은 샘문을 보수하였다."
+
+msgid "Nehemiah the son of Azbuk, the ruler of half the district of Beth Zur, made repairs to the place opposite the tombs of David, and to the pool that was made."
+msgstr "벧술 지역의 절반을 다스리는 아스북의 아들 느헤미야는 다윗의 묘실 맞은편과 파서 만든 못까지 보수하였다."
+
+msgid "Now the temple servants lived in Ophel, to the place opposite the water gate toward the east, and the tower that stands out."
+msgstr "성전 봉사자들은 오벨에 살았는데, 동쪽 수문 맞은편과 튀어나온 망대까지였다."
+
+msgid "Above the horse gate, the priests made repairs, everyone across from his own house."
+msgstr "마문 위로는 제사장들이 각각 자기 집 맞은편을 보수하였다."
+
+msgid "After him, Shemaiah the son of Shecaniah, the keeper of the east gate, made repairs."
+msgstr "그다음은 동문지기 스가냐의 아들 스마야가 보수하였다."
+
+msgid "Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner."
+msgstr "금장색 말기야는 성전 봉사자들과 상인들의 집까지, 함밉갓 문 맞은편과 성 모퉁이 오르는 곳까지 보수하였다."
+
+msgid "The wall is finished — in fifty-two days!"
+msgstr "성벽이 완성되었어요 — 오십이 일 만에!"
+
+msgid "Have you been out to the mount for branches?"
+msgstr "산에 가지 꺾으러 다녀왔어요?"
+
+msgid "Every one of us on his own roof, in a shelter of boughs."
+msgstr "우리 모두 저마다 자기 지붕 위 나뭇가지 초막에 있지요."
+
+msgid "Not since the days of Joshua has it been kept like this."
+msgstr "여호수아 때 이후로 이렇게 지킨 적이 없었어요."
+
+msgid "Walk the whole wall round — every gate stands."
+msgstr "성벽을 한 바퀴 돌아보세요 — 성문이 모두 섰어요."
+
+msgid "You shall take on the first day the fruit of majestic trees, branches of palm trees, and boughs of thick trees, and willows of the brook; and you shall rejoice before Yahweh your God seven days."
+msgstr "첫날에는 아름다운 나무의 열매와 종려나무 가지와 무성한 나무의 가지와 시냇가의 버드나무를 가져다가, 칠 일 동안 너희 하느님 여호와 앞에서 즐거워하여라."
+
+msgid "You shall dwell in temporary shelters for seven days."
+msgstr "너희는 칠 일 동안 초막에 거하여라."
+
+msgid "Go out to the mountain, and get olive branches, branches of wild olive, myrtle branches, palm branches, and branches of thick trees, to make temporary shelters, as it is written."
+msgstr "산으로 가서 올리브 가지와 들올리브 가지와 화석류 가지와 종려나무 가지와 무성한 나무의 가지를 가져다가, 기록된 대로 초막을 지으십시오."
+
+msgid "Lev. 23:40"
+msgstr "레 23:40"
+
+msgid "Lev. 23:42"
+msgstr "레 23:42"
+
+msgid "Lev. 6:13"
+msgstr "레 6:13"
+
+msgid "Today is holy to Yahweh your God. Don’t mourn, nor weep."
+msgstr "오늘은 여러분의 하느님 여호와께 거룩한 날이니 슬퍼하지도 울지도 마십시오."
+
+msgid "Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared."
+msgstr "가서 기름진 것을 먹고 단 것을 마시고, 준비하지 못한 사람에게는 몫을 나누어 보내십시오."
+
+msgid "Don’t be grieved, for the joy of Yahweh is your strength."
+msgstr "근심하지 마십시오. 여호와를 기뻐하는 것이 여러분의 힘입니다."
+
+msgid "We read in the book distinctly, and give the sense, so that everyone understands."
+msgstr "우리는 책을 똑똑히 읽고 뜻을 풀어 주어 모두가 깨닫게 합니다."
+
+msgid "Hold your peace, for the day is holy. Don’t be grieved."
+msgstr "조용히 하십시오. 오늘은 거룩한 날이니 근심하지 마십시오."
+
+msgid "I repaired the wall from the door of Eliashib's house to its end."
+msgstr "나는 엘리아십의 집 문에서 그 집 끝까지 성벽을 보수했지요."
+
+msgid "They're building shelters in the courts of God's house too — round the wall at the Sheep Gate."
+msgstr "하느님의 집 뜰에도 초막을 짓고 있어요 — 성벽을 따라 양문 쪽에요."
+
+msgid "Out through the gate for branches — olive, myrtle, palm. Go to the mount."
+msgstr "성문 밖으로 나가 가지를 꺾어 오세요 — 올리브, 화석류, 종려나무. 산으로 가세요."
+
+msgid "The gates stay open today. Nobody is coming to fight."
+msgstr "오늘은 성문을 열어 둡니다. 싸우러 오는 사람은 없어요."
+
+msgid "We're going out for palm branches!"
+msgstr "우리 종려나무 가지 꺾으러 가요!"
+
+msgid "Amen, Amen!"
+msgstr "아멘, 아멘!"
+
+msgid "We've listened since early morning."
+msgstr "이른 아침부터 듣고 있어요."
+
+msgid "We will not forsake the house of our God."
+msgstr "우리가 우리 하느님의 집을 저버리지 않겠습니다."
+
+msgid "Fire shall be kept burning on the altar continually; it shall not go out."
+msgstr "제단 위의 불은 끊임없이 타게 하여 꺼지지 않게 하여라."
+
+msgid "Go up into the court — there's a shelter to put up by the altar."
+msgstr "뜰로 올라가세요 — 제단 곁에 세울 초막이 있어요."
+
+msgid "What is this thing that you are doing? Will you rebel against the king?"
+msgstr "너희가 하는 이 일이 무엇이냐? 왕을 배반하려느냐?"
+
+msgid "What are these feeble Jews doing? … Will they revive the stones out of the heaps of rubbish, since they are burned?"
+msgstr "이 미약한 유다 사람들이 무엇을 하느냐? … 불타 버린 쓰레기 더미에서 돌을 되살리겠다는 것이냐?"
+
+msgid "What they are building, if a fox climbed up it, he would break down their stone wall."
+msgstr "그들이 쌓는 돌 성벽은 여우 한 마리만 올라가도 무너지리라."
+
+msgid "Will they fortify themselves? Will they sacrifice? Will they finish in a day?"
+msgstr "스스로 견고하게 하겠느냐? 제사를 드리겠느냐? 하루 만에 끝내겠느냐?"
+
+msgid "You and the Jews intend to rebel. Because of that, you are building the wall."
+msgstr "너와 유다 사람들이 반역하려 하고, 그 때문에 네가 성벽을 쌓는다고 한다."
+
+msgid "Sanballat's letter"
+msgstr "산발랏의 편지"
+
+msgid "Day %d  ·  %s"
+msgstr "%d일차  ·  %s"
+
+msgid "A piece has fallen — raise it again!"
+msgstr "한 부분이 무너졌습니다 — 다시 쌓으세요!"
+
+msgid "The stretch stands!"
+msgstr "구간이 섰습니다!"
+
+msgid "One piece left!"
+msgstr "한 부분 남았습니다!"
+
+msgid "%d of %d stand"
+msgstr "%d/%d 완성"
+
+msgid "Got through"
+msgstr "뚫고 들어옴"
+
+msgid "%d got in"
+msgid_plural "%d got in"
+msgstr[0] "%d명 침입"
+
+msgid "none got in"
+msgstr "침입 없음"
+
+msgid "worked till the stars"
+msgstr "별이 뜰 때까지 일함"
+
+msgid "%d day to spare"
+msgid_plural "%d days to spare"
+msgstr[0] "%d일 남김"
+
+msgid "rebuilt what fell"
+msgstr "무너진 곳을 다시 쌓음"
+
+msgid "The sun is low!"
+msgstr "해가 기울었습니다!"
+
+msgid "from the west"
+msgstr "서쪽에서"
+
+msgid "from the east"
+msgstr "동쪽에서"
+
+msgid "straight at the gate"
+msgstr "곧장 성문으로"
+
+msgid "Up the valley — %s!"
+msgstr "골짜기로 올라옵니다 — %s!"
+
+msgid "They're coming — %s!"
+msgstr "적이 옵니다 — %s!"
+
+msgid "A brute at the wall — bring him down!"
+msgstr "거한이 성벽에 붙었습니다 — 쓰러뜨리세요!"
+
+msgid "They're battering the wall!"
+msgstr "성벽을 치고 있습니다!"
+
+msgid "A brute! He'll batter the wall"
+msgstr "거한입니다! 성벽을 부수려 합니다"
+
+msgid "Raiders — quick ones, mind the gaps!"
+msgstr "약탈자입니다 — 빠르니 틈을 지키세요!"
+
+msgid "One got into the city!  %d of %d"
+msgstr "한 명이 도성에 들어왔습니다!  %d/%d"
+
+msgid "One got in — %d more and the city falls!"
+msgid_plural "One got in — %d more and the city falls!"
+msgstr[0] "한 명이 들어왔습니다 — %d명만 더 들어오면 도성이 무너집니다!"
+
+msgid "Day info"
+msgstr "하루 정보"
+
+msgid "In the world"
+msgstr "세상 속에"
+
+msgid "Plaques"
+msgstr "명패"
