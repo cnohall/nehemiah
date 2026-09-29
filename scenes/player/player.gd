@@ -329,8 +329,12 @@ func _physics_process(delta: float) -> void:
 
 ## Screen-space stick / keys → ground direction. Keys give length 1; a stick can be
 ## pushed part-way for a slower walk.
+## Walk the City turns the view so north sits up-screen (Main.set_view_yaw); the stick
+## turns with it. 0 everywhere else.
+static var view_yaw := 0.0
+
 static func screen_to_ground(v: Vector2) -> Vector3:
-	return SCREEN_RIGHT * v.x + SCREEN_DOWN * v.y
+	return (SCREEN_RIGHT * v.x + SCREEN_DOWN * v.y).rotated(Vector3.UP, view_yaw)
 
 # Remember presses for a moment, so one made during a pickup / throw animation still counts
 func _buffer_input(delta: float) -> void:

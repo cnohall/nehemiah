@@ -48,6 +48,7 @@ func _process(delta: float) -> bool:
 	elif _phase == 2 and k > 1.4:
 		_phase = 3
 		_shot("%02d_%d_middle" % [leg, gs.current_section_index])
+		print("tour: section %d  view_yaw %.2f" % [gs.current_section_index, _main.view_yaw])
 		_me().global_position = Vector3(-43.0, 0.1, 6.0)   # off the west end: on round
 	return false
 

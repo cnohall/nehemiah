@@ -174,7 +174,8 @@ func _frame_crew(delta: float) -> void:
 	mid /= crew.size()
 	var right := Vector3(camera.global_basis.x.x, 0.0, camera.global_basis.x.z).normalized()
 	var p := mid - right * ATTRACT_LEAD
-	var desired := Vector3(p.x + CAM_OFFSET.x, CAM_OFFSET.y, p.z + CAM_OFFSET.z)
+	var desired := p + _cam_offset()
+	desired.y = CAM_OFFSET.y
 	if not _cam_snapped:
 		_cam_base = desired
 		_cam_snapped = true
@@ -190,7 +191,8 @@ func _follow_local_player(delta: float) -> void:
 	var lead := Vector3(vel.x, 0.0, vel.z) * LOOK_AHEAD
 	_lead = _lead.lerp(lead.limit_length(LOOK_AHEAD_MAX), minf(1.0, delta * LOOK_AHEAD_EASE))
 	var p := local_player.global_position + _lead
-	var desired := Vector3(p.x + CAM_OFFSET.x, CAM_OFFSET.y, p.z + CAM_OFFSET.z)
+	var desired := p + _cam_offset()
+	desired.y = CAM_OFFSET.y
 	if not _cam_snapped:
 		# Snap on first frame instead of swooping in from the scene origin
 		_cam_base = desired
@@ -198,6 +200,24 @@ func _follow_local_player(delta: float) -> void:
 	else:
 		_cam_base = _cam_base.lerp(desired, delta * CAM_SMOOTH)
 	camera.global_position = _cam_base + _shake_offset(delta)
+
+## Walk the City: turn the view about the vertical (radians), so north can sit up-screen
+## as it does on a map. Movement turns with it (Player.view_yaw). 0 = the game's view.
+var view_yaw := 0.0
+
+func set_view_yaw(yaw: float) -> void:
+	view_yaw = yaw
+	Player.view_yaw = yaw
+	var target := Vector3.ZERO
+	if Player.local != null and is_instance_valid(Player.local):
+		target = Player.local.global_position
+	target.y = 0.0
+	camera.global_position = target + _cam_offset()
+	camera.look_at(target, Vector3.UP)
+	_cam_snapped = false
+
+func _cam_offset() -> Vector3:
+	return CAM_OFFSET.rotated(Vector3.UP, view_yaw)
 
 ## Local screen shake — hits, crumbling walls. Amount adds up, capped at 1.
 func shake(amount: float) -> void:
@@ -284,8 +304,8 @@ func _play_wall_cam(names: Array) -> void:
 		tw.tween_callback(Sfx.play.bind("build", label.global_position))
 	if _wall_cam:
 		_wall_cam.kill()
-	var start := Vector3(WALL_CAM_FROM, 0.0, WALL_CAM_Z) + CAM_OFFSET
-	var end := Vector3(WALL_CAM_TO, 0.0, WALL_CAM_Z) + CAM_OFFSET
+	var start := Vector3(WALL_CAM_FROM, 0.0, WALL_CAM_Z) + _cam_offset()
+	var end := Vector3(WALL_CAM_TO, 0.0, WALL_CAM_Z) + _cam_offset()
 	_wall_cam = create_tween().set_ignore_time_scale(true)
 	_wall_cam.tween_property(camera, "global_position", start, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_wall_cam.parallel().tween_property(camera, "size", WALL_CAM_SIZE, 0.35)

@@ -101,6 +101,7 @@ var _fed := {}             # "district:index" → true
 var _met := {}             # who → true
 var _seen := {}            # district → true
 var _fade: ColorRect
+var _compass: RingCompass
 
 var _panel: PanelContainer
 var _rows := {}   # task → [Tick, Label]
@@ -124,6 +125,7 @@ func _ready() -> void:
 	_enter(START)
 
 func _exit_tree() -> void:
+	Player.view_yaw = 0.0   # a static: the game's own view again
 	GameState.sun = _saved.get("sun", true)
 	GameState.posts = _saved.get("posts", true)
 
@@ -167,6 +169,15 @@ func _travel(dir: int, z: float) -> void:
 	tw.tween_property(_fade, "color:a", 0.0, FADE)
 	_traveling = false
 
+# Turn the view so true north is up-screen, as on a map of the city — in quarter turns,
+# since the crew face the four ways the view has always shown (north ends up within 45°
+# of up; the compass shows it exactly)
+const SCREEN_UP := Vector3(-0.70710678, 0.0, -0.70710678)   # the game's view: away from the camera
+
+func _north_up_yaw(district: int) -> float:
+	var yaw := SCREEN_UP.signed_angle_to(RingCompass.north_on_site(district), Vector3.UP)
+	return roundf(yaw / (PI * 0.5)) * PI * 0.5
+
 ## Along the wall at the same depth — but at the Sheep Gate's east end the temple court
 ## fills the ground, so in by the lane between it and the wall
 func _arrival_z(dir: int, z: float) -> float:
@@ -184,6 +195,9 @@ func _enter(district: int) -> void:
 	var sec: Dictionary = GameState.SECTIONS[district]
 	var first := not _seen.has(district)
 	_seen[district] = true
+	if _compass != null:
+		_compass.district = district
+	_main.set_view_yaw(_north_up_yaw(district))
 	_refresh()
 	var sub := GameState.short_ref(sec["ref"])
 	if first:
@@ -458,6 +472,10 @@ func _build_journal() -> void:
 	hint.text = "Walk up to people and press %s to talk" % InputMode.key("interact")
 	hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	vb.add_child(hint)
+	# Where on the wall you are, and which way north lies
+	_compass = RingCompass.new()
+	_compass.district = START
+	vb.add_child(_compass)
 	_leave = Button.new()
 	_leave.theme_type_variation = &"GhostButton"
 	_leave.text = "Back to the title"
