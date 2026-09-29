@@ -30,16 +30,20 @@ var _twists: HFlowContainer
 var _twist_note: Label
 var _foes: HFlowContainer
 var _marks: VBoxContainer
+var _mark_gems: Array[MarkGem] = []
+var _mark_names: Array[Label] = []
 var _build_btn: Button
 var _back_btn: Button
 var _lock: Label
 var _progress: Label
 var _progress_bar: Control
+var _hint: Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
+	InputMode.changed.connect(func(_pad: bool): _update_hint())
 	hide()
 
 func open(section_index := 0) -> void:
@@ -49,6 +53,7 @@ func open(section_index := 0) -> void:
 		_map.best.append(GameState.best_marks(i))
 		_map.unlocked.append(GameState.is_unlocked(i))
 	_update_progress()
+	_update_hint()
 	show()
 	UiFx.fade_in(self, 0.35)
 	_select(clampi(section_index, 0, GameState.SECTIONS.size() - 1))
@@ -83,7 +88,7 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var i := _map.section_at(_map.get_local_mouse_position())
 		if i >= 0 and i != _selected:
-			_select(i)
+			_select(i, true)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var i := _map.section_at(_map.get_local_mouse_position())
 		if i >= 0:
@@ -92,8 +97,9 @@ func _gui_input(event: InputEvent) -> void:
 			else:
 				_select(i)
 
-func _select(i: int) -> void:
-	var changed := i != _selected
+# A hover sweep across the map stays quiet; a key or click ticks
+func _select(i: int, hover := false) -> void:
+	var changed := i != _selected and not hover
 	_selected = i
 	_map.section = i
 	var sec: Dictionary = GameState.SECTIONS[i]
@@ -110,19 +116,11 @@ func _select(i: int) -> void:
 	_text.text = tr(StoryData.SECTION_LINES[i])
 	_fill_details(i)
 
-	for c in _marks.get_children():
-		c.queue_free()
 	var best: int = _map.best[i]
-	for m: int in GameState.MARKS:
-		var earned := best >= 0 and bool(best & m)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		var gem := MarkGem.new(earned, 20.0)
-		gem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(gem)
-		row.add_child(_label(&"Body", 20, UiStyle.TERRACOTTA if earned else UiStyle.INK_MUTED, false,
-			GameState.MARK_NAMES[m]))
-		_marks.add_child(row)
+	for k in GameState.MARKS.size():
+		var earned := best >= 0 and bool(best & GameState.MARKS[k])
+		_mark_gems[k].lit = earned
+		_mark_names[k].add_theme_color_override("font_color", UiStyle.TERRACOTTA if earned else UiStyle.INK_SOFT)
 
 	var open_ := bool(_map.unlocked[i])
 	# A locked stretch's button can't hold focus (its gold ring would read as pressable)
@@ -130,7 +128,7 @@ func _select(i: int) -> void:
 		_back_btn.grab_focus()
 	_build_btn.disabled = not open_
 	_build_btn.focus_mode = Control.FOCUS_ALL if open_ else Control.FOCUS_NONE
-	_build_btn.text = "Build again" if best >= 0 else "Build this stretch"
+	_build_btn.text = "Locked" if not open_ else "Build again" if best >= 0 else "Build this stretch"
 	_lock.visible = not open_
 	if not open_:
 		_lock.text = tr("Finish the %s first") % tr(GameState.SECTIONS[i - 1]["name"])
@@ -142,6 +140,7 @@ func _select(i: int) -> void:
 func _fill_details(i: int) -> void:
 	for box: Control in [_twists, _foes]:
 		for c in box.get_children():
+			box.remove_child(c)   # out now, so the old chips don't show for a frame
 			c.queue_free()
 	var sec: Dictionary = GameState.SECTIONS[i]
 	var twists: Array = sec.get("twists", [])
@@ -150,12 +149,17 @@ func _fill_details(i: int) -> void:
 		_twists.add_child(_chip("? ? ?", false))
 	elif twists.is_empty():
 		_twists.add_child(_chip(tr("The plain work"), false))
-	for t: String in twists if open_ else []:
-		_twists.add_child(_chip(tr(TWIST_NAMES.get(t, t)), true))
-	# What's new here, in a sentence — unless everything is (the finale)
+	# New here: amber, like the map's NEXT tag, and spelled out in the note below. Every
+	# chip carries its own sentence on hover, so the carried-over ones aren't a mystery.
 	var before: Array = GameState.SECTIONS[i - 1].get("twists", []) if i > 0 else []
 	var fresh: Array = twists.filter(func(t): return t not in before)
-	var lines: Array = fresh.map(func(t: String): return tr(GameState.TWIST_INTRO.get(t, "")).format({"horn": "[%s]" % InputMode.key("horn")}))
+	for t: String in twists if open_ else []:
+		var chip := _chip(tr(TWIST_NAMES.get(t, t)), true, false, t in fresh)
+		chip.tooltip_text = _intro(t)
+		chip.mouse_filter = Control.MOUSE_FILTER_PASS
+		_twists.add_child(chip)
+	# What's new here, in a sentence — unless everything is (the finale)
+	var lines: Array = fresh.map(_intro)
 	_twist_note.text = "" if not open_ else ("
 ".join(lines) if fresh.size() <= 2 else tr("Everything the wall has asked of you, all at once."))
 	_twist_note.visible = not _twist_note.text.is_empty()
@@ -165,10 +169,13 @@ func _fill_details(i: int) -> void:
 		var met := GameState.has_met(k)
 		_foes.add_child(_chip(tr(FOE_NAMES[k]) if met else "?", met, true))
 
-func _chip(text: String, strong: bool, foe := false) -> Label:
-	var l := _label(&"Eyebrow", 13, UiStyle.CREAM if strong else UiStyle.INK_SOFT, false, text)
+func _intro(twist: String) -> String:
+	return tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
+
+func _chip(text: String, strong: bool, foe := false, fresh := false) -> Label:
+	var l := _label(&"Eyebrow", 13, UiStyle.INK if fresh else UiStyle.CREAM if strong else UiStyle.INK_SOFT, false, text)
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # already translated
-	var bg: Color = (Color(0.42, 0.12, 0.09) if foe else UiStyle.INK_SOFT) if strong else Color(UiStyle.INK, 0.08)
+	var bg: Color = UiStyle.AMBER if fresh else (Color(0.42, 0.12, 0.09) if foe else UiStyle.INK_SOFT) if strong else Color(UiStyle.INK, 0.08)
 	l.add_theme_stylebox_override("normal", UiStyle.box(bg, Vector2(10, 4), 3))
 	return l
 
@@ -207,6 +214,14 @@ func _draw_progress() -> void:
 			c.draw_rect(r, UiStyle.AMBER, false, 1.5)
 		else:
 			c.draw_rect(r, Color(UiStyle.INK, 0.12))
+
+# The keys for the device in hand: a pad player gets its own face buttons
+func _update_hint() -> void:
+	if InputMode.using_pad:
+		_hint.text = tr("D-Pad   Choose          %s   Build          %s   Back") % [
+			InputMode.key("ui_accept"), InputMode.key("ui_cancel")]
+	else:
+		_hint.text = tr("← →  or  Click   Choose          Esc   Back")
 
 func _on_build() -> void:
 	if _map.unlocked[_selected]:
@@ -298,39 +313,57 @@ func _build() -> void:
 	_marks = VBoxContainer.new()
 	_marks.add_theme_constant_override("separation", 6)
 	column.add_child(_marks)
+	for m: int in GameState.MARKS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var gem := MarkGem.new(false, 20.0)
+		gem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(gem)
+		var name_ := _label(&"Body", 20, UiStyle.INK_SOFT, false, GameState.MARK_NAMES[m])
+		row.add_child(name_)
+		_marks.add_child(row)
+		_mark_gems.append(gem)
+		_mark_names.append(name_)
 	column.add_child(_gap(30))
 
+	# Build and Back side by side: one row, so the column stays short enough for the hint
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 16)
+	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(buttons)
 	_build_btn = Button.new()
 	_build_btn.theme_type_variation = &"PrimaryButton"
-	_build_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_build_btn.pressed.connect(_on_build)
-	column.add_child(_build_btn)
-	_lock = _label(&"Caption", 17, UiStyle.TERRACOTTA_DEEP, false)
-	column.add_child(_lock)
+	buttons.add_child(_build_btn)
 	_back_btn = Button.new()
 	_back_btn.theme_type_variation = &"GhostButton"
 	_back_btn.text = "Back"
-	_back_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_back_btn.pressed.connect(close)
-	column.add_child(_back_btn)
+	buttons.add_child(_back_btn)
 	for b: Button in [_build_btn, _back_btn]:
 		b.mouse_entered.connect(b.grab_focus)
+	# ← → walk the ring, so up/down hop between the two
+	_build_btn.focus_neighbor_bottom = _build_btn.get_path_to(_back_btn)
+	_back_btn.focus_neighbor_top = _back_btn.get_path_to(_build_btn)
+	_lock = _label(&"Caption", 17, UiStyle.TERRACOTTA_DEEP, false)
+	column.add_child(_lock)
 
-	var hint := _label(&"Eyebrow", 13, UiStyle.INK_MUTED, false,
-		"← →  or  Click   Choose          Esc   Back")
-	# Bottom-left, on the parchment wash — the land on the right is too bright for it
-	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	hint.position += Vector2(140, -64)
-	add_child(hint)
+	# Bottom of the column, on the parchment wash (the land on the right is too bright for
+	# it) — in the flow, so a tall column pushes it down rather than running over it
+	var push := _gap(12)
+	push.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(push)
+	_hint = _label(&"Eyebrow", 13, UiStyle.INK_MUTED, false)
+	_hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
+	column.add_child(_hint)
 
-func _label(variation: StringName, font_size: int, color: Color, wrap := true, text := "") -> Label:
+func _label(variation: StringName, font_size: int, color: Color, wrapped := true, text := "") -> Label:
 	var l := Label.new()
 	l.theme_type_variation = variation
 	l.text = text
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	if wrap:
+	if wrapped:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l

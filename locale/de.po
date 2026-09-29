@@ -1474,3 +1474,9 @@ msgstr "Aufhelfen  {interact}"
 
 msgid "Here"
 msgstr "Hier"
+
+msgid "D-Pad   Choose          %s   Build          %s   Back"
+msgstr "Steuerkreuz   Wählen          %s   Bauen          %s   Zurück"
+
+msgid "Locked"
+msgstr "Gesperrt"

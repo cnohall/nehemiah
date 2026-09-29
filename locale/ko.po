@@ -1464,3 +1464,9 @@ msgstr "일으키기  {interact}"
 
 msgid "Here"
 msgstr "여기"
+
+msgid "D-Pad   Choose          %s   Build          %s   Back"
+msgstr "방향키   선택          %s   건축          %s   뒤로"
+
+msgid "Locked"
+msgstr "잠김"

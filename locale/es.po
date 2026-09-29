@@ -1474,3 +1474,9 @@ msgstr "Levantar  {interact}"
 
 msgid "Here"
 msgstr "Aquí"
+
+msgid "D-Pad   Choose          %s   Build          %s   Back"
+msgstr "Cruceta   Elegir          %s   Construir          %s   Atrás"
+
+msgid "Locked"
+msgstr "Bloqueado"
