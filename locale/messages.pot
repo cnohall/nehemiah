@@ -1864,3 +1864,35 @@ msgstr ""
 
 msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
 msgstr ""
+
+# Tutorial: calls floated over what to go to
+
+msgid "Drag on the left to walk"
+msgstr ""
+
+msgid "Walk  {move}"
+msgstr ""
+
+msgid "Dash  {dash}"
+msgstr ""
+
+msgid "Pick up  {interact}"
+msgstr ""
+
+msgid "Deliver  {interact}"
+msgstr ""
+
+msgid "Not needed here  {drop}"
+msgstr ""
+
+msgid "Build  {interact}"
+msgstr ""
+
+msgid "Sling it  {throw}"
+msgstr ""
+
+msgid "Help up  {interact}"
+msgstr ""
+
+msgid "Here"
+msgstr ""

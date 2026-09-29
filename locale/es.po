@@ -1496,3 +1496,35 @@ msgstr "Ese es el trabajo"
 
 msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
 msgstr "Cargar, construir, proteger y levantarse unos a otros.\n«Levantémonos y edifiquemos.» (Neh. 2:18)"
+
+# Tutorial: calls floated over what to go to
+
+msgid "Drag on the left to walk"
+msgstr "Arrastra a la izquierda para caminar"
+
+msgid "Walk  {move}"
+msgstr "Caminar  {move}"
+
+msgid "Dash  {dash}"
+msgstr "Impulso  {dash}"
+
+msgid "Pick up  {interact}"
+msgstr "Recoger  {interact}"
+
+msgid "Deliver  {interact}"
+msgstr "Entregar  {interact}"
+
+msgid "Not needed here  {drop}"
+msgstr "Aquí no hace falta  {drop}"
+
+msgid "Build  {interact}"
+msgstr "Construir  {interact}"
+
+msgid "Sling it  {throw}"
+msgstr "Lanza  {throw}"
+
+msgid "Help up  {interact}"
+msgstr "Levantar  {interact}"
+
+msgid "Here"
+msgstr "Aquí"

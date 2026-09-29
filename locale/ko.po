@@ -1486,3 +1486,35 @@ msgstr "이것이 일입니다"
 
 msgid "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)"
 msgstr "나르고, 쌓고, 지키고, 서로 일으켜 주세요.\n“일어나 건축하자.” (느 2:18)"
+
+# Tutorial: calls floated over what to go to
+
+msgid "Drag on the left to walk"
+msgstr "왼쪽을 끌어 걷기"
+
+msgid "Walk  {move}"
+msgstr "걷기  {move}"
+
+msgid "Dash  {dash}"
+msgstr "대시  {dash}"
+
+msgid "Pick up  {interact}"
+msgstr "줍기  {interact}"
+
+msgid "Deliver  {interact}"
+msgstr "전달  {interact}"
+
+msgid "Not needed here  {drop}"
+msgstr "여기선 필요 없음  {drop}"
+
+msgid "Build  {interact}"
+msgstr "짓기  {interact}"
+
+msgid "Sling it  {throw}"
+msgstr "물매로 쏘기  {throw}"
+
+msgid "Help up  {interact}"
+msgstr "일으키기  {interact}"
+
+msgid "Here"
+msgstr "여기"

@@ -6,11 +6,19 @@ extends CanvasLayer
 # step at a time: move, dash, carry, deliver, build, the sling, and helping a fallen
 # crewmate up. Each step waits until the player has done it. No waves (WaveManager
 # stands down while GameState.tutorial), no story, nothing saved.
+#
+# The screen says what to do; the world says where. Each step's short call ("Pick up
+# [E]") floats as a pulsing tag over the thing to go to — the pile, the wall, the scout,
+# the fallen crewmate, or the worker themself — with an edge arrow while it's out of
+# view.
 
 const STEP_PAUSE := 0.8   # breath between one step done and the next shown
+const PING_EVERY := 0.4   # s between edge-arrow refreshes for an off-screen target
 
 var _main: Node
-var _steps: Array = []    # [{ "title", "text", "done": Callable, "start": Callable }]
+# [{ "title", "text", "done": Callable, "start": Callable, "goal": Callable }]
+# goal() → [Node3D, "call"] or [] — where to point and what the tag says there
+var _steps: Array = []
 var _i := -1
 var _between := 0.0
 var _start_pos := Vector3.ZERO
@@ -18,12 +26,15 @@ var _scout: Node3D
 var _fallen: Node3D
 var _fell := false   # the crewmate has gone down (a beat after joining)
 var _saved_sun := true
+var _ping_t := 0.0
 
 var _panel: PanelContainer
 var _count: Label
 var _title: Label
 var _text: Label
 var _leave: Button
+var _guide: WorldTag
+var _hidden_tag: WorldTag   # a pile tag the guide is standing in for
 
 func _init(main: Node) -> void:
 	_main = main
@@ -39,20 +50,27 @@ func _ready() -> void:
 		  "done": func(): return Input.is_action_just_pressed("interact") or _elapsed() > 8.0 },
 		{ "title": "Walk", "text": "Walk with {move}",
 		  "start": func(): _start_pos = _me().global_position,
+		  "goal": func(): return [_me(), "Walk  {move}"],
 		  "done": func(): return _me().global_position.distance_to(_start_pos) > 4.0 },
 		{ "title": "Dash", "text": "A quick burst: {dash}. It works while carrying too",
+		  "goal": func(): return [_me(), "Dash  {dash}"],
 		  "done": func(): return _me()._dash_cd > 0.0 },
 		{ "title": "Carry", "text": "Walk up to a stockpile and pick up a load with {interact}. The wall's tag says what it needs",
+		  "goal": func(): return [_pile(), "Pick up  {interact}"],
 		  "done": func(): return not _me().carried_kind.is_empty() },
 		{ "title": "Deliver", "text": "Take it to the wall on the amber footing and press {interact}. Not needed there? {drop} drops it",
+		  "goal": _work_goal,
 		  "done": func(): return int(_main.director._stats.get("loads", 0)) > 0 },
 		{ "title": "Build", "text": "Bring what the wall still asks for. Once it has it all, stand at the wall and work it up with {interact}",
+		  "goal": _work_goal,
 		  "done": func(): return _any_built() },
 		{ "title": "Guard the builders", "text": "An enemy! Hold {throw} to whirl the sling, aim, and let go. Close in, the same button is a sword cut",
 		  "start": _send_scout,
-		  "done": func(): return _scout == null or not is_instance_valid(_scout) or _scout.get("health") <= 0.0 },
+		  "goal": func(): return [_scout, "Sling it  {throw}"] if _scout_alive() else [],
+		  "done": func(): return not _scout_alive() },
 		{ "title": "Nobody gets up alone", "text": "Your crewmate is down. Go to them and press {interact} to help them up",
 		  "start": _fell_crewmate,
+		  "goal": func(): return [_fallen, "Help up  {interact}"] if _fell and is_instance_valid(_fallen) else [],
 		  "done": func(): return _fell and is_instance_valid(_fallen) and not _fallen.downed },
 		{ "title": "That's the work", "text": "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)",
 		  "start": _finale,
@@ -65,6 +83,9 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	GameState.sun = _saved_sun
+	_stand_in(null)
+	if _guide != null and is_instance_valid(_guide):
+		_guide.queue_free()
 
 var _step_t := 0.0
 
@@ -81,10 +102,13 @@ func _process(delta: float) -> void:
 		return
 	_step_t += delta
 	_refresh_text()   # keys follow the device in use
+	_point(delta)
 	if _steps[_i]["done"].call():
 		Sfx.play("tally_land")
 		_panel.modulate = Color(0.8, 1.0, 0.8)   # a green wash: done
 		_between = STEP_PAUSE
+		_guide.visible = false
+		_stand_in(null)
 
 func _next() -> void:
 	_i += 1
@@ -101,10 +125,99 @@ func _next() -> void:
 	UiFx.fade_in(_panel, 0.25)
 
 func _refresh_text() -> void:
-	_text.text = tr(_steps[_i]["text"]).format({
+	_text.text = _keys(tr(_steps[_i]["text"]))
+
+func _keys(s: String) -> String:
+	return s.format({
 		"interact": "[%s]" % InputMode.key("interact"), "move": "[%s]" % InputMode.key("move"),
 		"dash": "[%s]" % InputMode.key("dash"), "drop": "[%s]" % InputMode.key("drop"),
 		"throw": "[%s]" % InputMode.key("throw")})
+
+# The guide tag over this step's goal, and an edge arrow while it's off-screen
+func _point(delta: float) -> void:
+	var step: Dictionary = _steps[_i]
+	var goal: Array = step["goal"].call() if step.has("goal") else []
+	var node: Node3D = goal[0] if goal.size() >= 2 else null
+	if node == null or not is_instance_valid(node) or not _guide.is_inside_tree():
+		_guide.visible = false
+		_stand_in(null)
+		return
+	var own_tag := _own_tag(node)
+	var at := own_tag.global_position if own_tag != null else node.global_position + Vector3(0.0, 2.4, 0.0)
+	_guide.global_position = at
+	var call := _keys(tr(goal[1]))
+	# A pile's tag only names it: the guide takes its place ("Stone  Pick up [E]"). A
+	# site's lists what it still needs, worth keeping: the guide sits on top of it.
+	if node.is_in_group("build_sites"):
+		_stand_in(null)
+		_guide.screen_lift = 58.0 if own_tag != null and own_tag.visible else 0.0
+	else:
+		_stand_in(own_tag if node.get("count_label") == own_tag else null)
+		_guide.screen_lift = 0.0
+		if _hidden_tag != null:
+			call = _hidden_tag.text + "  " + call
+	_guide.text = call
+	_guide.visible = true
+	# Off-screen: an edge arrow (a downed player already gets OffscreenAlerts' own)
+	_ping_t -= delta
+	if _ping_t <= 0.0 and not node.is_in_group("players"):
+		_ping_t = PING_EVERY
+		var alerts := get_tree().get_first_node_in_group("offscreen_alerts")
+		if alerts != null:
+			alerts.ping(at, UiStyle.AMBER, "Here", PING_EVERY + 0.1)
+
+# Hide this pile tag while the guide speaks for it; bring the last one back
+func _stand_in(tag: WorldTag) -> void:
+	if tag == _hidden_tag:
+		return
+	if _hidden_tag != null and is_instance_valid(_hidden_tag):
+		_hidden_tag.visible = true
+	_hidden_tag = tag
+	if tag != null:
+		tag.visible = false
+
+# The tag a build site or pile already floats (its needs, its stock), if any
+func _own_tag(node: Node3D) -> WorldTag:
+	for prop in ["_label", "count_label"]:
+		var tag = node.get(prop)
+		if tag is WorldTag and is_instance_valid(tag) and tag.is_inside_tree():
+			return tag
+	return null
+
+# Deliver / build: carrying → the wall; the wall has it all → the wall, to work it;
+# otherwise → the pile it still needs
+func _work_goal() -> Array:
+	var site := SiteFocus.site()
+	if site == null:
+		return []
+	if not _me().carried_kind.is_empty():
+		if SiteFocus.matches_carry():
+			return [site, "Deliver  {interact}"]
+		return [_me(), "Not needed here  {drop}"]
+	if site.has_method("can_build") and site.can_build():
+		return [site, "Build  {interact}"]
+	return [_pile(), "Pick up  {interact}"]
+
+# Nearest pile of what the focus site still needs (any pile if it can't say)
+func _pile() -> Node3D:
+	var site := SiteFocus.site()
+	var need: String = site.next_need() if site != null and site.has_method("next_need") else ""
+	var best: Node3D
+	var best_d := INF
+	for p: Node3D in get_tree().get_nodes_in_group("supply_piles"):
+		if not need.is_empty() and p.kind != need:
+			continue
+		var d := p.global_position.distance_to(_me().global_position)
+		if d < best_d:
+			best_d = d
+			best = p
+	if best == null and not need.is_empty():
+		var any := get_tree().get_nodes_in_group("supply_piles")
+		return any[0] if not any.is_empty() else null
+	return best
+
+func _scout_alive() -> bool:
+	return _scout != null and is_instance_valid(_scout) and _scout.get("health") > 0.0
 
 func _me() -> Player:
 	return Player.local if Player.local != null and is_instance_valid(Player.local) else null
@@ -144,6 +257,10 @@ func _fell_crewmate() -> void:
 		_fell = true
 
 func _build() -> void:
+	_guide = WorldTag.make(WorldTag.Kind.TOAST)
+	_guide.pulse = true
+	_guide.visible = false
+	_main.add_child.call_deferred(_guide)
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", UiStyle.plaque(Vector2(26, 16), 0.95))
 	_panel.custom_minimum_size.x = 620
