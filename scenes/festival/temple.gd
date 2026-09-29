@@ -8,7 +8,7 @@ extends StaticBody3D
 # offering before it with its fire. Chunky blocks like the rest of the world; walls,
 # altar and house are solid, the court itself open.
 
-const COURT      := Rect2(27.0, 3.5, 16.0, 10.0)   # x, z, width, depth
+const COURT      := Rect2(27.0, 4.6, 16.0, 9.8)    # x, z, width, depth; a lane left along the wall
 const WALL_H     := 1.4
 const WALL_T     := 0.6
 const GATE_HALF  := 1.5     # the opening in the south wall, facing the city

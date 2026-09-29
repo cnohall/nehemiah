@@ -83,6 +83,15 @@ func try_build() -> bool:
 	raised.emit()
 	return true
 
+## Already raised on an earlier visit to this district: stand it up, no fanfare
+func stand() -> void:
+	built = true
+	pending = COST
+	_shelter.visible = true
+	BuildWork.reveal(_shelter, 1.0)
+	_mark.visible = false
+	_update_label()
+
 func is_complete() -> bool:
 	return built
 

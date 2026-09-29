@@ -1,7 +1,7 @@
 extends SceneTree
 
-# "Walk the City" screenshots: hear Ezra, fetch branches, raise a booth, send a portion,
-# go up to the temple.
+# "Walk the City" screenshots at the Water Gate: hear Ezra, fetch branches, raise a
+# booth, send a portion. The round of every stretch: festival_tour.gd
 #   Godot --path . --script res://tools/festival_shots.gd -- <out_dir>
 # Not headless — needs the GPU.
 
@@ -30,11 +30,7 @@ const SCRIPT := [
 	[10.2, "goto", Vector3(-9.5, 0.1, 23.8)],
 	[10.5, "press"], [10.6, "release"],
 	[11.2, "shot", "portion"],
-	[11.4, "goto", Vector3(36.0, 0.1, 11.0)],
-	[12.4, "shot", "temple"],
-	[12.6, "goto", Vector3(33.0, 0.1, 16.0)],
-	[13.4, "shot", "temple_outside"],
-	[13.5, "quit"],
+	[11.5, "quit"],
 ]
 
 func _initialize() -> void:

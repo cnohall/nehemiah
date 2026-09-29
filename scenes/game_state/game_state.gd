@@ -231,7 +231,7 @@ func par_time(section_index := current_section_index) -> float:
 		par += PAR_TWIST.get(twist, 0.0)
 	return par
 
-static func mark_count(mask: int) -> int:
+func mark_count(mask: int) -> int:
 	return MARKS.filter(func(m: int): return mask >= 0 and mask & m).size()
 
 ## Marks earned this run, all sections
@@ -388,6 +388,10 @@ func apply_festival() -> void:
 	if festival:
 		var day: int = SECTIONS[FESTIVAL_SECTION]["days"][0]
 		_apply(day, FESTIVAL_SECTION, phase, breaches, targets_done, targets_total)
+
+## Festival: walked round to another stretch (its first day, so the section follows)
+func festival_district(section_index: int) -> void:
+	_apply(SECTIONS[section_index]["days"][0], section_index, phase, breaches, targets_done, targets_total)
 
 ## Server: a "Play again" run picks up where the last one asked (see restart_day)
 func apply_restart() -> void:
