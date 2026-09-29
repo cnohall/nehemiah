@@ -18,6 +18,7 @@ const TALLY_DELAY   := 0.6
 const TALLY_HOLD    := 5.6
 const TALLY_COUNT   := 0.55    # seconds each number takes to count up
 const TALLY_STEP    := 0.3     # between one number starting and the next
+const WALL_CAM_HOLD := 3.3     # Main.WALL_CAM_TIME + its lead-in, less a beat
 const BANNER_PAD    := 28.0    # space above and below the banner text
 const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
 const TALLY_H       := 118.0   # …plus the numbers row…
@@ -731,7 +732,9 @@ func _replay_end(won: bool, vb: Control, stats: Control) -> void:
 ## The day's numbers (DayDirector.day_tallied): what the crew did, then who did what
 func show_tally(stats: Dictionary) -> void:
 	_last_tally = stats
-	await get_tree().create_timer(TALLY_DELAY, true, false, true).timeout
+	# A stretch that stands gets its wall cam first (Main)
+	var wall_cam := stats.has("names") and not GameState.attract
+	await get_tree().create_timer(TALLY_DELAY + (WALL_CAM_HOLD if wall_cam else 0.0), true, false, true).timeout
 	if GameState.phase != GameState.Phase.DUSK:
 		return
 	if _tally == null:

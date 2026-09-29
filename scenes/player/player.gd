@@ -730,7 +730,7 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 		var why := _why_not_needed(at)
 		_tell(why[0], why[1])
 		return
-	get_tree().call_group("day_director", "note_load", worker_id())
+	get_tree().call_group("day_director", "note_load", worker_id(), dest)
 	_sfx.rpc("deposit_" + carried_kind)
 	_set_carried.rpc("")
 	if dest.can_build():
