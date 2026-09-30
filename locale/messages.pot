@@ -192,6 +192,10 @@ msgstr ""
 msgid "An enemy! Hold {throw} to whirl the sling, aim, and let go. Close in, the same button is a sword cut"
 msgstr ""
 
+#: scenes\ui\friends_and_foes.gd:270
+msgid "Anyone can do any job — pick your trade when the crew gathers"
+msgstr ""
+
 #: scenes\bot\bot_brain.gd:26
 msgid "Apprentice"
 msgstr ""
@@ -204,7 +208,7 @@ msgstr ""
 msgid "Armed while building"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:408
+#: scenes\ui\friends_and_foes.gd:410
 msgid "Back"
 msgstr ""
 
@@ -581,7 +585,7 @@ msgstr ""
 msgid "Eliashib the high priest and his brothers the priests take up the work at the Sheep Gate."
 msgstr ""
 
-#: scenes\player\player.gd:1188
+#: scenes\player\player.gd:1194
 msgid "Enough hands here"
 msgstr ""
 
@@ -666,7 +670,7 @@ msgstr ""
 msgid "Friend"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:382
+#: scenes\ui\friends_and_foes.gd:384
 msgid "Friends and Foes"
 msgstr ""
 
@@ -729,7 +733,7 @@ msgstr ""
 msgid "Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared."
 msgstr ""
 
-#: scenes\player\player.gd:1288
+#: scenes\player\player.gd:1296
 msgid "Going down to Ono…"
 msgstr ""
 
@@ -935,6 +939,10 @@ msgstr ""
 
 #: scenes\ui\settings_panel.gd:166
 msgid "Keys"
+msgstr ""
+
+#: scenes\ui\friends_and_foes.gd:263
+msgid "Knack"
 msgstr ""
 
 #: scenes\input_mode\input_mode.gd:88
@@ -1535,7 +1543,7 @@ msgstr ""
 msgid "Sound"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:276
+#: scenes\ui\friends_and_foes.gd:278
 msgid "Speed"
 msgstr ""
 
@@ -1578,7 +1586,7 @@ msgstr ""
 msgid "Stone"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:280
+#: scenes\ui\friends_and_foes.gd:282
 msgid "Strength"
 msgstr ""
 
@@ -1681,19 +1689,7 @@ msgid "The conspiracy"
 msgstr ""
 
 #: scenes\ui\friends_and_foes.gd:25
-msgid "The crew · First player"
-msgstr ""
-
-#: scenes\ui\friends_and_foes.gd:37
-msgid "The crew · Fourth player"
-msgstr ""
-
-#: scenes\ui\friends_and_foes.gd:29
-msgid "The crew · Second player"
-msgstr ""
-
-#: scenes\ui\friends_and_foes.gd:33
-msgid "The crew · Third player"
+msgid "The crew · A trade to choose"
 msgstr ""
 
 #: scenes\ui\game_hud.gd:464
@@ -1724,7 +1720,7 @@ msgstr ""
 msgid "The horn"
 msgstr ""
 
-#: scenes\player\player.gd:1256
+#: scenes\player\player.gd:1264
 msgid "The horn was just sounded"
 msgstr ""
 
@@ -1847,7 +1843,7 @@ msgid "The work goes on. The wall is joined together up to half its height, for 
 msgstr ""
 
 #: scenes\ui\friends_and_foes.gd:39
-msgid "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers."
+msgid "The work is great and the wall is long, and the builders are spread thin along it. The overseer stands behind them with sword and sling, and where the horn sounds, the crew gathers."
 msgstr ""
 
 msgid "The work waits"
@@ -1931,7 +1927,7 @@ msgstr ""
 msgid "Too many enemies reached the inner city. Try the stretch again."
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:278
+#: scenes\ui\friends_and_foes.gd:280
 msgid "Toughness"
 msgstr ""
 
@@ -2059,10 +2055,6 @@ msgstr ""
 msgid "We've listened since early morning."
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:267
-msgid "Wears this player's colour"
-msgstr ""
-
 #: scenes\taunts\taunts.gd:12
 msgid "What are these feeble Jews doing? … Will they revive the stones out of the heaps of rubbish, since they are burned?"
 msgstr ""
@@ -2079,7 +2071,7 @@ msgstr ""
 msgid "What they are building, if a fox climbed up it, he would break down their stone wall."
 msgstr ""
 
-#: scenes\player\player.gd:1290
+#: scenes\player\player.gd:1298
 msgid "Why should the work stop? Back to the wall!"
 msgstr ""
 
@@ -2127,6 +2119,18 @@ msgstr ""
 
 #: scenes\tutorial\tutorial.gd:71
 msgid "Your crewmate is down. Go to them and press {interact} to help them up"
+msgstr ""
+
+#: scenes\player\player.gd:1228
+msgid "Your trade — quicker hands at this work"
+msgstr ""
+
+#: scenes\player\player.gd:855
+msgid "Your trade — quicker with a load"
+msgstr ""
+
+#: scenes\player\player.gd:936
+msgid "Your trade — your blows land harder"
 msgstr ""
 
 #: scenes\ui\game_hud.gd:1033
@@ -2304,7 +2308,7 @@ msgstr ""
 msgid "“…and cause the work to cease.”"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:374
+#: scenes\ui\friends_and_foes.gd:376
 msgid "← →   Choose          Drag   Turn          Esc   Back"
 msgstr ""
 

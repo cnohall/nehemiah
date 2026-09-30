@@ -1810,3 +1810,24 @@ msgstr "Trabalha a madeira mais rápido — estruturas, portas, postos de guarda
 
 msgid "Sword and sling hit harder"
 msgstr "Espada e funda acertam mais forte"
+
+msgid "The crew · A trade to choose"
+msgstr "A equipe · Um ofício à escolha"
+
+msgid "The work is great and the wall is long, and the builders are spread thin along it. The overseer stands behind them with sword and sling, and where the horn sounds, the crew gathers."
+msgstr "A obra é grande e a muralha é longa, e os construtores estão espalhados por ela. O capataz fica atrás deles com espada e funda, e onde soar a trombeta, a equipe se reúne."
+
+msgid "Knack"
+msgstr "Destreza"
+
+msgid "Anyone can do any job — pick your trade when the crew gathers"
+msgstr "Qualquer um pode fazer qualquer trabalho — escolha seu ofício quando a equipe se reunir"
+
+msgid "Your trade — quicker hands at this work"
+msgstr "Seu ofício — mãos mais rápidas nesta obra"
+
+msgid "Your trade — quicker with a load"
+msgstr "Seu ofício — mais rápido com carga"
+
+msgid "Your trade — your blows land harder"
+msgstr "Seu ofício — seus golpes acertam mais forte"
