@@ -1,7 +1,7 @@
-Menüs fürs Handy:
-• Neuer Titelbildschirm: Raum eröffnen, beitreten oder die Grundlagen lernen; Abschnitte und Freunde und Feinde nur einen Tipp entfernt
-• Freunde und Feinde, die Abschnittskarte und der Abspann passen jetzt aufs Handy
-• Kürzeres Spielmenü: Truppe und Schwierigkeit auf eigener Seite
-• Der Sammelbildschirm lässt die Welt sichtbar
-• Einstellungen: Regler für Effekte ist zurück, Mitwirkende und Version dort
-• Text sprengt kleinere Handys nicht mehr
+Neu in diesem Build:
+• Stadtrundgang: um die fertige Mauer spazieren, beim Laubhüttenfest
+• Sonne, Schreiber und Wächter zeigen jetzt den Tag an
+• Spott der Feinde, von einem Herold ausgerufen
+• Krüge und Körbe zum Zerschlagen, Vögel über der Baustelle
+• Neue Bilder für die Geschichte und freundlichere Kamele
+• Mehr Musik und aktualisierte Übersetzungen
