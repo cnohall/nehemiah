@@ -1860,3 +1860,24 @@ msgstr "목재 일을 더 빨리 한다 — 틀, 문, 망대"
 
 msgid "Sword and sling hit harder"
 msgstr "칼과 물매가 더 세게 친다"
+
+msgid "The crew · A trade to choose"
+msgstr "일꾼 · 고를 수 있는 직분"
+
+msgid "The work is great and the wall is long, and the builders are spread thin along it. The overseer stands behind them with sword and sling, and where the horn sounds, the crew gathers."
+msgstr "공사는 크고 성벽은 길어 일꾼들이 멀리 흩어져 있습니다. 감독은 칼과 물매를 들고 그들 뒤에 서 있고, 나팔 소리가 나는 곳으로 모두 모입니다."
+
+msgid "Knack"
+msgstr "특기"
+
+msgid "Anyone can do any job — pick your trade when the crew gathers"
+msgstr "누구나 어떤 일이든 할 수 있다 — 일꾼이 모일 때 직분을 고르자"
+
+msgid "Your trade — quicker hands at this work"
+msgstr "내 직분 — 이 일에 손이 더 빠르다"
+
+msgid "Your trade — quicker with a load"
+msgstr "내 직분 — 짐을 지고 더 빠르다"
+
+msgid "Your trade — your blows land harder"
+msgstr "내 직분 — 더 세게 친다"
