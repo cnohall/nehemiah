@@ -23,8 +23,13 @@ const DASH_REACH   := 0.55
 const FLOOR_Y      := 0.1    # top of the floor slab (Player.GROUND_Y)
 const DASH_WINDOW  := 0.35   # s a reported dash counts for (it lasts 0.14 s, plus lag)
 
+const NEIGHBOUR    := 1.4    # a piece bursting rocks the others this close
+const RIM          := 1      # _touching levels: brushing its side …
+const CORE         := 2      # … or walked right into it
+
 var _pieces: Array[Breakable] = []
 var _dashing := {}   # server: worker node → [msec until, last position]
+var _touching := {}  # every peer: piece → {mover: RIM/CORE}, so it rocks as they come on, not while they stand there
 
 @onready var _terrain: Node3D = get_node("../SectionTerrain")
 
@@ -45,6 +50,7 @@ func _rebuild() -> void:
 		remove_child(c)
 		c.queue_free()
 	_pieces.clear()
+	_touching.clear()
 	var index := GameState.current_section_index
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7000 + index
@@ -109,6 +115,8 @@ func _physics_process(_delta: float) -> void:
 		if piece.broken:
 			continue
 		var at := piece.global_position
+		var was: Dictionary = _touching.get(piece, {})
+		var now := {}
 		for m: Node3D in movers:
 			var d := Vector2(m.global_position.x - at.x, m.global_position.z - at.z).length()
 			if d > piece.radius() + BRUSH:
@@ -116,7 +124,13 @@ func _physics_process(_delta: float) -> void:
 			if server and d < piece.radius() + TRAMPLE and m.is_in_group("enemies"):
 				_break(piece, at - m.global_position)
 				break
-			piece.nudge(m.global_position)
+			now[m] = CORE if d < piece.radius() else RIM
+			if now[m] > was.get(m, 0):
+				piece.nudge(m.global_position, now[m] == CORE)
+		if now.is_empty():
+			_touching.erase(piece)
+		else:
+			_touching[piece] = now
 	if server:
 		_check_dashes()
 
@@ -189,8 +203,15 @@ func _break(piece: Breakable, dir: Vector3) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _smashed(i: int, dir: Vector3) -> void:
-	if i >= 0 and i < _pieces.size():
-		_pieces[i].smash(dir)
+	if i < 0 or i >= _pieces.size():
+		return
+	var gone := _pieces[i]
+	gone.smash(dir)
+	_touching.erase(gone)
+	# The ones standing with it rock at the burst
+	for p in _pieces:
+		if p != gone and _flat(p.global_position - gone.global_position).length() < NEIGHBOUR:
+			p.nudge(gone.global_position, true)
 
 ## Server: a late joiner sees what's already broken (after GameState, so the section matches)
 func send_state_to(peer_id: int) -> void:

@@ -33,8 +33,9 @@ Three types, unlocked over the campaign (`wave_manager.gd`). Spawn rate and max 
 | Scout | Day 1 | 3.5 | 40 | 5 | ~50% go for the wall ("wreckers"), rest run for gaps |
 | Brute | Day 9 (25% of spawns) | 2.5 | 100 | 15 | Always a wrecker — slow, batters walls |
 | Raider | Day 21 (~30% late mix) | 4.0 | 60 | 8 | Fast; ~50% wreckers |
+| Saboteur *(planned, §5.9)* | Day 6 (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
 
-All attack nearby workers first. A wrecker that knocks a section back to bare foundation pours through the breach.
+All but the saboteur attack nearby workers first. A wrecker that knocks a section back to bare foundation pours through the breach.
 Debug: run with `-- --day=N` (debug builds) to start at a later day and see brutes/raiders.
 
 ---
@@ -156,6 +157,54 @@ Three rules, each on by default and each switched off from the command line to A
 - Tests / shots: `tools/hud_shots.gd`, `wallcam_shots.gd`, `festival_shots.gd`, `map_age_shots.gd`, `breakable_test.gd`, `birds_test.gd`, `birds_shots.gd`
 - New strings are English only so far — run the i18n extract for es / pt_BR / de / ko
 
+### 5.9 Saboteur — ☐ spec (30 Sep 2026), not built
+**Why:** all three enemy types ask the same question — reach the wall before it's battered or slipped through — and differ only in stats. Days 1–8 are scouts only. The saboteur is the first foe that goes after a *different part of the work*: the supply, not the wall. It gives the crew a new job, "keep the yard", without new stats or weapons.
+
+**Grounded in:** "Our adversaries said, 'They will not know or see, until we come in the middle of them and kill them, and cause the work to cease.'" (Neh 4:11, WEB). Their aim was to stop the work, not to fight it out.
+
+**Behaviour** (`Type.SABOTEUR` in `enemy.gd`, server-authoritative like the rest):
+1. Spawns with the trickle on the enemy's side, never in a wave pack (he comes quietly)
+2. **Gets in:** runs for the nearest gap (an unbuilt unit or a gate without doors). No gap left → he **climbs** a finished unit, choosing the one farthest from any worker: a 2.5 s climb, in plain view; any hit knocks him off and the climb starts over
+3. **Picks a pile:** the stockpile whose material the work front needs now (`WorkFront`'s open units); ties → the nearest. Skips beam piles (too heavy to throw about)
+4. **Scatters it:** 1.5 s at the pile, then the pile is **scattered**: loads strewn over the pad, nothing can be taken from it. Rubble heaps and lime bins scatter the same way; water jars are knocked over
+5. Scatters **two piles at most**, then flees back out the way he came (existing flee: `FLEE_SPEED`, off at `FLEE_Z`). Never counts as a breach: the harm he does is lost time
+6. **Doesn't fight.** He ignores workers (no aggro), doesn't batter walls, has no weapon. A worker in reach just gets dodged around
+
+**Tidying a scattered pile:** the Neh. 4:17 cost. Stand at the pile and press [E] / A ("Tidy [E]"), then work it like a wall stage (§5.4): 2 s for one worker, extra hands +70%, moving or a hit stops it, progress is kept. Tidied → the pile works again. A scattered pile's tag pulses "Scattered — tidy [E]" for everyone.
+
+**Stats:**
+| Speed | Health | Damage | Knockback felt |
+|---|---|---|---|
+| 4.2 (fastest) | 30 (2 sling hits, 2 sword cuts, 4 post shots) | 0 | 1.2 (light) |
+
+**Unlock and count:** day 6, the second day of the Fish Gate, so beams (the section's twist) get one day to themselves. At most **1 alive**, and at most one every 50 s, through day 20. From day 21, 2 alive with 3–4 workers. Not scaled by section pressure; difficulty *pace* scales the interval. Water Gate (night watch): he comes out of the dark like the rest, and a torch by the yard is the answer.
+
+**Readability:**
+- Silhouette: slim, crouched run, dark hood, an empty sack over one shoulder, no spear or shield. Same goat-hair cloth + oxblood outline as the other foes (`CharacterRig` look "saboteur")
+- The first one of the day gets a **watchman call** ("One's slipped in — the yard!"), and an off-screen pointer "Saboteur" follows him while he's inside the wall
+- The strewn loads on a scattered pile are clearly spilled, not stacked: at a glance the pile reads as unusable
+- The dusk tally adds a line only on days it happened: "Piles scattered: n"
+
+**Bots:** a bot that needs a scattered pile's material tidies it before anything else. A bot with empty hands within 10 m of a saboteur chases him with the sword. Bots don't guard the yard ahead of time.
+
+**Tutorial:** none. The watchman call, the pointer and the "Tidy [E]" tag teach it the first time (as the brute's first appearance does today).
+
+**Build notes:**
+- `SupplyPile`: `scattered` bool, synced like `count`; `request_pickup()` refuses while scattered; `tidy_progress` synced for the build-style bar. A strewn-loads mesh layer toggled on the pad
+- `enemy.gd`: a saboteur branch in `_pick_target` (pile, not player/wall), the climb as a timed state, `_fleeing` reused
+- `WaveManager`: its own timer for saboteurs, apart from the trickle and the waves
+- A/B switch `-- --no-saboteur`, like `--no-waves`. Debug `-- --day=6` to see one on day 1 of the run
+- Test `tools/saboteur_test.gd`: gets in through a gap, scatters the right pile, pickups refused, tidy restores, flees after two, climbs when there's no gap, knocked off by a hit
+- New strings English only at first; run the i18n extract for es / pt_BR / de / ko
+
+**Not in v1:** stealing dropped loads, tipping the mortar trough, setting fires (Neh 4:11 says "cause the work to cease", not burn it), tidying while carrying.
+
+**Watch in playtests:**
+- Does one person end up parked in the yard all day? (He should be something that interrupts you, not a post to stand at.) If so: longer interval, or he only comes in during waves
+- Is 2 s of tidying felt, or ignored? Is the climb readable enough to stop before he's over?
+- Solo: is it a fair tax, or does it wreck the sun-clock par? Tune `sun_slack` against it, not him
+- Does it hide the archer's job (guarding builders) when both are in? Archer spec waits for this playtest
+
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:
 - Stations told apart by period-appropriate bases, not colour-coding: stone on a timber pallet, logs on sleeper beams, mortar on a reed mat with spilled lime (bright colour rugs tried and dropped: broke immersion)
@@ -174,7 +223,7 @@ Keep the earthy palette, borrow Overcooked's readability:
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |
 |---|---|---|
-| Enemies that attack the work itself, one at a time: **saboteur** (raids the yard, scatters loads; Neh 4:11) → **archer** (stays outside, hits builders on the scaffold; 4:17) | Variety across 52 days; makes guarding the yard / builders a real job | Low — add incrementally |
+| Enemies that attack the work itself, one at a time: **saboteur** (raids the yard, scatters loads; Neh 4:11 — spec §5.9) → **archer** (stays outside, hits builders on the scaffold; 4:17) | Variety across 52 days; makes guarding the yard / builders a real job | Low — add incrementally |
 | Civilians (women, children) inside the city | Raises stakes, fits Neh 4:13 | Adds AI work |
 | Player roles | More reason to coordinate | Could fragment co-op; Overcooked has no roles |
 | Prep days (gather materials, craft weapons) | Rhythm between sections | Slows pacing |

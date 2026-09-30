@@ -108,9 +108,10 @@ func _add_shadow() -> void:
 
 # ── Brushed past ──────────────────────────────────────────────
 
-## Someone brushed against it: rock away from `from`, then settle
-func nudge(from: Vector3) -> void:
-	if broken or _wobble_cd > 0.0:
+## Someone brushed against it: rock away from `from`, then settle. `hard`: walked
+## right into it, or a neighbour burst — rocks further, and cuts short a gentle rock
+func nudge(from: Vector3, hard := false) -> void:
+	if broken or (_wobble_cd > 0.0 and not hard):
 		return
 	_wobble_cd = WOBBLE_CD
 	var push := Vector3(global_position.x - from.x, 0.0, global_position.z - from.z)
@@ -122,7 +123,7 @@ func nudge(from: Vector3) -> void:
 		_wobble.kill()
 	_intact.rotation = Vector3.ZERO
 	_wobble = create_tween()
-	var tip := 0.22 if kind != "store" else 0.14
+	var tip := (0.22 if kind != "store" else 0.14) * (1.5 if hard else 1.0)
 	for step: float in [tip, -tip * 0.55, tip * 0.25, 0.0]:
 		# Small angles: tipping about a flat axis is near enough its x/z Euler parts
 		_wobble.tween_property(_intact, "rotation", Vector3(axis.x, 0.0, axis.z) * step, 0.09) \
@@ -139,7 +140,7 @@ func smash(dir: Vector3, quiet := false) -> void:
 	if _wobble:
 		_wobble.kill()
 	_intact.visible = false
-	_build_remains(dir)
+	_build_remains(dir, not quiet)
 	if quiet:
 		return   # a late joiner catching up: just show what's left
 	var up := global_position + Vector3(0, 0.35, 0)
@@ -170,8 +171,9 @@ func restore() -> void:
 	create_tween().tween_property(_intact, "scale", Vector3.ONE, 0.25) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-# What lies there after: sherds (the bottom still standing), or the crushed basket
-func _build_remains(dir: Vector3) -> void:
+# What lies there after: sherds (the bottom still standing), or the crushed basket.
+# `fling`: the loose bits fly out and land as the burst comes down, not already lying there
+func _build_remains(dir: Vector3, fling := true) -> void:
 	_remains = Node3D.new()
 	add_child(_remains)
 	_remains.top_level = true   # laid out in world space, whatever way the piece faced
@@ -197,11 +199,15 @@ func _build_remains(dir: Vector3) -> void:
 				var sherd := _mesh(_remains, _box(s), c.lightened(rng.randf_range(-0.05, 0.08)), at,
 					Vector3(rng.randf_range(-0.3, 0.3), rng.randf() * TAU, rng.randf_range(-0.3, 0.3)))
 				sherd.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				if fling:
+					_fly(sherd, rng.randf_range(0.3, 0.45), rng.randf_range(0.15, 0.35))
 			if kind == "jar":
 				_wet_patch()
 			else:
 				var heap := _mesh(_remains, _sphere(0.3, 0.12), GRAIN, flat * 0.3)   # spilled grain
 				heap.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				if fling:
+					_spill(heap, 0.1)
 		"basket":
 			var squashed := _mesh(_remains, _cyl(0.32, 0.28, 0.1), c.darkened(0.05), Vector3(0, 0.05, 0), Vector3(0.25, 0, 0.15))
 			squashed.scale = Vector3(1.1, 1.0, 0.9)
@@ -209,11 +215,30 @@ func _build_remains(dir: Vector3) -> void:
 			for i in 4:
 				var to := (flat if flat != Vector3.ZERO else Vector3.RIGHT.rotated(Vector3.UP, i * 1.6)) \
 					.rotated(Vector3.UP, rng.randf_range(-0.8, 0.8)) * rng.randf_range(0.4, 0.9)
-				var fig := _mesh(_remains, _sphere(0.07, 0.12), FIG, Vector3(0, 0.3, 0))
-				var tw := fig.create_tween()
-				tw.tween_property(fig, "position", Vector3(to.x, 0.06, to.z), 0.35 + i * 0.05) \
-					.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-			_mesh(_remains, _sphere(0.16, 0.08), BREAD.darkened(0.05), flat * 0.35 + Vector3(0.1, 0.04, 0))
+				var fig := _mesh(_remains, _sphere(0.07, 0.12), FIG, Vector3(to.x, 0.06, to.z))
+				if fling:
+					# Out and rolling: a low hop, then along the ground
+					_fly(fig, 0.35 + i * 0.05, 0.12)
+			var loaf := _mesh(_remains, _sphere(0.16, 0.08), BREAD.darkened(0.05), flat * 0.35 + Vector3(0.1, 0.04, 0))
+			if fling:
+				_fly(loaf, 0.3, 0.2)
+
+# A loose bit thrown from the middle of the piece, landing where it now lies
+func _fly(mi: MeshInstance3D, time: float, hop: float) -> void:
+	var land := mi.position
+	var spin := mi.rotation
+	var from := Vector3(0, 0.3, 0)
+	mi.position = from
+	mi.create_tween().tween_method(func(t: float) -> void:
+		mi.position = from.lerp(land, t) + Vector3.UP * sin(t * PI) * hop
+		mi.rotation = spin + Vector3(0, (1.0 - t) * 6.0, 0), 0.0, 1.0, time) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+# A heap that spreads out where it was spilled
+func _spill(mi: MeshInstance3D, delay: float) -> void:
+	mi.scale = Vector3(0.2, 0.4, 0.2)
+	mi.create_tween().tween_property(mi, "scale", Vector3.ONE, 0.45) \
+		.set_delay(delay).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 # Dark patch where the water went; it spreads, then dries
 func _wet_patch() -> void:
@@ -236,7 +261,7 @@ func _burst(at: Vector3, dir: Vector3, color: Color, amount: int, size: float) -
 	p.one_shot = true
 	p.explosiveness = 0.95
 	p.amount = amount
-	p.lifetime = 0.8
+	p.lifetime = 0.7
 	var flat := Vector3(dir.x, 0.0, dir.z).normalized()
 	p.direction = (Vector3.UP + flat * 0.8).normalized()
 	p.spread = 55.0
@@ -248,6 +273,12 @@ func _burst(at: Vector3, dir: Vector3, color: Color, amount: int, size: float) -
 	p.particle_flag_rotate_y = true
 	p.scale_amount_min = 0.6
 	p.scale_amount_max = 1.3
+	# Gone by the time they'd sink through the ground, not blinking out mid-air
+	var shrink := Curve.new()
+	shrink.add_point(Vector2(0.0, 1.0))
+	shrink.add_point(Vector2(0.75, 1.0))
+	shrink.add_point(Vector2(1.0, 0.0))
+	p.scale_amount_curve = shrink
 	var box := BoxMesh.new()
 	box.size = Vector3(size, size * 0.5, size * 0.8)
 	box.material = _mat(color)
