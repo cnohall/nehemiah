@@ -121,7 +121,7 @@ func _people() -> Array:
 		var id := p.worker_id()
 		var who: String = tr("You") if id == multiplayer.get_unique_id() else NetworkManager.name_of(id)
 		if who.is_empty():
-			who = tr(CharacterRig.TRADES[slot % CharacterRig.TRADES.size()])
+			who = tr(p.trade_name())
 		if NetworkManager.is_loading(id):
 			who = tr("%s · joining…") % who
 		out.append([id, p.slot_color, who])

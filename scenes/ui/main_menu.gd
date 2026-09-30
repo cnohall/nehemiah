@@ -338,13 +338,14 @@ func _on_festival() -> void:
 	GameState.festival = true
 	get_tree().change_scene_to_file(GAME_SCENE)
 
-# Opens on the furthest stretch this player may build
+# Opens on the first stretch not yet built (the last one once all stand)
 func _open_picker() -> void:
-	var last := 0
+	var at := GameState.SECTIONS.size() - 1
 	for i in GameState.SECTIONS.size():
-		if GameState.is_unlocked(i):
-			last = i
-	_picker.open(last)
+		if GameState.is_unlocked(i) and GameState.best_marks(i) < 0:
+			at = i
+			break
+	_picker.open(at)
 
 ## Host a game of just one section (the others' marks don't change)
 func _on_section_chosen(section_index: int) -> void:

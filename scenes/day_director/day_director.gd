@@ -52,6 +52,9 @@ var _breaches_at_dawn := 0
 var _section_time := 0.0
 var _section_breaches := 0   # GameState.breaches when the section began
 var _section_ono := 0        # workers who went with the messenger ("schemes")
+# Loads and foes over the whole section, for its closing tally: "loads", "foes",
+# "crew" (peer_id → { loads, foes }) — the day's own numbers stay in _stats
+var _section_stats := { "loads": 0, "foes": 0, "crew": {} }
 # Server: loads each worker brought to each unit this section — unit index → { peer_id: loads }.
 # When the stretch stands, each piece is carved with the name of the one who carried most.
 var _credit := {}
@@ -138,6 +141,7 @@ func _begin_day() -> void:
 		_section_time = 0.0
 		_section_breaches = GameState.breaches
 		_section_ono = 0
+		_section_stats = { "loads": 0, "foes": 0, "crew": {} }
 		_credit.clear()
 		for item in _items.get_children():
 			item.queue_free()  # new stretch of wall, fresh work site
@@ -212,7 +216,7 @@ func _end_day(nightfall := false) -> void:
 		if p.downed:
 			p._set_downed.rpc(false)
 	_stats["breaches"] = GameState.breaches - _breaches_at_dawn
-	_stats["crew"] = _crew_rows()
+	_stats["crew"] = _crew_rows(_stats["crew"])
 	if _section_done():
 		var pos := GameState.day_in_section(GameState.current_day)
 		_stats["spare"] = pos.y - 1 - pos.x
@@ -247,6 +251,9 @@ func _rate_section() -> void:
 	_stats["section_time"] = _section_time
 	_stats["par"] = par
 	_stats["section_breaches"] = GameState.breaches - _section_breaches
+	_stats["section_loads"] = _section_stats["loads"]
+	_stats["section_foes"] = _section_stats["foes"]
+	_stats["section_crew"] = _crew_rows(_section_stats["crew"])
 	_stats["wall"] = health
 	_stats["section_ono"] = _section_ono
 	_stats["names"] = _carvings()
@@ -452,16 +459,17 @@ func _reset_stats() -> void:
 	_stats = { "time": 0.0, "loads": 0, "foes": 0, "breaches": 0, "crew": {} }
 	_breaches_at_dawn = GameState.breaches
 
-func _crew_entry(peer_id: int) -> Dictionary:
-	if not _stats["crew"].has(peer_id):
-		_stats["crew"][peer_id] = { "loads": 0, "foes": 0 }
-	return _stats["crew"][peer_id]
+# Count one for the day and for the section ("loads" | "foes")
+func _count(key: String, peer_id: int) -> void:
+	for stats: Dictionary in [_stats, _section_stats]:
+		stats[key] += 1
+		if peer_id != 0:
+			stats["crew"].get_or_add(peer_id, { "loads": 0, "foes": 0 })[key] += 1
 
 ## Server: a worker delivered a load to the wall (`site`: where it went)
 func note_load(peer_id: int, site: Node = null) -> void:
 	if GameState.phase == GameState.Phase.WORK:
-		_stats["loads"] += 1
-		_crew_entry(peer_id)["loads"] += 1
+		_count("loads", peer_id)
 	for i in _units.size():
 		if site in _units[i]:
 			var by: Dictionary = _credit.get_or_add(i, {})
@@ -474,16 +482,14 @@ func note_ono() -> void:
 ## Server: an enemy fell (peer_id = whose stone landed last, 0 if unknown)
 func note_foe(peer_id: int) -> void:
 	if GameState.phase == GameState.Phase.WORK:
-		_stats["foes"] += 1
-		if peer_id != 0:
-			_crew_entry(peer_id)["foes"] += 1
+		_count("foes", peer_id)
 
 # One row per worker present, in slot order (Main sorts players by peer id)
-func _crew_rows() -> Array:
+func _crew_rows(crew: Dictionary) -> Array:
 	var ids: Array = get_parent().get_node("Players").get_children().map(func(p): return int(p.name))
 	ids.sort()
 	return ids.map(func(id: int):
-		var e: Dictionary = _stats["crew"].get(id, { "loads": 0, "foes": 0 })
+		var e: Dictionary = crew.get(id, { "loads": 0, "foes": 0 })
 		return [id, e["loads"], e["foes"]])
 
 @rpc("authority", "call_local", "reliable")

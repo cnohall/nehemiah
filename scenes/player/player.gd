@@ -107,6 +107,8 @@ var helping_id := 0
 var downed := false
 var slot_color := Color.WHITE   # ring / HUD colour, set by Main
 var _slot := 0                  # crew slot, set by Main (picks the dusk dance)
+var trade := 0                  # Trade, set by Main with the slot: what this worker is quicker at
+var _slotted := false
 var _facing := "down"
 var _is_busy := false
 var _sling_cd := 0.0
@@ -243,13 +245,22 @@ func _exit_tree() -> void:
 	if local == self:
 		local = null
 
-func set_slot(slot: int, c: Color) -> void:
+func set_slot(slot: int, c: Color, trade_index := -1) -> void:
+	var t := trade_index if trade_index >= 0 else slot % CharacterRig.TRADES.size()
+	if _slotted and slot == _slot and c == slot_color and t == trade:
+		return   # the crew list changed, not us — don't rebuild the rig
+	_slotted = true
 	_slot = slot
 	slot_color = c
-	_sprite.set_look(CharacterRig.worker_look(slot, c))
+	trade = t
+	_sprite.set_look(CharacterRig.worker_look(trade, c))
 	_sprite.set_ring_color(Color(0, 0, 0, 0) if GameState.attract else c)   # the title backdrop stays unmarked
 	_refresh_pip()
 	_rebuild_carry_prop()   # a new rig means a new chest anchor
+
+## "Carpenter" etc. — untranslated (callers tr() it)
+func trade_name() -> String:
+	return CharacterRig.TRADES[trade]
 
 # Small diamond in the player's colour over the head — who's who in a busy crew.
 # Only with company; pulses while downed so teammates see who needs help.
@@ -382,7 +393,7 @@ func _handle_movement(delta: float) -> void:
 		_dash_time -= delta
 		velocity = _dash_dir * DASH_SPEED
 	else:
-		var target := dir * (CARRY_SPEED if not carried_kind.is_empty() else RUN_SPEED)
+		var target := dir * (CARRY_SPEED * Trade.carry_mult(trade) if not carried_kind.is_empty() else RUN_SPEED)
 		if on_beam:
 			target = dir * (BEAM_PAIR_SPEED if _beam_partner() != null else BEAM_SOLO_SPEED)
 		if _charging:
@@ -408,7 +419,9 @@ func _beam_partner() -> Node3D:
 	return null
 
 # Owner: can't walk further from the other end than the beam allows — the pair has to
-# move together (each side clamps itself, so neither can drag the other)
+# move together (each side clamps itself, so neither can drag the other). The pull
+# collides: snapping straight to the partner dragged workers through solid terrain
+# (into a burned house shell, where they couldn't find the way out)
 func _tether_to_partner() -> void:
 	var partner := _beam_partner()
 	if partner == null:
@@ -417,7 +430,7 @@ func _tether_to_partner() -> void:
 	off.y = 0.0
 	if off.length() > BEAM_TETHER:
 		var p := partner.global_position + off.normalized() * BEAM_TETHER
-		global_position = Vector3(p.x, global_position.y, p.z)
+		move_and_collide(Vector3(p.x - global_position.x, 0.0, p.z - global_position.z))
 
 ## A lone beam carrier within reach who could use a hand
 func _carrier_needing_help(at: Vector3) -> Node3D:
@@ -964,7 +977,7 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 		# A little slack on reach: the foe kept walking during the wind-up
 		if to.length() > SWORD_REACH + 0.4 or absf(fwd.angle_to(to)) > deg_to_rad(SWORD_ARC_DEG):
 			continue
-		enemy.take_damage(SWORD_DAMAGE, worker_id())
+		enemy.take_damage(SWORD_DAMAGE * Trade.hit_mult(trade), worker_id())
 		enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
 		hit = true
 	var pots := get_tree().get_first_node_in_group("breakable_set")
@@ -1075,7 +1088,7 @@ func _server_sling(at: Vector3, land: Vector3, charge: float, pad: bool) -> void
 	if flat.length() > reach:
 		land = Vector3(at.x, GROUND_Y, at.z) + flat.normalized() * reach
 	var target := _assist_target(at, land, reach, _assist_cone(pad))
-	var damage := lerpf(SLING_MIN_DAMAGE, SLING_MAX_DAMAGE, charge)
+	var damage := lerpf(SLING_MIN_DAMAGE, SLING_MAX_DAMAGE, charge) * Trade.hit_mult(trade)
 	_throw_stone.rpc(target.get_path() if target else NodePath(), land, damage)
 
 # Every peer animates the stone; only the server's copy deals damage

@@ -1839,3 +1839,24 @@ msgstr "세상 속에"
 
 msgid "Plaques"
 msgstr "명패"
+
+msgid "The attackers"
+msgstr "공격하는 자들"
+
+msgid "Adversary"
+msgstr "대적"
+
+msgid "Your trade: %s"
+msgstr "내 직분: %s"
+
+msgid "Lays stone faster"
+msgstr "돌을 더 빨리 쌓는다"
+
+msgid "Walks faster with a load"
+msgstr "짐을 지고 더 빨리 걷는다"
+
+msgid "Works timber faster — frames, doors, watch posts"
+msgstr "목재 일을 더 빨리 한다 — 틀, 문, 망대"
+
+msgid "Sword and sling hit harder"
+msgstr "칼과 물매가 더 세게 친다"
