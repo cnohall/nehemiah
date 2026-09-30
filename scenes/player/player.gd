@@ -341,8 +341,8 @@ func _physics_process(delta: float) -> void:
 
 ## Screen-space stick / keys → ground direction. Keys give length 1; a stick can be
 ## pushed part-way for a slower walk.
-## Walk the City turns the view so north sits up-screen (Main.set_view_yaw); the stick
-## turns with it. 0 everywhere else.
+## Explore Jerusalem (and the campaign with Settings.turn_to_map) turns the view so north
+## sits up-screen (Main.set_view_yaw); the stick turns with it. 0 everywhere else.
 static var view_yaw := 0.0
 
 static func screen_to_ground(v: Vector2) -> Vector3:
@@ -378,7 +378,8 @@ func _throw_just_pressed() -> bool:
 	return Input.is_action_just_pressed("throw_charge") and not InputMode.gameplay_blocked()
 
 func _handle_movement(delta: float) -> void:
-	var dir := screen_to_ground(_move_input())
+	# Bots steer in the game's own view: the host's turned camera is none of theirs
+	var dir := screen_to_ground(_move_input()) if brain == null 		else (SCREEN_RIGHT * brain.move.x + SCREEN_DOWN * brain.move.y)
 	if dir != Vector3.ZERO:
 		_move_dir = dir.normalized()
 	var on_beam := carried_kind == "beam" or helping_id != 0
@@ -969,7 +970,7 @@ func _swing_sword(foe: Node3D) -> void:
 	if not is_instance_valid(self) or not _sprite.animation.begins_with("sword"):
 		return   # knocked out of the swing before it landed
 	_server_sword.rpc_id(1, global_position, aim_yaw)
-	if Trade.hit_mult(trade) > 1.0:
+	if Trade.hit_mult(trade) > 1.0 and is_instance_valid(foe) and foe.is_in_group("enemies"):   # not a jar
 		_knack("Your trade — your blows land harder")
 
 @rpc("any_peer", "call_local", "reliable")
@@ -1352,11 +1353,13 @@ func _feedback(text: String, need: String) -> void:
 	if multiplayer.get_remote_sender_id() == 1:
 		_toast(text, need)
 
-# Owner: the first time this game that the trade's knack (Trade) pays off, say so once
+# Owner: the first time this game that the trade's knack (Trade) pays off, say so once —
+# never over another line still rising, or the two print on top of each other
 var _knack_told := false
+var _toast_until := 0   # msec: the last toast is still on screen until then
 
 func _knack(text: String) -> void:
-	if not _knack_told:
+	if not _knack_told and brain == null and Time.get_ticks_msec() >= _toast_until:
 		_knack_told = true
 		_toast(text)
 
@@ -1369,6 +1372,7 @@ func _toast(text: String, need := "") -> void:
 		"drop": "[%s]" % InputMode.key("drop"), "need": tr({"beam": "beams"}.get(need, need)) if not need.is_empty() else "" }))
 	l.position = Vector3(0, HP_BAR_Y + 0.3, 0)
 	add_child(l)
+	_toast_until = Time.get_ticks_msec() + int(TOAST_TIME * 1000.0)
 	var tw := l.create_tween()
 	tw.set_parallel()
 	tw.tween_property(l, "position:y", l.position.y + 0.5, TOAST_TIME)

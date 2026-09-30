@@ -1,7 +1,7 @@
 class_name Festival
 extends CanvasLayer
 
-# "Walk the City": the Festival of Booths after the wall was finished (Neh. 8) — a
+# "Explore Jerusalem": the Festival of Booths after the wall was finished (Neh. 8) — a
 # sandbox with no clock and no enemy, for walking Jerusalem. It opens at the Water Gate,
 # where "all the people gathered themselves together as one man" (8:1), and the whole
 # circuit is open: walk off either end of a stretch, along the wall, and you come to the
@@ -176,10 +176,8 @@ func _travel(dir: int, z: float) -> void:
 	_traveling = false
 
 # Turn the view so true north is straight up-screen, as on a map of the city
-const SCREEN_UP := Vector3(-0.70710678, 0.0, -0.70710678)   # the game's view: away from the camera
-
 func _north_up_yaw(district: int) -> float:
-	return SCREEN_UP.signed_angle_to(RingCompass.north_on_site(district), Vector3.UP)
+	return RingCompass.north_up_yaw(district)
 
 ## Along the wall at the same depth — but at the Sheep Gate's east end the temple court
 ## fills the ground up to the wall, so in along the street before its gate
@@ -314,7 +312,7 @@ func _add_signs(root: Node3D) -> void:
 # face it over the crowd's heads ("in the sight of all the people", 8:5) — but never out
 # across the wall
 func _crowd_dir() -> Vector3:
-	var d := -SCREEN_UP.rotated(Vector3.UP, _north_up_yaw(_district))
+	var d := -RingCompass.SCREEN_UP.rotated(Vector3.UP, _north_up_yaw(_district))
 	d.z = maxf(d.z, -0.6)
 	return d.normalized()
 

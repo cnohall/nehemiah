@@ -97,6 +97,9 @@ var _sun_warned := false     # "the sun is low" said once a day
 # low on the screen.
 var _next_caption: Label
 var _style_world := false
+# Where this stretch lies on the real wall, and which way north is in the view (the same
+# plan and needle as Explore Jerusalem's journal), top right under the threat plaque
+var _compass: RingCompass
 
 func _ready() -> void:
 	# Keeps running while a solo game is paused (menus, settings, fades)
@@ -107,6 +110,7 @@ func _ready() -> void:
 	_build_controls_hint()
 	_build_next_line()
 	_build_next_caption()
+	_build_compass()
 	_build_sun_row()
 	_build_joining_plaque()
 	# The practice has no day to count or waves to warn of; its own plaque says the step
@@ -180,6 +184,8 @@ func _notification(what: int) -> void:
 		refresh_day(GameState.current_day)
 		_on_crew_changed(GameState.crew_size)
 		_refresh_gather_hint()
+		for r in _host_refreshers:   # trade, difficulty and bot rows
+			r.call()
 
 func _unhandled_input(event: InputEvent) -> void:
 	# B / Esc backs out of the menu, like every other screen
@@ -357,6 +363,7 @@ func _refresh_sun() -> void:
 func _process(delta: float) -> void:
 	if _style_world != Settings.diegetic_hud:
 		_apply_style()
+	_place_compass()
 	if _sun_row != null:
 		_refresh_sun()
 	_next_poll -= delta
@@ -380,6 +387,23 @@ func _apply_style() -> void:
 
 # Low and centred, clear of the crew cards and the controls card: a slim parchment
 # plaque, like the rest of the HUD
+func _build_compass() -> void:
+	_compass = RingCompass.new()
+	_compass.follow_section = true
+	$Root.add_child(_compass)
+	_compass.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_compass.offset_right = -18.0
+	_compass.offset_left = -18.0 - _compass.custom_minimum_size.x
+
+# Under the threat plaque when it's up; out of the way of the story and the end screen
+func _place_compass() -> void:
+	_compass.visible = not end_screen.visible and GameState.phase != GameState.Phase.STORY
+	var top := 18.0
+	if threat.visible:
+		top = threat.get_global_rect().end.y - $Root.get_global_rect().position.y + 12.0
+	_compass.offset_top = top
+	_compass.offset_bottom = top + _compass.custom_minimum_size.y
+
 func _build_next_caption() -> void:
 	_next_caption = Label.new()
 	_next_caption.add_theme_font_override("font", UiStyle.SPECTRAL_ITALIC)
@@ -1014,31 +1038,106 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	skill.tooltip_text = tr("Click to change")
 	refresh.call()
 
-# Everyone: which trade you work as (Trade) — a click steps to the next, the caption says
-# what it's quicker at. Bots take the trades left over. Remembered for the next game.
+# Everyone: which trade you work as (Trade) — one tile per trade, your own figure in each
+# trade's dress; the caption says what yours is quicker at. Bots take the trades left
+# over. Remembered for the next game.
+const TRADE_TILE_PX := 46   # portrait size in a trade tile
+
 func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
-	var pick := _bot_button("", in_menu)
-	pick.tooltip_text = tr("Click to change")
+	var tiles := HBoxContainer.new()
+	tiles.alignment = BoxContainer.ALIGNMENT_CENTER
+	tiles.add_theme_constant_override("separation", 6)
 	var about := _host_caption()
-	vb.add_child(pick)
-	vb.move_child(pick, at)
-	pick.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vb.add_child(tiles)
+	vb.move_child(tiles, at)
 	vb.add_child(about)
 	vb.move_child(about, at + 1)
+	var group := ButtonGroup.new()
+	var portraits: Array[CrewPortrait] = []
+	for t in CharacterRig.TRADES.size():
+		var tile := _trade_tile(t, group, in_menu)
+		tiles.add_child(tile)
+		portraits.append(tile.get_meta("portrait"))
+		tile.pressed.connect(func(): NetworkManager.choose_trade(t))
 	var mine := func() -> int:
 		var me := _worker(multiplayer.get_unique_id())
 		return me.trade if me != null else maxi(0, Settings.trade)
+	var shown_color := [null]   # the colour the portraits wear (a new one re-dresses them)
 	var refresh := func():
 		var t: int = mine.call()
-		pick.text = tr("Your trade: %s") % tr(CharacterRig.TRADES[t])
-		about.text = tr(Trade.ABOUT[t])
-	pick.pressed.connect(func():
-		NetworkManager.choose_trade((mine.call() + 1) % CharacterRig.TRADES.size()))
+		for i in tiles.get_child_count():
+			var tile := tiles.get_child(i) as Button
+			tile.set_pressed_no_signal(i == t)   # no signal, so the group won't clear the rest
+			tile.get_meta("paint").call()
+		about.text = "%s  ·  %s" % [tr("Your trade: %s") % tr(CharacterRig.TRADES[t]), tr(Trade.ABOUT[t])]
+		var me := _worker(multiplayer.get_unique_id())
+		var c: Color = me.slot_color if me != null else UiStyle.RULE
+		if shown_color[0] != c:
+			shown_color[0] = c
+			for i in portraits.size():
+				portraits[i].set_worker(i, c)
 	# The pick goes round the server and comes back with the crew list; Main re-slots first
 	if not NetworkManager.crew_info_changed.is_connected(_refresh_rows_later):
 		NetworkManager.crew_info_changed.connect(_refresh_rows_later)
 	_host_refreshers.append(refresh)
 	refresh.call()
+
+# A trade to pick: the worker in its dress, its name under; the chosen one sits pressed
+# into the parchment with a terracotta frame
+func _trade_tile(t: int, group: ButtonGroup, focusable: bool) -> Button:
+	var b := Button.new()
+	b.toggle_mode = true
+	b.button_group = group
+	b.focus_mode = Control.FOCUS_ALL if focusable else Control.FOCUS_NONE
+	b.tooltip_text = tr(Trade.ABOUT[t])
+	b.custom_minimum_size = Vector2(92, 0)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var pad := Vector2(4, 6)
+	var off := UiStyle.bordered(UiStyle.box(Color(0, 0, 0, 0), pad, 3), Color(UiStyle.RULE, 0.55), 1)
+	var hover := UiStyle.bordered(UiStyle.box(Color(UiStyle.TERRACOTTA, 0.07), pad, 3), UiStyle.TERRACOTTA, 1)
+	var on := UiStyle.bordered(UiStyle.box(Color(UiStyle.PARCHMENT_DEEP, 0.9), pad, 3), UiStyle.TERRACOTTA, 2, 3)
+	for s in ["normal", "disabled"]:
+		b.add_theme_stylebox_override(s, off)
+	b.add_theme_stylebox_override("hover", hover)
+	for s in ["pressed", "hover_pressed"]:
+		b.add_theme_stylebox_override(s, on)
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 2)
+	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	col.offset_top = pad.y
+	col.offset_bottom = -pad.y - 2
+	b.add_child(col)
+	var face := CrewPortrait.new()
+	face.custom_minimum_size = Vector2(TRADE_TILE_PX, TRADE_TILE_PX)
+	face.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(face)
+	var name_l := Label.new()
+	name_l.text = CharacterRig.TRADES[t]
+	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # "Carregador de água" takes two lines
+	name_l.add_theme_font_override("font", UiStyle.CINZEL_BOLD)
+	name_l.add_theme_font_size_override("font_size", 12)
+	name_l.add_theme_constant_override("line_spacing", -3)
+	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(name_l)
+	var paint := func():
+		name_l.add_theme_color_override("font_color", UiStyle.TERRACOTTA_DEEP if b.button_pressed \
+			else (UiStyle.TERRACOTTA if b.is_hovered() else UiStyle.INK_SOFT))
+		face.modulate = Color.WHITE if b.button_pressed or b.is_hovered() else Color(1, 1, 1, 0.72)
+	b.toggled.connect(func(_on: bool): paint.call())
+	b.mouse_entered.connect(paint)
+	b.mouse_exited.connect(paint)
+	paint.call()
+	# A Button doesn't grow for its children: follow the column (a wrapped name is taller)
+	var fit := func(): b.custom_minimum_size.y = col.get_combined_minimum_size().y + pad.y * 2 + 2
+	col.resized.connect(fit)
+	name_l.resized.connect(fit)
+	fit.call()
+	b.set_meta("portrait", face)
+	b.set_meta("paint", paint)
+	return b
 
 func _refresh_rows_later() -> void:
 	for r in _host_refreshers:

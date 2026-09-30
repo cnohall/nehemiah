@@ -6,7 +6,7 @@ extends Node3D
 # node's 3D position every frame. Drop-in for the old Label3D world labels — set
 # `text`, `visible`, `modulate`, `position` the same way — and the text is read for
 # structure:
-#   "Stone 2/5  Mortar 0/1"  → one column per material: icon, name, count, pips
+#   "Stone 2/5  Mortar 0/1"  → one column per material: icon over count
 #   "Stone"                  → icon + name (a supply pile)
 #   "Wall 80%"               → a small condition bar
 #   "Build  [E]"             → text with the key drawn as a keycap
@@ -143,7 +143,7 @@ func _build() -> void:
 	sb.shadow_color = Color(0.08, 0.05, 0.02, 0.35)
 	sb.shadow_size = 6
 	sb.shadow_offset = Vector2(0, 3)
-	var pad := Vector2(12, 7) if kind in [Kind.SITE, Kind.SHOUT] else Vector2(10, 5)
+	var pad := Vector2(12, 7) if kind == Kind.SHOUT else (Vector2(8, 5) if kind == Kind.SITE else Vector2(10, 5))
 	if kind == Kind.SCROLL:
 		pad = Vector2(20, 6)   # room for the rolled ends
 	sb.content_margin_left = pad.x
@@ -206,7 +206,7 @@ func _rebuild() -> void:
 	for line in text.split("\n", false):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_theme_constant_override("separation", 14)
+		row.add_theme_constant_override("separation", 10)
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_box.add_child(row)
 		# A shout or a note is prose: kept whole ("Sanballat · Tobiah · Geshem")
@@ -249,25 +249,14 @@ func _need(mat: String, have: int, need: int) -> Control:
 	if done:
 		icon.modulate = Color(1, 1, 1, 0.55)
 	col.add_child(icon)
-	var name_l := _label(mat.capitalize(), "caps", 13, TEXT_DIM)
-	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(name_l)
-	var count := _label("%d/%d" % [have, need], "bold", 19, DONE if done else TEXT)
+	# Icon + count only: the sign stays small
+	var count := _label("%d/%d" % [have, need], "bold", 17, DONE if done else TEXT)
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(count)
-	if need > 1 and need <= 8:
-		var pips := PipStrip.new()
-		pips.have = have
-		pips.need = need
-		pips.on = DONE if done else UiStyle.AMBER
-		pips.off = PIP_OFF
-		pips.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		col.add_child(pips)
 	return col
 
 func _condition(f: float) -> Control:
 	var row := _hbox(8)
-	row.add_child(_label("Wall", "caps", 13, TEXT_DIM))
 	var bar := PipStrip.new()
 	bar.bar = true
 	bar.fraction = f

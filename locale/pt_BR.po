@@ -1141,6 +1141,9 @@ msgstr "Desenvolvimento"
 msgid "Game design"
 msgstr "Design do jogo"
 
+msgid "Emotional support & spirit animal"
+msgstr "Apoio emocional e animal espiritual"
+
 msgid "Scripture"
 msgstr "Texto bíblico"
 
@@ -1490,8 +1493,8 @@ msgstr "A muralha está pronta. Sem relógio, sem inimigos — passeie pela cida
 msgid "Walk up to people and press %s to talk"
 msgstr "Aproxime-se das pessoas e aperte %s para conversar"
 
-msgid "Walk the City"
-msgstr "Passear pela cidade"
+msgid "Explore Jerusalem"
+msgstr "Explorar Jerusalém"
 
 msgid "Neh. 8  ·  The seventh month"
 msgstr "Ne 8  ·  O sétimo mês"
@@ -1786,6 +1789,15 @@ msgstr "Informações do dia"
 
 msgid "In the world"
 msgstr "No mundo"
+
+msgid "Camera"
+msgstr "Câmera"
+
+msgid "Follow"
+msgstr "Seguir"
+
+msgid "Fixed"
+msgstr "Fixa"
 
 msgid "Plaques"
 msgstr "Placas"

@@ -14,6 +14,11 @@ var screen_shake := true
 # Day, progress and threats told by the world (sun, scribe, watchmen) — false brings
 # back the day plaque and the threat plaque
 var diegetic_hud := true
+# Camera holds the whole stretch in view (Overcooked-style) instead of following you
+var fixed_camera := false
+# Turn the view on every stretch so north sits up-screen, the wall lying as it does on the
+# map (as Explore Jerusalem does) — off keeps the game's one view, outside always far
+var turn_to_map := false
 var rumble := true
 var toggle_charge := false   # sling: press to start, press again to throw (instead of hold)
 # Keyboard / mouse rebinds: action → {"key": physical keycode} or {"mouse": button index}.
@@ -61,6 +66,8 @@ func _ready() -> void:
 		sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 		screen_shake = cfg.get_value("display", "screen_shake", screen_shake)
 		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
+		fixed_camera = cfg.get_value("display", "fixed_camera", fixed_camera)
+		turn_to_map = cfg.get_value("display", "turn_to_map", turn_to_map)
 		rumble = cfg.get_value("controls", "rumble", rumble)
 		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
@@ -115,6 +122,8 @@ func save() -> void:
 	cfg.set_value("display", "vsync", vsync)
 	cfg.set_value("display", "screen_shake", screen_shake)
 	cfg.set_value("display", "diegetic_hud", diegetic_hud)
+	cfg.set_value("display", "fixed_camera", fixed_camera)
+	cfg.set_value("display", "turn_to_map", turn_to_map)
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)

@@ -9,8 +9,8 @@ extends SceneTree
 # interact like a player would, and prints how long each stage's work took.
 # Saves a screenshot mid-work. Exit code 0 = the day's first unit got fully built.
 
-const TIMEOUT := 90.0
-const HOST_LIFETIME := 80.0
+const TIMEOUT := 150.0         # trades stretch the work (Trade.WORK_MULT)
+const HOST_LIFETIME := 140.0
 
 var _out := ""
 var _main: Node3D
@@ -56,10 +56,10 @@ func _process(delta: float) -> bool:
 	_frame += 1
 	var nm = root.get_node("NetworkManager")
 	if _frame == 2 and _mode == "host":
-		nm.host()
+		nm.host(nm.TEST_PORT, 1)
 		_start_main()
 	elif _frame == 2 and _mode == "client":
-		nm.join("127.0.0.1")
+		nm.join("127.0.0.1", nm.TEST_PORT)
 	if _mode == "client" and _main == null:
 		# Status flips to connected a moment before the server hands out our peer id
 		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1:

@@ -53,8 +53,12 @@ func _process(delta: float) -> void:
 			tr("The sun is low!"), true)
 
 ## WaveManager (every peer): a wave or a surge is about to come in at `at`
+## A flank is named by its true quarter on the real wall (RingCompass): out across the
+## wall and toward that end of the stretch
 func warn_wave(at: Vector3, horn: bool) -> void:
-	var where := tr("from the west") if at.x < -6.0 else (tr("from the east") if at.x > 6.0 else tr("straight at the gate"))
+	var where := tr("straight at the gate")
+	if absf(at.x) > 6.0:
+		where = RingCompass.quarter(GameState.current_section_index, Vector3(signf(at.x), 0.0, -1.0))
 	var line := (tr("Up the valley — %s!") if horn else tr("They're coming — %s!")) % where
 	_call(_nearest_man(at.x), line, true)
 

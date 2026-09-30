@@ -81,10 +81,10 @@ func _ready() -> void:
 	menu.add_child(learn)
 	menu.move_child(learn, join_btn.get_index() + 1)
 	learn.pressed.connect(_on_learn)
-	# Walk the City: the Festival of Booths, a sandbox with no clock and no enemy
+	# Explore Jerusalem: the Festival of Booths, a sandbox with no clock and no enemy
 	var walk := join_btn.duplicate() as Button
 	walk.name = "FestivalButton"
-	walk.text = "Walk the City"
+	walk.text = "Explore Jerusalem"
 	menu.add_child(walk)
 	menu.move_child(walk, learn.get_index() + 1)
 	walk.pressed.connect(_on_festival)

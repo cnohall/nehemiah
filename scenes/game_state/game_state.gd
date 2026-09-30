@@ -161,7 +161,7 @@ var attract := false
 # Tutorial — no waves, no story, no bots but the one that falls; nothing it does is saved.
 # Set by the menu, cleared when the menu opens again (outlives reset() like replay_section).
 var tutorial := false
-# "Walk the City" from the title: the Festival of Booths (Neh. 8) after the wall is done —
+# "Explore Jerusalem" from the title: the Festival of Booths (Neh. 8) after the wall is done —
 # a solo sandbox at the Water Gate, the whole wall standing, no enemy, no clock. Festival
 # runs it. Set by the menu like `tutorial`; nothing it does is saved.
 var festival := false

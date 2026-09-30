@@ -705,6 +705,10 @@ msgstr ""
 msgid "Game design"
 msgstr ""
 
+#: scenes\story\credits_roll.gd:31
+msgid "Emotional support & spirit animal"
+msgstr ""
+
 #: scenes\ui\game_hud.gd:458
 msgid "Gathering the crew"
 msgstr ""
@@ -1986,7 +1990,7 @@ msgid "Walk  {move}"
 msgstr ""
 
 #: scenes\ui\main_menu.gd:87
-msgid "Walk the City"
+msgid "Explore Jerusalem"
 msgstr ""
 
 #: scenes\festival\festival.gd:533
@@ -2316,3 +2320,14 @@ msgstr ""
 msgid "← →  or  Click   Choose          Esc   Back"
 msgstr ""
 
+#: scenes\ui\settings_panel.gd:161
+msgid "Camera"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:161
+msgid "Follow"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd:161
+msgid "Fixed"
+msgstr ""

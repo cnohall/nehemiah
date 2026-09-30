@@ -1135,6 +1135,9 @@ msgstr "개발"
 msgid "Game design"
 msgstr "게임 디자인"
 
+msgid "Emotional support & spirit animal"
+msgstr "정서적 지원 & 영혼의 동물"
+
 msgid "Scripture"
 msgstr "성경 본문"
 
@@ -1480,8 +1483,8 @@ msgstr "성벽이 완성되었습니다. 시간 제한도 적도 없습니다 �
 msgid "Walk up to people and press %s to talk"
 msgstr "사람들에게 다가가 %s 키를 눌러 대화하세요"
 
-msgid "Walk the City"
-msgstr "성 거닐기"
+msgid "Explore Jerusalem"
+msgstr "예루살렘 둘러보기"
 
 msgid "Neh. 8  ·  The seventh month"
 msgstr "느 8장  ·  일곱째 달"
@@ -1773,6 +1776,15 @@ msgstr "하루 정보"
 
 msgid "In the world"
 msgstr "세상 속에"
+
+msgid "Camera"
+msgstr "카메라"
+
+msgid "Follow"
+msgstr "따라가기"
+
+msgid "Fixed"
+msgstr "고정"
 
 msgid "Plaques"
 msgstr "명패"
