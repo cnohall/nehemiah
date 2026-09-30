@@ -2,7 +2,7 @@ extends SceneTree
 
 # Touch sling check: hosts a LAN game in the phone preview, presses + drags the
 # on-screen sling, and prints how far the throw direction lands from the drag
-# direction on screen (should be ~0°) plus a screenshot of the aim guide.
+# direction on screen (should be ~0Â°) plus a screenshot of the aim guide.
 #   Godot --path . --resolution 1848x822 --script res://tools/touch_aim_test.gd -- --touch --lan <out_dir>
 
 var _frame := 0

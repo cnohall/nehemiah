@@ -18,6 +18,7 @@ const TALLY_DELAY   := 0.6
 const TALLY_HOLD    := 5.6
 const TALLY_COUNT   := 0.55    # seconds each number takes to count up
 const TALLY_STEP    := 0.3     # between one number starting and the next
+const WALL_CAM_HOLD := 3.3     # Main.WALL_CAM_TIME + its lead-in, less a beat
 const BANNER_PAD    := 28.0    # space above and below the banner text
 const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
 const TALLY_H       := 118.0   # …plus the numbers row…
@@ -97,6 +98,11 @@ var _sun_row: HBoxContainer  # day plaque: the sun clock (GameState.sun)
 var _sun_dial: SunDial
 var _sun_time: Label
 var _sun_warned := false     # "the sun is low" said once a day
+# Diegetic HUD (Settings.diegetic_hud): no plaques — the sun tells the time, the scribe
+# keeps the record, the watchmen call the threats. The "Next:" line stays, as a caption
+# low on the screen.
+var _next_caption: Label
+var _style_world := false
 
 func _ready() -> void:
 	# Keeps running while a solo game is paused (menus, settings, fades)
@@ -109,12 +115,12 @@ func _ready() -> void:
 	else:
 		_build_controls_hint()
 	_build_next_line()
+	_build_next_caption()
 	_build_sun_row()
 	_build_joining_plaque()
 	# The practice has no day to count or waves to warn of; its own plaque says the step
-	if GameState.tutorial:
-		$Root/DayPlaque.hide()
-		$Root/ThreatPlaque.hide()
+	_style_world = not Settings.diegetic_hud   # forces the first _apply_style
+	_apply_style()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -372,6 +378,8 @@ func _refresh_sun() -> void:
 			if GameState.last_day_of_section() else tr("What isn't built by the stars waits for tomorrow"), 2.2)
 
 func _process(delta: float) -> void:
+	if _style_world != Settings.diegetic_hud:
+		_apply_style()
 	if _sun_row != null:
 		_refresh_sun()
 	_next_poll -= delta
@@ -379,11 +387,38 @@ func _process(delta: float) -> void:
 		return
 	_next_poll = NEXT_POLL
 	# The practice points the way itself (Tutorial); two voices would talk over each other
-	var text := "" if GameState.tutorial else _next_text()
-	_next_line.visible = not text.is_empty()
-	_next_line.text = text
+	var text := "" if GameState.free_play() else _next_text()
+	var line := _next_caption if _style_world else _next_line
+	(_next_line if _style_world else _next_caption).visible = false
+	line.visible = not text.is_empty()
+	line.text = text
 	if _next_box != null:
 		_next_box.visible = _next_line.visible
+
+# Plaques, or the world telling it (the setting can change mid-game from the menu)
+func _apply_style() -> void:
+	_style_world = Settings.diegetic_hud
+	var plaques := not _style_world and not GameState.free_play() and not end_screen.visible
+	$Root/DayPlaque.visible = plaques
+	threat.visible = plaques
+	_next_poll = 0.0
+
+# Low and centred, clear of the crew cards and the controls card: a slim parchment
+# plaque, like the rest of the HUD
+func _build_next_caption() -> void:
+	_next_caption = Label.new()
+	_next_caption.add_theme_font_override("font", UiStyle.SPECTRAL_ITALIC)
+	_next_caption.add_theme_font_size_override("font_size", 21)
+	_next_caption.add_theme_color_override("font_color", UiStyle.INK)
+	_next_caption.add_theme_stylebox_override("normal", UiStyle.plaque(Vector2(26, 6), 0.95))
+	_next_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_next_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_next_caption.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
+	_next_caption.visible = false
+	$Root.add_child(_next_caption)
+	_next_caption.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 36)
+	_next_caption.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_next_caption.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 func _next_text() -> String:
 	if GameState.phase != GameState.Phase.WORK:
@@ -510,7 +545,7 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 					sub += "\n" + tr("The last day of this stretch — it must stand before the stars appear")
 				else:
 					sub += "\n" + tr("%d of %d stand — %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
-			if not GameState.tutorial:
+			if not GameState.free_play():
 				_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
 			# The campaign's ending story plays first; Main calls show_end after it
@@ -582,6 +617,7 @@ func _show_end(won: bool) -> void:
 		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
 	if GameState.is_replay():
 		_replay_end(won, vb, stats)
+	_build_end_map(won)
 	_build_reel(vb)
 	_build_vote(won, vb)
 	end_screen.show()
@@ -589,6 +625,47 @@ func _show_end(won: bool) -> void:
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
 	var first: Button = vb.get_node("Buttons").get_child(0)
 	first.grab_focus()
+
+# ── End screen: the scribe's map ───────────────────────────
+
+var _end_map: CircuitMap
+
+# The run's map, worn by it (CircuitMap `aged`), fills the screen behind a parchment
+# column on the left that holds the words, the reel and the choices. A win closes the
+# ring (finale); otherwise the stretch reached pulses.
+func _build_end_map(won: bool) -> void:
+	if Mobile.enabled():
+		return   # phones: the reel and the words fill the width, no room for the map
+	if _end_map == null:
+		var scrim: ColorRect = $Root/EndScreen/Scrim
+		scrim.color.a = 0.0
+		_end_map = CircuitMap.new()
+		_end_map.aged = true
+		_end_map.paper = true
+		_end_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		end_screen.add_child(_end_map)
+		end_screen.move_child(_end_map, scrim.get_index() + 1)
+		_end_map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var column := TextureRect.new()
+		var tex := GradientTexture2D.new()
+		var g := Gradient.new()
+		g.set_color(0, Color(UiStyle.PARCHMENT, 0.97))
+		g.set_color(1, Color(UiStyle.PARCHMENT, 0.0))
+		g.add_point(0.72, Color(UiStyle.PARCHMENT, 0.9))   # after the ends: it takes index 1
+		tex.gradient = g
+		column.texture = tex
+		column.stretch_mode = TextureRect.STRETCH_SCALE
+		column.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		end_screen.add_child(column)
+		end_screen.move_child(column, _end_map.get_index() + 1)
+		column.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+		column.anchor_right = 0.56
+		var center: Control = $Root/EndScreen/Center
+		center.anchor_right = 0.48
+	_end_map.finale = won and not GameState.is_replay()
+	_end_map.section = GameState.replay_section if GameState.is_replay() else GameState.current_section_index
+	_end_map.play()
 
 # ── End screen: highlight reel + play again ────────────────
 
@@ -746,7 +823,9 @@ func _replay_end(won: bool, vb: Control, stats: Control) -> void:
 ## The day's numbers (DayDirector.day_tallied): what the crew did, then who did what
 func show_tally(stats: Dictionary) -> void:
 	_last_tally = stats
-	await get_tree().create_timer(TALLY_DELAY, true, false, true).timeout
+	# A stretch that stands gets its wall cam first (Main)
+	var wall_cam := stats.has("names") and not GameState.attract
+	await get_tree().create_timer(TALLY_DELAY + (WALL_CAM_HOLD if wall_cam else 0.0), true, false, true).timeout
 	if GameState.phase != GameState.Phase.DUSK:
 		return
 	if _tally == null:
@@ -1219,7 +1298,7 @@ func _refresh_controls() -> void:
 		_horn_row.visible = GameState.has_twist("horn")
 	if _pause_what != null:
 		_pause_what.text = "Pause · menu" if _solo() else "Menu"
-	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1
+	var early := GameState.phase == GameState.Phase.GATHER or GameState.current_day == 1 or GameState.festival
 	var want := (early and not GameState.is_over()) or pause_menu.visible
 	if want == _controls.visible:
 		return

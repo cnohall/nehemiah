@@ -29,7 +29,9 @@ const WELL_POS    := Vector3(1.6, 0.0, 23.75)
 
 const ROCK_COLOR   := Color(0.66, 0.63, 0.57)
 const BUSH_COLOR   := Color(0.40, 0.50, 0.22)
-const TUFT_COLOR   := Color(0.46, 0.62, 0.22)
+const TUFT_COLOR   := Color(0.58, 0.60, 0.32)   # dusty sage — late summer, half dry
+const STRAW_COLOR  := Color(0.80, 0.70, 0.42)
+const MEADOW_GREEN := Color(0.52, 0.58, 0.28)
 const OLIVE_LEAF   := Palette.LEAF
 const OLIVE_TRUNK  := Color(0.42, 0.30, 0.20)
 const STONE_COLOR  := Palette.LIMESTONE
@@ -47,13 +49,23 @@ const OPENING      := Color(0.18, 0.13, 0.09)
 const FOOTING      := Color(0.70, 0.66, 0.58)   # rough limestone course at the foot of a house
 const BEAM_COLOR   := Color(0.42, 0.28, 0.16)
 const AWNINGS      := [Palette.INDIGO, Palette.MADDER, Palette.INDIGO, Palette.SAFFRON, Palette.UNDYED]
+const LAMPLIGHT    := Color(1.0, 0.58, 0.2)   # a clay oil lamp behind the window, at dusk
 
 var _rng := RandomNumberGenerator.new()
+# House details added after the layout was fixed draw from here, so nothing shifts
+var _deco := RandomNumberGenerator.new()
 # Instances collected by kind, flushed into one MultiMesh each at the end
 var _batches := {}
+# Window glows, lit by DayLight at dusk (set_lamps); built in _flush, in a fixed shuffled
+# order so they come on one by one, the same on every peer
+var _lamp_spots: Array[Transform3D] = []
+var _lamps: MultiMesh
+var _halos: MultiMesh   # the soft glow round each lit window, same order
+static var _halo_mat: StandardMaterial3D
 
 func _ready() -> void:
 	_rng.seed = 42
+	_deco.seed = 4242
 	_build_pebbles()
 	_build_rubble()
 	_build_bushes()
@@ -75,9 +87,13 @@ func _ready() -> void:
 # ── Ground cover ──────────────────────────────────────────────
 
 func _build_pebbles() -> void:
-	for p in _free_points(380, false, false):
+	var pts := _free_points(380, false, false)
+	for i in pts.size():
 		var s := Vector3(_rng.randf_range(0.6, 1.8), _rng.randf_range(0.4, 1.0), _rng.randf_range(0.6, 1.8))
-		_add("pebble", Transform3D(_yaw().scaled(s), Vector3(p.x, 0.04, p.y)), _vary(ROCK_COLOR, 0.06))
+		var xf := Transform3D(_yaw().scaled(s), Vector3(pts[i].x, 0.04, pts[i].y))
+		var col := _vary(ROCK_COLOR, 0.06)
+		if i % 3 != 2:   # thinned: the draws stay, a third aren't placed
+			_add("pebble", xf, col)
 
 # Tumbled blocks either side of the wall line — the old wall "broken down" (Neh. 2:13)
 func _build_rubble() -> void:
@@ -91,8 +107,10 @@ func _build_rubble() -> void:
 
 # Tufts of dry grass: a few blades fanned out, tips lighter
 func _build_tufts() -> void:
+	# Lone tufts read as stray spikes: still drawn from the RNG (the layout mustn't
+	# shift) but not placed; grass now grows only in colonies and meadows
 	for p in _free_points(260, true, false):
-		_tuft(Vector3(p.x, 0.1, p.y))
+		_tuft(Vector3(p.x, 0.1, p.y), false)
 	# A scatter along the wall foot and round the yard, where feet don't reach
 	for i in 70:
 		var at := Vector3(_rng.randf_range(-22.0, 22.0), 0.1, _rng.randf_range(-6.0, -1.6) if _rng.randf() < 0.6 else _rng.randf_range(1.6, 3.0))
@@ -111,12 +129,13 @@ func _build_meadows() -> void:
 	while z < 14.0:
 		var x := -HALF_X
 		while x < HALF_X:
-			var p := Vector2(x + _rng.randf_range(-0.4, 0.4), z + _rng.randf_range(-0.4, 0.4))
+			# Jitter more than half the step, so the grid doesn't show
+			var p := Vector2(x + _rng.randf_range(-0.4, 0.4) * 1.6, z + _rng.randf_range(-0.4, 0.4) * 1.6)
 			x += 1.1
 			var m := meadow(p.x, p.y)
 			if m < 0.62 or WORK_RECT.grow(1.5).has_point(p) or _blocked(p) or _on_street(p, 1.0):
 				continue
-			_tuft(Vector3(p.x, 0.1, p.y))
+			_tuft(Vector3(p.x, 0.1, p.y), true, clampf(remap(m, 0.62, 1.1, 0.0, 1.0), 0.0, 1.0))
 			if m > 0.85 and _rng.randf() < 0.12:
 				_bush(Vector3(p.x, 0.0, p.y))
 		z += 1.1
@@ -141,15 +160,66 @@ func _build_tuft_pairs() -> void:
 		for j in _rng.randi_range(2, 3):
 			_tuft(Vector3(p.x + _rng.randf_range(-0.55, 0.55), 0.1, p.y + _rng.randf_range(-0.55, 0.55)))
 
-func _tuft(at: Vector3) -> void:
+# One tuft = one instance of a baked clump of curved blades (_tuft_mesh), in one of two
+# shapes. `lush` (0 … 1) makes it bigger and greener — the heart of a meadow.
+# RNG draws are fixed per tuft whatever the look, so nothing seeded later shifts.
+func _tuft(at: Vector3, place := true, lush := 0.0) -> void:
 	var base := _vary(TUFT_COLOR, 0.05)
 	var n := _rng.randi_range(7, 11)
+	var yaw := 0.0
+	var lean := 0.0
+	var h := 0.0
+	var tint := 0.0
 	for i in n:
 		var a := TAU * i / n + _rng.randf_range(-0.3, 0.3)
-		var lean := _rng.randf_range(0.15, 0.6)
-		var h := _rng.randf_range(0.28, 0.6)
-		var b := Basis(Vector3.UP, a) * Basis(Vector3.RIGHT, lean) * Basis.from_scale(Vector3(1, h, 1))
-		_add("blade", Transform3D(b, at + Basis(Vector3.UP, a) * Vector3(0, 0, 0.04) + Vector3(0, h * 0.4, 0)), base.lightened(_rng.randf_range(0.0, 0.12)))
+		if i == 0:
+			yaw = a
+		lean += _rng.randf_range(0.15, 0.6) / n
+		h += _rng.randf_range(0.28, 0.6) / n
+		tint = maxf(tint, _rng.randf_range(0.0, 0.12))
+	if not place:
+		return
+	# lean ~0.37, h ~0.44, tint ~0.1 on average: spread each back out to a useful range
+	var size := remap(h, 0.36, 0.52, 0.8, 1.2) * (1.0 + lush * 0.5)
+	var c := base.lerp(STRAW_COLOR, clampf(remap(tint, 0.08, 0.12, 0.0, 0.45), 0.0, 0.45))
+	c = c.lerp(MEADOW_GREEN, lush * 0.6)
+	var b := Basis(Vector3.UP, yaw).scaled(Vector3(size * (0.8 + lean), size, size * (0.8 + lean)))
+	_add("tuft" if n % 2 == 0 else "tuft_b", Transform3D(b, at - Vector3(0, 0.02, 0)), c)
+
+# A clump of curved, tapering blades fanned from a small root, ~0.3 m tall, ~0.45 m
+# across. UV.y = 0 at the root, 1 at the tip (grass.gdshader shades along it).
+static func _tuft_mesh(seed: int) -> ArrayMesh:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var blades := 17
+	for i in blades:
+		var a := TAU * i / blades + rng.randf_range(-0.25, 0.25)
+		var out := Vector3(cos(a), 0.0, sin(a))
+		var side := out.cross(Vector3.UP)
+		var root := out * rng.randf_range(0.0, 0.07)
+		# Inner blades stand up tall, outer ones splay low
+		var inner := i % 3 == 0
+		var tall := rng.randf_range(0.26, 0.36) if inner else rng.randf_range(0.14, 0.26)
+		var reach := rng.randf_range(0.03, 0.08) if inner else rng.randf_range(0.12, 0.22)
+		var w := rng.randf_range(0.038, 0.055)
+		var pts: Array[Vector3] = []
+		for k in 4:
+			var t := k / 3.0
+			pts.append(root + out * reach * t * t + Vector3.UP * tall * (t * (1.6 - 0.6 * t)))
+		for k in 3:
+			var t0 := k / 3.0
+			var t1 := (k + 1) / 3.0
+			var w0 := w * (1.0 - t0)
+			var w1 := w * (1.0 - t1)
+			var q := [pts[k] - side * w0, pts[k] + side * w0, pts[k + 1] + side * w1, pts[k + 1] - side * w1]
+			var v := [t0, t0, t1, t1]
+			for idx in [0, 1, 2, 0, 2, 3]:
+				st.set_uv(Vector2(0.0, v[idx]))
+				st.set_normal(Vector3.UP)
+				st.add_vertex(q[idx])
+	return st.commit()
 
 # Grit on the work yard: small stones kicked about
 func _build_grit() -> void:
@@ -166,16 +236,22 @@ func _build_stone_clusters() -> void:
 	var spots: Array[Vector2] = _free_points(140, true, false)
 	for i in 110:
 		spots.append(Vector2(_rng.randf_range(-24.0, 24.0), _rng.randf_range(-9.0, 12.0)))
-	for p in spots:
+	for i in spots.size():
+		var p := spots[i]
 		if absf(p.y) < 1.3 or _blocked(p):
 			continue
-		var base := _vary(Palette.WALL_STONE, 0.06).darkened(_rng.randf_range(0.0, 0.12))
+		# Warm limestone like the ground it lies on (the cool wall grey spotted the whole
+		# map), and only two heaps in three: the draws are all still taken
+		var shown := i % 3 != 2
+		var base := _vary(Palette.LIMESTONE, 0.06).darkened(_rng.randf_range(0.0, 0.12))
 		for j in _rng.randi_range(2, 5):
 			var sz := _rng.randf_range(0.14, 0.32)
 			var s := Vector3(sz * _rng.randf_range(0.9, 1.5), sz * _rng.randf_range(0.6, 1.0), sz * _rng.randf_range(0.9, 1.4))
 			var off := Vector3(_rng.randf_range(-0.35, 0.35), s.y * 0.45, _rng.randf_range(-0.35, 0.35))
 			var tilt := Basis.from_euler(Vector3(_rng.randf_range(-0.25, 0.25), _rng.randf() * TAU, _rng.randf_range(-0.25, 0.25)))
-			_add("chip", Transform3D(tilt.scaled(s), Vector3(p.x, 0.0, p.y) + off), base.lightened(_rng.randf_range(0.0, 0.08)))
+			var col := base.lightened(_rng.randf_range(0.0, 0.08))
+			if shown:
+				_add("chip", Transform3D(tilt.scaled(s), Vector3(p.x, 0.0, p.y) + off), col)
 
 func _build_bushes() -> void:
 	# Each bush = 3 overlapping blobs so the silhouette isn't a single ball
@@ -234,18 +310,255 @@ func _build_outcrops() -> void:
 			_add("boulder", Transform3D(_yaw().scaled(s), at), _vary(ROCK_COLOR, 0.05).lightened(0.05))
 		_bush(c + Vector3(_rng.randf_range(-3, 3), 0, 2.5))
 
-# Sanballat's men camped beyond the ridge (Neh. 4:8, 4:11) — dark tents and a fire ring
+# The enemy's camps, just beyond where their men come on (Neh. 4:8, 4:11 "they will not
+# know or see, until we come in among them"): Sanballat's soldiers of Samaria (4:2) in
+# ridge tents under his standard, Geshem's Arabs in black goat-hair tents with their
+# camels, and a picket fire out on the east flank. Visual only, behind the spawn line.
+# Built with its own RNG: the draws the old camp made are still taken, so the city
+# seeded after it keeps its layout.
 func _build_camp() -> void:
-	var centre := Vector3(-12.0, 0.0, -41.0)
-	for i in 6:
-		var a := i * TAU / 6.0 + _rng.randf_range(-0.2, 0.2)
-		var at := centre + Vector3(cos(a) * 6.5, 0.0, sin(a) * 3.5)
-		var s := Vector3(_rng.randf_range(2.6, 3.6), _rng.randf_range(1.3, 1.7), _rng.randf_range(2.2, 3.0))
-		_add("tent", Transform3D(Basis(Vector3.UP, a + PI / 2.0) * Basis.from_scale(s), at + Vector3(0, s.y * 0.5, 0)), _vary(TENT_COLOR, 0.03))
+	for i in 48:
+		_rng.randf()
+	if GameState.festival:
+		return   # the wall is dedicated (Neh. 12): the enemy has gone home
+	var layout_rng := _rng
+	_rng = RandomNumberGenerator.new()
+	_rng.seed = 455
+	_soldier_camp(Vector3(-12.0, 0.0, -22.5))
+	_arab_camp(Vector3(10.5, 0.0, -24.5))
+	_picket(Vector3(23.0, 0.0, -15.5))
+	_rng = layout_rng
+
+const CAMP_CLEAR := [Rect2(-20.0, -28.0, 16.0, 11.0), Rect2(3.0, -30.0, 15.5, 11.0), Rect2(20.0, -18.5, 6.0, 5.5)]
+const GOAT_HAIR  := Color(0.25, 0.20, 0.17)
+const BRONZE     := Color(0.72, 0.52, 0.26)
+const OXBLOOD    := Color(0.46, 0.12, 0.09)
+const CAMEL      := Color(0.60, 0.44, 0.29)
+
+# Samaria's soldiers: ridge tents in two rows round a fire, a spear rack, the standard
+func _soldier_camp(c: Vector3) -> void:
+	for i in 3:
+		_ridge_tent(c + Vector3(-5.0 + i * 3.4, 0, -2.6 + _rng.randf_range(-0.3, 0.3)), _rng.randf_range(-0.12, 0.12),
+			Palette.UNDYED.darkened(0.12) if i != 1 else Palette.MADDER.darkened(0.25))
+	for i in 2:
+		_ridge_tent(c + Vector3(3.6 + i * 3.0, 0, 1.2 + i * 0.6), PI * 0.5 + _rng.randf_range(-0.1, 0.1), Palette.UNDYED.darkened(0.18))
+	_campfire(c + Vector3(-0.8, 0, 1.0))
+	_spear_rack(c + Vector3(-5.2, 0, 1.8), 0.0)
+	_standard(c + Vector3(1.4, 0, -1.2), OXBLOOD)
+	_firewood(c + Vector3(-3.2, 0, 2.6))
+	for p: Vector3 in [Vector3(1.8, 0, 2.4), Vector3(2.4, 0, 2.0)]:
+		_sack(c + p)
+	_jar(c + Vector3(2.2, 0, 2.9), 1.1)
+
+# Geshem's Arabs: two long black tents of goat hair, camels couched beside them
+func _arab_camp(c: Vector3) -> void:
+	_hair_tent(c + Vector3(-2.6, 0, -1.8), 0.08)
+	_hair_tent(c + Vector3(3.4, 0, -2.6), -0.1)
+	_campfire(c + Vector3(0.6, 0, 1.4))
+	_camel(c + Vector3(-3.8, 0, 2.2), 0.4)
+	_camel(c + Vector3(-1.6, 0, 3.4), -0.3)
+	_camel(c + Vector3(5.2, 0, 1.2), 2.6)
+	for i in 3:
+		_sack(c + Vector3(2.4 + i * 0.55, 0, 0.6 + (i % 2) * 0.3))
+	_jar(c + Vector3(-0.8, 0, 2.8), 1.0)
+	_jar(c + Vector3(-0.4, 0, 3.1), 0.8)
+	_spear_rack(c + Vector3(3.2, 0, 2.8), -0.2)
+
+# A lone watch fire on the flank, spears stuck in the ground
+func _picket(c: Vector3) -> void:
+	_campfire(c)
+	for i in 3:
+		var at := c + Vector3(1.4 + i * 0.35, 0, -0.8 + i * 0.25)
+		_spear(at, Basis.from_euler(Vector3(_rng.randf_range(-0.12, 0.12), 0, _rng.randf_range(-0.12, 0.12))))
+	_sack(c + Vector3(-1.2, 0, -0.6))
+
+# Soldier's tent: a ridge of cloth over a pole at each end, dark doorway, pegged ropes
+func _ridge_tent(c: Vector3, yaw: float, cloth: Color) -> void:
+	var b := Basis(Vector3.UP, yaw)
+	var l := _rng.randf_range(2.3, 2.7)
+	var h := 1.45
+	var half := 1.05
+	var slope := sqrt(h * h + half * half)
+	var tilt := atan2(h, half)
+	cloth = _vary(cloth, 0.03)
+	for side: float in [-1.0, 1.0]:
+		var panel := b * Basis(Vector3.RIGHT, side * tilt) * Basis.from_scale(Vector3(l, 0.06, slope))
+		_add("block", Transform3D(panel, c + b * Vector3(0, h * 0.5, side * half * 0.5)), cloth.darkened(0.0 if side < 0 else 0.1))
+		# Pegged guy ropes off the eaves
+		for sx: float in [-1.0, 1.0]:
+			_rope(c + b * Vector3(sx * l * 0.45, 0.2, side * half), c + b * Vector3(sx * (l * 0.5 + 0.3), 0.0, side * (half + 0.55)))
+	# Gable ends: a pole standing out of the ridge, the front flap open on a dark doorway
+	for sx: float in [-1.0, 1.0]:
+		_add("timber", Transform3D(b * Basis.from_scale(Vector3(0.08, h + 0.35, 0.08)), c + b * Vector3(sx * (l * 0.5 + 0.02), (h + 0.35) * 0.5, 0)), _vary(BEAM_COLOR, 0.04))
+	var door := b * Basis(Vector3.UP, PI * 0.5)
+	_add("tent", Transform3D(door * Basis.from_scale(Vector3(1.4, 1.05, 0.05)), c + b * Vector3(l * 0.5 - 0.01, 0.53, 0)), OPENING)
+	_add("tent", Transform3D(door * Basis.from_scale(Vector3(2.1, h, 0.04)), c + b * Vector3(-l * 0.5 + 0.02, h * 0.5, 0)), cloth.darkened(0.14))
+
+# Bedouin "house of hair": low black cloth on rows of poles, open to the front, a
+# pale woven band along the roof, the back and sides let down
+func _hair_tent(c: Vector3, yaw: float) -> void:
+	var b := Basis(Vector3.UP, yaw)
+	var l := 4.6
+	var d := 3.0
+	var ridge := 1.75
+	var eave := 1.05
+	var slope := sqrt(pow(ridge - eave, 2) + pow(d * 0.5, 2))
+	var tilt := atan2(ridge - eave, d * 0.5)
+	for side: float in [-1.0, 1.0]:
+		var rot := b * Basis(Vector3.RIGHT, side * tilt)
+		var panel := rot * Basis.from_scale(Vector3(l, 0.07, slope))
+		var mid := c + b * Vector3(0, (ridge + eave) * 0.5, side * d * 0.25)
+		_add("block", Transform3D(panel, mid), _vary(GOAT_HAIR, 0.02).lightened(0.06 if side > 0 else 0.0))
+		# The woven band: two pale stripes running the length of each slope
+		for k: float in [-0.22, 0.25]:
+			var at := mid + rot * Vector3(0, 0.012, k * slope)
+			_add("block", Transform3D(panel * Basis.from_scale(Vector3(1.0, 1.1, 0.07)), at), Palette.UNDYED.darkened(0.1))
+	# Back and sides let down to the ground
+	_add("block", Transform3D(b * Basis.from_scale(Vector3(l, eave, 0.05)), c + b * Vector3(0, eave * 0.5, -d * 0.5)), GOAT_HAIR.darkened(0.1))
+	for sx: float in [-1.0, 1.0]:
+		_add("block", Transform3D(b * Basis.from_scale(Vector3(0.05, eave, d)), c + b * Vector3(sx * l * 0.5, eave * 0.5, 0)), GOAT_HAIR.darkened(0.05))
+	# Poles along the front, the dark inside, a rug and cushions just in the shade
+	for i in 4:
+		var x := -l * 0.5 + 0.3 + i * (l - 0.6) / 3.0
+		_add("timber", Transform3D(b * Basis.from_scale(Vector3(0.09, eave, 0.09)), c + b * Vector3(x, eave * 0.5, d * 0.5)), _vary(BEAM_COLOR, 0.04))
+	_add("block", Transform3D(b * Basis.from_scale(Vector3(l - 0.2, 0.04, d - 0.3)), c + b * Vector3(0, 0.1, 0)), Color(0.14, 0.11, 0.09))
+	_add("block", Transform3D(b * Basis.from_scale(Vector3(2.2, 0.05, 1.3)), c + b * Vector3(-0.4, 0.13, 0.6)), Palette.MADDER)
+	_add("block", Transform3D(b * Basis.from_scale(Vector3(2.2, 0.052, 0.12)), c + b * Vector3(-0.4, 0.14, 0.95)), Palette.SAFFRON)
+	for i in 2:
+		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.7, 0.3, 0.4)), c + b * Vector3(-1.1 + i * 0.9, 0.24, -0.1)), Palette.DYES[(i + 2) % Palette.DYES.size()])
+	for sx: float in [-1.0, 1.0]:
+		_rope(c + b * Vector3(sx * l * 0.5, eave, d * 0.5), c + b * Vector3(sx * (l * 0.5 + 0.9), 0.0, d * 0.5 + 0.9))
+		_rope(c + b * Vector3(sx * l * 0.5, eave, -d * 0.5), c + b * Vector3(sx * (l * 0.5 + 0.9), 0.0, -d * 0.5 - 0.9))
+
+# A camel couched on folded legs, a saddle cloth over its hump, neck up and head level
+func _camel(c: Vector3, yaw: float) -> void:
+	var b := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * 1.25)
+	var col := _vary(CAMEL, 0.04)
+	_add("blob", Transform3D(b * Basis.from_scale(Vector3(1.9, 0.62, 0.72)), c + b * Vector3(0, 0.36, 0)), col)
+	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.85, 0.8, 0.56)), c + b * Vector3(-0.1, 0.72, 0)), col.lightened(0.04))
+	# Folded legs: just the knees showing under the belly
+	for sz: float in [-1.0, 1.0]:
+		for sx: float in [-0.55, 0.55]:
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.42, 0.14, 0.16)), c + b * Vector3(sx, 0.08, sz * 0.3)), col.darkened(0.12))
+	# Saddle cloth over the top of the hump, a pale band across it
+	var cloth: Color = [Palette.MADDER, Palette.INDIGO, Palette.MUREX][_rng.randi() % 3]
+	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.62, 0.3, 0.6)), c + b * Vector3(-0.1, 1.0, 0)), cloth)
+	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.14, 0.31, 0.61)), c + b * Vector3(-0.1, 1.0, 0)), Palette.UNDYED)
+	# Long neck out of the chest and up, a small head held level at the top
+	_add("blob", Transform3D(b * Basis(Vector3.BACK, -0.45) * Basis.from_scale(Vector3(0.22, 1.05, 0.2)), c + b * Vector3(1.05, 0.72, 0)), col)
+	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.48, 0.2, 0.2)), c + b * Vector3(1.4, 1.18, 0)), col.lightened(0.03))
+	for sz: float in [-0.07, 0.07]:
+		_add("block", Transform3D(b * Basis.from_scale(Vector3(0.05, 0.1, 0.04)), c + b * Vector3(1.24, 1.31, sz)), col.darkened(0.15))
+	_add("blob", Transform3D(b * Basis(Vector3.BACK, 0.9) * Basis.from_scale(Vector3(0.08, 0.36, 0.08)), c + b * Vector3(-1.0, 0.42, 0)), col.darkened(0.15))
+
+# Fire ring: blackened stones, crossed logs, embers; the flame and its light come up
+# at night with the torches (DayLight, group "torches"), smoke all day
+func _campfire(c: Vector3) -> void:
 	for i in 9:
-		var a := i * TAU / 9.0
-		_add("block", Transform3D(_yaw().scaled(Vector3(0.35, 0.25, 0.3)), centre + Vector3(cos(a) * 0.9, 0.1, sin(a) * 0.9)), _vary(ROCK_COLOR, 0.05).darkened(0.2))
-	_add("patch", Transform3D(Basis.from_scale(Vector3(0.7, 1.0, 0.7)), centre + Vector3(0, 0.11, 0)), Color(0.12, 0.09, 0.07))
+		var a := i * TAU / 9.0 + _rng.randf_range(-0.1, 0.1)
+		_add("block", Transform3D(Basis(Vector3.UP, -a) * Basis.from_scale(Vector3(0.34, 0.24, 0.3)), c + Vector3(cos(a) * 0.72, 0.12, sin(a) * 0.72)), _vary(ROCK_COLOR, 0.05).darkened(0.3))
+	_add("patch", Transform3D(Basis.from_scale(Vector3(1.3, 1.0, 1.3)), c + Vector3(0, 0.11, 0)), Color(0.14, 0.11, 0.09))
+	for i in 4:
+		var a := i * PI / 4.0 + 0.3
+		var log_b := Basis(Vector3.UP, a) * Basis(Vector3.BACK, 0.22)
+		_add("timber", Transform3D(log_b * Basis.from_scale(Vector3(0.9, 0.12, 0.12)), c + Vector3(0, 0.2, 0)), Color(0.22, 0.15, 0.10))
+	_add("ember", Transform3D(Basis.from_scale(Vector3(0.55, 0.12, 0.55)), c + Vector3(0, 0.16, 0)), Color(1.0, 0.45, 0.14))
+	_smoke(c + Vector3(0, 0.4, 0))
+	var torch := Node3D.new()
+	torch.position = c + Vector3(0, 0.45, 0)
+	torch.add_to_group("torches")
+	add_child(torch)
+	var flame := MeshInstance3D.new()
+	flame.name = "Flame"
+	flame.mesh = _sphere(0.3, 0.8, 8, 4)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(1.0, 0.62, 0.22)
+	flame.material_override = mat
+	flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	flame.visible = false
+	torch.add_child(flame)
+	var light := OmniLight3D.new()
+	light.name = "Light"
+	light.light_color = Color(1.0, 0.66, 0.38)
+	light.omni_range = 9.0
+	light.omni_attenuation = 1.3
+	light.light_energy = 0.0
+	light.position.y = 0.5
+	torch.add_child(light)
+
+# Crossbar on two forked posts, spears leaning on it, round shields propped below
+func _spear_rack(c: Vector3, yaw: float) -> void:
+	var b := Basis(Vector3.UP, yaw)
+	for sx: float in [-0.9, 0.9]:
+		_add("timber", Transform3D(b * Basis.from_scale(Vector3(0.1, 1.5, 0.1)), c + b * Vector3(sx, 0.75, 0)), _vary(BEAM_COLOR, 0.04))
+	_add("timber", Transform3D(b * Basis.from_scale(Vector3(2.0, 0.09, 0.09)), c + b * Vector3(0, 1.45, 0)), _vary(BEAM_COLOR, 0.04).lightened(0.05))
+	for i in 5:
+		_spear(c + b * Vector3(-0.7 + i * 0.35, 0, -0.35), b * Basis(Vector3.RIGHT, 0.22))
+	for sx: float in [-0.45, 0.4]:
+		var shield := b * Basis(Vector3.RIGHT, PI * 0.5 - 0.3)
+		_add("drum", Transform3D(shield * Basis.from_scale(Vector3(0.75, 0.08, 0.75)), c + b * Vector3(sx, 0.38, 0.32)), OXBLOOD.lightened(0.08))
+		_add("drum", Transform3D(shield * Basis.from_scale(Vector3(0.2, 0.12, 0.2)), c + b * Vector3(sx, 0.39, 0.35)), BRONZE)
+
+# A spear standing (on `basis`, its lean) with its foot at `at`: shaft and bronze head
+func _spear(at: Vector3, basis: Basis) -> void:
+	_add("timber", Transform3D(basis * Basis.from_scale(Vector3(0.05, 2.3, 0.05)), at + basis * Vector3(0, 1.15, 0)), Color(0.50, 0.36, 0.22))
+	_add("block", Transform3D(basis * Basis.from_scale(Vector3(0.1, 0.26, 0.05)), at + basis * Vector3(0, 2.38, 0)), BRONZE)
+
+# The enemy's standard: tall pole, crossbar, oxblood cloth with a bronze disc
+func _standard(at: Vector3, cloth: Color) -> void:
+	_add("timber", Transform3D(Basis.from_scale(Vector3(0.14, 4.2, 0.14)), at + Vector3(0, 2.1, 0)), _vary(BEAM_COLOR, 0.03).darkened(0.1))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(1.3, 0.1, 0.1)), at + Vector3(0.1, 4.0, 0.06)), _vary(BEAM_COLOR, 0.03))
+	_add("block", Transform3D(Basis.from_scale(Vector3(1.15, 1.6, 0.05)), at + Vector3(0.1, 3.15, 0.1)), cloth)
+	for dx: float in [-0.29, 0.0, 0.29]:
+		_add("block", Transform3D(Basis.from_scale(Vector3(0.22, 0.3, 0.05)), at + Vector3(0.1 + dx, 2.25, 0.1)), cloth.darkened(0.1))
+	_add("drum", Transform3D(Basis(Vector3.RIGHT, PI * 0.5) * Basis.from_scale(Vector3(0.55, 0.04, 0.55)), at + Vector3(0.1, 3.25, 0.14)), BRONZE)
+	_add("block", Transform3D(Basis.from_scale(Vector3(0.14, 0.3, 0.14)), at + Vector3(0, 4.35, 0)), BRONZE)
+
+func _firewood(c: Vector3) -> void:
+	for i in 7:
+		var log_b := Basis(Vector3.BACK, PI * 0.5)
+		_add("trunk", Transform3D(log_b * Basis.from_scale(Vector3(0.75, 1.3, 0.75)), c + Vector3(0, 0.1 + (i / 3) * 0.19, -0.3 + (i % 3) * 0.22 + (i / 3) * 0.1)), _vary(OLIVE_TRUNK, 0.05))
+
+# Grain sack: a lumpy bag, the neck tied off
+func _sack(at: Vector3) -> void:
+	var col := _vary(Palette.UNDYED, 0.04).darkened(0.08)
+	_add("blob", Transform3D(_yaw().scaled(Vector3(0.5, 0.55, 0.45)), at + Vector3(0, 0.3, 0)), col)
+	_add("drum", Transform3D(Basis.from_scale(Vector3(0.16, 0.12, 0.16)), at + Vector3(0, 0.6, 0)), col.darkened(0.12))
+
+# A taut rope from `a` down to a peg at `b`
+func _rope(a: Vector3, b: Vector3) -> void:
+	var dir := (b - a).normalized()
+	var rot := Basis(Quaternion(Vector3.RIGHT, dir))
+	_add("timber", Transform3D(rot.scaled_local(Vector3(a.distance_to(b), 0.025, 0.025)), (a + b) * 0.5), Color(0.72, 0.62, 0.46))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(0.06, 0.2, 0.06)), b + Vector3(0, 0.08, 0)), BEAM_COLOR)
+
+## Slow smoke going up (a cook fire, an oven, a smouldering heap)
+func _smoke(at: Vector3, dark := false) -> void:
+	var p := CPUParticles3D.new()
+	p.amount = 10
+	p.lifetime = 4.0
+	p.direction = Vector3.UP
+	p.spread = 12.0
+	p.gravity = Vector3(0.25, 0.35, 0.1)
+	p.initial_velocity_min = 0.3
+	p.initial_velocity_max = 0.6
+	p.scale_amount_min = 0.8
+	p.scale_amount_max = 1.4
+	p.scale_amount_curve = DustFx.grow_curve()
+	var c := Color(0.35, 0.33, 0.32) if dark else Color(0.85, 0.82, 0.78)
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(c, 0.0))
+	ramp.add_point(0.2, Color(c, 0.35))
+	ramp.set_color(1, Color(c, 0.0))
+	p.color_ramp = ramp
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.9, 0.9)
+	quad.material = DustFx.material()
+	p.mesh = quad
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.position = at
+	add_child(p)
 
 # ── City ──────────────────────────────────────────────────────
 
@@ -376,18 +689,24 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 	var h := _rng.randf_range(2.2, 3.2)
 	var tint := _vary(HOUSE_COLORS[_rng.randi() % HOUSE_COLORS.size()], 0.02)
 	_add("block", Transform3D(Basis.from_scale(Vector3(w, h, d)), c + Vector3(0, h * 0.5, 0)), tint)
-	# Parapet lip on the flat roof (Deut. 22:8)
-	_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.15, 0.25, d + 0.15)), c + Vector3(0, h + 0.1, 0)), tint.darkened(0.06))
+	_roof(c, w, d, h, tint)
 	_dress_walls(c, w, h, d)
+	_plaster(c, w, h, d, tint)
 	var top := h
+	var upper := false
+	var ux := 0.0
+	var uw := 0.0
 	# Upper room on part of the roof
 	if _rng.randf() < 0.3:
-		var uw := w * _rng.randf_range(0.4, 0.55)
+		upper = true
+		uw = w * _rng.randf_range(0.4, 0.55)
 		var ud := d * 0.6
 		var uh := _rng.randf_range(1.6, 2.0)
-		var ux := (w - uw) * 0.5 * (1.0 if _rng.randf() < 0.5 else -1.0)
+		ux = (w - uw) * 0.5 * (1.0 if _rng.randf() < 0.5 else -1.0)
 		_add("block", Transform3D(Basis.from_scale(Vector3(uw, uh, ud)), c + Vector3(ux, h + uh * 0.5, 0)), tint.lightened(0.03))
+		_roof(c + Vector3(ux, h, 0), uw, ud, uh, tint.lightened(0.03))
 		_add("opening", Transform3D(Basis.from_scale(Vector3(0.06, 0.4, 0.4)), c + Vector3(ux + uw * 0.5 + 0.02, h + uh * 0.6, 0)), OPENING)
+		_lamp_spots.append(Transform3D(Basis.from_scale(Vector3(0.02, 0.32, 0.32)), c + Vector3(ux + uw * 0.5 + 0.055, h + uh * 0.6, 0)))
 		top = h + uh
 	# Door on the street face; north faces are the ones the camera sees
 	var face := -1.0 if faces_north else 1.0
@@ -395,31 +714,137 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 	_door(c + Vector3(door_x, 0, face * d * 0.5), face)
 	_window(c + Vector3(w * 0.5, h * 0.62, _rng.randf_range(-d * 0.2, d * 0.2)))
 	# Rug or cloth laid out on the roof to dry
+	var rug_at := Vector3.INF
+	var rug_half := Vector2.ZERO
 	if _rng.randf() < 0.45:
 		var rw := minf(w * 0.5, _rng.randf_range(1.2, 2.0))
 		var rd := minf(d * 0.5, _rng.randf_range(0.9, 1.5))
-		var rug := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), h + 0.24, _rng.randf_range(-d * 0.15, d * 0.15))
-		_add("block", Transform3D(_yaw_small() * Basis.from_scale(Vector3(rw, 0.04, rd)), rug),
-			CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])
+		rug_at = c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), h + 0.1, _rng.randf_range(-d * 0.15, d * 0.15))
+		rug_half = Vector2(rw, rd) * 0.5
+		# Not tucked under the upper room: over to the open half of the roof
+		if upper and absf(rug_at.x - (c.x + ux)) < uw * 0.5 + rug_half.x:
+			rug_at.x = c.x - signf(ux) * uw * 0.5   # the middle of the open part
+		_rug(rug_at, rw, rd, _yaw_small(), CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])
 	# Cloth awning over the door, on two poles
 	if _rng.randf() < 0.55:
 		_canopy(c + Vector3(door_x, 0, face * (d * 0.5 + 0.65)), 1.8, 1.2, face, AWNINGS[_rng.randi() % AWNINGS.size()])
-	# Jars and a basket up on the roof
+	# Jars up on the roof
 	if _rng.randf() < 0.45:
 		for i in _rng.randi_range(1, 3):
-			var jar := c + Vector3(_rng.randf_range(-w * 0.35, w * 0.35), h + 0.4, _rng.randf_range(-d * 0.3, d * 0.3))
-			_add("jar", Transform3D(Basis.from_scale(Vector3.ONE * _rng.randf_range(0.8, 1.1)), jar), _vary(CLAY_COLOR, 0.05))
+			var jar := c + Vector3(_rng.randf_range(-w * 0.35, w * 0.35), h + 0.08, _rng.randf_range(-d * 0.3, d * 0.3))
+			_jar(jar, _rng.randf_range(0.8, 1.1) * 0.7)
 	# Water jars by the door
 	if _rng.randf() < 0.4:
 		for i in _rng.randi_range(1, 3):
-			var jar := c + Vector3(door_x + 0.7 + i * 0.4, 0.3, face * (d * 0.5 + 0.35))
-			_add("jar", Transform3D(Basis.from_scale(Vector3.ONE * _rng.randf_range(0.8, 1.1)), jar), _vary(CLAY_COLOR, 0.05))
+			var jar := c + Vector3(door_x + 0.7 + i * 0.4, 0.1, face * (d * 0.5 + 0.35))
+			_jar(jar, _rng.randf_range(0.8, 1.1) * 0.75)
+	# Details from their own RNG (the layout's draws stay as they were)
+	if faces_north and not upper and w > 3.6 and _deco.randf() < 0.6:
+		# Up the back wall, the +z face the camera sees (the door is round the front)
+		_stair(body, c + Vector3(0, 0, d * 0.5), w, h, 1.0 if _deco.randf() < 0.5 else -1.0)
+	_roof_life(c, w, d, h, rug_at, rug_half, upper, ux, uw)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(w, top, d)
 	shape.shape = box
 	shape.position = c + Vector3(0, top * 0.5, 0)
 	body.add_child(shape)
+
+# Flat roof: packed mud over the beams, a shade warmer than the lime-washed walls, inside
+# a raised parapet (Deut. 22:8)
+func _roof(c: Vector3, w: float, d: float, h: float, tint: Color) -> void:
+	var mud := tint.lerp(Color(0.72, 0.60, 0.45), 0.45)
+	_add("block", Transform3D(Basis.from_scale(Vector3(w - 0.1, 0.1, d - 0.1)), c + Vector3(0, h + 0.03, 0)), mud)
+	var lip := tint.darkened(0.04)
+	const T := 0.2
+	for sz: float in [-1.0, 1.0]:
+		_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.14, 0.34, T)), c + Vector3(0, h + 0.1, sz * (d * 0.5 + 0.07 - T * 0.5))), lip)
+	for sx: float in [-1.0, 1.0]:
+		_add("block", Transform3D(Basis.from_scale(Vector3(T, 0.34, d - 0.26)), c + Vector3(sx * (w * 0.5 + 0.07 - T * 0.5), h + 0.1, 0)), lip)
+
+# Rain splashes mud up the foot of the lime-washed walls the camera sees
+func _plaster(c: Vector3, w: float, h: float, d: float, tint: Color) -> void:
+	var splash := tint.lerp(Color(0.62, 0.50, 0.36), 0.35)
+	_add("wash", Transform3D(Basis.from_scale(Vector3(w + 0.02, 0.26, 0.02)), c + Vector3(0, 0.55, d * 0.5 + 0.01)), splash)
+	_add("wash", Transform3D(Basis.from_scale(Vector3(0.02, 0.26, d + 0.02)), c + Vector3(w * 0.5 + 0.01, 0.55, 0)), splash)
+
+# Stone steps built against the +z face, from the ground at one end up to the roof at
+# the `sx` corner
+func _stair(body: StaticBody3D, face_mid: Vector3, w: float, h: float, sx: float) -> void:
+	var run := minf(w * 0.55, h * 1.05)
+	var n := ceili(h / 0.3)
+	var step := run / n
+	var top_x := sx * (w * 0.5 - 0.1)   # outer edge of the top step, at the corner
+	var col := FOOTING.darkened(_deco.randf_range(0.0, 0.05))
+	for i in n:
+		var sh := h * float(i + 1) / n
+		var x := top_x - sx * (run - (i + 0.5) * step)
+		_add("block", Transform3D(Basis.from_scale(Vector3(step + 0.02, sh, 0.72)), face_mid + Vector3(x, sh * 0.5, 0.36)), col.darkened(0.04 * (i % 2)))
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(run, h * 0.6, 0.72)
+	shape.shape = box
+	shape.position = face_mid + Vector3(top_x - sx * run * 0.5, h * 0.3, 0.36)
+	body.add_child(shape)
+
+# What people keep on a roof: a stone roller for the mud, a mat of figs drying, a
+# shelter of palm fronds
+func _roof_life(c: Vector3, w: float, d: float, h: float, rug_at: Vector3, rug_half: Vector2, upper: bool, ux: float, uw: float) -> void:
+	var spots: Array[Vector3] = []
+	for i in 6:
+		var p := c + Vector3(_deco.randf_range(-w * 0.32, w * 0.32), h + 0.08, _deco.randf_range(-d * 0.26, d * 0.26))
+		if rug_at != Vector3.INF and absf(p.x - rug_at.x) < rug_half.x + 0.8 and absf(p.z - rug_at.z) < rug_half.y + 0.7:
+			continue
+		if upper and absf(p.x - (c.x + ux)) < uw * 0.5 + 0.6:
+			continue
+		var clear := true
+		for q: Vector3 in spots:
+			if p.distance_to(q) < 1.3:
+				clear = false
+		if clear:
+			spots.append(p)
+	var k := 0
+	if spots.size() > k and _deco.randf() < 0.45:
+		# Stone roller, left where the roof was last rolled
+		var p := spots[k]
+		k += 1
+		var roll := Basis(Vector3.UP, _deco.randf() * TAU) * Basis(Vector3.RIGHT, PI * 0.5) * Basis.from_scale(Vector3(0.36, 0.55, 0.36))
+		_add("drum", Transform3D(roll, p + Vector3(0, 0.18, 0)), ROCK_COLOR.darkened(0.18 + _deco.randf_range(0.0, 0.08)))
+	if spots.size() > k and _deco.randf() < 0.5:
+		# A reed mat with fruit laid out on it to dry
+		var p := spots[k]
+		k += 1
+		var yaw := Basis(Vector3.UP, _deco.randf_range(-0.15, 0.15))
+		_add("slab", Transform3D(yaw * Basis.from_scale(Vector3(1.1, 0.03, 0.8)), p), Color(0.70, 0.58, 0.36))
+		var fruit: Color = [Color(0.40, 0.24, 0.26), Color(0.78, 0.60, 0.30), Color(0.52, 0.40, 0.20)][_deco.randi() % 3]
+		for i in 10:
+			var off := yaw * Vector3(_deco.randf_range(-0.42, 0.42), 0.05, _deco.randf_range(-0.28, 0.28))
+			_add("pebble", Transform3D(Basis.from_scale(Vector3.ONE * 0.8), p + off), fruit.lightened(_deco.randf_range(0.0, 0.08)))
+	if spots.size() > k and w > 4.0 and _deco.randf() < 0.3:
+		# A shelter of poles roofed with dried palm fronds, for the heat of the day
+		var p := spots[k]
+		k += 1
+		for dx: float in [-0.6, 0.6]:
+			for dz: float in [-0.45, 0.45]:
+				_add("timber", Transform3D(Basis.from_scale(Vector3(0.08, 1.7, 0.08)), p + Vector3(dx, 0.85, dz)), BEAM_COLOR)
+		for dz: float in [-0.45, 0.45]:
+			_add("timber", Transform3D(Basis.from_scale(Vector3(1.4, 0.08, 0.08)), p + Vector3(0, 1.68, dz)), BEAM_COLOR.darkened(0.08))
+		for i in 7:
+			var frond := Basis(Vector3.UP, _deco.randf_range(-0.12, 0.12)) * Basis.from_scale(Vector3(0.24, 0.05, 1.3))
+			_add("timber", Transform3D(frond, p + Vector3(-0.63 + i * 0.21, 1.74, 0)), Color(0.64, 0.55, 0.33).darkened(_deco.randf_range(0.0, 0.12)))
+
+# A woven rug laid out flat: dyed ground, a band of another dye near each end, a pale
+# fringe, a lozenge in the middle
+func _rug(at: Vector3, w: float, d: float, yaw: Basis, cloth: Color) -> void:
+	cloth = cloth.lerp(Palette.UNDYED, 0.12)
+	_add("block", Transform3D(yaw * Basis.from_scale(Vector3(w, 0.04, d)), at), cloth)
+	var band: Color = CLOTH_COLORS[_deco.randi() % CLOTH_COLORS.size()]
+	if band.is_equal_approx(cloth):
+		band = Palette.UNDYED
+	for sx: float in [-1.0, 1.0]:
+		_add("block", Transform3D(yaw * Basis.from_scale(Vector3(0.12, 0.045, d)), at + yaw * Vector3(sx * w * 0.32, 0, 0)), band)
+		_add("block", Transform3D(yaw * Basis.from_scale(Vector3(0.1, 0.03, d - 0.08)), at + yaw * Vector3(sx * (w * 0.5 + 0.05), -0.005, 0)), Palette.UNDYED)
+	_add("block", Transform3D(yaw * Basis(Vector3.UP, PI * 0.25) * Basis.from_scale(Vector3(d * 0.32, 0.045, d * 0.32)), at), band.lerp(cloth, 0.3))
 
 # Stone footing, and roof-beam ends showing under the parapet on the faces the camera sees
 func _dress_walls(c: Vector3, w: float, h: float, d: float) -> void:
@@ -445,6 +870,7 @@ func _door(at: Vector3, face: float) -> void:
 # Small window on the +x face: opening, lintel, sill
 func _window(at: Vector3) -> void:
 	_add("opening", Transform3D(Basis.from_scale(Vector3(0.08, 0.5, 0.5)), at + Vector3(0.02, 0, 0)), OPENING)
+	_lamp_spots.append(Transform3D(Basis.from_scale(Vector3(0.02, 0.4, 0.4)), at + Vector3(0.065, 0, 0)))
 	_add("timber", Transform3D(Basis.from_scale(Vector3(0.16, 0.12, 0.78)), at + Vector3(0.06, 0.33, 0)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.16, 0.07, 0.66)), at + Vector3(0.06, -0.3, 0)), _vary(FOOTING, 0.03))
 
@@ -467,8 +893,9 @@ func _build_work_camp() -> void:
 	_cistern(Vector3(-20.5, 0, 10.5))
 	_cart(Vector3(-21.0, 0, 5.5), 0.5)
 	_bench(Vector3(19.5, 0, 9.0))
-	for x: float in [-22.2, 21.6]:
-		_banner(Vector3(x, 0, 2.6))
+	# Outboard of the watchmen's lookouts (Watchmen.STAND_X), clear of their legs and ladder
+	for x: float in [-23.6, 23.4]:
+		_banner(Vector3(x, 0, 1.6))
 
 # Stone-lined basin of water under an indigo canopy, jars waiting beside it
 func _cistern(c: Vector3) -> void:
@@ -562,9 +989,10 @@ func _banner(at: Vector3) -> void:
 	_add("timber", Transform3D(Basis.from_scale(Vector3(0.14, 4.4, 0.14)), at + Vector3(0, 2.2, 0)), _vary(BEAM_COLOR, 0.03))
 	_add("timber", Transform3D(Basis.from_scale(Vector3(0.1, 0.1, 1.2)), at + Vector3(0.06, 4.25, 0.55)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.05, 1.8, 1.05)), at + Vector3(0.08, 3.25, 0.58)), Palette.INDIGO)
-	# Swallow-tail: two short points at the foot
-	for dz: float in [-0.27, 0.27]:
-		_add("block", Transform3D(Basis(Vector3.RIGHT, dz * 1.4) * Basis.from_scale(Vector3(0.05, 0.4, 0.4)), at + Vector3(0.08, 2.25, 0.58 + dz)), Palette.INDIGO)
+	# Swallow-tail: two tails flush with the cloth's edges, a notch between. Thinner than
+	# the cloth and tucked up inside it so the join shows no seam (foot at y 2.35)
+	for s: float in [-1.0, 1.0]:
+		_add("block", Transform3D(Basis.from_scale(Vector3(0.04, 0.46, 0.44)), at + Vector3(0.08, 2.2, 0.58 + s * 0.305)), Palette.INDIGO)
 	# Tower emblem, a stepped silhouette in undyed wool
 	var e := at + Vector3(0.11, 3.2, 0.58)
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.03, 0.55, 0.36)), e), Palette.UNDYED)
@@ -574,7 +1002,14 @@ func _banner(at: Vector3) -> void:
 
 # ── Batching ──────────────────────────────────────────────────
 
+const CAMP_CLEARED := ["pebble", "tuft", "tuft_b", "bush", "boulder", "chip"]
+
 func _add(kind: String, xf: Transform3D, color: Color) -> void:
+	# Ground cover stays out of the enemy camps (it's placed before them, from the layout RNG)
+	if kind in CAMP_CLEARED:
+		for r: Rect2 in CAMP_CLEAR:
+			if r.has_point(Vector2(xf.origin.x, xf.origin.z)):
+				return
 	if not _batches.has(kind):
 		_batches[kind] = [[] as Array[Transform3D], [] as Array[Color]]
 	_batches[kind][0].append(xf)
@@ -604,9 +1039,92 @@ func _flush() -> void:
 		for key: Vector2i in tiles:
 			var mmi := _multimesh(mesh, tiles[key][0], tiles[key][1], mat)
 			# Ground-hugging bits: shadows cost more than they add
-			if kind in ["pebble", "patch", "slab", "blade", "bed", "chip"]:
+			if kind in ["pebble", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash"]:
 				mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
+	_build_lamps()
+
+func _build_lamps() -> void:
+	_lamps = null
+	_halos = null
+	if _lamp_spots.is_empty():
+		return
+	# Own RNG: the layout's _rng must not shift
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4021 + _lamp_spots.size()
+	var order := _lamp_spots.duplicate()
+	for i in range(order.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var t: Transform3D = order[i]
+		order[i] = order[j]
+		order[j] = t
+	var colors: Array[Color] = []
+	var halo_xf: Array[Transform3D] = []
+	var halo_colors: Array[Color] = []
+	for xf: Transform3D in order:
+		colors.append(LAMPLIGHT.darkened(rng.randf_range(0.0, 0.15)))
+		# A quad in the wall's plane (+x face), a little proud of it
+		halo_xf.append(Transform3D(Basis(Vector3.UP, PI * 0.5).scaled(Vector3.ONE * xf.basis.get_scale().y * 3.2), xf.origin + Vector3(0.04, 0, 0)))
+		halo_colors.append(Color(LAMPLIGHT, rng.randf_range(0.35, 0.5)))
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	var mmi := _multimesh(Chunky.unit_block(), order, colors, mat)
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_lamps = mmi.multimesh
+	_lamps.visible_instance_count = 0
+	var halo := _multimesh(QuadMesh.new(), halo_xf, halo_colors, _lamp_halo_material())
+	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_halos = halo.multimesh
+	_halos.visible_instance_count = 0
+	_lamp_spots.clear()
+	add_to_group("window_lamps")
+
+static func _lamp_halo_material() -> StandardMaterial3D:
+	if _halo_mat:
+		return _halo_mat
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 1))
+	grad.set_color(1, Color(1, 1, 1, 0))
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(0.5, 0.0)
+	tex.width = 64
+	tex.height = 64
+	_halo_mat = StandardMaterial3D.new()
+	_halo_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_halo_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_halo_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_halo_mat.vertex_color_use_as_albedo = true
+	_halo_mat.albedo_texture = tex
+	_halo_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _halo_mat
+
+## DayLight: light `share` (0 … 1) of the windows
+func set_lamps(share: float) -> void:
+	if _lamps:
+		_lamps.visible_instance_count = roundi(share * _lamps.instance_count)
+		_halos.visible_instance_count = _lamps.visible_instance_count
+
+static var _grass_mat: ShaderMaterial
+static var _ember_mat: StandardMaterial3D
+
+# Glowing coals: unlit, so they read as heat by day and night
+static func _ember_material() -> StandardMaterial3D:
+	if not _ember_mat:
+		_ember_mat = StandardMaterial3D.new()
+		_ember_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_ember_mat.vertex_color_use_as_albedo = true
+		_ember_mat.vertex_color_is_srgb = true
+	return _ember_mat
+
+static func _grass_material() -> ShaderMaterial:
+	if not _grass_mat:
+		_grass_mat = ShaderMaterial.new()
+		_grass_mat.shader = preload("res://assets/shaders/grass.gdshader")
+	return _grass_mat
 
 # Chunky look: bevelled blocks, faceted foliage and rock
 func _material_for(kind: String) -> Material:
@@ -616,7 +1134,7 @@ func _material_for(kind: String) -> Material:
 		"timber":           return Chunky.wood_material(0.025)
 		"slab":             return Chunky.material(0.1, false, 0.28)
 		"bush", "leaf":     return Chunky.foliage_material()
-		"blade":            return Chunky.material(0.0, true, 0.0)
+		"tuft", "tuft_b":   return _grass_material()
 		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
 	return Chunky.material(0.0, false, 0.0)
 
@@ -624,17 +1142,14 @@ func _mesh_for(kind: String) -> Mesh:
 	match kind:
 		"block", "slab", "opening", "chip", "timber": return Chunky.unit_block()
 		"pebble":  return _sphere(0.13, 0.10, 5, 2)
-		"blade":
-			# ~11k of these: a bare 3-sided spike, 6 triangles (the default height rings
-			# and caps made it 44 — half a million triangles of grass a frame)
-			var b := _cylinder(0.0, 0.075, 1.0, 3)
-			b.cap_top = false
-			b.cap_bottom = false
-			return b
+		"tuft":    return _tuft_mesh(7)
+		"tuft_b":  return _tuft_mesh(31)
 		"bush":    return _sphere(0.42, 0.62, 12, 6)
 		"leaf":    return _sphere(0.6, 1.0, 14, 7)
 		"boulder": return _sphere(0.6, 0.9, 6, 3)
 		"jar":     return _sphere(0.22, 0.5, 8, 4)
+		"blob":    return _sphere(0.5, 1.0, 12, 6)
+		"ember":   return _sphere(0.5, 1.0, 8, 3)
 		"trunk":   return _cylinder(0.12, 0.2, 1.0, 7)
 		"drum":    return _cylinder(0.5, 0.5, 1.0, 12)
 		"patch":   return _cylinder(0.5, 0.5, 0.02, 10)

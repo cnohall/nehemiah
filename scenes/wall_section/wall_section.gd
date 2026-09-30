@@ -269,6 +269,8 @@ func get_build_progress() -> float:
 ## Decorative only: stage from how far the campaign has got. Each stretch is offset a
 ## few days so they don't all rise together. Pure function of the day, so every peer agrees.
 func _follow_campaign(day: int) -> void:
+	if GameState.festival:
+		day = GameState.TOTAL_DAYS   # the festival comes after the wall is finished
 	var t := (day - 1 + (hash(global_position.x) % 7) - 3) / float(GameState.TOTAL_DAYS - 1)
 	var s := Stage.EMPTY
 	if day >= GameState.TOTAL_DAYS or t >= 0.9:

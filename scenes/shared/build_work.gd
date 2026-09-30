@@ -87,7 +87,7 @@ func _release_all() -> void:
 func _refresh_bar() -> void:
 	if _bar == null:
 		return
-	_bar.visible = progress > 0.0
+	_bar.visible = progress > 0.0 and not GameState.attract
 	if progress > 0.0:
 		_bar.show_value(progress, BAR_COLOR)
 

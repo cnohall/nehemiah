@@ -55,6 +55,7 @@ func _impact() -> void:
 				if d <= IMPACT_RADIUS:
 					enemy.take_damage(_damage, shooter)
 					break
+			get_tree().call_group("breakable_set", "smash_at", _land, IMPACT_RADIUS * 0.6)
 	if _target == null:
 		_puff()
 		Sfx.play("sling_miss", global_position)

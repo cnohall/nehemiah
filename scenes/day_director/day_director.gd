@@ -52,6 +52,9 @@ var _breaches_at_dawn := 0
 var _section_time := 0.0
 var _section_breaches := 0   # GameState.breaches when the section began
 var _section_ono := 0        # workers who went with the messenger ("schemes")
+# Server: loads each worker brought to each unit this section — unit index → { peer_id: loads }.
+# When the stretch stands, each piece is carved with the name of the one who carried most.
+var _credit := {}
 var _sun_resync := 0.0
 
 func _ready() -> void:
@@ -80,6 +83,7 @@ func _ready() -> void:
 func start() -> void:
 	GameState.reset()
 	GameState.apply_replay()
+	GameState.apply_festival()
 	GameState.apply_debug_start_day()
 	GameState.apply_restart()   # after --day=N: a restart picks its own day
 
@@ -134,6 +138,7 @@ func _begin_day() -> void:
 		_section_time = 0.0
 		_section_breaches = GameState.breaches
 		_section_ono = 0
+		_credit.clear()
 		for item in _items.get_children():
 			item.queue_free()  # new stretch of wall, fresh work site
 		# Posts start bare too — including any raised while the crew was still gathering
@@ -244,6 +249,21 @@ func _rate_section() -> void:
 	_stats["section_breaches"] = GameState.breaches - _section_breaches
 	_stats["wall"] = health
 	_stats["section_ono"] = _section_ono
+	_stats["names"] = _carvings()
+
+## Per unit in build order: whose name goes on it (worker id, 0 = nobody carried to it)
+func _carvings() -> Array:
+	var out := []
+	for i in _units.size():
+		var best := 0
+		var most := 0
+		var by: Dictionary = _credit.get(i, {})
+		for id: int in by:
+			if by[id] > most:
+				most = by[id]
+				best = id
+		out.append(best)
+	return out
 
 func _section_done() -> bool:
 	return _units.all(func(unit): return unit.all(func(p): return p.is_complete()))
@@ -437,11 +457,15 @@ func _crew_entry(peer_id: int) -> Dictionary:
 		_stats["crew"][peer_id] = { "loads": 0, "foes": 0 }
 	return _stats["crew"][peer_id]
 
-## Server: a worker delivered a load to the wall
-func note_load(peer_id: int) -> void:
+## Server: a worker delivered a load to the wall (`site`: where it went)
+func note_load(peer_id: int, site: Node = null) -> void:
 	if GameState.phase == GameState.Phase.WORK:
 		_stats["loads"] += 1
 		_crew_entry(peer_id)["loads"] += 1
+	for i in _units.size():
+		if site in _units[i]:
+			var by: Dictionary = _credit.get_or_add(i, {})
+			by[peer_id] = by.get(peer_id, 0) + 1
 
 ## Server: a worker went down to Ono with the messenger
 func note_ono() -> void:

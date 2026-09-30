@@ -165,7 +165,7 @@ func _point(delta: float) -> void:
 	var own_tag := _own_tag(node)
 	var at := own_tag.global_position if own_tag != null else node.global_position + Vector3(0.0, 2.4, 0.0)
 	_guide.global_position = at
-	var call := _keys(tr(goal[1]))
+	var line := _keys(tr(goal[1]))
 	# A pile's tag only names it: the guide takes its place ("Stone  Pick up [E]"). A
 	# site's lists what it still needs, worth keeping: the guide sits on top of it.
 	if node.is_in_group("build_sites"):
@@ -175,8 +175,8 @@ func _point(delta: float) -> void:
 		_stand_in(own_tag if node.get("count_label") == own_tag else null)
 		_guide.screen_lift = 0.0
 		if _hidden_tag != null:
-			call = _hidden_tag.text + "  " + call
-	_guide.text = call
+			line = _hidden_tag.text + "  " + line
+	_guide.text = line
 	_guide.visible = true
 	# Off-screen: an edge arrow (a downed player already gets OffscreenAlerts' own)
 	_ping_t -= delta

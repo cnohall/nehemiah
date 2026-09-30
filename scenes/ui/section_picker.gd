@@ -16,7 +16,11 @@ const TWIST_NAMES := {
 	"schemes": "Schemes",
 }
 const FOE_NAMES := { "scout": "Scout", "brute": "Brute", "raider": "Raider", "messenger": "Messenger" }
-const ROMAN := ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+const COLUMN_W := 520
+const TITLE_SIZE := 58
+const PHONE_COLUMN_W := 380
+const PHONE_TITLE_SIZE := 28
+const ROMAN :=["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
 
 var _selected := 0
 var _map: CircuitMap
@@ -28,14 +32,20 @@ var _twists: HFlowContainer
 var _twist_note: Label
 var _foes: HFlowContainer
 var _marks: BoxContainer
+var _mark_gems: Array[MarkGem] = []
+var _mark_names: Array[Label] = []
 var _build_btn: Button
 var _back_btn: Button
 var _lock: Label
+var _progress: Label
+var _progress_bar: Control
+var _hint: Label
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
+	InputMode.changed.connect(func(_pad: bool): _update_hint())
 	hide()
 
 func open(section_index := 0) -> void:
@@ -44,6 +54,8 @@ func open(section_index := 0) -> void:
 	for i in GameState.SECTIONS.size():
 		_map.best.append(GameState.best_marks(i))
 		_map.unlocked.append(GameState.is_unlocked(i))
+	_update_progress()
+	_update_hint()
 	show()
 	UiFx.fade_in(self, 0.35)
 	_select(clampi(section_index, 0, GameState.SECTIONS.size() - 1))
@@ -82,7 +94,7 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not Mobile.enabled():
 		var i := _map.section_at(_map.get_local_mouse_position())
 		if i >= 0 and i != _selected:
-			_select(i)
+			_select(i, true)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var i := _map.section_at(_map.get_local_mouse_position())
 		if i >= 0:
@@ -91,39 +103,40 @@ func _gui_input(event: InputEvent) -> void:
 			else:
 				_select(i)
 
-func _select(i: int) -> void:
-	var changed := i != _selected
+# A hover sweep across the map stays quiet; a key or click ticks
+func _select(i: int, hover := false) -> void:
+	var changed := i != _selected and not hover
 	_selected = i
 	_map.section = i
 	var sec: Dictionary = GameState.SECTIONS[i]
 	var days: Array = sec["days"]
 	_eyebrow.text = tr("Section %s of %s · Days %d–%d") % [ROMAN[i], ROMAN[ROMAN.size() - 1], days.front(), days.back()]
 	_title.text = tr(sec["name"])
+	# One line, shrunk to fit: a long name (or its translation) mustn't widen the column
+	var font := _title.get_theme_font("font")
+	var m := Mobile.enabled()
+	var fs := PHONE_TITLE_SIZE if m else TITLE_SIZE
+	var w := PHONE_COLUMN_W if m else COLUMN_W
+	while fs > (18 if m else 32) and font.get_string_size(_title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w:
+		fs -= 2
+	_title.add_theme_font_size_override("font_size", fs)
 	_ref.text = GameState.long_ref(sec["ref"])
 	_text.text = tr(StoryData.SECTION_LINES[i])
 	_fill_details(i)
 
-	for c in _marks.get_children():
-		c.queue_free()
 	var best: int = _map.best[i]
-	for m: int in GameState.MARKS:
-		var earned := best >= 0 and bool(best & m)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		var gem := MarkGem.new(earned, 16.0 if Mobile.enabled() else 20.0)
-		gem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		gem.tooltip_text = GameState.MARK_NAMES[m]
-		row.add_child(gem)
-		if Mobile.enabled():
-			_marks.add_child(row)
-			continue
-		row.add_child(_label(&"Body", 20, UiStyle.TERRACOTTA if earned else UiStyle.INK_MUTED, false,
-			GameState.MARK_NAMES[m]))
-		_marks.add_child(row)
+	for k in GameState.MARKS.size():
+		var earned := best >= 0 and bool(best & GameState.MARKS[k])
+		_mark_gems[k].lit = earned
+		_mark_names[k].add_theme_color_override("font_color", UiStyle.TERRACOTTA if earned else UiStyle.INK_SOFT)
 
 	var open_ := bool(_map.unlocked[i])
+	# A locked stretch's button can't hold focus (its gold ring would read as pressable)
+	if not open_ and _build_btn.has_focus():
+		_back_btn.grab_focus()
 	_build_btn.disabled = not open_
-	_build_btn.text = "Build again" if best >= 0 else "Build this stretch"
+	_build_btn.focus_mode = Control.FOCUS_ALL if open_ and not Mobile.enabled() else Control.FOCUS_NONE
+	_build_btn.text = "Locked" if not open_ else "Build again" if best >= 0 else "Build this stretch"
 	_lock.visible = not open_
 	if not open_:
 		_lock.text = tr("Finish the %s first") % tr(GameState.SECTIONS[i - 1]["name"])
@@ -135,6 +148,7 @@ func _select(i: int) -> void:
 func _fill_details(i: int) -> void:
 	for box: Control in [_twists, _foes]:
 		for c in box.get_children():
+			box.remove_child(c)   # out now, so the old chips don't show for a frame
 			c.queue_free()
 	var sec: Dictionary = GameState.SECTIONS[i]
 	var twists: Array = sec.get("twists", [])
@@ -143,12 +157,17 @@ func _fill_details(i: int) -> void:
 		_twists.add_child(_chip("? ? ?", false))
 	elif twists.is_empty():
 		_twists.add_child(_chip(tr("The plain work"), false))
-	for t: String in twists if open_ else []:
-		_twists.add_child(_chip(tr(TWIST_NAMES.get(t, t)), true))
-	# What's new here, in a sentence — unless everything is (the finale)
+	# New here: amber, like the map's NEXT tag, and spelled out in the note below. Every
+	# chip carries its own sentence on hover, so the carried-over ones aren't a mystery.
 	var before: Array = GameState.SECTIONS[i - 1].get("twists", []) if i > 0 else []
 	var fresh: Array = twists.filter(func(t): return t not in before)
-	var lines: Array = fresh.map(func(t: String): return tr(GameState.TWIST_INTRO.get(t, "")).format({"horn": "[%s]" % InputMode.key("horn")}))
+	for t: String in twists if open_ else []:
+		var chip := _chip(tr(TWIST_NAMES.get(t, t)), true, false, t in fresh)
+		chip.tooltip_text = _intro(t)
+		chip.mouse_filter = Control.MOUSE_FILTER_PASS
+		_twists.add_child(chip)
+	# What's new here, in a sentence — unless everything is (the finale)
+	var lines: Array = fresh.map(_intro)
 	_twist_note.text = "" if not open_ else ("
 ".join(lines) if fresh.size() <= 2 else tr("Everything the wall has asked of you, all at once."))
 	_twist_note.visible = not _twist_note.text.is_empty()
@@ -158,12 +177,59 @@ func _fill_details(i: int) -> void:
 		var met := GameState.has_met(k)
 		_foes.add_child(_chip(tr(FOE_NAMES[k]) if met else "?", met, true))
 
-func _chip(text: String, strong: bool, foe := false) -> Label:
-	var l := _label(&"Eyebrow", 11 if Mobile.enabled() else 13, UiStyle.CREAM if strong else UiStyle.INK_SOFT, false, text)
+func _intro(twist: String) -> String:
+	return tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
+
+func _chip(text: String, strong: bool, foe := false, fresh := false) -> Label:
+	var l := _label(&"Eyebrow", 11 if Mobile.enabled() else 13, UiStyle.INK if fresh else UiStyle.CREAM if strong else UiStyle.INK_SOFT, false, text)
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # already translated
-	var bg: Color = (Color(0.42, 0.12, 0.09) if foe else UiStyle.INK_SOFT) if strong else Color(UiStyle.INK, 0.08)
+	var bg: Color = UiStyle.AMBER if fresh else (Color(0.42, 0.12, 0.09) if foe else UiStyle.INK_SOFT) if strong else Color(UiStyle.INK, 0.08)
 	l.add_theme_stylebox_override("normal", UiStyle.box(bg, Vector2(10, 4), 3))
 	return l
+
+func _update_progress() -> void:
+	var n := GameState.SECTIONS.size()
+	var standing := 0
+	var marks := 0
+	for b: int in _map.best:
+		if b >= 0:
+			standing += 1
+			for m: int in GameState.MARKS:
+				marks += int(bool(b & m))
+	var total := n * GameState.MARKS.size()
+	if standing == n:
+		_progress.text = tr("All %d stretches standing · %d of %d marks") % [n, marks, total]
+	else:
+		_progress.text = tr("%d of %d stretches standing · %d of %d marks") % [standing, n, marks, total]
+	_progress_bar.queue_redraw()
+
+# One segment per stretch: standing ones amber (gold with every mark), the next outlined
+func _draw_progress() -> void:
+	var c := _progress_bar
+	var n := GameState.SECTIONS.size()
+	var w := c.size.x / n
+	var next := _map.next_section()
+	var all_marks: int = GameState.MARKS.reduce(func(a, m): return a | m, 0)
+	for i in n:
+		var r := Rect2(i * w + 1.5, 0, w - 3.0, c.size.y)
+		var b: int = _map.best[i]
+		if b == all_marks:   # every mark: full amber with a tick of terracotta beneath
+			c.draw_rect(r, UiStyle.AMBER)
+			c.draw_rect(Rect2(r.position.x, r.end.y + 2.0, r.size.x, 2.0), UiStyle.TERRACOTTA)
+		elif b >= 0:
+			c.draw_rect(r, Color(UiStyle.AMBER, 0.55))
+		elif i == next:
+			c.draw_rect(r, UiStyle.AMBER, false, 1.5)
+		else:
+			c.draw_rect(r, Color(UiStyle.INK, 0.12))
+
+# The keys for the device in hand: a pad player gets its own face buttons
+func _update_hint() -> void:
+	if InputMode.using_pad:
+		_hint.text = tr("D-Pad   Choose          %s   Build          %s   Back") % [
+			InputMode.key("ui_accept"), InputMode.key("ui_cancel")]
+	else:
+		_hint.text = tr("← →  or  Click   Choose          Esc   Back")
 
 func _on_build() -> void:
 	if _map.unlocked[_selected]:
@@ -203,7 +269,8 @@ func _build() -> void:
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6 if m else 10)
-	column.custom_minimum_size.x = 380 if m else 620
+	# Narrow enough that the text stays clear of the gate plaques on the west wall
+	column.custom_minimum_size.x = PHONE_COLUMN_W if m else COLUMN_W
 	column.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(column)
@@ -232,10 +299,24 @@ func _build() -> void:
 		scroll.add_child(details)
 	else:
 		column.add_child(_label(&"Eyebrow", 15, UiStyle.TERRACOTTA, false, "Choose a stretch of wall"))
-		column.add_child(_gap(28))
+	# How far round the circuit this player has come: a segment per stretch, and a tally
+	var progress := HBoxContainer.new()
+	progress.add_theme_constant_override("separation", 14)
+	progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	details.add_child(progress)
+	_progress_bar = Control.new()
+	_progress_bar.custom_minimum_size = Vector2(12 * (10 if m else 16), 8)
+	_progress_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_progress_bar.draw.connect(_draw_progress)
+	progress.add_child(_progress_bar)
+	_progress = _label(&"Body", 12 if m else 16, UiStyle.INK_SOFT, false)
+	_progress.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # already translated
+	progress.add_child(_progress)
+	details.add_child(_gap(2 if m else 20))
 	_eyebrow = _label(&"Eyebrow", 12 if m else 14, UiStyle.INK_SOFT, false)
 	details.add_child(_eyebrow)
-	_title = _label(&"Heading", 28 if m else 58, UiStyle.INK, false)
+	_title = _label(&"Heading", PHONE_TITLE_SIZE if m else TITLE_SIZE, UiStyle.INK, false)
 	_title.add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_BOLD, 3 if m else 5))
 	details.add_child(_title)
 	_ref = _label(&"Eyebrow", 12 if m else 14, UiStyle.TERRACOTTA, false)
@@ -282,52 +363,75 @@ func _build() -> void:
 		details.add_child(_gap(18))
 		details.add_child(_label(&"Eyebrow", 13, UiStyle.TERRACOTTA, false, "Your best here"))
 		details.add_child(_marks)
+	for mark: int in GameState.MARKS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var gem := MarkGem.new(false, 16.0 if m else 20.0)
+		gem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		gem.tooltip_text = GameState.MARK_NAMES[mark]
+		row.add_child(gem)
+		var name_ := _label(&"Body", 20, UiStyle.INK_SOFT, false, GameState.MARK_NAMES[mark])
+		name_.visible = not m   # phones: the gems alone, named on hover
+		row.add_child(name_)
+		_marks.add_child(row)
+		_mark_gems.append(gem)
+		_mark_names.append(name_)
 	column.add_child(_gap(6 if m else 30))
 
+	# Build and Back side by side: one row, so the column stays short enough for the hint
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 16)
+	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(buttons)
 	_build_btn = Button.new()
 	_build_btn.theme_type_variation = &"PrimaryButton"
-	_build_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_build_btn.pressed.connect(_on_build)
-	_lock = _label(&"Caption", 14 if m else 17, UiStyle.TERRACOTTA_DEEP, false)
 	if m:
-		# The button, and why it's locked, side by side: one row at the foot
-		var foot := HBoxContainer.new()
-		foot.add_theme_constant_override("separation", 14)
-		column.add_child(foot)
+		# The button, and why it's locked, side by side: one row at the foot (Back is
+		# the arrow in the header)
+		buttons.add_theme_constant_override("separation", 14)
 		_build_btn.focus_mode = Control.FOCUS_NONE
 		_build_btn.pressed.connect(Mobile.haptic)
-		foot.add_child(_build_btn)
+		buttons.add_child(_build_btn)
+		_lock = _label(&"Caption", 14, UiStyle.TERRACOTTA_DEEP, false)
 		_lock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_lock.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_lock.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		foot.add_child(_lock)
+		buttons.add_child(_lock)
+		_hint = _label(&"Eyebrow", 13, UiStyle.INK_MUTED, false)   # keys: nothing to show on touch
+		_hint.visible = false
+		column.add_child(_hint)
 		return
-	column.add_child(_build_btn)
-	column.add_child(_lock)
+	buttons.add_child(_build_btn)
 	_back_btn = Button.new()
 	_back_btn.theme_type_variation = &"GhostButton"
 	_back_btn.text = "Back"
-	_back_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_back_btn.pressed.connect(close)
-	column.add_child(_back_btn)
+	buttons.add_child(_back_btn)
 	for b: Button in [_build_btn, _back_btn]:
 		b.mouse_entered.connect(b.grab_focus)
+	# ← → walk the ring, so up/down hop between the two
+	_build_btn.focus_neighbor_bottom = _build_btn.get_path_to(_back_btn)
+	_back_btn.focus_neighbor_top = _back_btn.get_path_to(_build_btn)
+	_lock = _label(&"Caption", 17, UiStyle.TERRACOTTA_DEEP, false)
+	column.add_child(_lock)
 
-	var hint := _label(&"Eyebrow", 13, UiStyle.INK_MUTED, false,
-		"← →  or  Click   Choose          Esc   Back")
-	# Bottom-left, on the parchment wash — the land on the right is too bright for it
-	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	hint.position += Vector2(140, -64)
-	add_child(hint)
+	# Bottom of the column, on the parchment wash (the land on the right is too bright for
+	# it) — in the flow, so a tall column pushes it down rather than running over it
+	var push := _gap(12)
+	push.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(push)
+	_hint = _label(&"Eyebrow", 13, UiStyle.INK_MUTED, false)
+	_hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated
+	column.add_child(_hint)
 
-func _label(variation: StringName, font_size: int, color: Color, wrap := true, text := "") -> Label:
+func _label(variation: StringName, font_size: int, color: Color, wrapped := true, text := "") -> Label:
 	var l := Label.new()
 	l.theme_type_variation = variation
 	l.text = text
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	if wrap:
+	if wrapped:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l

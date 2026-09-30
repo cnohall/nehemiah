@@ -7,15 +7,18 @@
 
 Cooperative 2–4 player HD-2D isometric action-strategy set in 455 BCE Jerusalem. Players embody the workers and guards of Nehemiah's rebuilding effort, racing to reconstruct the city wall in 52 days while repelling Sanballat's and Tobiah's increasingly desperate forces. Tone: urgent and collaborative — think Overcooked meets tower defense, grounded in Biblical history.
 
-**Core loop per day:**
-1. Day begins — enemies spawn in waves
-2. Players fight, carry materials, and build walls simultaneously — deliver a stage's loads, then stand at the wall and work it up (§5.4)
-3. Day ends when all wall sections for that day are complete (sprint model)
+**Core loop** (sun clock, §5.6): the campaign is 12 stretches of wall (§6), each worked over its days (~4).
+1. Dawn — enemies come in a trickle plus announced waves
+2. Players fight, carry materials and build at the same time: deliver a stage's loads, then stand at the wall and work it up (§5.4). The stretch goes up in build order (the work front)
+3. A day ends when the sun sets ("till the stars appeared", Neh 4:21) or when the whole stretch stands; days left over are skipped and the next stretch starts tomorrow
 
 **Platform:** desktop (Steam) first, built so a console / mobile port stays cheap: every action works on keyboard + mouse and on a gamepad, UI is navigable by pad, button hints follow the device in use (`InputMode`).
 
-**Win condition:** Complete the wall section on day 52
-**Loss condition:** The enemies break through the wall and reach the inner city
+**Win condition:** The last stretch (Miphkad Gate) stands by day 52 and the circuit is closed
+**Loss conditions:**
+- 10 enemies get into the inner city over the run (`GameState.MAX_BREACHES`, a wrecker pours through a wall knocked back to bare foundation, or a runner goes through a gap)
+- Nightfall on a stretch's last day with it unfinished ("The stars appeared")
+- Either way: "Try the stretch again" restarts at that stretch's first day
 
 ---
 
@@ -30,23 +33,27 @@ Three types, unlocked over the campaign (`wave_manager.gd`). Spawn rate and max 
 | Scout | Day 1 | 3.5 | 40 | 5 | ~50% go for the wall ("wreckers"), rest run for gaps |
 | Brute | Day 9 (25% of spawns) | 2.5 | 100 | 15 | Always a wrecker — slow, batters walls |
 | Raider | Day 21 (~30% late mix) | 4.0 | 60 | 8 | Fast; ~50% wreckers |
+| Saboteur *(planned, §5.9)* | Day 6 (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
 
-All attack nearby workers first. A wrecker that knocks a section back to bare foundation pours through the breach.
+All but the saboteur attack nearby workers first. A wrecker that knocks a section back to bare foundation pours through the breach.
 Debug: run with `-- --day=N` (debug builds) to start at a later day and see brutes/raiders.
 
 ---
 
 ## 3. Structures
 
-Just one type of structure so far
+1. **Wall units** (`WallSection`) — stages: framing (timber; beams on beam stretches) → courses (stone) → mortar. Each stage: deliver the loads, then work it up by hand (§5.4). Enemies batter them back down a stage at a time. Broad Wall's are double-thick (§6.3)
+2. **Gates** (`Gate`) — two pillars built like wall units, then the **doors step**: deliver timber, work it → doors hang and close the gap. Workers pass through hung doors, enemies don't. Stretches with no gate seal the opening with stone instead
+3. **Watch posts** (`WatchPost`, §5.6) — two behind the wall; raise with timber, feed with stone for the slinger on top. Bare again each new stretch
+4. **Mortar trough** (`Trough`, mixing stretches) — not built: lime + water in → mortar out after 4 s
 
-1. Wall sections - required materials to build, wood, stones, and mortar
+Supply: stockpiles in the yard (timber, stone, mortar; per stretch some are replaced by rubble heaps, lime bins and water jars — §6.3). Dropped loads stay on the ground.
 
 ---
 
 ## 4. Historical Notes
 
-- Wall circuit: Nehemiah 3, clockwise from Sheep Gate
+- Wall circuit: Nehemiah 3 order from the Sheep Gate (north-east) — west along the north, down the west side, east along the south, up the east side back to the Miphkad Gate: counterclockwise on a north-up map
 - 52 days: Nehemiah 6:15 (Elul 25, 455 BCE)
 - Enemy leaders: Sanballat the Horonite, Tobiah the Ammonite, Geshem the Arab
 - Persian king: Artaxerxes I; his 20th year (Neh 2:1) = 455 BCE, per Watch Tower chronology (secular dating puts it at 445). Use BCE, not BC
@@ -61,6 +68,15 @@ Just one type of structure so far
 **Verdict:** Core loop is fun even without sound, in its early state. Keep the loop and polish it; don't redesign.
 
 **Design principle:** Keep it simple, like Overcooked. Overcooked 1 already worked, and Overcooked 2 improved on it mostly with small changes. Add one mechanic at a time and playtest after each.
+
+**Fun check** — every new mechanic's spec opens with this block, filled in before it's built:
+- **Fantasy:** does it make you feel more like a builder of Neh. 4:17 — one hand on the work, one on the weapon? Or is it about something else?
+- **Kind of fun it aims at** (MDA): pick one or two. Our core is **Fellowship** (the crew shouting at each other) and **Challenge** (build vs defend at once). Sensation / Discovery / Narrative / Submission are welcome as seasoning, but don't let them take the build slots while core ideas wait
+- **Where it can go sour:** what frustration can it cause (unclear telegraph, off-screen hit, slow walk, one player stuck at a post)? Does it pay off in relief or triumph, or does it just nag?
+- **A/B switch:** the command-line flag that turns it off (`-- --no-…`), so a playtest can show what it adds
+- **Kill rule:** what we'd see in a playtest that makes us cut it rather than tune it
+
+**Cut candidates** (settle in playtest 3, `PLAYTEST_3.md`): the *In good time* mark (overlaps the sun clock), plaques vs in-world day info (keep one), tally + story as two screens at a section's end, breakables / birds if they pull players off the work.
 
 ### 5.1 Structure
 - 12 wall sections × ~4 days each ≈ 48–52 days → matches the Day 52 win condition
@@ -137,6 +153,73 @@ Three rules, each on by default and each switched off from the command line to A
 **Later:**
 - ☐ **Cross-play** between web, mobile and Steam: look into it after the Steam launch. It needs one shared transport (WebRTC or a WebSocket relay via the existing Cloudflare DO); Steam/ENet/EOS don't talk to each other. Keep lobby code from blocking it
 
+### 5.8 The world tells it — ◐ first pass (29 Sep 2026), needs playtest 3
+- **Diegetic HUD** (Settings "Day info": *In the world* default, *Plaques* brings the old day/threat plaques back). The **sun** sinks from mid-morning (61°) to 22° and swings west as the daylight runs out — shadows lengthen toward the stars (`DayLight`). A **scribe** (`Scribe`) at a desk by the yard keeps the record on a scroll over his head: day and stretch, one block per piece (inked when it stands), red strokes for each one through, out of ten; he calls pieces standing or falling. Two **watchmen** (`Watchmen`) on timber stands at the ends of the stretch (Neh. 4:9) call waves and their side, a battered wall, the first brute/raider of the day, a breach, the sun low; a call from off-screen slides in from the edge (`Shout`, a `WorldTag` kind). The "Next:" line stays as an ink-rimmed caption low on screen. Watch: do new players still find the day count and breaches?
+- **Taunts** (`Taunts`): a herald of Sanballat's outside the wall calls the taunt across it (as his servant came with the open letter, 6:5) — at the start of the work and every 40 s until the stretch is half built; the call slides in from the screen edge. Sheep Gate (2:19), Jeshanah / Broad Wall / Tower of Ovens (4:2-3), East Gate (Sanballat's letter, 6:6). (The line used to be daubed on the ground outside the wall too; cut Sep 29 2026, it read strangely)
+- **Wall cam**: when a stretch stands the camera runs along it (3.2 s) and a dedication tablet rises on each piece with the name of whoever carried most to it (Steam name, else the trade). Server credits each load to its unit (`DayDirector.note_load(peer, site)`); the tally waits for the run. Free trailer material
+- **Scribe's map** (`CircuitMap.aged`, `GameState.chronicle`): the circuit map on the story cards and the end screen wears with the run — edges darken with the days, folds at 4 and 8 sections, an ink blot where the enemy got in, a lamp-oil ring on stretches worked till the stars or past par, a margin note per stretch ("2 got in", "worked till the stars", "1 day to spare", "rebuilt what fell"). The end screen is the final map, words on a parchment column at left
+- **Walk the City** (`Festival`, title menu, solo offline, nothing saved): the Festival of Booths after the wall (Neh. 8) at the Water Gate. Ezra reads from a wooden platform (Lev. 23:40, 42; Neh. 8:15); fetch **branches** from the slopes outside and build five booths — broad place, courtyards, by the well, the temple court (8:15-16); carry **portions** to four with nothing prepared (8:10); talk to Nehemiah, a Levite, Shallum's daughters, Meremoth, a priest, the gatekeeper, children (`Folk`, [E]); go up to the **temple** (`Temple`: walled court, sanctuary facing east, altar with its fire). Journal ticks it off; all done → "There was very great gladness" (8:17). Not the Sabbath: Neh. 13:15-19 forbids carrying loads on it. Not the zero-menu start either — first launch should still meet the real loop (the practice); revisit if players want a gentler first minute
+  - **Round the wall** (30 Sep 2026): the whole circuit is walkable — walk off either end of a stretch and you come to the next in Neh. 3's order (a fade, the ground changes to that section's terrain), round from the Miphkad Gate back to the Sheep Gate; a signpost at each end names the next gate. Every stretch has the builders Neh. 3 names there (quoted), townsfolk and a booth site; three hold the feast in full: Water Gate (Ezra), Sheep Gate (the temple, moved here beside the priests' stretch, 3:1), Fountain Gate (pool of Shelah, branches from the King's Garden). Progress holds across stretches; the journal adds "Walk the wall round — n of 12 gates". Goals: 5 booths, all 4 portions, 8 builders met, Ezra, the temple. Next, if it earns it: a city behind the wall that differs by district (City of David south, temple mount north) instead of the same streets everywhere
+- **Breakables** (`Breakables`, `Breakable`; 29 Sep 2026): clay water jars, tall storage jars and reed baskets of figs stand about each stretch — by the landmarks first (jars beside the potters' stalls, baskets by the fish stalls and ovens, water jars at the Pool of Shelah and at each priest's door, olive baskets under the Kidron trees), then a few loose clusters inside the wall and out on the enemy's side. They rock when anyone brushes past; a sword cut, a sling stone or a dash breaks one, and so does a raider trampling through on the way to the wall (Zelda's pots, Hades' urns). Sherds, a wet patch that dries, spilled grain or scattered figs stay till dawn, when fresh ones are put out. No collision, nothing inside, no score — set dressing that answers back. The attack press cuts at a pot at your feet only when no foe is in sling range, so it never steals a throw. Watch: does breaking them distract from the work? If players want a reason, the next step is a rare fig cake that heals a little (1 Sam. 25:18)
+- **Birds** (`Birds`, `Bird`; 30 Sep 2026): flocks of house sparrows and rock doves (Matt. 10:29; Lev. 1:14) peck and hop on open ground each side of the wall (doves only on the city side). A worker walking into one puts it up; so do a foe coming on (the flocks outside lift before the enemy reaches the wall, an early warning shown in the world) and anything loud: a dash, a sword swing, a jar breaking, a wall piece falling, the horn, a breach (`Sfx.STARTLES`). One flock's wings can put up the next. They climb away sideways on screen (not at the camera), and come back once it's been quiet round their spot for 12–22 s. Sparrows chirp, doves coo. Local to each peer, nothing replicated. Watch: are the flushes readable at play zoom, and are they fun or just noise? Web: ~30 birds of 6 meshes each, so check draw calls
+- **Lamps at dusk** (`ScatterLayer.set_lamps`, `DayLight.lamps`): as the sun sinks (evening 0.3 → 0.95) the house windows light one by one with a warm oil-lamp glow, all of them once night falls ("from the rising of the morning till the stars appeared", Neh. 4:21). Out at dawn. The birds go to roost as the lamps come on and come back at dawn
+- Tests / shots: `tools/hud_shots.gd`, `wallcam_shots.gd`, `festival_shots.gd`, `map_age_shots.gd`, `breakable_test.gd`, `birds_test.gd`, `birds_shots.gd`
+- New strings are English only so far — run the i18n extract for es / pt_BR / de / ko
+
+### 5.9 Saboteur — ☐ spec (30 Sep 2026), not built
+**Fun check:**
+- **Fantasy:** guarding the work, not just the wall — "cause the work to cease" (4:11) is what you're stopping
+- **Kind of fun:** Fellowship first (someone has to leave the wall — who?), then Challenge (a third thing to watch)
+- **Where it can go sour:** one player parked in the yard all day; a scattered pile nobody saw happen feels unfair (the watchman call and pointer have to carry that)
+- **A/B switch:** `-- --no-saboteur`
+- **Kill rule:** if the crew in playtests just ignores him, or one player guards the yard all day even after we tune the interval
+**Why:** all three enemy types ask the same question — reach the wall before it's battered or slipped through — and differ only in stats. Days 1–8 are scouts only. The saboteur is the first foe that goes after a *different part of the work*: the supply, not the wall. It gives the crew a new job, "keep the yard", without new stats or weapons.
+
+**Grounded in:** "Our adversaries said, 'They will not know or see, until we come in the middle of them and kill them, and cause the work to cease.'" (Neh 4:11, WEB). Their aim was to stop the work, not to fight it out.
+
+**Behaviour** (`Type.SABOTEUR` in `enemy.gd`, server-authoritative like the rest):
+1. Spawns with the trickle on the enemy's side, never in a wave pack (he comes quietly)
+2. **Gets in:** runs for the nearest gap (an unbuilt unit or a gate without doors). No gap left → he **climbs** a finished unit, choosing the one farthest from any worker: a 2.5 s climb, in plain view; any hit knocks him off and the climb starts over
+3. **Picks a pile:** the stockpile whose material the work front needs now (`WorkFront`'s open units); ties → the nearest. Skips beam piles (too heavy to throw about)
+4. **Scatters it:** 1.5 s at the pile, then the pile is **scattered**: loads strewn over the pad, nothing can be taken from it. Rubble heaps and lime bins scatter the same way; water jars are knocked over
+5. Scatters **two piles at most**, then flees back out the way he came (existing flee: `FLEE_SPEED`, off at `FLEE_Z`). Never counts as a breach: the harm he does is lost time
+6. **Doesn't fight.** He ignores workers (no aggro), doesn't batter walls, has no weapon. A worker in reach just gets dodged around
+
+**Tidying a scattered pile:** the Neh. 4:17 cost. Stand at the pile and press [E] / A ("Tidy [E]"), then work it like a wall stage (§5.4): 2 s for one worker, extra hands +70%, moving or a hit stops it, progress is kept. Tidied → the pile works again. A scattered pile's tag pulses "Scattered — tidy [E]" for everyone.
+
+**Stats:**
+| Speed | Health | Damage | Knockback felt |
+|---|---|---|---|
+| 4.2 (fastest) | 30 (2 sling hits, 2 sword cuts, 4 post shots) | 0 | 1.2 (light) |
+
+**Unlock and count:** day 6, the second day of the Fish Gate, so beams (the section's twist) get one day to themselves. At most **1 alive**, and at most one every 50 s, through day 20. From day 21, 2 alive with 3–4 workers. Not scaled by section pressure; difficulty *pace* scales the interval. Water Gate (night watch): he comes out of the dark like the rest, and a torch by the yard is the answer.
+
+**Readability:**
+- Silhouette: slim, crouched run, dark hood, an empty sack over one shoulder, no spear or shield. Same goat-hair cloth + oxblood outline as the other foes (`CharacterRig` look "saboteur")
+- The first one of the day gets a **watchman call** ("One's slipped in — the yard!"), and an off-screen pointer "Saboteur" follows him while he's inside the wall
+- The strewn loads on a scattered pile are clearly spilled, not stacked: at a glance the pile reads as unusable
+- The dusk tally adds a line only on days it happened: "Piles scattered: n"
+
+**Bots:** a bot that needs a scattered pile's material tidies it before anything else. A bot with empty hands within 10 m of a saboteur chases him with the sword. Bots don't guard the yard ahead of time.
+
+**Tutorial:** none. The watchman call, the pointer and the "Tidy [E]" tag teach it the first time (as the brute's first appearance does today).
+
+**Build notes:**
+- `SupplyPile`: `scattered` bool, synced like `count`; `request_pickup()` refuses while scattered; `tidy_progress` synced for the build-style bar. A strewn-loads mesh layer toggled on the pad
+- `enemy.gd`: a saboteur branch in `_pick_target` (pile, not player/wall), the climb as a timed state, `_fleeing` reused
+- `WaveManager`: its own timer for saboteurs, apart from the trickle and the waves
+- A/B switch `-- --no-saboteur`, like `--no-waves`. Debug `-- --day=6` to see one on day 1 of the run
+- Test `tools/saboteur_test.gd`: gets in through a gap, scatters the right pile, pickups refused, tidy restores, flees after two, climbs when there's no gap, knocked off by a hit
+- New strings English only at first; run the i18n extract for es / pt_BR / de / ko
+
+**Not in v1:** stealing dropped loads, tipping the mortar trough, setting fires (Neh 4:11 says "cause the work to cease", not burn it), tidying while carrying.
+
+**Watch in playtests:**
+- Does one person end up parked in the yard all day? (He should be something that interrupts you, not a post to stand at.) If so: longer interval, or he only comes in during waves
+- Is 2 s of tidying felt, or ignored? Is the climb readable enough to stop before he's over?
+- Solo: is it a fair tax, or does it wreck the sun-clock par? Tune `sun_slack` against it, not him
+- Does it hide the archer's job (guarding builders) when both are in? Archer spec waits for this playtest
+
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:
 - Stations told apart by period-appropriate bases, not colour-coding: stone on a timber pallet, logs on sleeper beams, mortar on a reed mat with spilled lime (bright colour rugs tried and dropped: broke immersion)
@@ -155,15 +238,16 @@ Keep the earthy palette, borrow Overcooked's readability:
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |
 |---|---|---|
-| Different enemy types | Needed for variety across 52 days | Low — add incrementally |
-| Ballistas mounted on the wall | Tower-defense layer, a way to spend materials | May let players skip combat |
+| Enemies that attack the work itself, one at a time: **saboteur** (raids the yard, scatters loads; Neh 4:11 — spec §5.9) → **archer** (stays outside, hits builders on the scaffold; 4:17) | Variety across 52 days; makes guarding the yard / builders a real job | Low — add incrementally |
 | Civilians (women, children) inside the city | Raises stakes, fits Neh 4:13 | Adds AI work |
 | Player roles | More reason to coordinate | Could fragment co-op; Overcooked has no roles |
 | Prep days (gather materials, craft weapons) | Rhythm between sections | Slows pacing |
 | Stand on a tile to spawn builders/fighters (mobile-ad style) | Addictive progression hook | Can drift toward an idle game |
 | Medkits / healing | Survivability | Low priority |
 
-**Suggested order:** wall damage → second enemy type → ballistas
+Done and removed from the table: wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6).
+
+**Suggested order:** playtest 3 first (§5.6–5.8 are all first pass) → saboteur → archer
 
 ---
 
@@ -192,7 +276,7 @@ Keep the earthy palette, borrow Overcooked's readability:
 
 ### 6.1 Also against repetition
 - **Layout per section** — each section is its own map (terrain, where the supply yard sits, where the gaps are), not a re-skin.
-- **Section intros** — a short, still illustrated card or clip between sections with its Neh 3 reference, and the narrative beat where one applies (mockery, conspiracy, Ono). Dignified, no cartoon cutscenes. ◐ System done (`StoryData` / `StoryPlayer`, Phase.STORY): prologue before day 1 (Neh 1–2), a card per section, beats at Jeshanah (4:2), Broad Wall (4:3), Valley Gate (4:7-20), East Gate (6:2-4). Every reader must finish (or skip) before the day starts; host can "Begin now". Drawn silhouette backdrops stand in until art exists (`art` key per slide). Verses: World English Bible (public domain; NWT barred by jw.org terms for software/commercial use). ✅ Ending after day 52 (`StoryData.ENDING`, campaign only, each reader at their own pace, then the end screen): the ring closes (6:15), they lost heart (6:16), the dedication (12:31-43). Then the **credits** (`CreditsRoll`): they roll up the dark column over the finished city with the ring closing, ending on Neh 13:31 "Remember me, my God, for good." Also a main menu entry. Chris Nohall (development), Joakim Henriquez (design), plus the attributions the licences ask for (CC-BY music, OFL fonts, MIT Godot/GodotSteam, WEB). Tests: `tools/ending_test.gd`, `tools/credits_test.gd`; shots/video: `tools/ending_shots.gd`, `tools/credits_shots.gd`. TODO: commission art
+- **Section intros** — a short, still illustrated card or clip between sections with its Neh 3 reference, and the narrative beat where one applies (mockery, conspiracy, Ono). Dignified, no cartoon cutscenes. ◐ System done (`StoryData` / `StoryPlayer`, Phase.STORY): prologue before day 1 (Neh 1–2), a card per section, beats at Jeshanah (4:2), Broad Wall (4:3), Valley Gate (4:7-20), East Gate (6:2-4). Every reader must finish (or skip) before the day starts; host can "Begin now". The eleven story slides have art (`art` key per slide, `assets/story`): tinted-lithograph views after David Roberts' Holy Land prints (1840s) — grand, small figures, sepia tints — painted in code by `tools/story_art` (`node tools/story_art/render.mjs`; walls always leave the frame, end in a tower or pass behind something). Section cards keep the circuit map. Verses: World English Bible (public domain; NWT barred by jw.org terms for software/commercial use). ✅ Ending after day 52 (`StoryData.ENDING`, campaign only, each reader at their own pace, then the end screen): the ring closes (6:15), they lost heart (6:16), the dedication (12:31-43). Then the **credits** (`CreditsRoll`): they roll up the dark column over the finished city with the ring closing, ending on Neh 13:31 "Remember me, my God, for good." Also a main menu entry. Chris Nohall (development), Joakim Henriquez (design), plus the attributions the licences ask for (CC-BY music, OFL fonts, MIT Godot/GodotSteam, WEB). Tests: `tools/ending_test.gd`, `tools/credits_test.gd`; shots/video: `tools/ending_shots.gd`, `tools/credits_shots.gd`.
 - **Section rating** ✅ — three marks per section, each earned on its own: *In good time* (section work time ≤ par: 7 min + extra for beams/salvage/mixing/haul — TODO tune, the log prints time vs par), *None got through* (no breaches in the section), *The wall holds* (average wall health ≥ 80% at the end). Shown on the section's last dusk card, beside each gate on the circuit map, and totalled on the end screen. Each player's best per section is saved to `user://progress.cfg` (not for `--day=N` runs) — and the replay picker reads it: main menu → **Choose a Section** opens the circuit map (`SectionPicker`), finished stretches standing with their best marks; a section opens once the one before it is finished (debug `-- --unlock-all`). Picking one hosts a game of just that section (`GameState.replay_section`): its card only, its days, then an end screen with the marks and "Back to the map". Test: `tools/replay_test.gd`. Replay value without coins or loot.
 - **Friends and Foes** ✅ — main menu page (`FriendsAndFoes`): the whole cast as a lineup of portrait medallions (crew | foes); the one picked stands in an arched plate (dawn before the finished wall for friends, dusk outside a broken one for foes, night for the unmet), sways in 3/4 view, turns on drag and plays a signature move (build, cheer, thrust, slash), beside a verbatim WEB quote in their own words, who they are, and for enemies speed / toughness / strength. "Met N of 12" counter. Foes stay ink silhouettes ("Not yet met", with the gate where they first show) until this player meets them: enemies and the messenger on sight, leaders in their story beat (`GameState.mark_met` → `progress.cfg [met]`; older saves backfill from finished sections via `MET_AT`). The section picker shows each stretch's twists as chips, a line on what's new there, and its foes (`?` until met); a locked stretch keeps its twists hidden. Shots: `tools/folk_shots.gd`.
 

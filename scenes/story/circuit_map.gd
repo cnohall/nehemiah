@@ -11,6 +11,10 @@ extends Control
 # ring from the Sheep Gate back to itself, each stretch lighting as it passes.
 # `picker` mode is the replay map (SectionPicker): every section this player has ever
 # finished stands with its best marks, `section` is the one selected, locked ones fade.
+# `aged`: the scribe's working map, worn by the run (GameState.chronicle) — its edges
+# darken and scorch as the days go by, it gets folded, an ink blot marks each stretch
+# where the enemy got in, a lamp-oil ring the stretches worked till the stars or past
+# their time, and a note in the scribe's hand beside each stretch reached.
 
 const RISE_TIME    := 1.6
 const RIDE_TIME    := 7.0
@@ -38,6 +42,9 @@ var finale := false
 ## No gate plaques or foes over the land — the credits roll over it
 var quiet := false
 var picker := false
+var aged := false
+## A parchment wash under the text column instead of the dark one (end screen)
+var paper := false
 ## Picker mode, per section: best marks (-1 = never finished) and whether it may be picked
 var best: Array = []
 var unlocked: Array = []
@@ -55,6 +62,7 @@ var _edge: GradientTexture2D
 var _plaque := _make_plaque(false)
 var _plaque_here := _make_plaque(true)
 var _foe_plaque := _make_foe_plaque()
+var _next_tab := _make_next_tab()
 
 func _ready() -> void:
 	_container = SubViewportContainer.new()
@@ -79,7 +87,7 @@ func _ready() -> void:
 	# A wash from the left edge, so the text column reads over the land: parchment
 	# under the picker's ink text, dark under the story's cream text
 	_edge = GradientTexture2D.new()
-	var wash := UiStyle.PARCHMENT if picker else UiStyle.DUSK
+	var wash := UiStyle.PARCHMENT if picker or paper else UiStyle.DUSK
 	var e := Gradient.new()
 	e.set_color(0, Color(wash, 0.92))
 	e.set_color(1, Color(wash, 0.0))
@@ -111,6 +119,21 @@ func _make_foe_plaque() -> StyleBoxFlat:
 	sb.bg_color = Color(0.36, 0.09, 0.07, 0.92)
 	sb.border_color = Color(0.93, 0.50, 0.38, 0.4)
 	return sb
+
+func _make_next_tab() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.set_corner_radius_all(4)
+	sb.anti_aliasing = true
+	sb.bg_color = UiStyle.AMBER
+	sb.shadow_color = Color(0.08, 0.05, 0.02, 0.35)
+	sb.shadow_size = 3
+	sb.shadow_offset = Vector2(0, 1)
+	return sb
+
+# A small padlock: shackle arc over a body, centred at `c`, `r` half its width
+static func _draw_lock(o: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	o.draw_arc(c + Vector2(0, -r * 0.55), r * 0.62, PI, TAU, 12, col, maxf(1.5, r * 0.3), true)
+	o.draw_rect(Rect2(c + Vector2(-r, -r * 0.6), Vector2(r * 2.0, r * 1.5)), col)
 
 func _layout() -> void:
 	_container.position = Vector2.ZERO
@@ -180,6 +203,13 @@ func section_at(point: Vector2) -> int:
 				hit = i
 	return hit
 
+## Picker: the first open stretch not yet finished — where the campaign carries on (-1: all done)
+func next_section() -> int:
+	for i in best.size():
+		if best[i] < 0 and unlocked[i]:
+			return i
+	return -1
+
 func _done(i: int) -> bool:
 	if inspect:
 		return false
@@ -212,6 +242,28 @@ func _draw_overlay() -> void:
 	var o := _overlay
 	var unit := _unit()
 	o.draw_texture_rect(_edge, Rect2(0, 0, size.x * 0.55, size.y), false)
+	var next := next_section() if picker else -1
+	if aged and not picker and not inspect:
+		_draw_age(o, unit)
+
+	# Picker: stretches not yet built are traced where they will stand, dashed on the
+	# ground — the next one in amber, marching; locked ones faint
+	if picker:
+		for i in CircuitDiorama.GATES.size():
+			if best[i] >= 0:
+				continue
+			var is_next := i == next
+			var col := Color(1.0, 0.78, 0.35) if is_next else Color(WorldTag.TEXT, 0.75 if unlocked[i] else 0.5)
+			var w := unit * (0.008 if is_next else 0.005)
+			var steps := 24
+			var phase := fposmod(_time * 1.5, 2.0) if is_next else 0.0
+			for k in steps:
+				if (k + int(phase)) % 2 == 1:
+					continue
+				var a := _project(_diorama.ring_world(i + float(k) / steps, 1.0))
+				var b := _project(_diorama.ring_world(i + float(k + 1) / steps, 1.0))
+				o.draw_line(a, b, Color(UiStyle.DUSK, 0.45), w * 2.0, true)
+				o.draw_line(a, b, col, w, true)
 
 	# The current / selected stretch: a gold line along the wall, breathing.
 	# The finale draws it round the whole ring as far as it has closed.
@@ -243,10 +295,11 @@ func _draw_overlay() -> void:
 		var gems := done and mask >= 0
 		# A small parchment plaque: the name, and the marks earned there beside it
 		var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var gr := fs * 0.32
-		var gw := gr * 2.2 * GameState.MARKS.size() + gr * 0.6 if gems else 0.0
+		var gr := fs * 0.4
+		var gw := gr * 2.3 * GameState.MARKS.size() + gr * 0.6 if gems else 0.0
+		var lw := fs * 0.9 if locked else 0.0     # a padlock before the name
 		var pad := Vector2(fs * 0.5, fs * 0.3)
-		var box := Vector2(tw + gw + pad.x * 2.0, fs + pad.y * 2.0)
+		var box := Vector2(lw + tw + gw + pad.x * 2.0, fs + pad.y * 2.0)
 		var out := (p - centre).normalized()
 		var anchor := p + out * unit * 0.026
 		var tl: Vector2
@@ -261,10 +314,22 @@ func _draw_overlay() -> void:
 		sb.bg_color = Color(WorldTag.BG, alpha)
 		o.draw_style_box(sb, Rect2(tl, box))
 		var text_col: Color = Color(1.0, 0.86, 0.55) if here else (WorldTag.TEXT if done else (Color(WorldTag.TEXT_DIM, 0.6) if locked else WorldTag.TEXT_DIM))
-		o.draw_string(font, tl + Vector2(pad.x, pad.y + fs * 0.8), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, text_col)
+		if locked:
+			_draw_lock(o, tl + Vector2(pad.x + fs * 0.3, box.y * 0.5 + fs * 0.08), fs * 0.3, text_col)
+		o.draw_string(font, tl + Vector2(pad.x + lw, pad.y + fs * 0.8), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, text_col)
 		if gems:
 			for k in GameState.MARKS.size():
-				MarkGem.draw_gem(o, tl + Vector2(pad.x + tw + gr * 1.6 + k * gr * 2.2, box.y * 0.5), gr, bool(mask & GameState.MARKS[k]))
+				MarkGem.draw_gem(o, tl + Vector2(pad.x + tw + gr * 1.5 + k * gr * 2.3, box.y * 0.5), gr, bool(mask & GameState.MARKS[k]))
+		# The next stretch to build: an amber tab riding on the plaque, bobbing
+		if i == next:
+			var ns := tr("Next")
+			var nfs := int(unit * 0.02)
+			var nw := UiStyle.CINZEL_BOLD.get_string_size(ns, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x
+			var bob := 2.0 * sin(_time * 3.0)
+			var tab := Rect2(tl + Vector2(fs * 0.3, -nfs * 1.25 + bob), Vector2(nw + nfs, nfs * 1.35))
+			o.draw_style_box(_next_tab, tab)
+			o.draw_string(UiStyle.CINZEL_BOLD, tab.position + Vector2(nfs * 0.5, nfs * 1.0), ns,
+				HORIZONTAL_ALIGNMENT_LEFT, -1, nfs, UiStyle.INK)
 
 	# The three who stand against the work, watching from their lands: oxblood chips
 	# with a pennant, so the threat reads at a glance. In the finale they fade as the
@@ -301,3 +366,92 @@ func _draw_overlay() -> void:
 		var base := tl.y + pad.y + small * 0.8
 		o.draw_string(nf, Vector2(fx.x + flag, base), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small, ink)
 		o.draw_string(lf, Vector2(fx.x + flag + nw + small * 0.4, base), land, HORIZONTAL_ALIGNMENT_LEFT, -1, tiny, dim)
+
+# ── Age (the scribe's map, worn by the run) ────────────────
+
+const INK_BLOT  := Color(0.13, 0.08, 0.05, 0.8)
+const OIL_RING  := Color(0.46, 0.29, 0.12)
+const SCORCH    := Color(0.30, 0.17, 0.07)
+const NOTE_INK  := Color(0.20, 0.12, 0.07, 0.85)
+
+func _draw_age(o: Control, unit: float) -> void:
+	var age := 1.0 if finale else clampf(float(GameState.current_day) / GameState.TOTAL_DAYS, 0.0, 1.0)
+	var reached := GameState.SECTIONS.size() if finale else mini(section + 1, GameState.SECTIONS.size())
+	# Edges: darkening in bands, deeper as the days go by
+	var bands := 14
+	var w := unit * 0.012
+	for k in bands:
+		var a := (0.05 + 0.3 * age) * pow(1.0 - float(k) / bands, 2.0)
+		o.draw_rect(Rect2(Vector2(k * w, k * w), size - Vector2(k * w, k * w) * 2.0), Color(SCORCH, a), false, w)
+	# Folds: once a third of the way round, again at two thirds
+	if reached >= 4:
+		_crease(o, Vector2(size.x * 0.62, 0), Vector2(size.x * 0.62, size.y))
+	if reached >= 8:
+		_crease(o, Vector2(0, size.y * 0.5), Vector2(size.x, size.y * 0.5))
+	var centre := _project(_diorama.unit_to_world(CircuitDiorama.CENTER))
+	for i in reached:
+		var c: Dictionary = GameState.chronicle[i]
+		var p := _project(_diorama.ring_world(i + 0.5, 0.0))
+		var out := (p - centre).normalized()
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 4200 + i
+		# A lamp-oil ring where the lamp stood through a long day's work
+		if c["nightfalls"] > 0 or c["late"]:
+			var rc := p + out * unit * 0.07 + Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * unit * 0.02
+			var rr := unit * rng.randf_range(0.04, 0.05)
+			o.draw_circle(rc, rr, Color(OIL_RING, 0.07))
+			o.draw_arc(rc, rr, 0.0, TAU, 48, Color(OIL_RING, 0.32), unit * 0.005, true)
+			o.draw_arc(rc, rr * 0.93, 0.4, TAU - 0.9, 40, Color(OIL_RING, 0.18), unit * 0.003, true)
+			if c["nightfalls"] > 1:
+				o.draw_arc(rc + Vector2(rr * 0.35, rr * 0.2), rr * 0.96, 0.0, TAU, 48, Color(OIL_RING, 0.2), unit * 0.004, true)
+		# An ink blot where the enemy got in — bigger for more
+		if c["breaches"] > 0:
+			_blot(o, p + out * unit * 0.035, unit * (0.012 + 0.009 * sqrt(float(c["breaches"]))), rng)
+		if not quiet:
+			_note(o, p - out * unit * 0.06, _note_for(c), unit, rng)
+
+# Where the sheet was folded: a pale ridge with a shadow along one side
+func _crease(o: Control, a: Vector2, b: Vector2) -> void:
+	var n := (b - a).orthogonal().normalized()
+	o.draw_line(a + n * 2.0, b + n * 2.0, Color(SCORCH, 0.16), 3.0, true)
+	o.draw_line(a, b, Color(1.0, 0.97, 0.9, 0.22), 2.0, true)
+
+func _blot(o: Control, c: Vector2, r: float, rng: RandomNumberGenerator) -> void:
+	var pts := PackedVector2Array()
+	var n := 16
+	for k in n:
+		var a := TAU * k / n
+		pts.append(c + Vector2(cos(a), sin(a)) * r * rng.randf_range(0.72, 1.25))
+	o.draw_colored_polygon(pts, INK_BLOT)
+	for k in 5:
+		var a := rng.randf() * TAU
+		o.draw_circle(c + Vector2(cos(a), sin(a)) * r * rng.randf_range(1.5, 2.4), r * rng.randf_range(0.08, 0.2), INK_BLOT)
+
+## What the scribe wrote beside a stretch (one or two short lines)
+func _note_for(c: Dictionary) -> PackedStringArray:
+	var lines := PackedStringArray()
+	if c["breaches"] > 0:
+		lines.append(tr_n("%d got in", "%d got in", c["breaches"]) % c["breaches"])
+	elif c["done"]:
+		lines.append(tr("none got in"))
+	if c["nightfalls"] > 0:
+		lines.append(tr("worked till the stars"))
+	elif c["spare"] > 0:
+		lines.append(tr_n("%d day to spare", "%d days to spare", c["spare"]) % c["spare"])
+	elif c["knocked"] > 0:
+		lines.append(tr("rebuilt what fell"))
+	return lines
+
+# Italic, a little aslant, like a hand in the margin
+func _note(o: Control, at: Vector2, lines: PackedStringArray, unit: float, rng: RandomNumberGenerator) -> void:
+	if lines.is_empty():
+		return
+	var fs := int(unit * 0.018)
+	var font := UiStyle.SPECTRAL_ITALIC
+	o.draw_set_transform(at, rng.randf_range(-0.09, 0.02), Vector2.ONE)
+	for k in lines.size():
+		var tw := font.get_string_size(lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var at_line := Vector2(-tw * 0.5, k * fs * 1.1)
+		o.draw_string_outline(font, at_line, lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(UiStyle.PARCHMENT, 0.55))
+		o.draw_string(font, at_line, lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, NOTE_INK)
+	o.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

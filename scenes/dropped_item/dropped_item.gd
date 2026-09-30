@@ -11,11 +11,15 @@ const COLORS := {
 	"beam":   Color(0.46, 0.31, 0.17),
 	"lime":   Color(0.90, 0.88, 0.82),
 	"water":  Color(0.66, 0.40, 0.26),   # the clay jar it's carried in
+	# Festival of Booths (Festival): cut olive boughs, and food sent to those with none
+	"branch": Color(0.46, 0.33, 0.20),   # the bough's wood; leaves are Palette.LEAF
+	"portion": Color(0.62, 0.47, 0.26),  # a reed basket; bread and figs in it
 }
 const MORTAR_FILL := Color(0.66, 0.64, 0.60)
 const MARKER_SHADER := preload("res://assets/shaders/ground_marker.gdshader")
 # Lift so each prop rests on the floor instead of sinking into it
-const REST_Y := { "stone": 0.14, "wood": 0.08, "mortar": 0.13, "beam": 0.11, "lime": 0.14, "water": 0.2 }
+const REST_Y := { "stone": 0.14, "wood": 0.08, "mortar": 0.13, "beam": 0.11, "lime": 0.14, "water": 0.2,
+	"branch": 0.1, "portion": 0.14 }
 
 @export var kind: String = "stone"
 
@@ -102,6 +106,43 @@ static func build_prop(material_kind: String) -> Node3D:
 			neck.bottom_radius = 0.07
 			neck.height = 0.14
 			_add_mesh(root, neck, mat, Vector3(0, 0.22, 0), Vector3.ZERO)
+		"branch":
+			# An olive bough: a crooked stick with clumps of leaves along it
+			var stick := CylinderMesh.new()
+			stick.top_radius = 0.03
+			stick.bottom_radius = 0.045
+			stick.height = 1.0
+			_add_mesh(root, stick, mat, Vector3.ZERO, Vector3(0, 0, PI / 2 - 0.15))
+			var leaf := StandardMaterial3D.new()
+			leaf.albedo_color = Palette.LEAF
+			leaf.roughness = 0.95
+			for i in 4:
+				var clump := SphereMesh.new()
+				clump.radius = 0.16 - i * 0.015
+				clump.height = 0.2
+				_add_mesh(root, clump, leaf, Vector3(-0.3 + i * 0.22, 0.06 + i * 0.03, (0.06 if i % 2 == 0 else -0.06)), Vector3.ZERO)
+		"portion":
+			# A reed basket with loaves and a few figs
+			var basket := CylinderMesh.new()
+			basket.top_radius = 0.24
+			basket.bottom_radius = 0.18
+			basket.height = 0.2
+			_add_mesh(root, basket, mat, Vector3.ZERO, Vector3.ZERO)
+			var bread := StandardMaterial3D.new()
+			bread.albedo_color = Color(0.82, 0.60, 0.32)
+			bread.roughness = 0.95
+			for x: float in [-0.08, 0.09]:
+				var loaf := SphereMesh.new()
+				loaf.radius = 0.12
+				loaf.height = 0.1
+				_add_mesh(root, loaf, bread, Vector3(x, 0.12, 0.02), Vector3.ZERO)
+			var fig := StandardMaterial3D.new()
+			fig.albedo_color = Palette.MUREX
+			for i in 3:
+				var f := SphereMesh.new()
+				f.radius = 0.045
+				f.height = 0.09
+				_add_mesh(root, f, fig, Vector3(-0.1 + i * 0.1, 0.14, -0.12), Vector3.ZERO)
 		"mortar":
 			var basket := CylinderMesh.new()
 			basket.top_radius = 0.22

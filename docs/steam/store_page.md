@@ -7,7 +7,7 @@ Facts mirror GAME_DESIGN.md v0.6 and nehemiah-website `src/lib/dictionaries/en.t
 
 ## 0. Before the page exists (user-only, needs login)
 
-1. partner.steamgames.com → sign up as **Corner Stone Games** (company or individual).
+1. partner.steamgames.com → sign up as **Takiko Games** (company or individual).
 2. Fill tax interview + bank info (identity verification can take days).
 3. Pay Steam Direct fee ($100, recouped after $1,000 gross) → get the **App ID**.
 4. Swap App ID in `scenes/network_manager/network_manager.gd` (`STEAM_APP_ID := 480`) and any `steam_appid.txt`.
@@ -21,8 +21,8 @@ Facts mirror GAME_DESIGN.md v0.6 and nehemiah-website `src/lib/dictionaries/en.t
 | Field | Value |
 |---|---|
 | App name | **Nehemiah: The Wall** (matches `project.godot`; plain "Nehemiah" is hard to find in search) |
-| Developer | Corner Stone Games |
-| Publisher | Corner Stone Games |
+| Developer | Takiko Games |
+| Publisher | Takiko Games |
 | Franchise | — |
 | Release date | Coming soon |
 | Website | https://www.nehemiahgame.com |
@@ -212,6 +212,11 @@ All required for Coming Soon unless marked. No review scores/awards/"wishlist no
 | Client icon | .ico (16/32/64/256) | `icon.ico` |
 | Screenshots | 1920×1080, min 5 (aim 8–10) | Gameplay only, no UI mockups |
 | Trailer *(strongly recommended)* | 1920×1080 MP4, 30–90 s | First 5 s = gameplay, not logos |
+
+**Generated:** `store/steam/capsules/` (all sizes above, plus `community_icon.jpg` from `icon.png`) via
+`node store/steam/render.mjs`, cropping the 4K no-HUD render `store/steam/key_art.png` from
+`Godot --path . --script res://tools/capsule_shots.gd -- --nostory store/steam`.
+Screenshots: `store/steam/screenshots/01–09` (upload in that order).
 
 ### Screenshot shot list (render via `tools/*_shots.gd`)
 1. 4-player crew at Sheep Gate wall, raider inbound (hero shot)

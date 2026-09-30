@@ -26,6 +26,9 @@ var _defs := {
 	"deposit_water":  [_n("impactSoft_medium_%03d", 0, 5), -4.0, 0.6, 0.7],
 	"mix_done":       [_n("impactPlank_medium_%03d", 0, 5), -6.0, 1.1, 1.25],
 	"deposit_beam":   [_n("impactWood_heavy_%03d", 0, 5), -2.0, 0.85, 0.95],
+	"deposit_branch": [["cloth1", "cloth2", "cloth3", "cloth4"], -3.0, 0.8, 0.95],
+	"deposit_portion": [_n("impactSoft_medium_%03d", 0, 5), -4.0, 1.05, 1.2],
+	"work_branch":    [_n("impactWood_medium_%03d", 0, 5), -9.0, 1.3, 1.5],
 	"build":          [_n("impactPlank_medium_%03d", 0, 5), 0.0, 0.8, 0.95],
 	# One strike of the working loop, by what is being worked
 	"work_wood":      [_n("impactWood_medium_%03d", 0, 5), -8.0, 1.15, 1.35],
@@ -40,6 +43,15 @@ var _defs := {
 	# Builder's sword (Neh. 4:18): the swing, higher and brighter than an enemy's
 	"sword":          [["knifeSlice", "knifeSlice2"], -6.0, 1.15, 1.35],
 	"sling_miss":     [_n("impactGeneric_light_%03d", 0, 5), -8.0, 0.8, 1.0],
+	# Breakable props (Breakable): a clay jar shattering, its water, a reed basket crushed
+	"shatter":        [_n("shatter_%03d", 0, 4), -6.0, 0.85, 1.15],
+	"splash":         [_n("splash_%03d", 0, 3), -10.0, 0.9, 1.1],
+	"basket_crush":   [_n("impactPlank_medium_%03d", 0, 5), -8.0, 1.45, 1.7],
+	"pot_knock":      [_n("impactGeneric_light_%03d", 0, 5), -16.0, 1.5, 1.8],
+	# Birds about the site (Birds): a flock taking off, sparrows, a rock dove
+	"wings":          [_n("wings_%03d", 0, 3), -12.0, 0.9, 1.15],
+	"chirp":          [_n("chirp_%03d", 0, 4), -22.0, 0.9, 1.15],
+	"coo":            [_n("coo_%03d", 0, 3), -20.0, 0.92, 1.05],
 	"hurt":           [_n("impactSoft_heavy_%03d", 0, 5), -2.0, 0.9, 1.1],
 	"downed":         [_n("impactPunch_heavy_%03d", 0, 5), 0.0, 0.6, 0.7],
 	"revive":         [["clothBelt", "clothBelt2"], 0.0, 0.9, 1.0],
@@ -62,6 +74,11 @@ const TRIM := {
 	"clothBelt": 16.5, "clothBelt2": 15.0,
 	"handleSmallLeather": 18.5, "handleSmallLeather2": 24.0,
 }
+# Loud enough to put the birds up (Birds): event → reach in metres, 0 = the whole site
+const STARTLES := {
+	"sword": 3.5, "dash": 3.0, "shatter": 4.5, "sling_miss": 3.0, "wall_crumble": 8.0,
+	"enemy_die": 4.0, "downed": 4.0, "horn": 0.0, "breach": 0.0,
+}
 # UI-level (non-positional) music stings
 var _jingle_defs := {
 	"day_start": ["jingles_PIZZI00"],
@@ -77,13 +94,27 @@ const MUSIC := "res://assets/audio/music/"
 const MUSIC_FADE := 2.5
 const MUSIC_BASE_DB := -6.0     # sits under the effects
 const DUCK_DB := -10.0          # while a jingle plays
+# mood: [[file, volume_db], …] — each time a mood comes back it picks another track,
+# so 52 days don't wear one loop thin. alkakrab/ is gitignored (its license bars
+# redistribution in a public repo): a clean checkout just has fewer tracks.
 var _music_defs := {
-	"calm": ["calm_caravan", 0.0],             # "Desert theme" by yd — CC0
-	"work": ["work_desert_of_dreams", -2.0],   # "Caryil, The Desert of Dreams" by insydnis — CC-BY 3.0
+	"calm": [
+		["calm_caravan", 0.0],                        # "Desert theme" by yd — CC0
+		["alkakrab/calm_dunes_of_silence", 0.0],      # AlkaKrab, Desert Fantasy Ambient
+		["alkakrab/calm_canyon_echoes", 0.0],
+		["alkakrab/calm_sunblade_horizon", 0.0],
+	],
+	"work": [
+		["work_desert_of_dreams", -2.0],              # "Caryil, The Desert of Dreams" by insydnis — CC-BY 3.0
+		["alkakrab/work_ash_and_oasis", 0.0],
+		["alkakrab/work_scorchlight_mirage", 0.0],
+		["alkakrab/work_whispers_in_the_sand", 0.0],
+	],
 }
 var _music_a: AudioStreamPlayer
 var _music_b: AudioStreamPlayer
 var _music_mood := ""
+var _music_last := {}   # mood → index last played, so a mood never repeats back to back
 var _music_tween: Tween
 var _duck_tween: Tween
 
@@ -120,9 +151,15 @@ func _ready() -> void:
 	_listener = AudioListener3D.new()
 	add_child(_listener)
 	for mood: String in _music_defs:
-		var s: AudioStreamOggVorbis = load(MUSIC + _music_defs[mood][0] + ".ogg")
-		s.loop = true
-		_streams["music_" + mood] = [s]
+		var tracks := []   # [stream, volume_db]
+		for def: Array in _music_defs[mood]:
+			var path: String = MUSIC + def[0] + ".ogg"
+			if not ResourceLoader.exists(path):
+				continue
+			var s: AudioStreamOggVorbis = load(path)
+			s.loop = true
+			tracks.append([s, def[1]])
+		_streams["music_" + mood] = tracks
 	_music_a = _music_player()
 	_music_b = _music_player()
 	GameState.phase_changed.connect(_on_phase)
@@ -165,6 +202,8 @@ func play(event: String, at: Variant = null) -> void:
 	if now - _last_played.get(event, -100000) < MIN_GAP * 1000.0:
 		return
 	_last_played[event] = now
+	if STARTLES.has(event):
+		get_tree().call_group("bird_set", "startle", at, STARTLES[event])
 	var def: Array = _defs[event]
 	var stream: AudioStream = streams.pick_random()
 	var pitch := randf_range(def[2], def[3])
@@ -209,7 +248,7 @@ func _on_phase(phase: int) -> void:
 			play_jingle("day_start")
 			play_music("calm")
 		GameState.Phase.WORK:
-			play_music("work")
+			play_music("calm" if GameState.festival else "work")   # a feast day, not a work day
 		GameState.Phase.DUSK:
 			play_jingle("day_done")
 			play_music("calm")
@@ -235,11 +274,16 @@ func play_music(mood: String) -> void:
 	if _music_tween:
 		_music_tween.kill()
 	_music_tween = create_tween().set_parallel()
-	if not mood.is_empty():
-		incoming.stream = _streams["music_" + mood][0]
+	var tracks: Array = _streams.get("music_" + mood, [])
+	if not tracks.is_empty():
+		var i := randi() % tracks.size()
+		if tracks.size() > 1 and i == _music_last.get(mood, -1):
+			i = (i + 1) % tracks.size()
+		_music_last[mood] = i
+		incoming.stream = tracks[i][0]
 		incoming.volume_db = -60.0
 		incoming.play()
-		_music_tween.tween_property(incoming, "volume_db", MUSIC_BASE_DB + _music_defs[mood][1], MUSIC_FADE)
+		_music_tween.tween_property(incoming, "volume_db", MUSIC_BASE_DB + tracks[i][1], MUSIC_FADE)
 	_music_tween.tween_property(outgoing, "volume_db", -60.0, MUSIC_FADE)
 	_music_tween.chain().tween_callback(outgoing.stop)
 

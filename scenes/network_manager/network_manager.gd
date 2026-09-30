@@ -52,6 +52,9 @@ var _hosting_lobby := false
 var _eos: Node = null
 # Why the last online host/join failed, for the menu
 var last_error := ""
+# A createLobby / joinLobby awaiting Steam's callback; cleared by disconnect_session so a
+# callback that lands after the player went solo is dropped, not turned into a session
+var _steam_pending := false
 
 # Connect once — reconnecting per host()/join() call errors on the second attempt
 func _ready() -> void:
@@ -111,6 +114,7 @@ func host_steam() -> void:
 		host_failed.emit("Steam is not running.")
 		return
 	_hosting_lobby = true
+	_steam_pending = true
 	_steam.createLobby(LOBBY_TYPE_FRIENDS_ONLY, MAX_PLAYERS)
 
 func join_steam(lobby_id: int) -> void:
@@ -118,6 +122,7 @@ func join_steam(lobby_id: int) -> void:
 		lobby_joined.emit(false)
 		return
 	_hosting_lobby = false
+	_steam_pending = true
 	_steam.joinLobby(lobby_id)
 
 # Online Steam friends, those already in the game first. Used by the in-game
@@ -233,6 +238,7 @@ func disconnect_session() -> void:
 	_hosting_lobby = false
 	if _eos:
 		_eos.leave()
+	_steam_pending = false
 	crew_info.clear()
 
 # ── Crew list ──────────────────────────────────────────────
@@ -298,7 +304,7 @@ func gate_sync(sync: MultiplayerSynchronizer) -> void:
 	sync.add_visibility_filter(is_peer_ready)
 
 ## Server → clients replication of `props` on `owner`, as a gated "Sync" child
-func add_sync(owner: Node, props: Array[NodePath],
+func add_sync(target: Node, props: Array[NodePath],
 		mode := SceneReplicationConfig.REPLICATION_MODE_ALWAYS, interval := 0.1) -> MultiplayerSynchronizer:
 	var cfg := SceneReplicationConfig.new()
 	for prop in props:
@@ -309,7 +315,7 @@ func add_sync(owner: Node, props: Array[NodePath],
 	sync.replication_interval = interval
 	sync.replication_config = cfg
 	gate_sync(sync)
-	owner.add_child(sync)
+	target.add_child(sync)
 	return sync
 
 # ── Signals ────────────────────────────────────────────────
@@ -346,14 +352,14 @@ func _init_steam() -> void:
 		# Extension didn't load: DLLs missing next to the exe, or blocked by AV
 		_steam_error = "Steam plugin failed to load"
 		return
-	var steam := Engine.get_singleton("Steam")
+	var singleton := Engine.get_singleton("Steam")
 	# embed_callbacks = true: GodotSteam pumps run_callbacks() itself each frame
-	var res: Dictionary = steam.steamInitEx(STEAM_APP_ID, true)
+	var res: Dictionary = singleton.steamInitEx(STEAM_APP_ID, true)
 	if res.get("status", -1) != 0:
 		_steam_error = "%s (code %d)" % [res.get("verbal", "?"), res.get("status", -1)]
 		print("NetworkManager: Steam unavailable (%s) — LAN only" % _steam_error)
 		return
-	_steam = steam
+	_steam = singleton
 	if _steam.has_method("initRelayNetworkAccess"):
 		# Warm up the relay network now so the first connection isn't slow
 		_steam.initRelayNetworkAccess()
@@ -367,6 +373,11 @@ func _init_steam() -> void:
 		join_steam.call_deferred(args[i + 1].to_int())
 
 func _on_steam_lobby_created(result: int, lobby_id: int) -> void:
+	if not _steam_pending:
+		if result == STEAM_RESULT_OK:
+			_steam.leaveLobby(lobby_id)
+		return
+	_steam_pending = false
 	if result != STEAM_RESULT_OK:
 		_hosting_lobby = false
 		host_failed.emit(tr("Steam could not create a lobby (result %d).") % result)
@@ -389,6 +400,11 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 	# Fires for the creator too — the host path is finished in _on_steam_lobby_created
 	if _hosting_lobby:
 		return
+	if not _steam_pending:
+		if response == LOBBY_ENTER_SUCCESS:
+			_steam.leaveLobby(lobby_id)
+		return
+	_steam_pending = false
 	if response != LOBBY_ENTER_SUCCESS:
 		lobby_joined.emit(false)
 		return
@@ -397,9 +413,9 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 		disconnect_session()
 		lobby_joined.emit(false)
 		return
-	var owner: int = _steam.getLobbyOwner(lobby_id)
+	var lobby_owner: int = _steam.getLobbyOwner(lobby_id)
 	var peer: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
-	var err: int = peer.create_client(owner, 0)
+	var err: int = peer.create_client(lobby_owner, 0)
 	if err != OK:
 		disconnect_session()
 		lobby_joined.emit(false)

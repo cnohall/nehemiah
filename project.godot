@@ -15,12 +15,12 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Nehemiah: The Wall"
-config/version="0.1.2-beta"
 config/description="Co-op 2-4 player HD-2D isometric action-strategy, 445 BC Jerusalem"
+config/version="0.1.2-beta"
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
-config/icon="res://icon.png"
 boot_splash/bg_color=Color(0.105, 0.068, 0.044, 1)
+config/icon="res://icon.png"
 
 [autoload]
 
@@ -41,6 +41,10 @@ Settings="*res://scenes/settings/settings.gd"
 InputMode="*res://scenes/input_mode/input_mode.gd"
 Mobile="*res://scenes/mobile/mobile.gd"
 SteamAchievements="*res://scenes/achievements/achievements.gd"
+
+[debug]
+
+gdscript/warnings/integer_division=0
 
 [display]
 
@@ -163,13 +167,10 @@ locale/translations=PackedStringArray("res://locale/es.po", "res://locale/pt_BR.
 
 [rendering]
 
-renderer/rendering_method.mobile="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size.mobile=1024
-lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=1
-
-lights_and_shadows/directional_shadow/size=4096
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=1
 camera/depth_of_field/depth_of_field_bokeh_shape=0
 environment/ssao/quality=1
 anti_aliasing/quality/msaa_3d=2

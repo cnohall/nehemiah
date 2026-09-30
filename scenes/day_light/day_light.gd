@@ -22,15 +22,29 @@ const LAMP_POLL       := 0.5   # once night has settled, how often to hand out l
 const EVENING_COLOR   := Color(1.0, 0.62, 0.38)
 const EVENING_SUN     := 0.72   # sun energy at the very end of the day
 const EVENING_RATE    := 0.6
+# Sun clock, told by the sun itself (diegetic HUD): from the scene's mid-morning height
+# the sun sinks and swings west as the daylight runs out, so the shadows lengthen and
+# turn. Angles in degrees; bearing is the sun's direction in the ground plane (x, z).
+const SUN_HIGH     := 61.4    # elevation of the scene's sun: where each day starts
+const SUN_LOW_ELEV := 22.0    # at the stars — low, long shadows, still readable
+const SUN_BEARING  := 140.0   # the scene's sun, south-west of the site…
+const SUN_SWING    := 38.0    # …turning toward the west over the day
+const SUN_ARC_RATE := 0.5     # how fast it swings back up at a new dawn
+# Lamps in the windows (ScatterLayer, group "window_lamps"): lit one by one as evening
+# comes on (Neh. 4:21 "till the stars appeared"), all of them once night falls
+const LAMPS_FROM := 0.3       # evening at which the first is lit …
+const LAMPS_ALL  := 0.95      # … and the last
 
 @onready var _sun: DirectionalLight3D = get_parent().get_node("Sun")
 @onready var _env: Environment = get_parent().get_node("WorldEnvironment").environment
 
 var darkness := 0.0
 var evening := 0.0
+var lamps := 0.0   # 0 … 1: share of the windows lit (read by Birds too)
 var _target := 0.0
 var _day := {}   # daylight values to return to
 var _lamp_poll := 0.0
+var _arc := 0.0   # 0 = the day's first light … 1 = the stars
 
 func _ready() -> void:
 	_day = {
@@ -55,7 +69,24 @@ func _evening_target() -> float:
 		return 0.0
 	return clampf(1.0 - GameState.sun_left / (GameState.sun_total * GameState.SUN_LOW), 0.0, 1.0)
 
+## How far through today's light (0 without a sun clock)
+func _arc_target() -> float:
+	if GameState.sun_total <= 0.0:
+		return 0.0
+	return clampf(1.0 - GameState.sun_left / GameState.sun_total, 0.0, 1.0)
+
+func _apply_arc() -> void:
+	var el := deg_to_rad(lerpf(SUN_HIGH, SUN_LOW_ELEV, _arc))
+	var bearing := deg_to_rad(SUN_BEARING + SUN_SWING * _arc)
+	var to_sun := Vector3(cos(el) * cos(bearing), sin(el), cos(el) * sin(bearing))
+	_sun.global_basis = Basis.looking_at(-to_sun, Vector3.UP)
+
 func _process(delta: float) -> void:
+	var a := _arc_target()
+	if not is_equal_approx(_arc, a):
+		# Counting down it follows the clock; a new dawn brings it back up gently
+		_arc = a if a > _arc else move_toward(_arc, a, SUN_ARC_RATE * delta)
+		_apply_arc()
 	var e := _evening_target()
 	if not is_equal_approx(evening, e):
 		evening = move_toward(evening, e, EVENING_RATE * delta)
@@ -89,6 +120,8 @@ func _apply() -> void:
 
 func _update_lamps() -> void:
 	var k := darkness * darkness * (3.0 - 2.0 * darkness)
+	lamps = maxf(smoothstep(LAMPS_FROM, LAMPS_ALL, evening), k)
+	get_tree().call_group("window_lamps", "set_lamps", lamps)
 	for p: Node3D in get_tree().get_nodes_in_group("players"):
 		var lamp: OmniLight3D = p.get_node_or_null("Lamp")
 		if lamp == null:

@@ -72,23 +72,48 @@ func ping(at: Vector3, color: Color, text: String, seconds: float) -> void:
 
 # Disc pinned to the screen edge, arrow pointing at the off-screen target
 func _pointer(target: Vector2, color: Color, text: String, pulse: float) -> void:
-	var size := get_viewport_rect().size
-	var box := Rect2(margin_side, margin_top, size.x - margin_side * 2.0, size.y - margin_top - margin_bottom)
+	var vp_size := get_viewport_rect().size
+	var box := Rect2(margin_side, margin_top, vp_size.x - margin_side * 2.0, vp_size.y - margin_top - margin_bottom)
 	var centre := box.get_center()
 	var dir := (target - centre).normalized()
 	# Push out from the box centre until we hit its edge
 	var half := box.size * 0.5
 	var t := minf(half.x / maxf(absf(dir.x), 0.001), half.y / maxf(absf(dir.y), 0.001))
 	var pos := centre + dir * t
-	var side := dir.orthogonal()
-	var tip := pos + dir * (RADIUS + TIP)
-	var base := pos + dir * (RADIUS - 4.0)
-	var fill := Color(color, pulse)
-	draw_colored_polygon(PackedVector2Array([tip, base + side * 11.0, base - side * 11.0]), fill)
-	draw_circle(pos, RADIUS + 2.0, Color(UiStyle.DUSK, 0.55 * pulse))
-	draw_circle(pos, RADIUS, fill)
-	var font := UiStyle.CINZEL_SEMI
-	text = tr(text)
-	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
-	draw_string(font, pos + Vector2(-w * 0.5, FONT_SIZE * 0.35), text,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Color(UiStyle.CREAM, pulse))
+	# Pulse is a ring rippling outward, not a flicker of the badge itself
+	var ripple := fmod(Time.get_ticks_msec() * 0.0011, 1.0)
+	draw_arc(pos, RADIUS + 3.0 + ripple * 16.0, 0.0, TAU, 48,
+		Color(color, 0.55 * (1.0 - ripple)), 2.5 * (1.0 - ripple) + 0.5, true)
+	var shadow := pos + Vector2(0.0, 3.0)
+	_pin(shadow, dir, RADIUS + 3.0, Color(UiStyle.DUSK, 0.35))
+	_pin(pos, dir, RADIUS + 3.0, UiStyle.DUSK.lerp(color, 0.25))   # dark lip
+	_pin(pos, dir, RADIUS + 1.5, UiStyle.PARCHMENT)                 # cream bezel
+	_pin(pos, dir, RADIUS, color.darkened(0.12))
+	# Soft top-lit face: a lighter disc nudged up, then a thin inner rim
+	draw_circle(pos + Vector2(0.0, -2.0), RADIUS - 3.0, color.lightened(0.08 + 0.06 * pulse), true, -1.0, true)
+	draw_arc(pos, RADIUS - 3.0, 0.0, TAU, 40, Color(UiStyle.CREAM, 0.35), 1.0, true)
+	var font := UiStyle.CINZEL_BOLD
+	text = tr(text).to_upper()
+	var size := FONT_SIZE
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	while w > RADIUS * 2.0 - 10.0 and size > 8:
+		size -= 1
+		w = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var at := pos + Vector2(-w * 0.5, size * 0.36)
+	draw_string(font, at + Vector2(0.0, 1.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(UiStyle.DUSK, 0.6))
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, UiStyle.CREAM)
+
+# Teardrop: disc of radius r whose tangents meet in a point along dir — one shape,
+# so layered fills never double up where arrow and disc overlap
+func _pin(pos: Vector2, dir: Vector2, r: float, color: Color) -> void:
+	var tip_dist := r + TIP * (r / RADIUS)
+	var a0 := dir.angle()
+	var half := acos(r / tip_dist)
+	var pts := PackedVector2Array([pos + dir * tip_dist])
+	const STEPS := 36
+	for i in STEPS + 1:
+		var a := a0 + half + (TAU - half * 2.0) * i / STEPS
+		pts.append(pos + Vector2.from_angle(a) * r)
+	draw_colored_polygon(pts, color)
+	pts.append(pts[0])
+	draw_polyline(pts, color, 1.0, true)   # antialiased edge

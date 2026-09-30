@@ -12,6 +12,8 @@
 [ext_resource type="Script" path="res://scenes/section_stage/section_stage.gd" id="10_stage"]
 [ext_resource type="PackedScene" path="res://scenes/trough/trough.tscn" id="11_trough"]
 [ext_resource type="Script" path="res://scenes/section_terrain/section_terrain.gd" id="12_terrain"]
+[ext_resource type="Script" path="res://scenes/breakable/breakables.gd" id="40_breakables"]
+[ext_resource type="Script" path="res://scenes/birds/birds.gd" id="41_birds"]
 [ext_resource type="Script" path="res://scenes/day_light/day_light.gd" id="13_daylight"]
 [ext_resource type="Script" path="res://scenes/horn/horn.gd" id="14_horn"]
 [ext_resource type="PackedScene" path="res://scenes/watch_post/watch_post.tscn" id="15_post"]
@@ -294,6 +296,12 @@ script = ExtResource("10_stage")
 
 [node name="SectionTerrain" type="Node3D" parent="." groups=["navigation_mesh_source_group"]]
 script = ExtResource("12_terrain")
+
+[node name="Breakables" type="Node3D" parent="."]
+script = ExtResource("40_breakables")
+
+[node name="Birds" type="Node3D" parent="."]
+script = ExtResource("41_birds")
 
 [node name="DayLight" type="Node" parent="."]
 script = ExtResource("13_daylight")

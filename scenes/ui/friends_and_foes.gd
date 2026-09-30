@@ -631,7 +631,7 @@ func _build_lineup() -> Control:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var group := ""
-	var box: HBoxContainer
+	var box: HBoxContainer = null
 	for i in ENTRIES.size():
 		var e: Dictionary = ENTRIES[i]
 		if e["group"] != group:
@@ -762,13 +762,13 @@ func _medal(i: int) -> Control:
 	_medal_vps.append(vp)
 	return m
 
-func _label(variation: StringName, font_size: int, color: Color, wrap := true, text := "") -> Label:
+func _label(variation: StringName, font_size: int, color: Color, wrapped := true, text := "") -> Label:
 	var l := Label.new()
 	l.theme_type_variation = variation
 	l.text = text
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
-	if wrap:
+	if wrapped:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l

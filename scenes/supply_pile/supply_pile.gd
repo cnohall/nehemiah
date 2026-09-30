@@ -36,6 +36,8 @@ const COLORS := {
 	"beam":   Color(0.46, 0.31, 0.17),
 	"lime":   Color(0.92, 0.91, 0.86),
 	"water":  Color(0.66, 0.40, 0.26),
+	"branch": Color(0.46, 0.33, 0.20),
+	"portion": Color(0.62, 0.47, 0.26),
 }
 
 func _ready() -> void:
@@ -76,6 +78,10 @@ func _ready() -> void:
 			_build_lime(rng)
 		"water":
 			_build_water(rng)
+		"branch":
+			_build_boughs(rng)
+		"portion":
+			_build_food(rng)
 	_fold_visual()
 	GameState.section_changed.connect(_refresh_active.unbind(1))
 	_refresh_active()
@@ -129,12 +135,28 @@ const ASH := Color(0.30, 0.27, 0.24)
 # Burned rubble (Neh. 4:2 "burned as they are"): a low scorched mound with loose
 # blocks on top; blocks disappear as the stock runs down
 func _build_rubble_heap(rng: RandomNumberGenerator) -> void:
+	# The mound: soft lumps of earth and lime dust run together, not one hard dome
 	var mound := SphereMesh.new()
-	mound.radius = 1.25
-	mound.height = 0.7
-	mound.radial_segments = 12
-	mound.rings = 4
-	_add(mound, ASH.lerp(COLORS["stone"], 0.7), Vector3(0, 0.05, 0), Vector3(0, rng.randf() * TAU, 0))
+	mound.radius = 0.5
+	mound.height = 1.0
+	mound.radial_segments = 20
+	mound.rings = 8
+	var earth := ASH.lerp(COLORS["stone"], 0.55)
+	var heart := _add(mound, earth, Vector3(0, 0.02, 0), Vector3(0, rng.randf() * TAU, 0))
+	heart.scale = Vector3(2.3, 0.6, 2.0)
+	for i in 3:
+		var a := TAU * i / 3.0 + rng.randf_range(-0.4, 0.4)
+		var lump := _add(mound, earth.lerp(ASH, rng.randf_range(0.0, 0.3)), Vector3(cos(a) * 0.75, 0.0, sin(a) * 0.65), Vector3(0, rng.randf() * TAU, 0))
+		lump.scale = Vector3(rng.randf_range(1.0, 1.4), rng.randf_range(0.35, 0.5), rng.randf_range(0.9, 1.2))
+	# Broken stone and a charred beam end spilling off it — these stay when it's picked bare
+	for i in 9:
+		var a := rng.randf() * TAU
+		var r := rng.randf_range(1.1, 1.6)
+		var s := Vector3(rng.randf_range(0.16, 0.3), rng.randf_range(0.1, 0.18), rng.randf_range(0.14, 0.26))
+		_add(_box(s), (COLORS["stone"] as Color).lerp(ASH, rng.randf_range(0.0, 0.5)), Vector3(cos(a) * r, 0.1 + s.y * 0.4, sin(a) * r),
+			Vector3(rng.randf_range(-0.3, 0.3), rng.randf() * TAU, rng.randf_range(-0.3, 0.3)))
+	var beam := rng.randf() * TAU
+	_add(_box(Vector3(1.4, 0.16, 0.18)), Color(0.18, 0.14, 0.12), Vector3(cos(beam) * 0.6, 0.3, sin(beam) * 0.6), Vector3(0, beam, 0.35))
 	for i in rubble_stock:
 		var a := TAU * i / rubble_stock + rng.randf_range(-0.3, 0.3)
 		var r := rng.randf_range(0.2, 0.8)
@@ -248,6 +270,26 @@ func _build_water(rng: RandomNumberGenerator) -> void:
 		mouth.height = 0.12
 		_add(mouth, COLORS["water"].darkened(0.1), Vector3(x, 0.2 + h + 0.02, 0), Vector3.ZERO)
 
+# Festival (Neh. 8:15): cut boughs of olive, myrtle and palm heaped on the ground
+func _build_boughs(rng: RandomNumberGenerator) -> void:
+	for i in 7:
+		var bough := DroppedItem.build_prop("branch")
+		bough.position = Vector3(rng.randf_range(-0.6, 0.6), 0.22 + (i / 3) * 0.14, rng.randf_range(-0.6, 0.6))
+		bough.rotation.y = rng.randf() * TAU
+		bough.scale = Vector3.ONE * rng.randf_range(1.1, 1.4)
+		_visual.add_child(bough)
+
+# Festival (Neh. 8:10): a trestle table of baskets — bread, figs — to send out
+func _build_food(rng: RandomNumberGenerator) -> void:
+	_add(_box(Vector3(1.9, 0.08, 0.9)), COLORS["wood"].lightened(0.1), Vector3(0, 0.62, 0), Vector3.ZERO)
+	for sx: float in [-0.8, 0.8]:
+		_add(_box(Vector3(0.1, 0.55, 0.8)), COLORS["wood"].darkened(0.1), Vector3(sx, 0.34, 0), Vector3.ZERO)
+	for i in 3:
+		var basket := DroppedItem.build_prop("portion")
+		basket.position = Vector3(-0.6 + i * 0.6, 0.76, rng.randf_range(-0.12, 0.12))
+		basket.scale = Vector3.ONE * 1.3
+		_visual.add_child(basket)
+
 func _build_stones(rng: RandomNumberGenerator) -> void:
 	# Loose cut blocks, stacked in two rough layers
 	for layer in 2:
@@ -343,9 +385,11 @@ func _fold_visual() -> void:
 	var items := []
 	for c in _visual.get_children():
 		var mi := c as MeshInstance3D
-		if mi == null or _rubble_stones.has(mi):
+		# Props built elsewhere (boughs, baskets) aren't flat-coloured boxes: leave them be
+		var mat := mi.material_override as StandardMaterial3D if mi else null
+		if mat == null or _rubble_stones.has(mi):
 			continue
-		items.append([mi.mesh, mi.transform, (mi.material_override as StandardMaterial3D).albedo_color])
+		items.append([mi.mesh, mi.transform, mat.albedo_color])
 		mi.free()
 	if items.is_empty():
 		return
