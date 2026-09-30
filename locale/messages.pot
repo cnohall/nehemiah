@@ -1842,8 +1842,8 @@ msgid "The stars appeared"
 msgstr ""
 
 #: scenes\ui\game_hud.gd:800
-msgid "The stars appeared — %d left for tomorrow."
-msgid_plural "The stars appeared — %d left for tomorrow."
+msgid "The stars appeared — %d wall piece left for tomorrow."
+msgid_plural "The stars appeared — %d wall pieces left for tomorrow."
 msgstr[0] ""
 msgstr[1] ""
 
