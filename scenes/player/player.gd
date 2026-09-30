@@ -851,6 +851,8 @@ func _set_carried(kind: String) -> void:
 		_release_helper()
 	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
 		_toast("Heavy — a partner can take the other end {interact}")
+	elif not kind.is_empty() and is_multiplayer_authority() and Trade.carry_mult(trade) > 1.0:
+		_knack("Your trade — quicker with a load")
 	# Pick up → squashed under the load; put down → spring back up
 	_sprite.squash(Vector2(1.08, 0.92) if not kind.is_empty() else Vector2(0.95, 1.05))
 
@@ -930,6 +932,8 @@ func release_throw() -> void:
 	if _sprite.animation.begins_with("slash"):
 		_sprite.squash(Vector2(1.08, 0.94))
 		_server_sling.rpc_id(1, global_position, land, charge, InputMode.using_pad or brain != null)
+		if Trade.hit_mult(trade) > 1.0:
+			_knack("Your trade — your blows land harder")
 
 # ── Sword ──────────────────────────────────────────────────
 
@@ -965,6 +969,8 @@ func _swing_sword(foe: Node3D) -> void:
 	if not is_instance_valid(self) or not _sprite.animation.begins_with("sword"):
 		return   # knocked out of the swing before it landed
 	_server_sword.rpc_id(1, global_position, aim_yaw)
+	if Trade.hit_mult(trade) > 1.0:
+		_knack("Your trade — your blows land harder")
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_sword(at: Vector3, yaw: float) -> void:
@@ -1218,6 +1224,8 @@ func _set_working(site_path: NodePath) -> void:
 		_facing = CharAnim.dir_from_velocity(site.approach_point(global_position, 0.0) - global_position, _facing)
 		anim = "build_" + _facing
 		_sprite.squash(Vector2(1.06, 0.94))
+		if Trade.prefers(trade, site.work_material()):
+			_knack("Your trade — quicker hands at this work")
 	elif not downed and not _is_busy:
 		anim = "idle_" + _facing
 
@@ -1343,6 +1351,14 @@ func _tell(text: String, need := "") -> void:
 func _feedback(text: String, need: String) -> void:
 	if multiplayer.get_remote_sender_id() == 1:
 		_toast(text, need)
+
+# Owner: the first time this game that the trade's knack (Trade) pays off, say so once
+var _knack_told := false
+
+func _knack(text: String) -> void:
+	if not _knack_told:
+		_knack_told = true
+		_toast(text)
 
 # Short floating line above the head (local only)
 func _toast(text: String, need := "") -> void:
