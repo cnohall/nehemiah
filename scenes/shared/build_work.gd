@@ -70,13 +70,26 @@ func _process(delta: float) -> void:
 	if not site.can_build():
 		_release_all()
 		return
-	var hands := 1.0 + EXTRA_HAND * (_builders.size() - 1)
-	progress = minf(1.0, progress + delta * hands / work_time)
+	progress = minf(1.0, progress + delta * hands() / (work_time * Trade.work_mult()))
 	if progress >= 1.0:
 		progress = 0.0
 		site.try_build()
 		_release_all()
 		finished.emit()
+
+## Server: workers at it, in one-worker paces. Each trade works at its own pace (Trade);
+## the quickest counts in full, every other hand adds EXTRA_HAND of theirs.
+func hands() -> float:
+	var site := get_parent()
+	var material: String = site.work_material() if site.has_method("work_material") else ""
+	var paces: Array = _builders.map(func(p: Node3D) -> float:
+		return Trade.work_pace(p.trade, material) if "trade" in p else 1.0)
+	paces.sort()
+	paces.reverse()
+	var total := 0.0
+	for i in paces.size():
+		total += paces[i] * (1.0 if i == 0 else EXTRA_HAND)
+	return total
 
 func _release_all() -> void:
 	for p in _builders:

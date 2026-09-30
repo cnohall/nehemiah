@@ -75,6 +75,9 @@ const MAX_BREACHES := 10   # enemies that may reach the inner city before the ci
 var waves: bool = "--no-waves" not in OS.get_cmdline_user_args()
 var sun: bool = "--no-sun" not in OS.get_cmdline_user_args()
 var posts: bool = "--no-posts" not in OS.get_cmdline_user_args()
+# Trades (GDD §5.10): longer hands-on work, each trade quicker at its own (Trade).
+# `-- --no-trades` for the old times and no perks
+var trades: bool = "--no-trades" not in OS.get_cmdline_user_args()
 signal rules_changed
 
 # Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
@@ -283,10 +286,13 @@ func _load_met() -> void:
 func is_replay() -> bool:
 	return replay_section >= 0
 
+## Early beta: every section open on the map, so testers can jump to any stretch
+const ALL_SECTIONS_OPEN := true
+
 ## Picked on the map: the first section is always open; each next one once the one
 ## before it has been finished (any marks). Debug builds: `-- --unlock-all`.
 func is_unlocked(section_index: int) -> bool:
-	if section_index == 0 or best_marks(section_index) >= 0 or best_marks(section_index - 1) >= 0:
+	if ALL_SECTIONS_OPEN or section_index == 0 or best_marks(section_index) >= 0 or best_marks(section_index - 1) >= 0:
 		return true
 	return OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args()
 
@@ -420,7 +426,7 @@ func apply_attract_start() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
-	_sync_rules.rpc_id(peer_id, waves, sun, posts)
+	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades)
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size)
@@ -442,10 +448,11 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_rules(w: bool, s: bool, p: bool) -> void:
+func _sync_rules(w: bool, s: bool, p: bool, t: bool) -> void:
 	waves = w
 	sun = s
 	posts = p
+	trades = t
 	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")

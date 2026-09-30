@@ -150,6 +150,9 @@ func _on_tally(stats: Dictionary) -> void:
 		"bot" if r[0] >= BOT_ID_BASE else "host", r[1], r[2]])
 	print("Day %d: %.0f s, %d breaches — %s" % [root.get_node("GameState").current_day,
 		stats["time"], stats["breaches"], ", ".join(rows)])
+	if stats.has("marks"):
+		print("Section: %.0f s, %d loads, %d foes, %d breaches" % [stats["section_time"],
+			stats["section_loads"], stats["section_foes"], stats["section_breaches"]])
 
 func _finish(code: int) -> bool:
 	Engine.time_scale = 1.0

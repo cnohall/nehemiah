@@ -4,7 +4,8 @@ extends Control
 # Replay map (main menu → "Choose a Section"): the circuit with every stretch this player
 # has finished standing, their best marks beside each gate. Pick one to host a game of
 # just that section (GameState.replay_section). A section opens once the one before it
-# has been finished; the Sheep Gate is always open.
+# has been finished; the Sheep Gate is always open (early beta: all open,
+# GameState.ALL_SECTIONS_OPEN).
 
 signal chosen(section_index: int)
 signal closed

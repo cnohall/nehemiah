@@ -1789,3 +1789,24 @@ msgstr "En el mundo"
 
 msgid "Plaques"
 msgstr "Placas"
+
+msgid "The attackers"
+msgstr "Los atacantes"
+
+msgid "Adversary"
+msgstr "Adversario"
+
+msgid "Your trade: %s"
+msgstr "Tu oficio: %s"
+
+msgid "Lays stone faster"
+msgstr "Coloca piedra más rápido"
+
+msgid "Walks faster with a load"
+msgstr "Camina más rápido con carga"
+
+msgid "Works timber faster — frames, doors, watch posts"
+msgstr "Trabaja la madera más rápido — armazones, puertas, puestos de guardia"
+
+msgid "Sword and sling hit harder"
+msgstr "Espada y honda golpean más fuerte"

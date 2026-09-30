@@ -179,7 +179,7 @@ func disconnect_session() -> void:
 ## Server (host / solo): start the list with ourselves, once the game scene is up
 func open_crew() -> void:
 	if multiplayer.is_server():
-		crew_info[multiplayer.get_unique_id()] = { "name": steam_name(), "loading": false }
+		crew_info[multiplayer.get_unique_id()] = { "name": steam_name(), "loading": false, "trade": Settings.trade }
 		_broadcast_crew()
 
 ## A person's Steam name, or "" (no Steam, or not heard yet)
@@ -193,12 +193,36 @@ func is_loading(id: int) -> bool:
 func loading_peers() -> Array:
 	return crew_info.keys().filter(is_loading)
 
+## A person's chosen trade (Trade), or -1 (their slot's own)
+func trade_of(id: int) -> int:
+	return crew_info.get(id, {}).get("trade", -1)
+
+## Local player: pick a trade (-1 = the slot's own); remembered for next time
+func choose_trade(trade: int) -> void:
+	Settings.trade = trade
+	Settings.save()
+	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
+		_set_trade(multiplayer.get_unique_id(), trade)
+	else:
+		_ask_trade.rpc_id(1, trade)
+
+@rpc("any_peer", "reliable")
+func _ask_trade(trade: int) -> void:
+	if multiplayer.is_server():
+		_set_trade(multiplayer.get_remote_sender_id(), trade)
+
+func _set_trade(id: int, trade: int) -> void:
+	if crew_info.has(id):
+		crew_info[id]["trade"] = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
+		_broadcast_crew()
+
 # Client → server, as soon as the connection is up: who we are
 @rpc("any_peer", "reliable")
-func _hello(display_name: String) -> void:
+func _hello(display_name: String, trade: int) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if multiplayer.is_server() and crew_info.has(id):
 		crew_info[id]["name"] = display_name.left(32)
+		crew_info[id]["trade"] = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
 		_broadcast_crew()
 
 @rpc("authority", "call_remote", "reliable")
@@ -255,7 +279,7 @@ func add_sync(target: Node, props: Array[NodePath],
 
 func _on_peer_connected(id: int) -> void:
 	if multiplayer.is_server():
-		crew_info[id] = { "name": "", "loading": true }
+		crew_info[id] = { "name": "", "loading": true, "trade": -1 }
 		_broadcast_crew()
 	peer_connected.emit(id)
 
@@ -266,7 +290,7 @@ func _on_peer_disconnected(id: int) -> void:
 	peer_disconnected.emit(id)
 
 func _on_connected_to_server() -> void:
-	_hello.rpc_id(1, steam_name())
+	_hello.rpc_id(1, steam_name(), Settings.trade)
 	lobby_joined.emit(true)
 
 func _on_connection_failed() -> void:

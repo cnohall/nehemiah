@@ -133,6 +133,10 @@ func _ready() -> void:
 	# Mouse only: with a pad, A near a stockpile must not also start the day
 	$Root/GatherPanel/VBox/Begin.focus_mode = Control.FOCUS_NONE
 	_build_gamepad_begin()
+	if GameState.trades and not GameState.attract and not GameState.festival:
+		_build_trade_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
+		var pause_vb := $Root/PauseMenu/Center/Modal/VBox
+		_build_trade_row(pause_vb, $Root/PauseMenu/Center/Modal/VBox/Settings.get_index(), true)
 	if is_host:
 		_build_bot_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
 		# Also from the menu: mid-day, and reachable on a pad
@@ -799,6 +803,9 @@ func show_tally(stats: Dictionary) -> void:
 	# The whole section is done (rated) — say so, and how many days it had to spare
 	elif stats.has("marks"):
 		title = tr("The %s stands") % tr(section["name"])
+		var lost: int = stats["section_breaches"]
+		sub = tr("Not one enemy got through.") if lost == 0 \
+			else tr_n("%d slipped through — but the wall stands.", "%d slipped through — but the wall stands.", lost) % lost
 		sub = tr("Section %d of %d complete  ·  %s") % [GameState.current_section_index + 1,
 			GameState.SECTIONS.size(), sub]
 		var spare: int = stats.get("spare", 0)
@@ -809,21 +816,23 @@ func show_tally(stats: Dictionary) -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 56)
 	_tally.add_child(row)
-	var secs := int(stats["time"])
+	# A stretch that stands counts the whole stretch, not just its last day
+	var rated := stats.has("marks")
+	var pre := "section_" if rated else ""
+	var secs := int(stats[pre + "time"])
 	var counts: Array = [
 		[secs, "Time", func(v: int): return "%d:%02d" % [v / 60, v % 60]],
-		[stats["loads"], "Loads carried", func(v: int): return str(v)],
-		[stats["foes"], "Foes felled", func(v: int): return str(v)],
+		[stats[pre + "loads"], "Loads carried", func(v: int): return str(v)],
+		[stats[pre + "foes"], "Foes felled", func(v: int): return str(v)],
 	]
 	for i in counts.size():
 		var cell := _stat(counts[i][2].call(0), counts[i][1])
 		row.add_child(cell)
 		_count_up(cell.get_child(0), counts[i][0], counts[i][2], i * TALLY_STEP + 0.5)
 
-	var crew: Array = stats["crew"]
+	var crew: Array = stats[pre + "crew"]
 	if crew.size() > 1:
 		_tally.add_child(_crew_line(crew))
-	var rated := stats.has("marks")
 	if rated:
 		_tally.add_child(_marks_line(stats))
 	# The tally stays until everyone is ready (playtest 2) — the title screen's crew
@@ -888,13 +897,21 @@ func _crew_line(crew: Array) -> Control:
 		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		swatch.color = _slot_colors[slot % _slot_colors.size()]
 		chip.add_child(swatch)
-		var who: String = "You" if r[0] == multiplayer.get_unique_id() else CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
+		var worker := _worker(r[0])
+		var who: String = "You" if r[0] == multiplayer.get_unique_id() \
+			else (worker.trade_name() if worker != null else CharacterRig.TRADES[slot % CharacterRig.TRADES.size()])
 		chip.add_child(_crew_label(who, UiStyle.INK))
 		chip.add_child(_crew_label(tr_n("%d load", "%d loads", r[1]) % r[1], UiStyle.TERRACOTTA if r[1] > 0 and r[1] == top_loads else UiStyle.INK_SOFT))
 		chip.add_child(_crew_label("·", UiStyle.INK_MUTED))
 		chip.add_child(_crew_label(tr_n("%d foe", "%d foes", r[2]) % r[2], UiStyle.TERRACOTTA if r[2] > 0 and r[2] == top_foes else UiStyle.INK_SOFT))
 		line.add_child(chip)
 	return line
+
+func _worker(id: int) -> Player:
+	for p: Player in get_tree().get_nodes_in_group("players"):
+		if p.worker_id() == id:
+			return p
+	return null
 
 func _crew_label(text: String, color: Color) -> Label:
 	var l := Label.new()
@@ -997,6 +1014,36 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	skill.tooltip_text = tr("Click to change")
 	refresh.call()
 
+# Everyone: which trade you work as (Trade) — a click steps to the next, the caption says
+# what it's quicker at. Bots take the trades left over. Remembered for the next game.
+func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
+	var pick := _bot_button("", in_menu)
+	pick.tooltip_text = tr("Click to change")
+	var about := _host_caption()
+	vb.add_child(pick)
+	vb.move_child(pick, at)
+	pick.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vb.add_child(about)
+	vb.move_child(about, at + 1)
+	var mine := func() -> int:
+		var me := _worker(multiplayer.get_unique_id())
+		return me.trade if me != null else maxi(0, Settings.trade)
+	var refresh := func():
+		var t: int = mine.call()
+		pick.text = tr("Your trade: %s") % tr(CharacterRig.TRADES[t])
+		about.text = tr(Trade.ABOUT[t])
+	pick.pressed.connect(func():
+		NetworkManager.choose_trade((mine.call() + 1) % CharacterRig.TRADES.size()))
+	# The pick goes round the server and comes back with the crew list; Main re-slots first
+	if not NetworkManager.crew_info_changed.is_connected(_refresh_rows_later):
+		NetworkManager.crew_info_changed.connect(_refresh_rows_later)
+	_host_refreshers.append(refresh)
+	refresh.call()
+
+func _refresh_rows_later() -> void:
+	for r in _host_refreshers:
+		r.call_deferred()
+
 func _host_row(children: Array) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1061,12 +1108,12 @@ func _refresh_joining() -> void:
 
 ## `display` = their Steam name ("" = none); `loading` = still joining (game not loaded)
 func set_player_present(slot: int, present: bool, is_local: bool, is_bot := false,
-		display := "", loading := false) -> void:
+		display := "", loading := false, trade := -1) -> void:
 	if slot >= _cards.size():
 		return
 	var card: Dictionary = _cards[slot]
 	card.root.visible = present
-	card.name.text = CharacterRig.TRADES[slot % CharacterRig.TRADES.size()]
+	card.name.text = CharacterRig.TRADES[(trade if trade >= 0 else slot) % CharacterRig.TRADES.size()]
 	var who: String = tr("You") if is_local else (tr("Bot") if is_bot \
 		else (display if not display.is_empty() else tr("Crew %s") % ROMAN[slot]))
 	card.who.text = tr("%s · joining…") % who if loading else who
@@ -1098,11 +1145,11 @@ func set_player_carry(slot: int, kind: String) -> void:
 		icon.kind = k
 		icon.queue_redraw()
 
-func set_player_color(slot: int, color: Color) -> void:
+func set_player_color(slot: int, color: Color, trade := -1) -> void:
 	if slot >= _cards.size():
 		return
 	_slot_colors[slot] = color
-	(_cards[slot].portrait as CrewPortrait).set_worker(slot, color)
+	(_cards[slot].portrait as CrewPortrait).set_worker(trade if trade >= 0 else slot, color)
 	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat
 	card.content_margin_left = 10
 	card.content_margin_top = 8

@@ -102,7 +102,7 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Hands are full while working — builders can't sling. Guarding the builders is the Neh. 4:17 moment
 - **Sword** (Neh. 4:18, "every builder had his sword girded by his side"): same button as the sling. A foe within 2 m → a quick cut instead of a wind-up: 20 damage to every foe in a 130° arc in front, shoves them back (scout 1.3 m, raider ~1 m, brute ~0.45 m), 0.45 s cooldown. Sling stays the safe way to chip at range; the sword pays better but means standing in reach. Unlimited sling stones stay — the stone-vs-wall choice lives in the watch posts
 - The next stage rises block by block (doors plank by plank) as the work fills; a knock + dust per stroke
-- Time per stage for one worker: framing 2 s, courses 3 s, mortar 2 s, doors/seal 2.5 s; solo works 25% faster
+- Time per stage for one worker: framing 2 s, courses 3 s, mortar 2 s, doors/seal 2.5 s; solo works 25% faster. With trades on (§5.10) all ×1.6, and a trade's own work back at these times
 - To keep days the same length, each stage costs one load less (never below 1); beams unchanged
 - **No tool.** A tool is a fetch step with no decision in it (Overcooked only uses tools when they're scarce). Could return as a one-section twist (a single shared plumb line)
 - Watch in playtests: solo pacing; whether hits interrupting work feels fair or nagging
@@ -220,6 +220,36 @@ Three rules, each on by default and each switched off from the command line to A
 - Solo: is it a fair tax, or does it wreck the sun-clock par? Tune `sun_slack` against it, not him
 - Does it hide the archer's job (guarding builders) when both are in? Archer spec waits for this playtest
 
+### 5.10 Trades — ◐ first pass (30 Sep 2026), needs playtest 3
+**Fun check:**
+- **Fantasy:** the crew of Neh. 4 as it was: builders, burden-bearers (4:10), craftsmen, and those behind them with the spears (4:16). *You're* the carpenter, not just worker #3
+- **Kind of fun:** Fellowship ("you frame, I'll haul"), a little Challenge (who covers the job nobody is quick at?)
+- **Where it can go sour:** a crew waiting for "the mason" instead of just laying stone; solo feeling locked into one trade; four people picking the same one
+- **A/B switch:** `-- --no-trades` (host's choice is sent to joiners, like `--no-waves`)
+- **Kill rule:** players ignore their trade entirely (the perk is invisible), or wait around for the right trade instead of working
+
+**Rules** (`Trade`, `scenes/shared/trade.gd`):
+- **Nobody is locked out of anything.** Every trade can carry, build, fight. A trade only makes one thing faster (Overcooked has no roles; this is the softest kind)
+- **Work is longer:** every stage's hands-on time ×1.6 (courses 3 → 4.8 s, framing 2 → 3.2 s, mortar 2 → 3.2 s, doors 2.5 → 4 s). **A trade's own work runs ×1.6**, so the specialist works at the old pace and everyone else is slower. More time at the wall = more Neh. 4:17 (the builders are exposed; someone has to guard them)
+- **Builder** — stone stages (courses, the stone seal) ×1.6
+- **Carpenter** — timber stages (framing, beams, gate doors, watch posts) ×1.6
+- **Water carrier** — walks loaded ×1.25 (5.5 → ~6.9; running is 8). Every load, not just water. Beams unchanged (the pair's tether)
+- **Overseer** — sword and sling ×1.6 damage (a full-charge sling fells a scout; sword: raider 2 cuts, brute 4)
+- Mortar has no specialist: always the slow stage, a job anyone takes
+- Extra hands: the quickest at the site counts in full, each other hand adds 70% *of their own pace* (`BuildWork.hands`)
+- Loads, par and `sun_slack` are unchanged: bot run on the Fish Gate took 196 s with and without trades (the longer work is paid back by the specialists)
+
+**Choosing:** "Your trade: …" in the gather panel and the pause menu (click steps to the next; a caption says what it's quicker at). Anyone, any time; remembered in `settings.cfg` (`Settings.trade`, -1 = your place's own, the old default). Travels in `NetworkManager.crew_info` (`choose_trade`). Duplicates are allowed — no lobby arguments; four carpenters just have slow stone. **Bots take the trades nobody holds** (`Trade.assign`), so solo + 3 bots is always the full crew. The look follows the trade (`CharacterRig.worker_look(trade, colour)`); the colour stays the slot's.
+
+**Bots:** overseer is first on guard when foes close on the work; water carrier fetches while anything is wanted; builder and carpenter go to their own work first. Any of them falls back to whatever is open.
+
+**Watch in playtests:**
+- Do people notice their perk without being told? (If not: a small tag at the wall "Carpenter's work" or a faster strike sound)
+- Does the crew split up by trade, or still swarm? Either is fine; waiting for the specialist is not
+- Is 4.8 s of courses for a non-builder dull, or tense? Tune `WORK_MULT` before `PACE`
+- Solo: is Builder the right default? Should solo work get the ×1.6 at all (`SOLO_WORK_MULT` already makes it 25% quicker)?
+- New strings English only; run the i18n extract for es / pt_BR / de / ko
+
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:
 - Stations told apart by period-appropriate bases, not colour-coding: stone on a timber pallet, logs on sleeper beams, mortar on a reed mat with spilled lime (bright colour rugs tried and dropped: broke immersion)
@@ -240,12 +270,11 @@ Keep the earthy palette, borrow Overcooked's readability:
 |---|---|---|
 | Enemies that attack the work itself, one at a time: **saboteur** (raids the yard, scatters loads; Neh 4:11 — spec §5.9) → **archer** (stays outside, hits builders on the scaffold; 4:17) | Variety across 52 days; makes guarding the yard / builders a real job | Low — add incrementally |
 | Civilians (women, children) inside the city | Raises stakes, fits Neh 4:13 | Adds AI work |
-| Player roles | More reason to coordinate | Could fragment co-op; Overcooked has no roles |
 | Prep days (gather materials, craft weapons) | Rhythm between sections | Slows pacing |
 | Stand on a tile to spawn builders/fighters (mobile-ad style) | Addictive progression hook | Can drift toward an idle game |
 | Medkits / healing | Survivability | Low priority |
 
-Done and removed from the table: wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6).
+Done and removed from the table: wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6), player roles → trades (§5.10).
 
 **Suggested order:** playtest 3 first (§5.6–5.8 are all first pass) → saboteur → archer
 

@@ -21,21 +21,21 @@ const ENTRIES := [
 	  "quote": "“I am doing a great work, so that I can’t come down.”", "ref": "Neh. 6:3",
 	  "text": "He asks King Artaxerxes to send him to rebuild the city of his forefathers, inspects the broken walls by night, and works beside the people. When his enemies call him away, he stays at the work." },
 	{ "key": "builder", "group": "friends", "name": "Builder", "slot": 0, "move": "build",
-	  "role": "The crew · First player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“Among the builders, everyone wore his sword at his side, and so built.”", "ref": "Neh. 4:18",
 	  "text": "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt." },
 	{ "key": "water_carrier", "group": "friends", "name": "Water carrier", "slot": 1, "move": "cheer",
-	  "role": "The crew · Second player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“Everyone with one of his hands did the work, and with the other held his weapon.”", "ref": "Neh. 4:17",
 	  "text": "Water for the mortar, stone and timber for the wall: the burden-bearers keep the builders supplied." },
 	{ "key": "carpenter", "group": "friends", "name": "Carpenter", "slot": 2, "move": "build",
-	  "role": "The crew · Third player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“They laid its beams, and set up its doors, its bolts, and its bars.”", "ref": "Neh. 3:3",
 	  "text": "Lays the beams and hangs the doors of each gate. The long timbers take two to carry." },
 	{ "key": "overseer", "group": "friends", "name": "Overseer", "slot": 3, "move": "cheer",
-	  "role": "The crew · Fourth player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“Wherever you hear the sound of the trumpet, rally there to us.”", "ref": "Neh. 4:20",
-	  "text": "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers." },
+	  "text": "The work is great and the wall is long, and the builders are spread thin along it. The overseer stands behind them with sword and sling, and where the horn sounds, the crew gathers." },
 	{ "key": "scout", "group": "foes", "name": "Scout", "enemy": "scout", "move": "thrust",
 	  "role": "From the first day",
 	  "quote": "“They will not know or see, until we come in among them.”", "ref": "Neh. 4:11",
@@ -255,16 +255,18 @@ func _fill_extra(e: Dictionary, known: bool, where: String) -> void:
 		c.queue_free()
 	if not known:
 		return
-	if e.has("slot"):
+	# A trade's knack (Trade): what it does faster than the rest of the crew
+	if e.has("slot") and GameState.trades:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
-		var sw := ColorRect.new()
-		sw.color = Palette.CREW[e["slot"]]
-		sw.custom_minimum_size = Vector2(18, 18)
-		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(sw)
-		row.add_child(_label(&"Eyebrow", 13, UiStyle.INK_SOFT, false, "Wears this player's colour"))
+		var knack := _label(&"Eyebrow", 13, UiStyle.CREAM, false, "Knack")
+		knack.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.OLIVE, Vector2(10, 3), 3))
+		knack.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(knack)
+		row.add_child(_label(&"Body", 17, UiStyle.INK, false, Trade.ABOUT[e["slot"]]))
 		_extra.add_child(row)
+		_extra.add_child(_label(&"Eyebrow", 13, UiStyle.INK_MUTED, false,
+			"Anyone can do any job — pick your trade when the crew gathers"))
 	if e.has("enemy"):
 		var t := _enemy_type(e)
 		# Against the fastest, toughest, hardest-hitting of the three
