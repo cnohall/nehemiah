@@ -100,11 +100,11 @@ func _on_section_changed() -> void:
 func _enabled() -> bool:
 	return GameState.posts
 
-# Shown / solid / in the groups only while the rule is on
+# Shown / in the groups only while the rule is on; solid only once it stands
 func _refresh() -> void:
 	var on := _enabled()
 	visible = on
-	_col.set_deferred("disabled", not on)
+	_col.set_deferred("disabled", not on or not built)   # bare footing: walk over it
 	if on:
 		add_to_group("build_sites")
 		add_to_group("watch_posts")

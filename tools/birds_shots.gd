@@ -49,7 +49,7 @@ func _process(delta: float) -> bool:
 			"begin": _main.director.begin()
 			"near":
 				var birds: Node = _main.get_node("Birds")
-				_flock = birds._flocks.filter(func(f): return f.spot.z > 0.0 and f.kind == "sparrow")[0]
+				_flock = birds._flocks.filter(func(f): return f.spot.z > 0.0)[0]
 				me.global_position = _flock.spot - Vector3(2.6, 0, 2.6)   # the flock just below on screen
 			"walk_in": me.global_position = _flock.spot - Vector3(1.6, 0, 1.6)
 			"city": me.global_position = Vector3(8, 0.1, 13)

@@ -54,7 +54,7 @@ func _process(_delta: float) -> bool:
 						if k.distance_to(at) < 1.5:
 							bad.append(at)
 				var n: int = _birds._flocks.size()
-				_check(n >= 4 and inside > 0 and inside < n and bad.is_empty(),
+				_check(n >= 2 and inside > 0 and inside < n and bad.is_empty(),
 					"%s: %d flocks (%d inside), misplaced %s" % [_gs.SECTIONS[i]["name"], n, inside, bad])
 			_gs.current_section_index = 0
 			_gs.section_changed.emit(0)

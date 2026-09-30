@@ -10,8 +10,8 @@ extends Node3D
 #   evening:    as the lamps come on (DayLight.lamps) they go to roost, back at dawn
 
 const BIRD := preload("res://scenes/birds/bird.gd")
-const FLOCKS_IN  := 3
-const FLOCKS_OUT := 3
+const FLOCKS_IN  := 1
+const FLOCKS_OUT := 1
 const AREA_X     := 20.0
 const AREA_Z     := Vector2(4.0, 12.5)   # |z| band each side of the wall line
 const SPOT_CLEAR := 2.0     # from piles, build sites, the respawn point, heaps
@@ -69,7 +69,7 @@ func _lay_out(count: int, side: float, rng: RandomNumberGenerator) -> void:
 		var kind := "dove" if side > 0.0 and rng.randf() < 0.4 else "sparrow"
 		var flock := { "spot": Vector3(c.x, FLOOR_Y, c.y), "kind": kind, "birds": [],
 			"away": false, "quiet": 0.0, "call": rng.randf_range(1.0, 6.0) }
-		var n := rng.randi_range(2, 4) if kind == "dove" else rng.randi_range(4, 7)
+		var n := rng.randi_range(2, 3) if kind == "dove" else rng.randi_range(3, 5)
 		for i in n:
 			var at := c + Vector2.RIGHT.rotated(rng.randf() * TAU) * rng.randf_range(0.0, FLOCK_R)
 			var bird := BIRD.new() as Bird

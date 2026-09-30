@@ -29,7 +29,9 @@ const WELL_POS    := Vector3(1.6, 0.0, 23.75)
 
 const ROCK_COLOR   := Color(0.66, 0.63, 0.57)
 const BUSH_COLOR   := Color(0.40, 0.50, 0.22)
-const TUFT_COLOR   := Color(0.46, 0.62, 0.22)
+const TUFT_COLOR   := Color(0.58, 0.60, 0.32)   # dusty sage — late summer, half dry
+const STRAW_COLOR  := Color(0.80, 0.70, 0.42)
+const MEADOW_GREEN := Color(0.50, 0.62, 0.26)
 const OLIVE_LEAF   := Palette.LEAF
 const OLIVE_TRUNK  := Color(0.42, 0.30, 0.20)
 const STONE_COLOR  := Palette.LIMESTONE
@@ -98,8 +100,10 @@ func _build_rubble() -> void:
 
 # Tufts of dry grass: a few blades fanned out, tips lighter
 func _build_tufts() -> void:
+	# Lone tufts read as stray spikes: still drawn from the RNG (the layout mustn't
+	# shift) but not placed; grass now grows only in colonies and meadows
 	for p in _free_points(260, true, false):
-		_tuft(Vector3(p.x, 0.1, p.y))
+		_tuft(Vector3(p.x, 0.1, p.y), false)
 	# A scatter along the wall foot and round the yard, where feet don't reach
 	for i in 70:
 		var at := Vector3(_rng.randf_range(-22.0, 22.0), 0.1, _rng.randf_range(-6.0, -1.6) if _rng.randf() < 0.6 else _rng.randf_range(1.6, 3.0))
@@ -118,12 +122,13 @@ func _build_meadows() -> void:
 	while z < 14.0:
 		var x := -HALF_X
 		while x < HALF_X:
-			var p := Vector2(x + _rng.randf_range(-0.4, 0.4), z + _rng.randf_range(-0.4, 0.4))
+			# Jitter more than half the step, so the grid doesn't show
+			var p := Vector2(x + _rng.randf_range(-0.4, 0.4) * 1.6, z + _rng.randf_range(-0.4, 0.4) * 1.6)
 			x += 1.1
 			var m := meadow(p.x, p.y)
 			if m < 0.62 or WORK_RECT.grow(1.5).has_point(p) or _blocked(p) or _on_street(p, 1.0):
 				continue
-			_tuft(Vector3(p.x, 0.1, p.y))
+			_tuft(Vector3(p.x, 0.1, p.y), true, clampf(remap(m, 0.62, 1.1, 0.0, 1.0), 0.0, 1.0))
 			if m > 0.85 and _rng.randf() < 0.12:
 				_bush(Vector3(p.x, 0.0, p.y))
 		z += 1.1
@@ -148,15 +153,66 @@ func _build_tuft_pairs() -> void:
 		for j in _rng.randi_range(2, 3):
 			_tuft(Vector3(p.x + _rng.randf_range(-0.55, 0.55), 0.1, p.y + _rng.randf_range(-0.55, 0.55)))
 
-func _tuft(at: Vector3) -> void:
+# One tuft = one instance of a baked clump of curved blades (_tuft_mesh), in one of two
+# shapes. `lush` (0 … 1) makes it bigger and greener — the heart of a meadow.
+# RNG draws are fixed per tuft whatever the look, so nothing seeded later shifts.
+func _tuft(at: Vector3, place := true, lush := 0.0) -> void:
 	var base := _vary(TUFT_COLOR, 0.05)
 	var n := _rng.randi_range(7, 11)
+	var yaw := 0.0
+	var lean := 0.0
+	var h := 0.0
+	var tint := 0.0
 	for i in n:
 		var a := TAU * i / n + _rng.randf_range(-0.3, 0.3)
-		var lean := _rng.randf_range(0.15, 0.6)
-		var h := _rng.randf_range(0.28, 0.6)
-		var b := Basis(Vector3.UP, a) * Basis(Vector3.RIGHT, lean) * Basis.from_scale(Vector3(1, h, 1))
-		_add("blade", Transform3D(b, at + Basis(Vector3.UP, a) * Vector3(0, 0, 0.04) + Vector3(0, h * 0.4, 0)), base.lightened(_rng.randf_range(0.0, 0.12)))
+		if i == 0:
+			yaw = a
+		lean += _rng.randf_range(0.15, 0.6) / n
+		h += _rng.randf_range(0.28, 0.6) / n
+		tint = maxf(tint, _rng.randf_range(0.0, 0.12))
+	if not place:
+		return
+	# lean ~0.37, h ~0.44, tint ~0.1 on average: spread each back out to a useful range
+	var size := remap(h, 0.36, 0.52, 0.8, 1.2) * (1.0 + lush * 0.5)
+	var c := base.lerp(STRAW_COLOR, clampf(remap(tint, 0.08, 0.12, 0.0, 0.45), 0.0, 0.45))
+	c = c.lerp(MEADOW_GREEN, lush * 0.6)
+	var b := Basis(Vector3.UP, yaw).scaled(Vector3(size * (0.8 + lean), size, size * (0.8 + lean)))
+	_add("tuft" if n % 2 == 0 else "tuft_b", Transform3D(b, at - Vector3(0, 0.02, 0)), c)
+
+# A clump of curved, tapering blades fanned from a small root, ~0.3 m tall, ~0.45 m
+# across. UV.y = 0 at the root, 1 at the tip (grass.gdshader shades along it).
+static func _tuft_mesh(seed: int) -> ArrayMesh:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var blades := 17
+	for i in blades:
+		var a := TAU * i / blades + rng.randf_range(-0.25, 0.25)
+		var out := Vector3(cos(a), 0.0, sin(a))
+		var side := out.cross(Vector3.UP)
+		var root := out * rng.randf_range(0.0, 0.07)
+		# Inner blades stand up tall, outer ones splay low
+		var inner := i % 3 == 0
+		var tall := rng.randf_range(0.26, 0.36) if inner else rng.randf_range(0.14, 0.26)
+		var reach := rng.randf_range(0.03, 0.08) if inner else rng.randf_range(0.12, 0.22)
+		var w := rng.randf_range(0.038, 0.055)
+		var pts: Array[Vector3] = []
+		for k in 4:
+			var t := k / 3.0
+			pts.append(root + out * reach * t * t + Vector3.UP * tall * (t * (1.6 - 0.6 * t)))
+		for k in 3:
+			var t0 := k / 3.0
+			var t1 := (k + 1) / 3.0
+			var w0 := w * (1.0 - t0)
+			var w1 := w * (1.0 - t1)
+			var q := [pts[k] - side * w0, pts[k] + side * w0, pts[k + 1] + side * w1, pts[k + 1] - side * w1]
+			var v := [t0, t0, t1, t1]
+			for idx in [0, 1, 2, 0, 2, 3]:
+				st.set_uv(Vector2(0.0, v[idx]))
+				st.set_normal(Vector3.UP)
+				st.add_vertex(q[idx])
+	return st.commit()
 
 # Grit on the work yard: small stones kicked about
 func _build_grit() -> void:
@@ -593,7 +649,7 @@ func _flush() -> void:
 	for kind: String in _batches:
 		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
 		# Ground-hugging bits: shadows cost more than they add
-		if kind in ["pebble", "patch", "slab", "blade", "bed", "chip"]:
+		if kind in ["pebble", "patch", "slab", "tuft", "tuft_b", "bed", "chip"]:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
 	_build_lamps()
@@ -662,6 +718,14 @@ func set_lamps(share: float) -> void:
 		_lamps.visible_instance_count = roundi(share * _lamps.instance_count)
 		_halos.visible_instance_count = _lamps.visible_instance_count
 
+static var _grass_mat: ShaderMaterial
+
+static func _grass_material() -> ShaderMaterial:
+	if not _grass_mat:
+		_grass_mat = ShaderMaterial.new()
+		_grass_mat.shader = preload("res://assets/shaders/grass.gdshader")
+	return _grass_mat
+
 # Chunky look: bevelled blocks, faceted foliage and rock
 func _material_for(kind: String) -> Material:
 	match kind:
@@ -670,7 +734,7 @@ func _material_for(kind: String) -> Material:
 		"timber":           return Chunky.wood_material(0.025)
 		"slab":             return Chunky.material(0.1, false, 0.28)
 		"bush", "leaf":     return Chunky.foliage_material()
-		"blade":            return Chunky.material(0.0, true, 0.0)
+		"tuft", "tuft_b":   return _grass_material()
 		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
 	return Chunky.material(0.0, false, 0.0)
 
@@ -678,7 +742,8 @@ func _mesh_for(kind: String) -> Mesh:
 	match kind:
 		"block", "slab", "opening", "chip", "timber": return Chunky.unit_block()
 		"pebble":  return _sphere(0.13, 0.10, 5, 2)
-		"blade":   return _cylinder(0.0, 0.075, 1.0, 3)
+		"tuft":    return _tuft_mesh(7)
+		"tuft_b":  return _tuft_mesh(31)
 		"bush":    return _sphere(0.42, 0.62, 12, 6)
 		"leaf":    return _sphere(0.6, 1.0, 14, 7)
 		"boulder": return _sphere(0.6, 0.9, 6, 3)
