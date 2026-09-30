@@ -5,7 +5,7 @@
 import { W, H, rand, pick, I, smooth, poly } from "./kit.mjs";
 import {
 	lerp, tone, tint, haze, pen, gradSky, clouds, glowAt, stars, rays, ridgePts, yOn, landBand, slopeStrokes,
-	rocks, scrub, olive, road, smoke, wallP, wallPath, tower, arch, houseP, city, columnP, tentP, army,
+	rocks, scrub, olive, road, smoke, wallP, wallPath, tower, arch, houseP, city, columnP, saddleY, tentP, army,
 	fire, pole, plank, fig, ROBES, WRAPS, stepRag, blobPts, rect, temple, palmL,
 } from "./litho.mjs";
 
@@ -82,39 +82,68 @@ export const SCENES = {
 	// Neh 1:1-4 — Shushan, a winter night: Hanani and the men from Judah bring the news
 	judah: {
 		seed: 101,
+		// Test of the closer-to-the-game look: warm lamp-lit night, chunky figures, light grain
+		page: { paper: 0.28, mottle: 0.18 },
 		draw() {
-			let s = gradSky([[0, "#161c30"], [0.45, "#303852"], [0.62, "#57536a"]]);
-			s += stars(220, 520);
-			s += glowAt(360, 170, 260, "#e8e2cc", 0.35) + tint(blobPts(360, 170, 30, 30, 12, 0.04), "#f2ead2", 0.95);
-			s += clouds([[760, 150, 460, 26, 0.28, "#2a3048", "#9a98b0"], [1500, 260, 380, 22, 0.22, "#2a3048", "#8a88a0"]]);
-			// The plain of Susa, the Ulai river, the lower town on its mound
-			s += landBand(ridgePts(-40, W + 40, 598, 6), { tintC: "#4a4a5c", d: 0.42, line: 0.3 });
-			s += haze([[-40, 640], [600, 628], [1100, 645], [W + 40, 632], [W + 40, 648], [1100, 660], [600, 642], [-40, 654]], "#9aa0b4", 0.35, "blur8");
+			let s = gradSky([[0, "#1e1820"], [0.42, "#3a2a30"], [0.6, "#704c40"]], { grain: false });
+			s += stars(180, 480);
+			s += glowAt(360, 170, 260, "#f2dcae", 0.3) + tint(blobPts(360, 170, 30, 30, 12, 0.04), "#f6e8c6", 0.97);
+			s += clouds([[760, 150, 460, 26, 0.18, "#3a2c3a", "#c09a7c"], [1450, 250, 380, 22, 0.15, "#3a2c3a", "#b08c74"]]);
+			// The plain of Susa, the Ulai river, the lower town on its mound, lamps in its windows
+			s += landBand(ridgePts(-40, W + 40, 598, 6), { tintC: "#5a463e", d: 0.3, line: 0.3 });
+			s += haze([[-40, 640], [600, 628], [1100, 645], [W + 40, 632], [W + 40, 648], [1100, 660], [600, 642], [-40, 654]], "#c09070", 0.18, "blur8");
 			const mound = [[40, 600], [150, 560], [420, 548], [620, 575], [700, 600]];
-			s += landBand(mound, { tintC: "#565064", d: 0.4, bottom: 610, line: 0.4 });
-			s += city({ x0: 120, x1: 640, topY: (x) => yOn(mound, x), botY: () => 600, rowH: 12, scale: () => 0.5, c: "#8a8498", lit: () => 0.6 });
-			for (const x of [180, 340, 520]) s += glowAt(x, 588, 16, "#ffb050", 0.5);
+			s += landBand(mound, { tintC: "#6a5246", d: 0.28, bottom: 610, line: 0.4 });
+			s += city({ x0: 120, x1: 640, topY: (x) => yOn(mound, x), botY: () => 600, rowH: 12, scale: () => 0.5, c: "#c8a888", lit: () => 0.6 });
+			for (const x of [170, 260, 340, 430, 520, 600]) s += glowAt(x, 588, 18, "#ffb050", 0.6);
 			for (const [x, y, h] of [[690, 626, 70], [760, 632, 58], [840, 628, 76], [930, 636, 52]]) s += palmL(x, y, h);
-			// The palace terrace behind its parapet, a colonnade marching away to the right
-			s += landBand([[-40, 700], [W + 40, 690]], { tintC: "#5e5260", d: 0.45, d2: 0.5, line: 0.5 });
-			s += wallP({ x0: -60, y0: 712, x1: 1100, y1: 712, h0: 34, h1: 30, courses: 3, d: 0.45, stone: "#7e7488", N: 120 });
-			for (let i = 0; i < 9; i++) s += pen(`M${lerp(900, 2000, i / 8)},${lerp(700, 1080, i / 8) - 5}L${lerp(700, -300, i / 8)},${lerp(700, 1080, i / 8) + 10}`, 0.6, 0.18);
+			// The palace terrace behind its low parapet
+			s += landBand([[-40, 700], [W + 40, 690]], { tintC: "#6e5646", d: 0.3, d2: 0.4, line: 0.4 });
+			s += wallP({ x0: -60, y0: 712, x1: 1040, y1: 712, h0: 24, h1: 22, courses: 2, d: 0.45, stone: "#8a6e5a", N: 120 });
+			for (let i = 0; i < 9; i++) s += pen(`M${lerp(900, 2000, i / 8)},${lerp(700, 1080, i / 8) - 5}L${lerp(700, -300, i / 8)},${lerp(700, 1080, i / 8) + 10}`, 0.6, 0.14);
+			// A hall of columns marching away to the right, roofed: the interior dark behind them
 			const cols = [];
 			for (let i = 0; i < 7; i++) {
 				const k = Math.pow(i / 6, 1.6);
 				cols.push([lerp(1080, 1870, k), lerp(708, 1060, k), lerp(300, 1150, k)]);
 			}
-			s += pen(poly(cols.map(([x, b, h]) => [x, b - h * 0.97]), false), 5, 0.55);
-			for (const [x, b, h] of cols) s += columnP(x, b, h, { d: 0.55, c: "#8e8494" });
+			const sy = cols.map(([, b, h]) => saddleY(b, h));
+			const [x0, b0] = cols[0], [x6, b6] = cols[6];
+			const at = (ya, yb, x) => lerp(ya, yb, (x - x0) / (x6 - x0));
+			const inside = [[x0, sy[0]], [W + 40, at(sy[0], sy[6], W + 40)], [W + 40, at(b0, b6, W + 40)], [x0, b0]];
+			s += tint(inside, "#3a261c", 0.95, false) + tone(inside, 0.45, { round: false });
+			for (const [x, y, r] of [[1400, 640, 150], [1720, 560, 220]]) s += glowAt(x, y, r, "#e89048", 0.35);
+			const colO = { d: 0.35, c: "#c8a888", bull: "#d4b890" };
+			for (const [x, b, h] of cols) s += columnP(x, b, h, { ...colO, parts: { left: false, beamEnd: false } });
+			// The main beam seated in the saddles, a cornice over it, stepped merlons along the roof
+			const bh = (h) => h * 0.07;
+			for (let i = 0; i < cols.length - 1; i++) {
+				const [xa, , ha] = cols[i], [xb, , hb] = cols[i + 1];
+				const ya = sy[i], yb = sy[i + 1];
+				const beam = [[xa, ya - bh(ha)], [xb, yb - bh(hb)], [xb, yb], [xa, ya]];
+				s += tint(beam, "#8a5e3c", 0.97, false) + tone([[xa, ya - bh(ha) * 0.4], [xb, yb - bh(hb) * 0.4], [xb, yb], [xa, ya]], 0.4, { round: false }) + pen(poly(beam), 0.9, 0.65);
+				const ca = ya - bh(ha), cb = yb - bh(hb), ta = ha * 0.03, tb = hb * 0.03;
+				const cornice = [[xa - ha * 0.008, ca - ta], [xb + hb * 0.008, cb - tb], [xb, cb], [xa, ca]];
+				s += tint(cornice, "#c8a888", 0.97, false) + tone(cornice, 0.15, { round: false }) + pen(poly(cornice), 0.8, 0.6);
+				for (let t = 0; t < 1; t += 1 / 3) {
+					const x = lerp(xa, xb, t), y = lerp(ca - ta, cb - tb, t), m = lerp(ha, hb, t) * 0.03;
+					const mer = [[x - m, y + 1], [x - m, y - m * 0.6], [x - m * 0.6, y - m * 0.6], [x - m * 0.6, y - m * 1.2], [x - m * 0.2, y - m * 1.2], [x - m * 0.2, y - m * 1.8],
+						[x + m * 0.2, y - m * 1.8], [x + m * 0.2, y - m * 1.2], [x + m * 0.6, y - m * 1.2], [x + m * 0.6, y - m * 0.6], [x + m, y - m * 0.6], [x + m, y + 1]];
+					s += tint(mer, "#c8a888", 0.97, false) + tone(mer, 0.12, { round: false }) + pen(poly(mer), 0.7, 0.55);
+				}
+			}
+			// The outer bulls in front of the beam
+			for (const [x, b, h] of cols) s += columnP(x, b, h, { ...colO, parts: { base: false, shaft: false, right: false, beamEnd: false } });
 			// A lamp on its stand, and the men round it
-			s += tint(rect(1296, 640, 7, 170), "#6a5030", 0.95, false) + fire(1300, 640, 9);
-			s += glowAt(1250, 700, 460, "#f0a050", 0.3);
-			s += fig({ x: 910, y: 820, h: 175, dir: 1, robe: "#5e5448", mantle: "#7a6a52", wrap: "#b0a288", beard: "grey", back: [80, 95], front: [70, 70], items: [I.staff("front", 5)], shade: 0.9 });
-			s += fig({ x: 1030, y: 832, h: 182, dir: 1, robe: "#6a5a48", wrap: "#b8a88a", back: [80, 95], front: [40, -20], items: [I.staff("front", 3)], shade: 0.9 });
-			s += fig({ x: 820, y: 808, h: 165, dir: 1, robe: "#4e4a46", wrap: "#a89a80", back: [80, 95], front: [75, 90], shade: 0.9 });
+			s += tint(rect(1296, 640, 7, 170), "#6a5030", 0.95, false) + fire(1300, 640, 10);
+			s += glowAt(1220, 720, 560, "#f0a050", 0.34);
+			const crew = { chunky: 0.6, shade: 0.6 };
+			s += fig({ ...crew, x: 910, y: 820, h: 170, dir: 1, robe: "#6f6a3e", mantle: "#8a7a4a", wrap: "#e6d8b8", beard: "grey", back: [80, 95], front: [70, 70], items: [I.staff("front", 5)] });
+			s += fig({ ...crew, x: 1030, y: 832, h: 176, dir: 1, robe: "#b07a3a", wrap: "#e2d0a8", back: [80, 95], front: [40, -20], items: [I.staff("front", 3)] });
+			s += fig({ ...crew, x: 810, y: 808, h: 160, dir: 1, robe: "#9a5a3c", wrap: "#d8c8a4", back: [80, 95], front: [75, 90] });
 			// Nehemiah, the king's cupbearer, bowed with grief (1:4)
-			s += fig({ x: 1175, y: 840, h: 190, dir: -1, robe: "#7a3c38", mantle: "#384568", wrap: "#e6dcc4", beard: "short", lean: 4, look: 24, back: [30, -120], front: [35, -125], shade: 0.8 });
-			s += shadowBand(900, 0.75, "#2a2838");
+			s += fig({ ...crew, x: 1175, y: 840, h: 184, dir: -1, robe: "#9a3c30", mantle: "#3f5068", wrap: "#f0e6d0", beard: "short", lean: 4, look: 24, back: [30, -120], front: [35, -125], shade: 0.5 });
+			s += shadowBand(900, 0.5, "#3a2820");
 			return s;
 		},
 	},

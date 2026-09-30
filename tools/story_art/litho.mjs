@@ -46,10 +46,10 @@ export function glowAt(cx, cy, r, c, o) {
 
 // ── Sky ───────────────────────────────────────────────────────
 
-export function gradSky(stops) {
+export function gradSky(stops, { grain = true } = {}) {
 	const id = "sk" + Math.floor(rand(0, 1e9));
 	const st = stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join("");
-	return `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${st}</linearGradient><rect x="-40" y="-40" width="${W + 80}" height="${H + 80}" fill="url(#${id})" filter="url(#wash3)"/>`;
+	return `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${st}</linearGradient><rect x="-40" y="-40" width="${W + 80}" height="${H + 80}" fill="url(#${id})"${grain ? ` filter="url(#wash3)"` : ""}/>`;
 }
 
 /**
@@ -325,41 +325,72 @@ export function city({ x0, x1, topY, botY, rowH = 18, lit = (x) => 0.5, scale = 
 	return s;
 }
 
-/** Persian column: bell base, fluted shaft, bull capital; shaded on the right */
-export function columnP(x, base, h, { d = 0.3, c = "#d6c4a0", capital = true } = {}) {
+/**
+ * Persian column: bell base, fluted shaft, and the capital of two kneeling bull foreparts
+ * back to back, heads outward, a saddle between their necks where a beam rests.
+ * `parts` picks what to draw, so a beam laid in the saddle can pass between the bulls:
+ * { base, shaft, left, right, beamEnd } (all on by default).
+ */
+export function columnP(x, base, h, { d = 0.3, c = "#d6c4a0", bull = "#cbb48c", parts = {} } = {}) {
+	const on = { base: true, shaft: true, left: true, right: true, beamEnd: true, ...parts };
 	const w = h * 0.075;
 	let s = "";
-	const plinth = rect(x - w * 1.5, base - h * 0.02, w * 3, h * 0.02);
-	const bell = [[x - w * 1.25, base - h * 0.02], [x - w * 1.0, base - h * 0.05], [x - w * 0.6, base - h * 0.075], [x + w * 0.6, base - h * 0.075], [x + w * 1.0, base - h * 0.05], [x + w * 1.25, base - h * 0.02]];
-	s += tint(plinth, c, 0.95, false) + tone(rect(x + w * 0.3, base - h * 0.02, w * 1.2, h * 0.02), d + 0.2, { round: false });
-	s += tint(bell, c, 0.95) + tone([[x + w * 0.15, base - h * 0.075], [x + w * 0.6, base - h * 0.075], [x + w * 1.0, base - h * 0.05], [x + w * 1.25, base - h * 0.02], [x + w * 0.15, base - h * 0.02]], d + 0.15, { round: false });
-	s += pen(smooth(bell), 0.8, 0.6) + pen(poly(plinth), 0.8, 0.5);
+	if (on.base) {
+		const plinth = rect(x - w * 1.5, base - h * 0.02, w * 3, h * 0.02);
+		const bell = [[x - w * 1.25, base - h * 0.02], [x - w * 1.0, base - h * 0.05], [x - w * 0.6, base - h * 0.075], [x + w * 0.6, base - h * 0.075], [x + w * 1.0, base - h * 0.05], [x + w * 1.25, base - h * 0.02]];
+		s += tint(plinth, c, 0.95, false) + tone(rect(x + w * 0.3, base - h * 0.02, w * 1.2, h * 0.02), d + 0.2, { round: false });
+		s += tint(bell, c, 0.95) + tone([[x + w * 0.15, base - h * 0.075], [x + w * 0.6, base - h * 0.075], [x + w * 1.0, base - h * 0.05], [x + w * 1.25, base - h * 0.02], [x + w * 0.15, base - h * 0.02]], d + 0.15, { round: false });
+		s += pen(smooth(bell), 0.8, 0.6) + pen(poly(plinth), 0.8, 0.5);
+	}
 	const top = base - h * 0.8;
-	const shaft = rect(x - w * 0.5, top, w, base - h * 0.075 - top);
-	s += tint(shaft, c, 0.95, false) + tone(rect(x + w * 0.1, top, w * 0.4, base - h * 0.075 - top), d + 0.2, { round: false });
-	let fl = "";
-	for (let i = -2; i <= 2; i++) fl += `M${f1(x + i * w * 0.2)},${f1(top + 2)}L${f1(x + i * w * 0.2)},${f1(base - h * 0.08)}`;
-	s += penPath(fl, 0.6, 0.3) + pen(poly(shaft), 0.9, 0.6);
-	if (capital) {
-		// A collar, then two kneeling bulls back to back carrying the beam
-		const col = rect(x - w * 0.75, top - h * 0.03, w * 1.5, h * 0.03);
-		s += tint(col, c, 0.95, false) + tone(rect(x + w * 0.2, top - h * 0.03, w * 0.55, h * 0.03), d + 0.2, { round: false }) + pen(poly(col), 0.8, 0.6);
-		const by = top - h * 0.055;
-		for (const sg of [-1, 1]) {
-			const P = (pts) => pts.map(([a, b]) => [x + sg * a * w, by + b * h]);
-			const body = P([[0, -0.025], [1.3, -0.03], [1.75, -0.02], [1.9, 0.0], [1.7, 0.022], [0, 0.025]]);
-			const head = P([[1.7, -0.022], [2.35, -0.02], [2.6, 0.0], [2.45, 0.02], [1.85, 0.02]]);
-			s += tint(body, "#cbb48c", 0.97) + tint(head, "#cbb48c", 0.97);
-			s += tone(P([[0.2, 0.004], [1.7, 0.0], [1.7, 0.022], [0.2, 0.025]]), d + 0.25, { round: false }) + tone(P([[1.9, 0.004], [2.5, 0.004], [2.45, 0.02], [1.9, 0.02]]), d + 0.2, { round: false });
-			s += pen(smooth(body, true), 0.9, 0.75) + pen(smooth(head, true), 0.9, 0.75);
-			s += pen(smooth(P([[2.2, -0.018], [2.45, -0.04], [2.3, -0.055]])), 1.1, 0.85);
-			s += pen(smooth(P([[1.55, 0.022], [1.6, 0.045], [1.9, 0.048]])), 1.1, 0.8);
+	const colTop = top - h * 0.03;
+	if (on.shaft) {
+		// One shaft, its shadow side a softer band inside the outline (not a second pole)
+		const shaft = rect(x - w * 0.5, top, w, base - h * 0.075 - top);
+		s += tint(shaft, c, 0.95, false) + tone(rect(x + w * 0.12, top, w * 0.38, base - h * 0.075 - top), d * 0.55, { round: false });
+		let fl = "";
+		for (let i = -2; i <= 2; i++) fl += `M${f1(x + i * w * 0.2)},${f1(top + 2)}L${f1(x + i * w * 0.2)},${f1(base - h * 0.08)}`;
+		s += penPath(fl, 0.6, 0.22) + pen(poly(shaft), 0.9, 0.6);
+		const col = rect(x - w * 0.75, colTop, w * 1.5, h * 0.03);
+		s += tint(col, c, 0.95, false) + tone(rect(x + w * 0.2, colTop, w * 0.55, h * 0.03), d * 0.6, { round: false }) + pen(poly(col), 0.8, 0.6);
+	}
+	// The bulls, in units of w from the saddle, y up from the collar
+	const P = (sg, pts) => pts.map(([a, b]) => [x + sg * a * w, colTop + b * w]);
+	for (const sg of [-1, 1]) {
+		if (!on[sg < 0 ? "left" : "right"]) continue;
+		// Head held high over the chest, so the saddle between the two is a dip the beam drops into
+		const body = P(sg, [[0, -0.02], [1.0, -0.05], [1.28, -0.38], [1.34, -0.86], [1.2, -1.12], [1.02, -1.4], [0.5, -1.3], [0, -1.26]]);
+		const head = P(sg, [[1.0, -1.36], [1.12, -1.78], [1.5, -1.8], [1.86, -1.48], [2.08, -1.06], [1.98, -0.86], [1.62, -0.9], [1.3, -1.06]]);
+		const leg = P(sg, [[0.92, -0.36], [1.3, -0.3], [1.34, 0], [1.8, 0], [1.84, -0.2], [1.4, -0.24]]);
+		const ear = P(sg, [[1.12, -1.6], [0.74, -1.74], [0.82, -1.56], [1.06, -1.48]]);
+		if (sg < 0) s += tint(leg, bull, 0.97, false);
+		s += tint(body, bull, 0.97, false) + tint(ear, bull, 0.97, false) + tint(head, bull, 0.97, false);
+		// Shade under the chest, the leg, the jaw; the far bull darker all over
+		s += tone(P(sg, [[0.05, -0.04], [1.0, -0.06], [1.28, -0.4], [0.1, -0.55]]), d * 0.8, { round: false }) + (sg < 0 ? tone(leg, d * 0.6, { round: false }) : "");
+		s += tone(P(sg, [[1.3, -1.06], [1.62, -0.9], [1.98, -0.86], [2.08, -1.06], [1.7, -1.1]]), d * 0.7, { round: false });
+		if (sg > 0) s += tone(body, d * 0.45, { round: false }) + tone(head, d * 0.35, { round: false });
+		s += pen(poly(body, false), 0.9, 0.75) + pen(poly(head), 1, 0.85) + (sg < 0 ? pen(poly(leg), 0.8, 0.6) : "") + pen(poly(ear), 0.8, 0.6);
+		// Thick horn curving forward and up, eye, nostril, and the curled collar on the chest
+		const horn = P(sg, [[1.26, -1.74], [1.36, -2.06], [1.64, -2.16]]);
+		s += `<path d="${smooth(horn)}" stroke="#b89a70" stroke-width="${f1(Math.max(2, w * 0.16))}" stroke-linecap="round" fill="none"/>` + pen(smooth(horn), Math.max(0.8, w * 0.02), 0.7);
+		const [ex, ey] = P(sg, [[1.5, -1.46]])[0], [nx, ny] = P(sg, [[1.96, -1.04]])[0];
+		s += `<circle cx="${f1(ex)}" cy="${f1(ey)}" r="${f1(Math.max(1, w * 0.05))}" fill="${SEP}"/><circle cx="${f1(nx)}" cy="${f1(ny)}" r="${f1(Math.max(0.8, w * 0.035))}" fill="${SEP}" fill-opacity="0.7"/>`;
+		let curls = "";
+		for (let r = 0; r < 4; r++) for (let c = 0; c < 2; c++) {
+			const [cx, cy] = [1.04 + c * 0.12 + r * 0.03, -0.44 - r * 0.17];
+			curls += smooth(P(sg, [[cx - 0.05, cy], [cx, cy - 0.06], [cx + 0.05, cy]]));
 		}
-		const beam = rect(x - w * 2.2, by - h * 0.05, w * 4.4, h * 0.022);
-		s += tint(beam, "#8a6a4a", 0.95, false) + tone(beam, 0.45, { round: false }) + pen(poly(beam), 0.8, 0.6);
+		s += penPath(curls, 0.8, 0.5);
+	}
+	if (on.beamEnd) {
+		// The end of a beam running into the picture, seated in the saddle
+		const be = rect(x - w * 0.42, colTop - w * 2.1, w * 0.84, w * 0.8);
+		s += tint(be, "#8a6a4a", 0.95, false) + tone(be, 0.35, { round: false }) + pen(poly(be), 0.8, 0.6);
 	}
 	return s;
 }
+/** Where a beam rests on columnP's capital: the saddle between the bulls' necks */
+export const saddleY = (base, h) => base - h * 0.83 - h * 0.075 * 1.26;
 
 /** Black goat-hair tent: a low roof sagging between its poles, the front open, guy ropes */
 export function tentP(x, base, w, h, { d = 0.75 } = {}) {
@@ -425,8 +456,8 @@ export const fig = (o) => figure({ shade: 0.75, wrap: WRAPS[0], ...o });
 
 // ── Page ──────────────────────────────────────────────────────
 
-/** Paper, grain and the crayon filter; body is the drawing */
-export function page(body) {
+/** Paper, grain and the crayon filter; body is the drawing. `paper`/`mottle`: overlay strengths */
+export function page(body, { paper = 0.5, mottle = 0.3 } = {}) {
 	const bg = "#eee1c4";
 	const extra = `<defs>
 	<filter id="crayon" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
@@ -445,8 +476,8 @@ export function page(body) {
 	const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${baseDefs()}${extra}
 	<rect width="${W}" height="${H}" fill="${bg}"/>
 	${body}
-	<rect width="${W}" height="${H}" filter="url(#mottle)" opacity="0.3" style="mix-blend-mode:multiply"/>
-	<rect width="${W}" height="${H}" filter="url(#paper)" opacity="0.5" style="mix-blend-mode:multiply"/>
+	<rect width="${W}" height="${H}" filter="url(#mottle)" opacity="${mottle}" style="mix-blend-mode:multiply"/>
+	<rect width="${W}" height="${H}" filter="url(#paper)" opacity="${paper}" style="mix-blend-mode:multiply"/>
 	<rect width="${W}" height="${H}" fill="url(#vig)"/>
 	</svg>`;
 	return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;overflow:hidden;background:${bg}}svg{display:block}</style></head><body>${svg}</body></html>`;

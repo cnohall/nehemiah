@@ -20,6 +20,8 @@ const SHOTS := [
 	[8.0, Vector2(-2.0, 20.0), 22.0, "city"],
 	[8.5, Vector2(0.0, -14.0), 22.0, "outside"],
 	[9.0, Vector2(0.0, 4.0), 40.0, "wide"],
+	[9.5, Vector2(-2.0, -22.0), 18.0, "camp"],
+	[10.0, Vector2(6.0, 20.0), 12.0, "houses"],
 ]
 
 func _initialize() -> void:

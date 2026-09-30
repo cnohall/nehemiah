@@ -28,8 +28,8 @@ uniform float outside_shade = 0.0;
 uniform float relief = 0.6;
 // Meadows: green ground under the grass colonies ScatterLayer plants — same mask as
 // ScatterLayer.meadow(); kept off the work yard (work_rect: x0, z0, x1, z1)
-uniform vec3 col_meadow     : source_color = vec3(0.520, 0.600, 0.250);
-uniform vec3 col_meadow_dk  : source_color = vec3(0.380, 0.470, 0.190);
+uniform vec3 col_meadow     : source_color = vec3(0.560, 0.590, 0.300);   // dusty late-summer green
+uniform vec3 col_meadow_dk  : source_color = vec3(0.440, 0.490, 0.230);
 uniform vec3 col_ochre      : source_color = vec3(0.780, 0.500, 0.280);  // red-ochre earth
 uniform vec4 work_rect = vec4(-14.0, -2.5, 14.0, 13.0);
 
@@ -150,7 +150,7 @@ void fragment() {
 	float meadow = smoothstep(0.5, 0.72, mm) * (1.0 - trodden) * (1.0 - work_area(world_xz))
 		* (1.0 - smoothstep(12.0, 15.0, world_xz.y));
 	vec3 meadow_col = mix(col_meadow, col_meadow_dk, smoothstep(0.8, 1.1, mm));
-	col = mix(col, meadow_col, meadow * 0.75);
+	col = mix(col, meadow_col, meadow * 0.62);
 
 	col = mix(col, section_tint, tint_amount * (0.7 + 0.6 * (mid - 0.5)));
 	// Falling away outside the wall: darker and a touch cooler with distance

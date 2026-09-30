@@ -315,8 +315,11 @@ export function figure(o) {
 	const {
 		x, y, h, dir = 1, robe = C.terracotta, mantle = null, wrap = C.cream, skin = C.skin,
 		beard = "full", back = [80, 95], front = [75, 90], lean = 0, stride = 0.3, hat = "wrap",
-		items = [], behind = [], look = 0, shade = 0.5, silhouette = false, seated = false,
+		items = [], behind = [], look = 0, shade = 0.5, silhouette = false, seated = false, chunky = 0,
 	} = o;
+	// Chunky: the game crew's build — a big head (chunky × the usual size) on a short,
+	// stout body, still standing h tall. Head space keeps the neck at (hx, hy + 7).
+	const hk = 1 + chunky, by = (100 - 18 * hk) / 82, bx = 1 + chunky * 0.4;
 	const k = h / 100;
 	const wrap_ = silhouette ? robe : wrap;
 	const sw = Math.max(0.9, Math.min(2.6, h / 110)) / k;
@@ -417,10 +420,22 @@ export function figure(o) {
 		const cd = smooth([[hx + 4.8, hy - 4], [hx + 3.5, hy - 12], [hx - 3, hy - 13.5], [hx - 7.5, hy - 6], [hx - 7, hy - 2.5]], true);
 		hs += fill(cd, wrap_) + `<path d="${cd}" stroke="${ink_}" stroke-width="${sw}" fill="none"/>`;
 	}
-	s += g(hs, hg);
-
-	for (const fn of items) s += fn(P);
-	s += limb(B, robe, false);
+	if (!chunky) {
+		s += g(hs, hg);
+		for (const fn of items) s += fn(P);
+		s += limb(B, robe, false);
+	} else {
+		// Body squashed about the feet; the head scaled about its neck, set on the squashed neck
+		const body = `<g transform="scale(${f(bx * 100) / 100},${f(by * 1000) / 1000})">`;
+		const nx = hx * bx, ny = (hy + 7) * by;
+		// Items that key off the head (loads, horns) follow it into body space
+		P.head = [hx, (ny - 7 * hk) / by];
+		let it = "";
+		for (const fn of items) it += fn(P);
+		s = body + s + "</g>"
+			+ `<g transform="translate(${f(nx)},${f(ny)}) scale(${f(hk * 100) / 100}) translate(${f(-hx)},${f(-(hy + 7))})">${g(hs, hg)}</g>`
+			+ body + it + limb(B, robe, false) + "</g>";
+	}
 
 	const flip = dir < 0 ? -k : k;
 	return `<g transform="translate(${f(x)},${f(y)}) scale(${f(flip * 1000) / 1000},${f(k * 1000) / 1000})" filter="url(#fig)">${s}</g>`;

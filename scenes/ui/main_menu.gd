@@ -285,6 +285,8 @@ func _on_host() -> void:
 # Solo, offline: no hosting, the game scene runs as its own server
 func _on_learn() -> void:
 	_stop_world()
+	# A join or host still in flight would land us in someone's game as a client
+	NetworkManager.disconnect_session()
 	GameState.replay_section = -1
 	GameState.tutorial = true
 	get_tree().change_scene_to_file(GAME_SCENE)
@@ -292,6 +294,7 @@ func _on_learn() -> void:
 # Solo, offline, like the practice: the city at the Festival of Booths
 func _on_festival() -> void:
 	_stop_world()
+	NetworkManager.disconnect_session()
 	GameState.replay_section = -1
 	GameState.festival = true
 	get_tree().change_scene_to_file(GAME_SCENE)
@@ -370,6 +373,7 @@ func _fill_friend_games() -> void:
 		b.text = tr("Join %s") % g.name
 		b.pressed.connect(func():
 			status_label.text = tr("Joining %s…") % g.name
+			connect_btn.disabled = true   # in flight: Back cancels it
 			_stop_world()
 			NetworkManager.join_steam(g.lobby))
 		box.add_child(b)
@@ -395,6 +399,10 @@ func _on_connect() -> void:
 		NetworkManager.join(addr)
 
 func _on_back() -> void:
+	# Backing out mid-connect: drop the attempt, or it lands later as a client
+	if connect_btn.disabled:
+		NetworkManager.disconnect_session()
+		_resume_world()
 	join_panel.hide()
 	status_label.text = ""
 	connect_btn.disabled = false

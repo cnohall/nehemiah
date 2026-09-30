@@ -1,7 +1,8 @@
 class_name HealthBar
 extends MeshInstance3D
 
-# Overhead bar for characters. Hidden while full unless `always_show`.
+# Overhead bar for characters. Hidden while full unless `always_show`, and always on
+# the title backdrop (GameState.attract), which stays unmarked.
 
 const SHADER := preload("res://assets/shaders/health_bar.gdshader")
 const HEALTHY := Color(0.52, 0.66, 0.28)
@@ -24,12 +25,12 @@ func _init(width := 0.8, height := 0.09) -> void:
 func show_health(frac: float) -> void:
 	frac = clampf(frac, 0.0, 1.0)
 	_apply(frac, HEALTHY if frac > 0.6 else (HURT if frac > 0.3 else LOW))
-	visible = frac < 0.999
+	visible = frac < 0.999 and not GameState.attract
 
 ## Explicit colour + always visible (e.g. a downed countdown)
 func show_value(frac: float, color: Color) -> void:
 	_apply(clampf(frac, 0.0, 1.0), color)
-	visible = true
+	visible = not GameState.attract
 
 func _apply(frac: float, color: Color) -> void:
 	_mat.set_shader_parameter("fill", frac)

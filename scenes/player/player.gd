@@ -247,7 +247,7 @@ func set_slot(slot: int, c: Color) -> void:
 	_slot = slot
 	slot_color = c
 	_sprite.set_look(CharacterRig.worker_look(slot, c))
-	_sprite.set_ring_color(c)
+	_sprite.set_ring_color(Color(0, 0, 0, 0) if GameState.attract else c)   # the title backdrop stays unmarked
 	_refresh_pip()
 	_rebuild_carry_prop()   # a new rig means a new chest anchor
 

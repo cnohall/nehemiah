@@ -69,6 +69,15 @@ Supply: stockpiles in the yard (timber, stone, mortar; per stretch some are repl
 
 **Design principle:** Keep it simple, like Overcooked. Overcooked 1 already worked, and Overcooked 2 improved on it mostly with small changes. Add one mechanic at a time and playtest after each.
 
+**Fun check** — every new mechanic's spec opens with this block, filled in before it's built:
+- **Fantasy:** does it make you feel more like a builder of Neh. 4:17 — one hand on the work, one on the weapon? Or is it about something else?
+- **Kind of fun it aims at** (MDA): pick one or two. Our core is **Fellowship** (the crew shouting at each other) and **Challenge** (build vs defend at once). Sensation / Discovery / Narrative / Submission are welcome as seasoning, but don't let them take the build slots while core ideas wait
+- **Where it can go sour:** what frustration can it cause (unclear telegraph, off-screen hit, slow walk, one player stuck at a post)? Does it pay off in relief or triumph, or does it just nag?
+- **A/B switch:** the command-line flag that turns it off (`-- --no-…`), so a playtest can show what it adds
+- **Kill rule:** what we'd see in a playtest that makes us cut it rather than tune it
+
+**Cut candidates** (settle in playtest 3, `PLAYTEST_3.md`): the *In good time* mark (overlaps the sun clock), plaques vs in-world day info (keep one), tally + story as two screens at a section's end, breakables / birds if they pull players off the work.
+
 ### 5.1 Structure
 - 12 wall sections × ~4 days each ≈ 48–52 days → matches the Day 52 win condition
 - Each section plays like one Overcooked level
@@ -158,6 +167,12 @@ Three rules, each on by default and each switched off from the command line to A
 - New strings are English only so far — run the i18n extract for es / pt_BR / de / ko
 
 ### 5.9 Saboteur — ☐ spec (30 Sep 2026), not built
+**Fun check:**
+- **Fantasy:** guarding the work, not just the wall — "cause the work to cease" (4:11) is what you're stopping
+- **Kind of fun:** Fellowship first (someone has to leave the wall — who?), then Challenge (a third thing to watch)
+- **Where it can go sour:** one player parked in the yard all day; a scattered pile nobody saw happen feels unfair (the watchman call and pointer have to carry that)
+- **A/B switch:** `-- --no-saboteur`
+- **Kill rule:** if the crew in playtests just ignores him, or one player guards the yard all day even after we tune the interval
 **Why:** all three enemy types ask the same question — reach the wall before it's battered or slipped through — and differ only in stats. Days 1–8 are scouts only. The saboteur is the first foe that goes after a *different part of the work*: the supply, not the wall. It gives the crew a new job, "keep the yard", without new stats or weapons.
 
 **Grounded in:** "Our adversaries said, 'They will not know or see, until we come in the middle of them and kill them, and cause the work to cease.'" (Neh 4:11, WEB). Their aim was to stop the work, not to fight it out.

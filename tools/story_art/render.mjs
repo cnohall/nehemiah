@@ -27,7 +27,7 @@ for (const name of names) {
 	if (!scene) throw new Error(`no scene ${name}`);
 	seed(scene.seed ?? name.length * 7919);
 	const html = join(tmp, `${name}.html`);
-	writeFileSync(html, page(scene.draw()));
+	writeFileSync(html, page(scene.draw(), scene.page));
 	const png = join(out ?? tmp, `${name}.png`);
 	execFileSync(CHROME, ["--headless=new", "--disable-gpu", "--hide-scrollbars", `--window-size=${W},${H}`,
 		"--force-device-scale-factor=1", "--virtual-time-budget=4000", `--screenshot=${png}`, `file:///${html.replace(/\\/g, "/")}`], { stdio: "ignore" });

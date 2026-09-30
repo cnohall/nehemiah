@@ -374,15 +374,14 @@ func _apply_style() -> void:
 	threat.visible = plaques
 	_next_poll = 0.0
 
-# Low and centred, clear of the crew cards and the controls card: ink-rimmed text over
-# the world, no panel
+# Low and centred, clear of the crew cards and the controls card: a slim parchment
+# plaque, like the rest of the HUD
 func _build_next_caption() -> void:
 	_next_caption = Label.new()
-	_next_caption.add_theme_font_override("font", UiStyle.WORLD_FONT)
-	_next_caption.add_theme_font_size_override("font_size", 22)
-	_next_caption.add_theme_color_override("font_color", UiStyle.CREAM)
-	_next_caption.add_theme_color_override("font_outline_color", Color(UiStyle.DUSK, 0.92))
-	_next_caption.add_theme_constant_override("outline_size", 9)
+	_next_caption.add_theme_font_override("font", UiStyle.SPECTRAL_ITALIC)
+	_next_caption.add_theme_font_size_override("font_size", 21)
+	_next_caption.add_theme_color_override("font_color", UiStyle.INK)
+	_next_caption.add_theme_stylebox_override("normal", UiStyle.plaque(Vector2(26, 6), 0.95))
 	_next_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_next_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_next_caption.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # set translated

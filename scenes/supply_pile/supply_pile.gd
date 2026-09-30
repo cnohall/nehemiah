@@ -133,12 +133,28 @@ const ASH := Color(0.30, 0.27, 0.24)
 # Burned rubble (Neh. 4:2 "burned as they are"): a low scorched mound with loose
 # blocks on top; blocks disappear as the stock runs down
 func _build_rubble_heap(rng: RandomNumberGenerator) -> void:
+	# The mound: soft lumps of earth and lime dust run together, not one hard dome
 	var mound := SphereMesh.new()
-	mound.radius = 1.25
-	mound.height = 0.7
-	mound.radial_segments = 12
-	mound.rings = 4
-	_add(mound, ASH.lerp(COLORS["stone"], 0.7), Vector3(0, 0.05, 0), Vector3(0, rng.randf() * TAU, 0))
+	mound.radius = 0.5
+	mound.height = 1.0
+	mound.radial_segments = 20
+	mound.rings = 8
+	var earth := ASH.lerp(COLORS["stone"], 0.55)
+	var heart := _add(mound, earth, Vector3(0, 0.02, 0), Vector3(0, rng.randf() * TAU, 0))
+	heart.scale = Vector3(2.3, 0.6, 2.0)
+	for i in 3:
+		var a := TAU * i / 3.0 + rng.randf_range(-0.4, 0.4)
+		var lump := _add(mound, earth.lerp(ASH, rng.randf_range(0.0, 0.3)), Vector3(cos(a) * 0.75, 0.0, sin(a) * 0.65), Vector3(0, rng.randf() * TAU, 0))
+		lump.scale = Vector3(rng.randf_range(1.0, 1.4), rng.randf_range(0.35, 0.5), rng.randf_range(0.9, 1.2))
+	# Broken stone and a charred beam end spilling off it — these stay when it's picked bare
+	for i in 9:
+		var a := rng.randf() * TAU
+		var r := rng.randf_range(1.1, 1.6)
+		var s := Vector3(rng.randf_range(0.16, 0.3), rng.randf_range(0.1, 0.18), rng.randf_range(0.14, 0.26))
+		_add(_box(s), (COLORS["stone"] as Color).lerp(ASH, rng.randf_range(0.0, 0.5)), Vector3(cos(a) * r, 0.1 + s.y * 0.4, sin(a) * r),
+			Vector3(rng.randf_range(-0.3, 0.3), rng.randf() * TAU, rng.randf_range(-0.3, 0.3)))
+	var beam := rng.randf() * TAU
+	_add(_box(Vector3(1.4, 0.16, 0.18)), Color(0.18, 0.14, 0.12), Vector3(cos(beam) * 0.6, 0.3, sin(beam) * 0.6), Vector3(0, beam, 0.35))
 	for i in rubble_stock:
 		var a := TAU * i / rubble_stock + rng.randf_range(-0.3, 0.3)
 		var r := rng.randf_range(0.2, 0.8)
