@@ -109,7 +109,9 @@ func _process(_delta: float) -> void:
 	# Keep the tag on screen: slide it in from the edge, pointer hidden while it's off its mark
 	var area := vp.get_visible_rect().size
 	var at := want.clamp(Vector2(EDGE_MARGIN, EDGE_MARGIN), area - sz - Vector2(EDGE_MARGIN, EDGE_MARGIN))
-	if not clamp_to_screen and not at.is_equal_approx(want):
+	# Only a tag that matters slides in from the edge: dimmed ones (not where the next
+	# load goes) just leave, or they pile up against the edge over one another
+	if (not clamp_to_screen or modulate.a < 0.99) and not at.is_equal_approx(want):
 		_root.visible = false
 		return
 	_root.position = at.round()
@@ -149,7 +151,14 @@ func _build() -> void:
 	sb.content_margin_top = pad.y
 	sb.content_margin_bottom = pad.y + 1
 	sb.anti_aliasing = true
-	_panel.add_theme_stylebox_override("panel", sb)
+	if kind == Kind.SCROLL:
+		# The scroll draws its own sheet and tail (Scribe.ScrollSheet); keep the margins
+		var bare := StyleBoxEmpty.new()
+		for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+			bare.set_content_margin(side, sb.get_content_margin(side))
+		_panel.add_theme_stylebox_override("panel", bare)
+	else:
+		_panel.add_theme_stylebox_override("panel", sb)
 	_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_root.add_child(_panel)
 	_box = VBoxContainer.new()
@@ -162,9 +171,16 @@ func _build() -> void:
 		_pointer.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_pointer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_pointer.draw.connect(func():
+			if kind == Kind.SCROLL:
+				return
 			var w := POINTER.x
 			var h := POINTER.y
-			_pointer.draw_colored_polygon(PackedVector2Array([Vector2(0, -1), Vector2(w, -1), Vector2(w * 0.5, h)]), _bg()))
+			# Shadow, fill over the panel's bottom border, then the border carried round
+			# the tip, so the tail reads as part of the panel rather than stuck on
+			var edge := UiStyle.RULE if _paper() else BG_EDGE
+			_pointer.draw_colored_polygon(PackedVector2Array([Vector2(1, 1), Vector2(w - 1, 1), Vector2(w * 0.5, h + 3)]), Color(0.08, 0.05, 0.02, 0.18))
+			_pointer.draw_colored_polygon(PackedVector2Array([Vector2(-0.5, -1.5), Vector2(w + 0.5, -1.5), Vector2(w * 0.5, h)]), _bg())
+			_pointer.draw_polyline(PackedVector2Array([Vector2(0, -0.5), Vector2(w * 0.5, h), Vector2(w, -0.5)]), edge, 1.0, true))
 		_root.add_child(_pointer)
 
 func _paper() -> bool:
@@ -193,7 +209,8 @@ func _rebuild() -> void:
 		row.add_theme_constant_override("separation", 14)
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_box.add_child(row)
-		var segs := line.replace(" · ", "  ").replace("·", "  ").split("  ", false)
+		# A shout or a note is prose: kept whole ("Sanballat · Tobiah · Geshem")
+		var segs := PackedStringArray([line]) if _paper() or kind == Kind.NOTE 			else line.replace(" · ", "  ").replace("·", "  ").split("  ", false)
 		for seg in segs:
 			seg = seg.strip_edges()
 			if not seg.is_empty():
@@ -216,6 +233,9 @@ func _segment(seg: String) -> Control:
 	# "Wall 80%" — condition bar
 	if words.size() == 2 and first == "wall" and words[1].ends_with("%"):
 		return _condition(int(words[1].trim_suffix("%")) / 100.0)
+	# A site's name ("Watch post") — small caps, like everything else on a dark tag
+	if kind == Kind.SITE and not seg.contains("["):
+		return _label(seg, "caps", 14, TEXT)
 	return _rich(seg)
 
 func _need(mat: String, have: int, need: int) -> Control:

@@ -1,10 +1,11 @@
-extends SceneTree
+﻿extends SceneTree
 
 # Breakable jars and baskets (Breakables), offline:
 #   Godot --headless --path . --script res://tools/breakable_test.gd
 # - every section lays some out, none on a worker's spot, a landmark or the wall strip
 # - a sword cut, a sling stone, a dash and a foe walking through each break one
 # - a worker next to one with no foe about gets the sword for it; with a foe in range, not
+# - standing beside one rocks it once, not over and over
 # - dawn puts them all back
 # Exit code 0 = every check passed.
 
@@ -16,6 +17,7 @@ var _state := "layout"
 var _fails := 0
 var _fake: Node3D
 var _mark := 0
+var _mark_ms := 0
 var _player: Node3D
 var _trampled: Node3D
 var _dashed: Node3D
@@ -34,7 +36,7 @@ func _process(_delta: float) -> bool:
 		_gs = root.get_node("GameState")
 		_set = _main.get_node("Breakables")
 		_player = _main.get_node("Players").get_child(0)
-	if _frame > 600:
+	if Time.get_ticks_msec() > 60000:
 		_check(false, "timed out in " + _state)
 		return _finish()
 	match _state:
@@ -77,30 +79,45 @@ func _process(_delta: float) -> bool:
 			# A foe walks through the one at the feet
 			_fake.global_position = r.global_position + Vector3(0.1, 0, 0)
 			_trampled = r
-			_mark = _frame
+			_mark_ms = Time.get_ticks_msec()
 			_state = "trample"
 		"trample":
-			if _frame - _mark < 3:
+			# Waits by the clock: headless process frames outrun the physics ticks
+			if not _trampled.broken and _since() < 0.5:
 				return false
 			var r: Node3D = _trampled
 			_check(r.broken, "foe tramples one")
 			_fake.queue_free()
 			var d: Node3D = _set._pieces.filter(func(x): return not x.broken)[0]
-			_dashed = d
 			_player.global_position = d.global_position - Vector3(2, 0, 0)
 			_set.note_dash(_player)
 			_player.global_position = d.global_position + Vector3(2, 0, 0)
-			_mark = _frame
-			_state = "dash"
-		"dash":
-			if _frame - _mark < 2:
+			_set._check_dashes()
+			_check(d.broken, "dash through one breaks it")
+			# Standing at a jar's side rocks it once, not over and over
+			var s: Node3D = _set._pieces.filter(func(x): return not x.broken)[0]
+			_dashed = s
+			_player.global_position = s.global_position + Vector3(s.radius() + 0.2, 0, 0)
+			_mark_ms = Time.get_ticks_msec()
+			_state = "lean"
+		"lean":
+			if _dashed._wobble_cd == 0.0 and _since() < 0.3:
 				return false
-			_check(_dashed.broken, "dash through one breaks it")
+			_check(_dashed._wobble_cd > 0.0, "brushing up to one rocks it")
+			_state = "stand"
+		"stand":
+			if _since() < 1.2:
+				return false
+			_check(_dashed._wobble_cd == 0.0 and _player.global_position.distance_to(_dashed.global_position) < _dashed.radius() + 0.35,
+				"standing beside one doesn't keep rocking it")
 			_gs.set_phase(_gs.Phase.DAWN)
 			var whole: bool = _set._pieces.all(func(p): return not p.broken)
 			_check(whole, "dawn puts them back")
 			return _finish()
 	return false
+
+func _since() -> float:
+	return (Time.get_ticks_msec() - _mark_ms) / 1000.0
 
 func _check(ok: bool, what: String) -> void:
 	print(("PASS  " if ok else "FAIL  ") + what)

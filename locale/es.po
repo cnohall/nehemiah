@@ -1543,3 +1543,312 @@ msgstr "Cruceta   Elegir          %s   Construir          %s   Atrás"
 
 msgid "Locked"
 msgstr "Bloqueado"
+
+msgid "The Festival of Booths"
+msgstr "La Fiesta de las Cabañas"
+
+msgid "The wall is finished. No clock, no enemy — walk the city."
+msgstr "La muralla está terminada. Sin reloj ni enemigos — recorre la ciudad."
+
+msgid "Walk up to people and press %s to talk"
+msgstr "Acércate a la gente y pulsa %s para hablar"
+
+msgid "Walk the City"
+msgstr "Recorrer la ciudad"
+
+msgid "Neh. 8  ·  The seventh month"
+msgstr "Neh. 8  ·  El séptimo mes"
+
+msgid "Hear Ezra read the Law at the Water Gate"
+msgstr "Escucha a Esdras leer la Ley en la Puerta de las Aguas"
+
+msgid "Build booths with branches from the mount — %d of %d"
+msgstr "Construye cabañas con ramas del monte — %d de %d"
+
+msgid "Send portions to those with nothing prepared — %d of %d"
+msgstr "Envía porciones a quienes no tienen nada preparado — %d de %d"
+
+msgid "Meet the people who built the wall — %d of %d"
+msgstr "Conoce a la gente que construyó la muralla — %d de %d"
+
+msgid "Go up to the house of God, by the Sheep Gate"
+msgstr "Sube a la casa de Dios, junto a la Puerta de las Ovejas"
+
+msgid "Walk the wall round — %d of %d gates"
+msgstr "Da la vuelta a la muralla — %d de %d puertas"
+
+msgid "There was very great gladness"
+msgstr "Hubo muy grande alegría"
+
+msgid "%s  ·  Stay as long as you like"
+msgstr "%s  ·  Quédate cuanto quieras"
+
+msgid "%s  ·  walk off either end of the wall to go on round"
+msgstr "%s  ·  sal por cualquier extremo de la muralla para seguir la vuelta"
+
+msgid "The house of God"
+msgstr "La casa de Dios"
+
+msgid "“We will not forsake the house of our God.”  (%s)"
+msgstr "“No abandonaremos la casa de nuestro Dios.”  (%s)"
+
+msgid "A booth"
+msgstr "Una cabaña"
+
+msgid "Branch"
+msgstr "Rama"
+
+msgid "Portion"
+msgstr "Porción"
+
+msgid "Nothing prepared"
+msgstr "Nada preparado"
+
+msgid "see %s"
+msgstr "ver %s"
+
+msgid "This booth stands"
+msgstr "Esta cabaña ya está en pie"
+
+msgid "The booth wants branches — from the olive trees outside the wall"
+msgstr "La cabaña necesita ramas — de los olivos fuera de la muralla"
+
+msgid "Branches enough — {interact} to build it"
+msgstr "Ya hay ramas suficientes — {interact} para construirla"
+
+msgid "They're after bread, not that"
+msgstr "Buscan pan, no eso"
+
+msgid "They have plenty now"
+msgstr "Ya tienen de sobra"
+
+msgid "Nothing is prepared in my house for the feast."
+msgstr "En mi casa no hay nada preparado para la fiesta."
+
+msgid "Blessings on you — the joy of Yahweh is our strength today."
+msgstr "Bendito seas — hoy la alegría de Jehová es nuestra fuerza."
+
+msgid "Then Eliashib the high priest rose up with his brothers the priests, and they built the sheep gate."
+msgstr "Entonces el sumo sacerdote Eliasib se levantó con sus hermanos los sacerdotes, y construyeron la Puerta de las Ovejas."
+
+msgid "The sons of Hassenaah built the fish gate. They laid its beams, and set up its doors, its bolts, and its bars."
+msgstr "Los hijos de Senaá construyeron la Puerta del Pescado. Colocaron sus vigas y pusieron sus puertas, sus cerrojos y sus barras."
+
+msgid "Joiada the son of Paseah and Meshullam the son of Besodeiah repaired the old gate."
+msgstr "Joiadá hijo de Paseah y Mesulam hijo de Besodías repararon la Puerta Vieja."
+
+msgid "Next to him, Uzziel the son of Harhaiah, goldsmiths, made repairs."
+msgstr "Junto a él reparó Uziel hijo de Harhaya, de los orfebres."
+
+msgid "Next to him, Hananiah, one of the perfumers, made repairs, and they fortified Jerusalem even to the wide wall."
+msgstr "Junto a él reparó Hananías, uno de los perfumistas, y fortificaron Jerusalén hasta el Muro Ancho."
+
+msgid "Malchijah the son of Harim and Hasshub the son of Pahathmoab repaired another portion and the tower of the furnaces."
+msgstr "Malquías hijo de Harim y Hasub hijo de Pahat-moab repararon otro tramo y la Torre de los Hornos."
+
+msgid "Next to him, Shallum the son of Hallohesh, the ruler of half the district of Jerusalem, he and his daughters made repairs."
+msgstr "Junto a él reparó Salum hijo de Halohés, gobernante de la mitad del distrito de Jerusalén, él con sus hijas."
+
+msgid "Hanun and the inhabitants of Zanoah repaired the valley gate."
+msgstr "Hanún y los habitantes de Zanoa repararon la Puerta del Valle."
+
+msgid "Malchijah the son of Rechab, the ruler of the district of Beth Haccherem, repaired the dung gate."
+msgstr "Malquías hijo de Recab, gobernante del distrito de Bet-haquerem, reparó la Puerta del Muladar."
+
+msgid "Shallun the son of Colhozeh, the ruler of the district of Mizpah, repaired the spring gate."
+msgstr "Salum hijo de Colhoze, gobernante del distrito de Mizpa, reparó la Puerta de la Fuente."
+
+msgid "Nehemiah the son of Azbuk, the ruler of half the district of Beth Zur, made repairs to the place opposite the tombs of David, and to the pool that was made."
+msgstr "Nehemías hijo de Azbuc, gobernante de la mitad del distrito de Bet-sur, reparó hasta enfrente de los sepulcros de David y hasta el estanque que se había hecho."
+
+msgid "Now the temple servants lived in Ophel, to the place opposite the water gate toward the east, and the tower that stands out."
+msgstr "Los servidores del templo vivían en Ofel, hasta enfrente de la Puerta de las Aguas, hacia el este, y la torre que sobresale."
+
+msgid "Above the horse gate, the priests made repairs, everyone across from his own house."
+msgstr "Por encima de la Puerta de los Caballos repararon los sacerdotes, cada uno frente a su casa."
+
+msgid "After him, Shemaiah the son of Shecaniah, the keeper of the east gate, made repairs."
+msgstr "Después de él reparó Semaías hijo de Secanías, guarda de la Puerta Oriental."
+
+msgid "Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner."
+msgstr "Malquías, uno de los orfebres, reparó hasta la casa de los servidores del templo y de los comerciantes, frente a la Puerta de Mifcad, y hasta la subida de la esquina."
+
+msgid "The wall is finished — in fifty-two days!"
+msgstr "¡La muralla está terminada — en cincuenta y dos días!"
+
+msgid "Have you been out to the mount for branches?"
+msgstr "¿Ya fuiste al monte por ramas?"
+
+msgid "Every one of us on his own roof, in a shelter of boughs."
+msgstr "Cada uno de nosotros en su propia azotea, en una cabaña de ramas."
+
+msgid "Not since the days of Joshua has it been kept like this."
+msgstr "Desde los días de Josué no se había celebrado así."
+
+msgid "Walk the whole wall round — every gate stands."
+msgstr "Recorre toda la muralla — todas las puertas están en pie."
+
+msgid "You shall take on the first day the fruit of majestic trees, branches of palm trees, and boughs of thick trees, and willows of the brook; and you shall rejoice before Yahweh your God seven days."
+msgstr "El primer día tomarán fruto de árboles majestuosos, ramas de palmera, ramas de árboles frondosos y sauces del arroyo, y se alegrarán delante de Jehová su Dios durante siete días."
+
+msgid "You shall dwell in temporary shelters for seven days."
+msgstr "Vivirán en cabañas durante siete días."
+
+msgid "Go out to the mountain, and get olive branches, branches of wild olive, myrtle branches, palm branches, and branches of thick trees, to make temporary shelters, as it is written."
+msgstr "Salgan al monte y traigan ramas de olivo, de olivo silvestre, de mirto, de palmera y de árboles frondosos, para hacer cabañas, como está escrito."
+
+msgid "Lev. 23:40"
+msgstr "Lev. 23:40"
+
+msgid "Lev. 23:42"
+msgstr "Lev. 23:42"
+
+msgid "Lev. 6:13"
+msgstr "Lev. 6:13"
+
+msgid "Today is holy to Yahweh your God. Don’t mourn, nor weep."
+msgstr "Hoy es un día santo para Jehová su Dios. No se pongan de luto ni lloren."
+
+msgid "Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared."
+msgstr "Vayan, coman lo sustancioso, beban lo dulce y envíen porciones a quien no tiene nada preparado."
+
+msgid "Don’t be grieved, for the joy of Yahweh is your strength."
+msgstr "No se entristezcan, porque la alegría de Jehová es su fuerza."
+
+msgid "We read in the book distinctly, and give the sense, so that everyone understands."
+msgstr "Leemos el libro con claridad y explicamos el sentido, para que todos entiendan."
+
+msgid "Hold your peace, for the day is holy. Don’t be grieved."
+msgstr "Callen, porque el día es santo. No se entristezcan."
+
+msgid "I repaired the wall from the door of Eliashib's house to its end."
+msgstr "Yo reparé la muralla desde la puerta de la casa de Eliasib hasta el final de ella."
+
+msgid "They're building shelters in the courts of God's house too — round the wall at the Sheep Gate."
+msgstr "También están haciendo cabañas en los patios de la casa de Dios — siguiendo la muralla, en la Puerta de las Ovejas."
+
+msgid "Out through the gate for branches — olive, myrtle, palm. Go to the mount."
+msgstr "Sal por la puerta a buscar ramas — olivo, mirto, palmera. Ve al monte."
+
+msgid "The gates stay open today. Nobody is coming to fight."
+msgstr "Hoy las puertas se quedan abiertas. Nadie viene a pelear."
+
+msgid "We're going out for palm branches!"
+msgstr "¡Vamos a buscar ramas de palmera!"
+
+msgid "Amen, Amen!"
+msgstr "¡Amén, amén!"
+
+msgid "We've listened since early morning."
+msgstr "Llevamos escuchando desde el amanecer."
+
+msgid "We will not forsake the house of our God."
+msgstr "No abandonaremos la casa de nuestro Dios."
+
+msgid "Fire shall be kept burning on the altar continually; it shall not go out."
+msgstr "El fuego se mantendrá encendido sobre el altar continuamente; no se apagará."
+
+msgid "Go up into the court — there's a shelter to put up by the altar."
+msgstr "Sube al patio — hay una cabaña que levantar junto al altar."
+
+msgid "What is this thing that you are doing? Will you rebel against the king?"
+msgstr "¿Qué es esto que están haciendo? ¿Se van a rebelar contra el rey?"
+
+msgid "What are these feeble Jews doing? … Will they revive the stones out of the heaps of rubbish, since they are burned?"
+msgstr "¿Qué hacen estos judíos debiluchos? … ¿Harán revivir las piedras de los montones de escombros, quemadas como están?"
+
+msgid "What they are building, if a fox climbed up it, he would break down their stone wall."
+msgstr "Lo que están construyendo, si una zorra se subiera, derribaría su muro de piedra."
+
+msgid "Will they fortify themselves? Will they sacrifice? Will they finish in a day?"
+msgstr "¿Se fortificarán? ¿Ofrecerán sacrificios? ¿Terminarán en un día?"
+
+msgid "You and the Jews intend to rebel. Because of that, you are building the wall."
+msgstr "Tú y los judíos piensan rebelarse. Por eso estás construyendo la muralla."
+
+msgid "Sanballat's letter"
+msgstr "Carta de Sanbalat"
+
+msgid "Day %d  ·  %s"
+msgstr "Día %d  ·  %s"
+
+msgid "A piece has fallen — raise it again!"
+msgstr "¡Cayó un tramo — vuelve a levantarlo!"
+
+msgid "The stretch stands!"
+msgstr "¡El tramo está en pie!"
+
+msgid "One piece left!"
+msgstr "¡Queda un tramo!"
+
+msgid "%d of %d stand"
+msgstr "%d de %d en pie"
+
+msgid "Got through"
+msgstr "Se colaron"
+
+msgid "%d got in"
+msgid_plural "%d got in"
+msgstr[0] "%d entró"
+msgstr[1] "%d entraron"
+
+msgid "none got in"
+msgstr "no entró nadie"
+
+msgid "worked till the stars"
+msgstr "trabajaron hasta las estrellas"
+
+msgid "%d day to spare"
+msgid_plural "%d days to spare"
+msgstr[0] "%d día de sobra"
+msgstr[1] "%d días de sobra"
+
+msgid "rebuilt what fell"
+msgstr "reconstruyeron lo caído"
+
+msgid "The sun is low!"
+msgstr "¡El sol está bajo!"
+
+msgid "from the west"
+msgstr "por el oeste"
+
+msgid "from the east"
+msgstr "por el este"
+
+msgid "straight at the gate"
+msgstr "directo a la puerta"
+
+msgid "Up the valley — %s!"
+msgstr "¡Suben por el valle — %s!"
+
+msgid "They're coming — %s!"
+msgstr "¡Ahí vienen — %s!"
+
+msgid "A brute at the wall — bring him down!"
+msgstr "¡Un bruto en la muralla — derríbenlo!"
+
+msgid "They're battering the wall!"
+msgstr "¡Están golpeando la muralla!"
+
+msgid "A brute! He'll batter the wall"
+msgstr "¡Un bruto! Va a golpear la muralla"
+
+msgid "Raiders — quick ones, mind the gaps!"
+msgstr "¡Saqueadores — son rápidos, cuidado con las brechas!"
+
+msgid "One got into the city!  %d of %d"
+msgstr "¡Uno entró en la ciudad!  %d de %d"
+
+msgid "One got in — %d more and the city falls!"
+msgid_plural "One got in — %d more and the city falls!"
+msgstr[0] "Entró uno — ¡%d más y la ciudad cae!"
+msgstr[1] "Entró uno — ¡%d más y la ciudad cae!"
+
+msgid "Day info"
+msgstr "Info del día"
+
+msgid "In the world"
+msgstr "En el mundo"
+
+msgid "Plaques"
+msgstr "Placas"

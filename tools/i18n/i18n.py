@@ -38,7 +38,7 @@ IGNORE = {
     "Chris Nohall", "Joakim Henriquez", "World English Bible", "Godot Engine", "Cinzel · Spectral · Noto Serif KR",
 }
 # Built at runtime (kind.capitalize() on a world tag), so no literal in the code
-DYNAMIC = {"Stone", "Wood", "Mortar", "Lime", "Water", "Beam", "Beams", "Rubble"}
+DYNAMIC = {"Stone", "Wood", "Mortar", "Lime", "Water", "Beam", "Beams", "Rubble", "Branch", "Portion"}
 # A literal that reads like UI text: two words or more, starting with a capital
 SENTENCE = re.compile(r'^[A-Z][a-z’\']+( [A-Za-z’\'—·,.!?…:%s]+)+[.!?…]?$')
 

@@ -53,6 +53,9 @@ var _online: Node = null
 var _online_joining := false
 # Why the last online host/join failed, for the menu
 var last_error := ""
+# A createLobby / joinLobby awaiting Steam's callback; cleared by disconnect_session so a
+# callback that lands after the player went solo is dropped, not turned into a session
+var _steam_pending := false
 
 # Connect once — reconnecting per host()/join() call errors on the second attempt
 func _ready() -> void:
@@ -112,6 +115,7 @@ func host_steam() -> void:
 		host_failed.emit("Steam is not running.")
 		return
 	_hosting_lobby = true
+	_steam_pending = true
 	_steam.createLobby(LOBBY_TYPE_FRIENDS_ONLY, MAX_PLAYERS)
 
 func join_steam(lobby_id: int) -> void:
@@ -119,6 +123,7 @@ func join_steam(lobby_id: int) -> void:
 		lobby_joined.emit(false)
 		return
 	_hosting_lobby = false
+	_steam_pending = true
 	_steam.joinLobby(lobby_id)
 
 # Online Steam friends, those already in the game first. Used by the in-game
@@ -242,6 +247,7 @@ func disconnect_session() -> void:
 		_steam.clearRichPresence()
 	_lobby_id = 0
 	_hosting_lobby = false
+	_steam_pending = false
 	crew_info.clear()
 
 # ── Crew list ──────────────────────────────────────────────
@@ -376,6 +382,11 @@ func _init_steam() -> void:
 		join_steam.call_deferred(args[i + 1].to_int())
 
 func _on_steam_lobby_created(result: int, lobby_id: int) -> void:
+	if not _steam_pending:
+		if result == STEAM_RESULT_OK:
+			_steam.leaveLobby(lobby_id)
+		return
+	_steam_pending = false
 	if result != STEAM_RESULT_OK:
 		_hosting_lobby = false
 		host_failed.emit(tr("Steam could not create a lobby (result %d).") % result)
@@ -398,6 +409,11 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 	# Fires for the creator too — the host path is finished in _on_steam_lobby_created
 	if _hosting_lobby:
 		return
+	if not _steam_pending:
+		if response == LOBBY_ENTER_SUCCESS:
+			_steam.leaveLobby(lobby_id)
+		return
+	_steam_pending = false
 	if response != LOBBY_ENTER_SUCCESS:
 		lobby_joined.emit(false)
 		return

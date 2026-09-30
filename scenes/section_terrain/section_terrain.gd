@@ -51,6 +51,7 @@ func _rebuild() -> void:
 		c.queue_free()
 	_batches.clear()
 	_rng.seed = 1000 + index
+	_deco.seed = 2000 + index
 	_body = StaticBody3D.new()
 	_body.collision_mask = 0
 	add_child(_body)
@@ -204,32 +205,6 @@ func _tree(at: Vector3, fig := false) -> void:
 		_olive(at)
 	_collider(at, Vector3(0.5, 1.5, 0.5))
 
-func _smoke(at: Vector3, dark := false) -> void:
-	var p := CPUParticles3D.new()
-	p.amount = 10
-	p.lifetime = 4.0
-	p.direction = Vector3.UP
-	p.spread = 12.0
-	p.gravity = Vector3(0.25, 0.35, 0.1)
-	p.initial_velocity_min = 0.3
-	p.initial_velocity_max = 0.6
-	p.scale_amount_min = 0.8
-	p.scale_amount_max = 1.4
-	p.scale_amount_curve = DustFx.grow_curve()
-	var c := Color(0.35, 0.33, 0.32) if dark else Color(0.85, 0.82, 0.78)
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color(c, 0.0))
-	ramp.add_point(0.2, Color(c, 0.35))
-	ramp.set_color(1, Color(c, 0.0))
-	p.color_ramp = ramp
-	var quad := QuadMesh.new()
-	quad.size = Vector2(0.9, 0.9)
-	quad.material = DustFx.material()
-	p.mesh = quad
-	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	p.position = at
-	add_child(p)
-
 ## Torch on a pole — lit by DayLight when night falls (group "torches")
 func _torch(at: Vector3) -> void:
 	_add("trunk", Transform3D(Basis.from_scale(Vector3(0.6, 1.8, 0.6)), at + Vector3(0, 0.9, 0)), _vary(WOOD, 0.03).darkened(0.15))
@@ -277,7 +252,10 @@ func _sheepfold(c: Vector3) -> void:
 		_add("pebble", Transform3D(Basis.from_scale(Vector3(1.6, 2.0, 1.6)), at + Vector3(0.35, 0.1, 0.2)), Color(0.22, 0.18, 0.15))
 	# A few strays grazing on the slope
 	for p: Vector3 in [Vector3(-8.5, 0, -9.5), Vector3(-7.2, 0, -10.4), Vector3(6.5, 0, -9.0)]:
-		_add("bush", Transform3D(_yaw().scaled(Vector3(1.1, 0.7, 0.8)), p + Vector3(0, 0.35, 0)), _vary(WOOL, 0.04))
+		var yaw := _yaw()
+		_add("bush", Transform3D(yaw.scaled(Vector3(1.1, 0.7, 0.8)), p + Vector3(0, 0.35, 0)), _vary(WOOL, 0.04))
+		# Head down to the grass
+		_add("pebble", Transform3D(yaw * Basis.from_scale(Vector3(1.6, 2.0, 1.6)), p + yaw * Vector3(0.38, 0.22, 0.0)), Color(0.22, 0.18, 0.15))
 
 # Fish Gate (3:3): Tyrian fish sellers' stalls inside the gate (Neh. 13:16)
 func _fish_market() -> void:
@@ -431,15 +409,16 @@ func _low_house(c: Vector3, w: float, d: float) -> void:
 	var h := _rng.randf_range(1.6, 2.0)
 	var tint := _vary(HOUSE_COLORS[_rng.randi() % HOUSE_COLORS.size()], 0.02)
 	_solid(c, Vector3(w, h, d), tint)
-	_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.15, 0.22, d + 0.15)), c + Vector3(0, h + 0.1, 0)), tint.darkened(0.06))
+	_roof(c, w, d, h, tint)
 	_dress_walls(c, w, h, d)
+	_plaster(c, w, h, d, tint)
 	# Door toward the wall — "in front of his own house"
 	var door := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), 0, -d * 0.5)
 	_door(door, -1.0)
 	_prop("jar", door + Vector3(0.75, 0, -0.45))   # a water jar by the step
 	if _rng.randf() < 0.6:
-		var rug := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), h + 0.22, 0)
-		_add("block", Transform3D(_yaw_small() * Basis.from_scale(Vector3(minf(w * 0.5, 1.8), 0.04, 1.2)), rug), CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])
+		var rug := c + Vector3(_rng.randf_range(-w * 0.2, w * 0.2), h + 0.1, 0)
+		_rug(rug, minf(w * 0.5, 1.8), 1.2, _yaw_small(), CLOTH_COLORS[_rng.randi() % CLOTH_COLORS.size()])
 
 # East Gate (3:29): across the Kidron, the olive trees of the Mount of Olives
 func _kidron(g: Dictionary) -> void:

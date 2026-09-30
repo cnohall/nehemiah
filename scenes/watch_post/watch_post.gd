@@ -33,7 +33,8 @@ const LABEL_POLL      := 0.2
 const WOOD_COLOR      := Color(0.52, 0.34, 0.18)
 const BASKET_COLOR    := Color(0.66, 0.52, 0.30)
 const STONE_COLOR     := Color(0.72, 0.70, 0.65)
-const TARGET_COLOR    := Color(0.55, 0.45, 0.30)
+const TARGET_COLOR    := Color(0.62, 0.50, 0.34)
+const LINE_COLOR      := Color(0.93, 0.90, 0.82)   # lime and cord marking out the plot
 const SLINGER_COLOR   := Color(0.44, 0.55, 0.24)
 const STONE_SLOTS     := 9
 
@@ -100,11 +101,11 @@ func _on_section_changed() -> void:
 func _enabled() -> bool:
 	return GameState.posts
 
-# Shown / solid / in the groups only while the rule is on
+# Shown / in the groups only while the rule is on; solid only once it stands
 func _refresh() -> void:
 	var on := _enabled()
 	visible = on
-	_col.set_deferred("disabled", not on)
+	_col.set_deferred("disabled", not on or not built)   # bare footing: walk over it
 	if on:
 		add_to_group("build_sites")
 		add_to_group("watch_posts")
@@ -267,12 +268,25 @@ func approach_point(from: Vector3, standoff: float) -> Vector3:
 func _build_footing() -> void:
 	_footing = Node3D.new()
 	add_child(_footing)
+	# The plot, scraped bare and lined out in lime (the floor's top is at y 0.1)
+	var ground := _Parts.new()
+	ground.add(Vector3(FOOT.x, 0.02, FOOT.z), Vector3(0, 0.1, 0), TARGET_COLOR)
+	for s: float in [-1.0, 1.0]:
+		ground.add(Vector3(FOOT.x + 0.08, 0.025, 0.08), Vector3(0, 0.11, s * FOOT.z * 0.5), LINE_COLOR)
+		ground.add(Vector3(0.08, 0.025, FOOT.z), Vector3(s * FOOT.x * 0.5, 0.11, 0), LINE_COLOR)
+	var flat := ground.build(Chunky.material(0.0))
+	flat.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_footing.add_child(flat)
+	# A stake at each corner and a cord run round them, a flat footing stone under each
 	var parts := _Parts.new()
-	parts.add(Vector3(FOOT.x, 0.06, FOOT.z), Vector3(0, 0.03, 0), TARGET_COLOR)
 	for sx: float in [-0.6, 0.6]:
 		for sz: float in [-0.6, 0.6]:
-			parts.add(Vector3(0.14, 0.45, 0.14), Vector3(sx, 0.22, sz), WOOD_COLOR.darkened(0.1))
-	_footing.add_child(parts.build(Chunky.wood_material(0.03)))
+			parts.add(Vector3(0.12, 0.6, 0.12), Vector3(sx, 0.4, sz), WOOD_COLOR.darkened(0.1))
+			parts.add(Vector3(0.36, 0.1, 0.36), Vector3(sx, 0.13, sz), STONE_COLOR.darkened(0.08))
+	for s: float in [-0.6, 0.6]:
+		parts.add(Vector3(1.2, 0.03, 0.03), Vector3(0, 0.55, s), LINE_COLOR)
+		parts.add(Vector3(0.03, 0.03, 1.2), Vector3(s, 0.55, 0), LINE_COLOR)
+	_footing.add_child(parts.build(Chunky.wood_material(0.02)))
 
 # Standing: four legs, braces, a plank deck, a ladder, a basket of stones, the slinger
 func _build_frame() -> void:

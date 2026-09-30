@@ -48,6 +48,10 @@ var _defs := {
 	"splash":         [_n("splash_%03d", 0, 3), -10.0, 0.9, 1.1],
 	"basket_crush":   [_n("impactPlank_medium_%03d", 0, 5), -8.0, 1.45, 1.7],
 	"pot_knock":      [_n("impactGeneric_light_%03d", 0, 5), -16.0, 1.5, 1.8],
+	# Birds about the site (Birds): a flock taking off, sparrows, a rock dove
+	"wings":          [_n("wings_%03d", 0, 3), -12.0, 0.9, 1.15],
+	"chirp":          [_n("chirp_%03d", 0, 4), -22.0, 0.9, 1.15],
+	"coo":            [_n("coo_%03d", 0, 3), -20.0, 0.92, 1.05],
 	"hurt":           [_n("impactSoft_heavy_%03d", 0, 5), -2.0, 0.9, 1.1],
 	"downed":         [_n("impactPunch_heavy_%03d", 0, 5), 0.0, 0.6, 0.7],
 	"revive":         [["clothBelt", "clothBelt2"], 0.0, 0.9, 1.0],
@@ -69,6 +73,11 @@ const TRIM := {
 	"cloth1": 7.5, "cloth2": 13.0, "cloth3": 13.0, "cloth4": 18.0,
 	"clothBelt": 16.5, "clothBelt2": 15.0,
 	"handleSmallLeather": 18.5, "handleSmallLeather2": 24.0,
+}
+# Loud enough to put the birds up (Birds): event → reach in metres, 0 = the whole site
+const STARTLES := {
+	"sword": 3.5, "dash": 3.0, "shatter": 4.5, "sling_miss": 3.0, "wall_crumble": 8.0,
+	"enemy_die": 4.0, "downed": 4.0, "horn": 0.0, "breach": 0.0,
 }
 # UI-level (non-positional) music stings
 var _jingle_defs := {
@@ -193,6 +202,8 @@ func play(event: String, at: Variant = null) -> void:
 	if now - _last_played.get(event, -100000) < MIN_GAP * 1000.0:
 		return
 	_last_played[event] = now
+	if STARTLES.has(event):
+		get_tree().call_group("bird_set", "startle", at, STARTLES[event])
 	var def: Array = _defs[event]
 	var stream: AudioStream = streams.pick_random()
 	var pitch := randf_range(def[2], def[3])

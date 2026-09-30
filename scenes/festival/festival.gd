@@ -497,7 +497,7 @@ func _build_journal() -> void:
 	var hint := Label.new()
 	hint.theme_type_variation = &"Caption"
 	hint.add_theme_color_override("font_color", UiStyle.INK_MUTED)
-	hint.text = "Walk up to people and press %s to talk" % InputMode.key("interact")
+	hint.text = tr("Walk up to people and press %s to talk") % InputMode.key("interact")
 	hint.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	vb.add_child(hint)
 	# Where on the wall you are, and which way north lies

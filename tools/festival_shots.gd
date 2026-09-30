@@ -2,10 +2,11 @@ extends SceneTree
 
 # "Walk the City" screenshots at the Water Gate: hear Ezra, fetch branches, raise a
 # booth, send a portion. The round of every stretch: festival_tour.gd
-#   Godot --path . --script res://tools/festival_shots.gd -- <out_dir>
+#   Godot --path . --script res://tools/festival_shots.gd -- <out_dir> [--lang=ko]
 # Not headless — needs the GPU.
 
 var _out := ""
+var _lang := ""
 var _main: Node3D
 var _t := 0.0
 var _step := 0
@@ -35,7 +36,9 @@ const SCRIPT := [
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
-		if not a.begins_with("--"):
+		if a.begins_with("--lang="):
+			_lang = a.trim_prefix("--lang=")
+		elif not a.begins_with("--"):
 			_out = a
 	root.size = Vector2i(1920, 1080)
 	root.get_node("GameState").festival = true
@@ -45,6 +48,12 @@ func _initialize() -> void:
 
 func _process(delta: float) -> bool:
 	_frame += 1
+	if _frame == 1 and not _lang.is_empty():
+		# After Settings.apply() in the autoloads; the journal re-reads it on the first refresh
+		TranslationServer.set_locale(_lang)
+		var festival := _main.find_child("Festival", true, false)
+		if festival != null and festival.has_method("_refresh"):
+			festival._refresh()
 	if _frame < 3:
 		return false
 	_t += delta
