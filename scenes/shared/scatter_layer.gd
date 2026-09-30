@@ -355,9 +355,9 @@ func _arab_camp(c: Vector3) -> void:
 	_hair_tent(c + Vector3(-2.6, 0, -1.8), 0.08)
 	_hair_tent(c + Vector3(3.4, 0, -2.6), -0.1)
 	_campfire(c + Vector3(0.6, 0, 1.4))
-	_camel(c + Vector3(-3.8, 0, 2.2), 0.4)
-	_camel(c + Vector3(-1.6, 0, 3.4), -0.3)
-	_camel(c + Vector3(5.2, 0, 1.2), 2.6)
+	_camel(c + Vector3(-3.6, 0, 2.8), 0.4)
+	_camel(c + Vector3(-5.2, 0, 4.5), PI + 0.2)
+	_camel(c + Vector3(7.4, 0, 2.6), 3.7)
 	for i in 3:
 		_sack(c + Vector3(2.4 + i * 0.55, 0, 0.6 + (i % 2) * 0.3))
 	_jar(c + Vector3(-0.8, 0, 2.8), 1.0)
@@ -430,26 +430,142 @@ func _hair_tent(c: Vector3, yaw: float) -> void:
 		_rope(c + b * Vector3(sx * l * 0.5, eave, d * 0.5), c + b * Vector3(sx * (l * 0.5 + 0.9), 0.0, d * 0.5 + 0.9))
 		_rope(c + b * Vector3(sx * l * 0.5, eave, -d * 0.5), c + b * Vector3(sx * (l * 0.5 + 0.9), 0.0, -d * 0.5 - 0.9))
 
-# A camel couched on folded legs, a saddle cloth over its hump, neck up and head level
+# A camel couched on folded legs (+X is forward), drawn in the workers' chunky style: a
+# short lofted body with the hump behind the middle and a blanket over the flanks, a
+# thick neck tapering up out of the chest, and a big round head with heavy brows and a
+# drooping lip, turned a little to look about. Pale belly, throat and muzzle
 func _camel(c: Vector3, yaw: float) -> void:
 	var b := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * 1.25)
 	var col := _vary(CAMEL, 0.04)
-	_add("blob", Transform3D(b * Basis.from_scale(Vector3(1.9, 0.62, 0.72)), c + b * Vector3(0, 0.36, 0)), col)
-	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.85, 0.8, 0.56)), c + b * Vector3(-0.1, 0.72, 0)), col.lightened(0.04))
-	# Folded legs: just the knees showing under the belly
-	for sz: float in [-1.0, 1.0]:
-		for sx: float in [-0.55, 0.55]:
-			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.42, 0.14, 0.16)), c + b * Vector3(sx, 0.08, sz * 0.3)), col.darkened(0.12))
-	# Saddle cloth over the top of the hump, a pale band across it
+	var pale := col.lightened(0.2)
+	var dark := col.darkened(0.2)
 	var cloth: Color = [Palette.MADDER, Palette.INDIGO, Palette.MUREX][_rng.randi() % 3]
-	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.62, 0.3, 0.6)), c + b * Vector3(-0.1, 1.0, 0)), cloth)
-	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.14, 0.31, 0.61)), c + b * Vector3(-0.1, 1.0, 0)), Palette.UNDYED)
-	# Long neck out of the chest and up, a small head held level at the top
-	_add("blob", Transform3D(b * Basis(Vector3.BACK, -0.45) * Basis.from_scale(Vector3(0.22, 1.05, 0.2)), c + b * Vector3(1.05, 0.72, 0)), col)
-	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.48, 0.2, 0.2)), c + b * Vector3(1.4, 1.18, 0)), col.lightened(0.03))
-	for sz: float in [-0.07, 0.07]:
-		_add("block", Transform3D(b * Basis.from_scale(Vector3(0.05, 0.1, 0.04)), c + b * Vector3(1.24, 1.31, sz)), col.darkened(0.15))
-	_add("blob", Transform3D(b * Basis(Vector3.BACK, 0.9) * Basis.from_scale(Vector3(0.08, 0.36, 0.08)), c + b * Vector3(-1.0, 0.42, 0)), col.darkened(0.15))
+	_add("camel_body", Transform3D(b, c), col)
+	_add("camel_belly", Transform3D(b, c), pale)
+	_add("camel_cloth", Transform3D(b, c), cloth)
+	_add("camel_band", Transform3D(b, c), Palette.UNDYED)
+	# Legs folded under: the fore knees just showing at the chest, the hind legs along
+	# the flanks with the feet tucked forward
+	for sz: float in [-1.0, 1.0]:
+		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.36, 0.16, 0.18)), c + b * Vector3(0.6, 0.09, sz * 0.2)), pale.darkened(0.06))
+		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.66, 0.32, 0.2)), c + b * Vector3(-0.4, 0.2, sz * 0.4)), col)
+		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.3, 0.1, 0.14)), c + b * Vector3(-0.02, 0.05, sz * 0.46)), pale.darkened(0.06))
+	# Tail kept flat down the rump, a dark tuft at the end
+	_add("blob", Transform3D(b * Basis(Vector3.BACK, 0.15) * Basis.from_scale(Vector3(0.07, 0.3, 0.07)), c + b * Vector3(-0.84, 0.42, 0)), col.darkened(0.08))
+	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.1, 0.12, 0.08)), c + b * Vector3(-0.87, 0.27, 0)), dark)
+	# Neck and head, turned about the chest
+	var neck := Basis(Vector3.UP, _rng.randf_range(-0.45, 0.45))
+	var root := Vector3(0.6, 0.6, 0)
+	var part := func(kind: String, size: Vector3, at: Vector3, tint: Color) -> void:
+		_add(kind, Transform3D(b * neck * Basis.from_scale(size), c + b * (root + neck * (at - root))), tint)
+	part.call("camel_neck", Vector3.ONE, Vector3.ZERO, col)
+	part.call("camel_throat", Vector3.ONE, Vector3.ZERO, pale)
+	part.call("camel_head", Vector3.ONE, Vector3.ZERO, col.lightened(0.03))
+	part.call("camel_muzzle", Vector3.ONE, Vector3.ZERO, col.lightened(0.1))
+	# The drooping lower lip, nostrils, halter
+	part.call("blob", Vector3(0.2, 0.1, 0.17), Vector3(1.55, 1.23, 0), pale.darkened(0.05))
+	part.call("block", Vector3(0.05, 0.31, 0.32), Vector3(1.4, 1.41, 0), cloth)
+	for sz: float in [-1.0, 1.0]:
+		part.call("blob", Vector3(0.04, 0.03, 0.05), Vector3(1.63, 1.42, sz * 0.055), dark.darkened(0.3))
+		# Big dark eyes under heavy brows, small round ears laid back
+		part.call("blob", Vector3(0.08, 0.09, 0.05), Vector3(1.24, 1.51, sz * 0.18), Color(0.08, 0.06, 0.05))
+		part.call("blob", Vector3(0.03, 0.03, 0.02), Vector3(1.26, 1.54, sz * 0.2), Color(0.95, 0.92, 0.85))
+		part.call("blob", Vector3(0.16, 0.05, 0.08), Vector3(1.23, 1.58, sz * 0.17), dark)
+		_add("blob", Transform3D(b * neck * Basis(Vector3.BACK, 0.5) * Basis.from_scale(Vector3(0.07, 0.15, 0.06)), c + b * (root + neck * (Vector3(1.04, 1.62, sz * 0.13) - root))), dark)
+
+# Camel lofts, rings along a spine in the XY plane: [centre, above, below, side]
+# (half-extents toward the spine's upper normal, away from it, and across in Z)
+const CAMEL_BODY := [
+	[Vector3(-0.84, 0.44, 0), 0.01, 0.01, 0.01],
+	[Vector3(-0.82, 0.44, 0), 0.13, 0.13, 0.15],
+	[Vector3(-0.78, 0.44, 0), 0.23, 0.24, 0.28],
+	[Vector3(-0.68, 0.43, 0), 0.34, 0.36, 0.42],
+	[Vector3(-0.52, 0.42, 0), 0.46, 0.38, 0.48],
+	[Vector3(-0.34, 0.42, 0), 0.7, 0.38, 0.49],
+	[Vector3(-0.16, 0.42, 0), 0.84, 0.38, 0.47],
+	[Vector3(0.02, 0.42, 0), 0.72, 0.38, 0.46],
+	[Vector3(0.2, 0.43, 0), 0.5, 0.38, 0.44],
+	[Vector3(0.38, 0.45, 0), 0.38, 0.37, 0.4],
+	[Vector3(0.54, 0.47, 0), 0.32, 0.33, 0.34],
+	[Vector3(0.66, 0.48, 0), 0.22, 0.24, 0.22],
+	[Vector3(0.72, 0.48, 0), 0.01, 0.01, 0.01],
+]
+# Deep out of the chest, tapering as it rises
+const CAMEL_NECK := [
+	[Vector3(0.4, 0.62, 0), 0.26, 0.3, 0.26],
+	[Vector3(0.66, 0.66, 0), 0.24, 0.28, 0.23],
+	[Vector3(0.86, 0.76, 0), 0.2, 0.23, 0.19],
+	[Vector3(1.0, 0.94, 0), 0.16, 0.18, 0.16],
+	[Vector3(1.07, 1.14, 0), 0.145, 0.15, 0.145],
+	[Vector3(1.1, 1.3, 0), 0.15, 0.15, 0.15],
+	[Vector3(1.11, 1.4, 0), 0.01, 0.01, 0.01],
+]
+# Big round skull, then the long heavy muzzle
+const CAMEL_HEAD := [
+	[Vector3(0.98, 1.44, 0), 0.01, 0.01, 0.01],
+	[Vector3(1.0, 1.44, 0), 0.12, 0.12, 0.13],
+	[Vector3(1.08, 1.45, 0), 0.2, 0.17, 0.2],
+	[Vector3(1.2, 1.45, 0), 0.21, 0.17, 0.2],
+	[Vector3(1.32, 1.43, 0), 0.16, 0.15, 0.16],
+	[Vector3(1.44, 1.4, 0), 0.14, 0.15, 0.15],
+	[Vector3(1.54, 1.38, 0), 0.14, 0.16, 0.155],
+	[Vector3(1.62, 1.37, 0), 0.11, 0.13, 0.12],
+	[Vector3(1.66, 1.37, 0), 0.01, 0.01, 0.01],
+]
+# The blanket hangs down each flank from just below the hump's shoulders
+const CAMEL_RIDGE := 0.4
+const CLOTH_ARCS := [[-0.45, 0.8], [PI - 0.8, PI + 0.45]]
+
+# `rings` with `sub` smooth (Catmull-Rom) steps between each pair, so a few hand-set
+# rings loft without facets
+static func _resample(rings: Array, sub: int) -> Array:
+	var out := []
+	var n := rings.size()
+	for i in n - 1:
+		var pre: Array = rings[maxi(i - 1, 0)]
+		var a: Array = rings[i]
+		var b: Array = rings[i + 1]
+		var post: Array = rings[mini(i + 2, n - 1)]
+		for j in sub:
+			var t := j / float(sub)
+			var r := [a[0].cubic_interpolate(b[0], pre[0], post[0], t)]
+			for k in range(1, 4):
+				r.append(cubic_interpolate(a[k], b[k], pre[k], post[k], t))
+			out.append(r)
+	out.append(rings[n - 1])
+	return out
+
+# A tube lofted through `rings` (see CAMEL_BODY), smooth-shaded. `arcs` limits it to
+# angle ranges round the spine (0 is +Z, PI/2 the upper side), `grow` pads it outward,
+# `ridge` narrows the upper side toward a spine (a camel's back is narrower than its belly)
+static func _loft(rings: Array, arcs: Array = [[0.0, TAU]], grow := 0.0, ridge := 0.0, seg := 18) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var n := rings.size()
+	var verts := 0
+	for arc: Array in arcs:
+		var closed: bool = arc[1] - arc[0] >= TAU - 0.001
+		var cols: int = seg if closed else maxi(2, ceili(seg * (arc[1] - arc[0]) / TAU) + 1)
+		var first := verts
+		for i in n:
+			var r: Array = rings[i]
+			var t: Vector3 = (rings[mini(i + 1, n - 1)][0] - rings[maxi(i - 1, 0)][0]).normalized()
+			var up := Vector3(-t.y, t.x, 0.0)
+			for k in cols:
+				var a: float = arc[0] + (arc[1] - arc[0]) * k / float(cols if closed else cols - 1)
+				var s := sin(a)
+				var h: float = (r[1] if s > 0.0 else r[2]) + grow
+				var w: float = r[3] * (1.0 - ridge * maxf(s, 0.0)) + grow
+				st.add_vertex(r[0] + up * s * h + Vector3.BACK * cos(a) * w)
+			verts += cols
+		for i in n - 1:
+			for k in (cols if closed else cols - 1):
+				var a0 := first + i * cols + k
+				var a1 := first + i * cols + (k + 1) % cols
+				for idx: int in [a0, a1 + cols, a0 + cols, a0, a1, a1 + cols]:
+					st.add_index(idx)
+	st.generate_normals()
+	return st.commit()
 
 # Fire ring: blackened stones, crossed logs, embers; the flame and its light come up
 # at night with the torches (DayLight, group "torches"), smoke all day
@@ -1152,6 +1268,16 @@ func _mesh_for(kind: String) -> Mesh:
 		"ember":   return _sphere(0.5, 1.0, 8, 3)
 		"trunk":   return _cylinder(0.12, 0.2, 1.0, 7)
 		"drum":    return _cylinder(0.5, 0.5, 1.0, 12)
+		"camel_body":  return _loft(_resample(CAMEL_BODY, 3), [[0.0, TAU]], 0.0, CAMEL_RIDGE)
+		# Pale undersides: the same lofts, just proud, over the lower arc only
+		"camel_belly": return _loft(_resample(CAMEL_BODY, 3), [[PI + 0.3, TAU - 0.3]], 0.006, CAMEL_RIDGE)
+		"camel_neck":  return _loft(_resample(CAMEL_NECK, 3))
+		"camel_throat": return _loft(_resample(CAMEL_NECK, 3), [[PI + 0.55, TAU - 0.55]], 0.006)
+		"camel_head":  return _loft(_resample(CAMEL_HEAD, 3))
+		"camel_muzzle": return _loft(_resample(CAMEL_HEAD, 3).slice(15, 25), [[0.0, TAU]], 0.006)
+		# Rings 4..9 and 6..7 of the body, after the resample
+		"camel_cloth": return _loft(_resample(CAMEL_BODY, 3).slice(12, 28), CLOTH_ARCS, 0.025, CAMEL_RIDGE)
+		"camel_band":  return _loft(_resample(CAMEL_BODY, 3).slice(18, 22), CLOTH_ARCS, 0.04, CAMEL_RIDGE)
 		"patch":   return _cylinder(0.5, 0.5, 0.02, 10)
 		"tent":
 			var m := PrismMesh.new()

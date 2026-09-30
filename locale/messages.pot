@@ -9,7 +9,7 @@ msgid_plural "%d days to spare"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:945
+#: scenes\ui\game_hud.gd:947
 msgid "%d foe"
 msgid_plural "%d foes"
 msgstr[0] ""
@@ -21,19 +21,19 @@ msgid_plural "%d got in"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:905
+#: scenes\ui\game_hud.gd:907
 msgid "%d got through"
 msgid_plural "%d got through"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:943
+#: scenes\ui\game_hud.gd:945
 msgid "%d load"
 msgid_plural "%d loads"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:990
+#: scenes\ui\game_hud.gd:992
 msgid "%d of %d builders here"
 msgstr ""
 
@@ -58,25 +58,25 @@ msgid_plural "%d pieces still to finish — look for the amber footings"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:843
+#: scenes\ui\game_hud.gd:845
 msgid "%d slipped through — but the wall stands."
 msgid_plural "%d slipped through — but the wall stands."
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:906
+#: scenes\ui\game_hud.gd:908
 msgid "%d%% sound"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:904
+#: scenes\ui\game_hud.gd:906
 msgid "%d:%02d of %d:%02d"
 msgstr ""
 
-#: scenes\festival\festival.gd:539
+#: scenes\festival\festival.gd:577
 msgid "%s  ·  Stay as long as you like"
 msgstr ""
 
-#: scenes\festival\festival.gd:207
+#: scenes\festival\festival.gd:208
 msgid "%s  ·  walk off either end of the wall to go on round"
 msgstr ""
 
@@ -84,7 +84,7 @@ msgstr ""
 msgid "%s is back on their feet"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1163
+#: scenes\ui\game_hud.gd:1165
 msgid "%s is joining…"
 msgstr ""
 
@@ -92,11 +92,11 @@ msgstr ""
 msgid "%s went down"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1187
+#: scenes\ui\game_hud.gd:1189
 msgid "%s · joining…"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:783
+#: scenes\ui\game_hud.gd:785
 msgid "%s — %d of %d"
 msgstr ""
 
@@ -119,7 +119,7 @@ msgstr ""
 msgid "A brute! He'll batter the wall"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1163
+#: scenes\ui\game_hud.gd:1165
 msgid "A builder is joining…"
 msgstr ""
 
@@ -158,11 +158,11 @@ msgstr ""
 msgid "Above the Horse Gate the priests each repair in front of their own house."
 msgstr ""
 
-#: scenes\festival\festival.gd:51
+#: scenes\festival\festival.gd:52
 msgid "Above the horse gate, the priests made repairs, everyone across from his own house."
 msgstr ""
 
-#: scenes\festival\festival.gd:52
+#: scenes\festival\festival.gd:53
 msgid "After him, Shemaiah the son of Shecaniah, the keeper of the east gate, made repairs."
 msgstr ""
 
@@ -170,7 +170,7 @@ msgstr ""
 msgid "All %d stretches standing · %d of %d marks"
 msgstr ""
 
-#: scenes\festival\festival.gd:401
+#: scenes\festival\festival.gd:402
 msgid "Amen, Amen!"
 msgstr ""
 
@@ -205,7 +205,7 @@ msgstr ""
 msgid "Back to the map"
 msgstr ""
 
-#: scenes\festival\festival.gd:509
+#: scenes\festival\festival.gd:546
 msgid "Back to the title"
 msgstr ""
 
@@ -232,7 +232,7 @@ msgstr ""
 msgid "Beside Sanballat"
 msgstr ""
 
-#: scenes\festival\festival.gd:434
+#: scenes\festival\festival.gd:435
 msgid "Blessings on you — the joy of Yahweh is our strength today."
 msgstr ""
 
@@ -240,11 +240,11 @@ msgstr ""
 msgid "Bot"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1041
+#: scenes\ui\game_hud.gd:1043
 msgid "Bot skill: %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1040
+#: scenes\ui\game_hud.gd:1042
 msgid "Bots: %d"
 msgstr ""
 
@@ -287,7 +287,7 @@ msgstr ""
 msgid "Build again"
 msgstr ""
 
-#: scenes\festival\festival.gd:528
+#: scenes\festival\festival.gd:566
 msgid "Build booths with branches from the mount — %d of %d"
 msgstr ""
 
@@ -347,7 +347,7 @@ msgstr ""
 msgid "Click"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1066
+#: scenes\ui\game_hud.gd:1068
 msgid "Click to change"
 msgstr ""
 
@@ -382,11 +382,11 @@ msgstr ""
 msgid "Controllers: remap buttons in Steam Input."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1658
+#: scenes\ui\game_hud.gd:1660
 msgid "Copied"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1653
+#: scenes\ui\game_hud.gd:1655
 msgid "Copy code"
 msgstr ""
 
@@ -418,15 +418,15 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1639
+#: scenes\ui\game_hud.gd:1641
 msgid "Crew"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1186
+#: scenes\ui\game_hud.gd:1188
 msgid "Crew %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1089
+#: scenes\ui\game_hud.gd:1091
 msgid "Crew and difficulty"
 msgstr ""
 
@@ -473,7 +473,7 @@ msgstr ""
 msgid "Day %d  ·  %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:842
+#: scenes\ui\game_hud.gd:844
 msgid "Day %d complete"
 msgstr ""
 
@@ -524,7 +524,7 @@ msgstr ""
 msgid "Development"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1037
+#: scenes\ui\game_hud.gd:1039
 msgid "Difficulty: %s"
 msgstr ""
 
@@ -540,7 +540,7 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: scenes\festival\festival.gd:369
+#: scenes\festival\festival.gd:370
 msgid "Don’t be grieved, for the joy of Yahweh is your strength."
 msgstr ""
 
@@ -556,7 +556,7 @@ msgstr ""
 msgid "Down — a crewmate has to help you up"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1352
+#: scenes\ui\game_hud.gd:1354
 msgid "Downed"
 msgstr ""
 
@@ -614,7 +614,7 @@ msgstr ""
 msgid "Enter the 5-letter room code from the host's screen — or their IP address on the same Wi-Fi."
 msgstr ""
 
-#: scenes\festival\festival.gd:87
+#: scenes\festival\festival.gd:88
 msgid "Every one of us on his own roof, in a shelter of boughs."
 msgstr ""
 
@@ -645,13 +645,13 @@ msgstr ""
 msgid "Finish the gate: hang its doors, bolts and bars"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:856
+#: scenes\ui\game_hud.gd:858
 msgid "Finished with %d day to spare"
 msgid_plural "Finished with %d days to spare"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\festival\festival.gd:409
+#: scenes\festival\festival.gd:410
 msgid "Fire shall be kept burning on the altar continually; it shall not go out."
 msgstr ""
 
@@ -667,7 +667,7 @@ msgstr ""
 msgid "Foe"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:866
+#: scenes\ui\game_hud.gd:868
 msgid "Foes felled"
 msgstr ""
 
@@ -734,19 +734,19 @@ msgstr ""
 msgid "Geshem"
 msgstr ""
 
-#: scenes\festival\festival.gd:354
+#: scenes\festival\festival.gd:355
 msgid "Go out to the mountain, and get olive branches, branches of wild olive, myrtle branches, palm branches, and branches of thick trees, to make temporary shelters, as it is written."
 msgstr ""
 
-#: scenes\festival\festival.gd:413
+#: scenes\festival\festival.gd:414
 msgid "Go up into the court — there's a shelter to put up by the altar."
 msgstr ""
 
-#: scenes\festival\festival.gd:532
+#: scenes\festival\festival.gd:570
 msgid "Go up to the house of God, by the Sheep Gate"
 msgstr ""
 
-#: scenes\festival\festival.gd:368
+#: scenes\festival\festival.gd:369
 msgid "Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared."
 msgstr ""
 
@@ -778,7 +778,7 @@ msgstr ""
 msgid "Hang the doors"
 msgstr ""
 
-#: scenes\festival\festival.gd:46
+#: scenes\festival\festival.gd:47
 msgid "Hanun and the inhabitants of Zanoah repaired the valley gate."
 msgstr ""
 
@@ -790,7 +790,7 @@ msgstr ""
 msgid "Hard"
 msgstr ""
 
-#: scenes\festival\festival.gd:86
+#: scenes\festival\festival.gd:87
 msgid "Have you been out to the mount for branches?"
 msgstr ""
 
@@ -814,7 +814,7 @@ msgstr ""
 msgid "He walks up to a worker with an open letter and waits. Go with him and you are led away from the wall. Keep working and he gives up."
 msgstr ""
 
-#: scenes\festival\festival.gd:526
+#: scenes\festival\festival.gd:564
 msgid "Hear Ezra read the Law at the Water Gate"
 msgstr ""
 
@@ -861,7 +861,7 @@ msgstr ""
 msgid "Hold E   Faster          Esc   Skip"
 msgstr ""
 
-#: scenes\festival\festival.gd:374
+#: scenes\festival\festival.gd:375
 msgid "Hold your peace, for the day is holy. Don’t be grieved."
 msgstr ""
 
@@ -892,7 +892,7 @@ msgstr ""
 msgid "Host a room"
 msgstr ""
 
-#: scenes\festival\festival.gd:378
+#: scenes\festival\festival.gd:379
 msgid "I repaired the wall from the door of Eliashib's house to its end."
 msgstr ""
 
@@ -900,7 +900,7 @@ msgstr ""
 msgid "I'm ready"
 msgstr ""
 
-#: scenes\ui\main_menu.gd:686
+#: scenes\ui\main_menu.gd:688
 msgid "IP address"
 msgstr ""
 
@@ -936,7 +936,7 @@ msgstr ""
 msgid "Joiada and Meshullam repair the Gate of the Old City. Its stone lies in the burned rubble."
 msgstr ""
 
-#: scenes\festival\festival.gd:41
+#: scenes\festival\festival.gd:42
 msgid "Joiada the son of Paseah and Meshullam the son of Besodeiah repaired the old gate."
 msgstr ""
 
@@ -947,7 +947,7 @@ msgstr ""
 msgid "Join Game"
 msgstr ""
 
-#: scenes\ui\main_menu.gd:681
+#: scenes\ui\main_menu.gd:683
 msgid "Join a crew"
 msgstr ""
 
@@ -1010,15 +1010,15 @@ msgstr ""
 msgid "Let us build"
 msgstr ""
 
-#: scenes\festival\festival.gd:352
+#: scenes\festival\festival.gd:353
 msgid "Lev. 23:40"
 msgstr ""
 
-#: scenes\festival\festival.gd:353
+#: scenes\festival\festival.gd:354
 msgid "Lev. 23:42"
 msgstr ""
 
-#: scenes\festival\festival.gd:409
+#: scenes\festival\festival.gd:410
 msgid "Lev. 6:13"
 msgstr ""
 
@@ -1029,11 +1029,11 @@ msgstr ""
 msgid "Lime"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:865
+#: scenes\ui\game_hud.gd:867
 msgid "Loads carried"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1654
+#: scenes\ui\game_hud.gd:1656
 msgid "Lobby code %s"
 msgstr ""
 
@@ -1061,15 +1061,15 @@ msgstr ""
 msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
 msgstr ""
 
-#: scenes\festival\festival.gd:44
+#: scenes\festival\festival.gd:45
 msgid "Malchijah the son of Harim and Hasshub the son of Pahathmoab repaired another portion and the tower of the furnaces."
 msgstr ""
 
-#: scenes\festival\festival.gd:47
+#: scenes\festival\festival.gd:48
 msgid "Malchijah the son of Rechab, the ruler of the district of Beth Haccherem, repaired the dung gate."
 msgstr ""
 
-#: scenes\festival\festival.gd:53
+#: scenes\festival\festival.gd:54
 msgid "Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner."
 msgstr ""
 
@@ -1081,7 +1081,7 @@ msgstr ""
 msgid "Master builder"
 msgstr ""
 
-#: scenes\festival\festival.gd:531
+#: scenes\festival\festival.gd:569
 msgid "Meet the people who built the wall — %d of %d"
 msgstr ""
 
@@ -1175,7 +1175,7 @@ msgstr ""
 msgid "Neh. %s"
 msgstr ""
 
-#: scenes\festival\festival.gd:470
+#: scenes\festival\festival.gd:483
 msgid "Neh. 8  ·  The seventh month"
 msgstr ""
 
@@ -1198,7 +1198,7 @@ msgstr ""
 msgid "Nehemiah 6:15"
 msgstr ""
 
-#: scenes\festival\festival.gd:49
+#: scenes\festival\festival.gd:50
 msgid "Nehemiah the son of Azbuk, the ruler of half the district of Beth Zur, made repairs to the place opposite the tombs of David, and to the pool that was made."
 msgstr ""
 
@@ -1210,19 +1210,19 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:750
+#: scenes\ui\game_hud.gd:752
 msgid "Next stretch"
 msgstr ""
 
-#: scenes\festival\festival.gd:43
+#: scenes\festival\festival.gd:44
 msgid "Next to him, Hananiah, one of the perfumers, made repairs, and they fortified Jerusalem even to the wide wall."
 msgstr ""
 
-#: scenes\festival\festival.gd:45
+#: scenes\festival\festival.gd:46
 msgid "Next to him, Shallum the son of Hallohesh, the ruler of half the district of Jerusalem, he and his daughters made repairs."
 msgstr ""
 
-#: scenes\festival\festival.gd:42
+#: scenes\festival\festival.gd:43
 msgid "Next to him, Uzziel the son of Harhaiah, goldsmiths, made repairs."
 msgstr ""
 
@@ -1242,11 +1242,11 @@ msgstr ""
 msgid "Night watch"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:847
+#: scenes\ui\game_hud.gd:849
 msgid "Nightfall on day %d"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1667
+#: scenes\ui\game_hud.gd:1669
 msgid "No friends online"
 msgstr ""
 
@@ -1270,11 +1270,11 @@ msgstr ""
 msgid "Not needed here  {drop}"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:843
+#: scenes\ui\game_hud.gd:845
 msgid "Not one enemy got through."
 msgstr ""
 
-#: scenes\festival\festival.gd:88
+#: scenes\festival\festival.gd:89
 msgid "Not since the days of Joshua has it been kept like this."
 msgstr ""
 
@@ -1297,7 +1297,7 @@ msgstr ""
 msgid "Nothing prepared"
 msgstr ""
 
-#: scenes\festival\festival.gd:50
+#: scenes\festival\festival.gd:51
 msgid "Now the temple servants lived in Ophel, to the place opposite the water gate toward the east, and the tower that stands out."
 msgstr ""
 
@@ -1359,7 +1359,7 @@ msgstr ""
 msgid "Out of sling stones"
 msgstr ""
 
-#: scenes\festival\festival.gd:383
+#: scenes\festival\festival.gd:384
 msgid "Out through the gate for branches — olive, myrtle, palm. Go to the mount."
 msgstr ""
 
@@ -1390,11 +1390,11 @@ msgstr ""
 msgid "Plaques"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:752
+#: scenes\ui\game_hud.gd:754
 msgid "Play again"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:747
+#: scenes\ui\game_hud.gd:749
 msgid "Play it again"
 msgstr ""
 
@@ -1454,11 +1454,11 @@ msgstr ""
 msgid "Room code or address"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1430
+#: scenes\ui\game_hud.gd:1432
 msgid "Room code — tap to copy"
 msgstr ""
 
-#: scenes\festival\festival.gd:230
+#: scenes\festival\festival.gd:231
 msgid "Rubble"
 msgstr ""
 
@@ -1520,7 +1520,7 @@ msgstr ""
 msgid "Section %d of %d  ·  %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:852
+#: scenes\ui\game_hud.gd:854
 msgid "Section %d of %d complete  ·  %s"
 msgstr ""
 
@@ -1536,7 +1536,7 @@ msgstr ""
 msgid "Sections"
 msgstr ""
 
-#: scenes\festival\festival.gd:530
+#: scenes\festival\festival.gd:568
 msgid "Send portions to those with nothing prepared — %d of %d"
 msgstr ""
 
@@ -1548,7 +1548,7 @@ msgstr ""
 msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1600
+#: scenes\ui\game_hud.gd:1602
 msgid "Settings"
 msgstr ""
 
@@ -1556,7 +1556,7 @@ msgstr ""
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr ""
 
-#: scenes\festival\festival.gd:48
+#: scenes\festival\festival.gd:49
 msgid "Shallun the son of Colhozeh, the ruler of the district of Mizpah, repaired the spring gate."
 msgstr ""
 
@@ -1568,7 +1568,7 @@ msgstr ""
 msgid "Shemaiah, the keeper of the East Gate, makes repairs."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1011
+#: scenes\ui\game_hud.gd:1013
 msgid "Short of hands? Add bots to the crew."
 msgstr ""
 
@@ -1706,7 +1706,7 @@ msgstr ""
 msgid "The Broad Wall: build it double-thick — more stone, and room for four at the work"
 msgstr ""
 
-#: scenes\festival\festival.gd:475
+#: scenes\festival\festival.gd:489
 msgid "The Festival of Booths"
 msgstr ""
 
@@ -1781,7 +1781,7 @@ msgstr ""
 msgid "The game keeps running for your crew while this is open."
 msgstr ""
 
-#: scenes\festival\festival.gd:384
+#: scenes\festival\festival.gd:385
 msgid "The gates stay open today. Nobody is coming to fight."
 msgstr ""
 
@@ -1793,11 +1793,11 @@ msgstr ""
 msgid "The horn was just sounded"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:772
+#: scenes\ui\game_hud.gd:774
 msgid "The host's pick decides — or most of the crew"
 msgstr ""
 
-#: scenes\festival\festival.gd:150
+#: scenes\festival\festival.gd:151
 msgid "The house of God"
 msgstr ""
 
@@ -1841,7 +1841,7 @@ msgstr ""
 msgid "The sons of Hassenaah build the Fish Gate and lay its beams."
 msgstr ""
 
-#: scenes\festival\festival.gd:40
+#: scenes\festival\festival.gd:41
 msgid "The sons of Hassenaah built the fish gate. They laid its beams, and set up its doors, its bolts, and its bars."
 msgstr ""
 
@@ -1852,9 +1852,9 @@ msgstr ""
 msgid "The stars appeared"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:848
-msgid "The stars appeared — %d left for tomorrow."
-msgid_plural "The stars appeared — %d left for tomorrow."
+#: scenes\ui\game_hud.gd:850
+msgid "The stars appeared — %d wall piece left for tomorrow."
+msgid_plural "The stars appeared — %d wall pieces left for tomorrow."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1897,11 +1897,11 @@ msgstr ""
 msgid "The wall is finished"
 msgstr ""
 
-#: scenes\festival\festival.gd:85
+#: scenes\festival\festival.gd:86
 msgid "The wall is finished — in fifty-two days!"
 msgstr ""
 
-#: scenes\festival\festival.gd:480
+#: scenes\festival\festival.gd:496
 msgid "The wall is finished. No clock, no enemy — walk the city."
 msgstr ""
 
@@ -1919,11 +1919,11 @@ msgstr ""
 msgid "The work waits"
 msgstr ""
 
-#: scenes\festival\festival.gd:39
+#: scenes\festival\festival.gd:40
 msgid "Then Eliashib the high priest rose up with his brothers the priests, and they built the sheep gate."
 msgstr ""
 
-#: scenes\festival\festival.gd:538
+#: scenes\festival\festival.gd:576
 msgid "There was very great gladness"
 msgstr ""
 
@@ -1947,7 +1947,7 @@ msgstr ""
 msgid "They're battering the wall!"
 msgstr ""
 
-#: scenes\festival\festival.gd:379
+#: scenes\festival\festival.gd:380
 msgid "They're building shelters in the courts of God's house too — round the wall at the Sheep Gate."
 msgstr ""
 
@@ -1967,7 +1967,7 @@ msgstr ""
 msgid "Those against the work"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:807
+#: scenes\ui\game_hud.gd:809
 msgid "Time"
 msgstr ""
 
@@ -1979,7 +1979,7 @@ msgstr ""
 msgid "Tobiah laughs"
 msgstr ""
 
-#: scenes\festival\festival.gd:367
+#: scenes\festival\festival.gd:368
 msgid "Today is holy to Yahweh your God. Don’t mourn, nor weep."
 msgstr ""
 
@@ -2013,7 +2013,7 @@ msgstr ""
 msgid "Trough"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:754
+#: scenes\ui\game_hud.gd:756
 msgid "Try the stretch again"
 msgstr ""
 
@@ -2045,7 +2045,7 @@ msgid_plural "Waiting for %d builders"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:787
+#: scenes\ui\game_hud.gd:789
 msgid "Waiting for the host or most of the crew"
 msgstr ""
 
@@ -2064,11 +2064,11 @@ msgstr ""
 msgid "Walk the City"
 msgstr ""
 
-#: scenes\festival\festival.gd:533
+#: scenes\festival\festival.gd:571
 msgid "Walk the wall round — %d of %d gates"
 msgstr ""
 
-#: scenes\festival\festival.gd:89
+#: scenes\festival\festival.gd:90
 msgid "Walk the whole wall round — every gate stands."
 msgstr ""
 
@@ -2076,7 +2076,7 @@ msgstr ""
 msgid "Walk up to a stockpile and pick up a load with {interact}. The wall's tag says what it needs"
 msgstr ""
 
-#: scenes\festival\festival.gd:500
+#: scenes\festival\festival.gd:526
 msgid "Walk up to people and press %s to talk"
 msgstr ""
 
@@ -2110,19 +2110,19 @@ msgstr ""
 msgid "Wave"
 msgstr ""
 
-#: scenes\festival\festival.gd:373
+#: scenes\festival\festival.gd:374
 msgid "We read in the book distinctly, and give the sense, so that everyone understands."
 msgstr ""
 
-#: scenes\festival\festival.gd:408
+#: scenes\festival\festival.gd:409
 msgid "We will not forsake the house of our God."
 msgstr ""
 
-#: scenes\festival\festival.gd:388
+#: scenes\festival\festival.gd:389
 msgid "We're going out for palm branches!"
 msgstr ""
 
-#: scenes\festival\festival.gd:401
+#: scenes\festival\festival.gd:402
 msgid "We've listened since early morning."
 msgstr ""
 
@@ -2164,7 +2164,7 @@ msgstr ""
 msgid "Word from Judah"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:941
+#: scenes\ui\game_hud.gd:943
 msgid "You"
 msgstr ""
 
@@ -2172,11 +2172,11 @@ msgstr ""
 msgid "You and the Jews intend to rebel. Because of that, you are building the wall."
 msgstr ""
 
-#: scenes\festival\festival.gd:353
+#: scenes\festival\festival.gd:354
 msgid "You shall dwell in temporary shelters for seven days."
 msgstr ""
 
-#: scenes\festival\festival.gd:352
+#: scenes\festival\festival.gd:353
 msgid "You shall take on the first day the fruit of majestic trees, branches of palm trees, and boughs of thick trees, and willows of the brook; and you shall rejoice before Yahweh your God seven days."
 msgstr ""
 
@@ -2192,7 +2192,7 @@ msgstr ""
 msgid "Your crewmate is down. Go to them and press {interact} to help them up"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:905
+#: scenes\ui\game_hud.gd:907
 msgid "all through the section"
 msgstr ""
 
@@ -2219,15 +2219,15 @@ msgstr ""
 msgid "from the west"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1672
+#: scenes\ui\game_hud.gd:1674
 msgid "in game"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1678
+#: scenes\ui\game_hud.gd:1680
 msgid "invite failed"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1678
+#: scenes\ui\game_hud.gd:1680
 msgid "invited"
 msgstr ""
 
@@ -2342,7 +2342,7 @@ msgstr ""
 msgid "“They will not know or see, until we come in among them.”"
 msgstr ""
 
-#: scenes\festival\festival.gd:151
+#: scenes\festival\festival.gd:152
 msgid "“We will not forsake the house of our God.”  (%s)"
 msgstr ""
 
