@@ -63,6 +63,7 @@ var _plaque := _make_plaque(false)
 var _plaque_here := _make_plaque(true)
 var _foe_plaque := _make_foe_plaque()
 var _next_tab := _make_next_tab()
+var _plaque_rects: Array[Rect2] = []   # last drawn, per section, for hit tests
 
 func _ready() -> void:
 	_container = SubViewportContainer.new()
@@ -191,8 +192,12 @@ func play() -> void:
 		_tween.tween_interval(0.5)
 		_tween.tween_property(self, "_rise", 1.0, RISE_TIME).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
-## Picker: the section whose gate or stretch is under `point` (local), or -1
+## Picker: the section whose name plaque, gate or stretch is under `point` (local), or -1
 func section_at(point: Vector2) -> int:
+	# Plaques first, topmost (last drawn) wins
+	for i in range(_plaque_rects.size() - 1, -1, -1):
+		if _plaque_rects[i].grow(2.0).has_point(point):
+			return i
 	var reach := _unit() * 0.06
 	var hit := -1
 	for i in CircuitDiorama.GATES.size():
@@ -275,6 +280,7 @@ func _draw_overlay() -> void:
 		o.draw_polyline(line, Color(UiStyle.GOLD, 0.35 + 0.3 * pulse), unit * 0.012, true)
 		o.draw_polyline(line, Color(1.0, 0.93, 0.72, 0.8 + 0.2 * pulse), unit * 0.005, true)
 
+	_plaque_rects.clear()
 	if quiet:
 		return
 	var centre := _project(_diorama.unit_to_world(CircuitDiorama.CENTER))
@@ -308,6 +314,7 @@ func _draw_overlay() -> void:
 		var sb := _plaque_here if here else _plaque
 		sb.bg_color = Color(WorldTag.BG, alpha)
 		o.draw_style_box(sb, Rect2(tl, box))
+		_plaque_rects.append(Rect2(tl, box))
 		var text_col: Color = Color(1.0, 0.86, 0.55) if here else (WorldTag.TEXT if done else (Color(WorldTag.TEXT_DIM, 0.6) if locked else WorldTag.TEXT_DIM))
 		if locked:
 			_draw_lock(o, tl + Vector2(pad.x + fs * 0.3, box.y * 0.5 + fs * 0.08), fs * 0.3, text_col)
