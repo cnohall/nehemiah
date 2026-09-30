@@ -795,7 +795,7 @@ func show_tally(stats: Dictionary) -> void:
 	if unfinished > 0:
 		# The stars came first: the day ends, the rest waits for tomorrow
 		title = tr("Nightfall on day %d") % day
-		sub = tr_n("The stars appeared — %d left for tomorrow.", "The stars appeared — %d left for tomorrow.", unfinished) % unfinished
+		sub = tr_n("The stars appeared — %d wall piece left for tomorrow.", "The stars appeared — %d wall pieces left for tomorrow.", unfinished) % unfinished
 	# The whole section is done (rated) — say so, and how many days it had to spare
 	elif stats.has("marks"):
 		title = tr("The %s stands") % tr(section["name"])

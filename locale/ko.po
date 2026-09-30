@@ -1216,9 +1216,9 @@ msgstr "물매꾼에게는 물맷돌이 필요합니다"
 msgid "The slinger has stones enough"
 msgstr "물매꾼에게 돌이 충분합니다"
 
-msgid "The stars appeared — %d left for tomorrow."
-msgid_plural "The stars appeared — %d left for tomorrow."
-msgstr[0] "별이 떴습니다 — %d개는 내일로 넘어갑니다."
+msgid "The stars appeared — %d wall piece left for tomorrow."
+msgid_plural "The stars appeared — %d wall pieces left for tomorrow."
+msgstr[0] "별이 떴습니다 — 남은 성벽 부분 %d개는 내일로 넘어갑니다."
 
 msgid "The stretch"
 msgstr "이 구간"
