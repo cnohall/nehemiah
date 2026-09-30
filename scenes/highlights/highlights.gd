@@ -110,4 +110,4 @@ func _trim() -> void:
 
 func _who(p: Player) -> String:
 	var who := NetworkManager.name_of(p.worker_id())
-	return who if not who.is_empty() else tr(CharacterRig.TRADES[p._slot % CharacterRig.TRADES.size()])
+	return who if not who.is_empty() else tr(p.trade_name())

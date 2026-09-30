@@ -13,59 +13,60 @@ signal closed
 # key, group, name, role (eyebrow), quote (World English Bible, verbatim), ref, text.
 # Optional: "slot" (crew trade, CharacterRig.worker_look), "enemy" (enemy_look kind),
 # "move" (a signature animation played when picked).
-# Foes in the order they turn up along the wall (GameState.MET_AT), so the lineup
-# fills in left to right as the work goes on.
+# Three groups: the crew; the named men behind the opposition (and their envoy), set
+# apart so they don't read as bosses; then the attackers at the wall. Within each, in
+# the order they turn up (GameState.MET_AT), so the lineup fills in left to right.
 const ENTRIES := [
 	{ "key": "nehemiah", "group": "friends", "name": "Nehemiah",
 	  "role": "Governor of Judah · Cupbearer to the king",
 	  "quote": "“I am doing a great work, so that I can’t come down.”", "ref": "Neh. 6:3",
 	  "text": "He asks King Artaxerxes to send him to rebuild the city of his forefathers, inspects the broken walls by night, and works beside the people. When his enemies call him away, he stays at the work." },
 	{ "key": "builder", "group": "friends", "name": "Builder", "slot": 0, "move": "build",
-	  "role": "The crew · First player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“Among the builders, everyone wore his sword at his side, and so built.”", "ref": "Neh. 4:18",
 	  "text": "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt." },
 	{ "key": "water_carrier", "group": "friends", "name": "Water carrier", "slot": 1, "move": "cheer",
-	  "role": "The crew · Second player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“Everyone with one of his hands did the work, and with the other held his weapon.”", "ref": "Neh. 4:17",
 	  "text": "Water for the mortar, stone and timber for the wall: the burden-bearers keep the builders supplied." },
 	{ "key": "carpenter", "group": "friends", "name": "Carpenter", "slot": 2, "move": "build",
-	  "role": "The crew · Third player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“They laid its beams, and set up its doors, its bolts, and its bars.”", "ref": "Neh. 3:3",
 	  "text": "Lays the beams and hangs the doors of each gate. The long timbers take two to carry." },
 	{ "key": "overseer", "group": "friends", "name": "Overseer", "slot": 3, "move": "cheer",
-	  "role": "The crew · Fourth player",
+	  "role": "The crew · A trade to choose",
 	  "quote": "“Wherever you hear the sound of the trumpet, rally there to us.”", "ref": "Neh. 4:20",
-	  "text": "The work is great and the wall is long, and the builders are spread thin along it. Where the horn sounds, the crew gathers." },
+	  "text": "The work is great and the wall is long, and the builders are spread thin along it. The overseer stands behind them with sword and sling, and where the horn sounds, the crew gathers." },
+	{ "key": "sanballat", "group": "leaders", "name": "Sanballat",
+	  "role": "The Horonite · Samaria",
+	  "quote": "“Will they revive the stones out of the heaps of rubbish, since they are burned?”", "ref": "Neh. 4:2",
+	  "text": "Furious that anyone has come to seek the good of the people. He mocks the builders before the army of Samaria, then plots to attack the city." },
+	{ "key": "tobiah", "group": "leaders", "name": "Tobiah",
+	  "role": "The Ammonite · Ammon",
+	  "quote": "“What they are building, if a fox climbed up it, he would break down their stone wall.”", "ref": "Neh. 4:3",
+	  "text": "Sanballat’s companion, an official from Ammon. When jokes fail, he sends letters to make Nehemiah afraid." },
+	{ "key": "geshem", "group": "leaders", "name": "Geshem",
+	  "role": "The Arab · Arabia",
+	  "quote": "“What is this thing that you are doing? Will you rebel against the king?”", "ref": "Neh. 2:19",
+	  "text": "He laughs at the work from the start, joins the plot against the city, and with Sanballat invites Nehemiah down to the plain of Ono." },
+	{ "key": "messenger", "group": "leaders", "name": "Messenger",
+	  "role": "Sent by Sanballat and Geshem",
+	  "quote": "“Come! Let’s meet together in the villages in the plain of Ono.”", "ref": "Neh. 6:2",
+	  "text": "He walks up to a worker with an open letter and waits. Go with him and you are led away from the wall. Keep working and he gives up." },
 	{ "key": "scout", "group": "foes", "name": "Scout", "enemy": "scout", "move": "thrust",
 	  "role": "From the first day",
 	  "quote": "“They will not know or see, until we come in among them.”", "ref": "Neh. 4:11",
 	  "text": "Light and quick. Some slip through the gaps for the inner city, others turn on the wall. A few sling stones bring one down." },
-	{ "key": "sanballat", "group": "foes", "name": "Sanballat",
-	  "role": "The Horonite · Samaria",
-	  "quote": "“Will they revive the stones out of the heaps of rubbish, since they are burned?”", "ref": "Neh. 4:2",
-	  "text": "Furious that anyone has come to seek the good of the people. He mocks the builders before the army of Samaria, then plots to attack the city." },
 	{ "key": "brute", "group": "foes", "name": "Brute", "enemy": "brute", "move": "thrust",
 	  "role": "From day 9",
 	  "quote": "“They all conspired together to come and fight against Jerusalem.”", "ref": "Neh. 4:8",
 	  "text": "Helmet, shield and spear. Slow, but he hits hard, takes many stones, and always goes for the wall." },
-	{ "key": "tobiah", "group": "foes", "name": "Tobiah",
-	  "role": "The Ammonite · Ammon",
-	  "quote": "“What they are building, if a fox climbed up it, he would break down their stone wall.”", "ref": "Neh. 4:3",
-	  "text": "Sanballat’s companion, an official from Ammon. When jokes fail, he sends letters to make Nehemiah afraid." },
 	{ "key": "raider", "group": "foes", "name": "Raider", "enemy": "raider", "move": "slash",
 	  "role": "From day 21",
 	  "quote": "“…and cause the work to cease.”", "ref": "Neh. 4:11",
 	  "text": "Hooded and cloaked, with a dagger, and the fastest of them all. Raiders reach a gap before you do." },
-	{ "key": "geshem", "group": "foes", "name": "Geshem",
-	  "role": "The Arab · Arabia",
-	  "quote": "“What is this thing that you are doing? Will you rebel against the king?”", "ref": "Neh. 2:19",
-	  "text": "He laughs at the work from the start, joins the plot against the city, and with Sanballat invites Nehemiah down to the plain of Ono." },
-	{ "key": "messenger", "group": "foes", "name": "Messenger",
-	  "role": "Sent by Sanballat and Geshem",
-	  "quote": "“Come! Let’s meet together in the villages in the plain of Ono.”", "ref": "Neh. 6:2",
-	  "text": "He walks up to a worker with an open letter and waits. Go with him and you are led away from the wall. Keep working and he gives up." },
 ]
-const GROUPS := { "friends": "The builders", "foes": "Those against the work" }
+const GROUPS := { "friends": "The builders", "leaders": "Those against the work", "foes": "The attackers" }
 
 const OXBLOOD    := Color(0.42, 0.12, 0.09)
 const SWAY       := 0.22      # rad either side of the 3/4 view
@@ -211,7 +212,7 @@ func _select(i: int) -> void:
 		m.queue_redraw()
 	var e: Dictionary = ENTRIES[i]
 	var known := _known(e)
-	var foe: bool = e["group"] == "foes"
+	var foe: bool = e["group"] != "friends"
 
 	# The plate: dawn before the finished wall, dusk outside a broken one, night unmet
 	_backdrop.sky = "night" if not known else ("dusk" if foe else "dawn")
@@ -234,7 +235,7 @@ func _select(i: int) -> void:
 		if GameState.MET_AT.has(e["key"]) else ""
 	_eyebrow.text = tr(e["role"]) if known else where
 	_title.text = tr(e["name"]) if known else tr("Not yet met")
-	_tag.text = tr("Foe") if foe else tr("Friend")
+	_tag.text = tr({ "friends": "Friend", "leaders": "Adversary", "foes": "Foe" }[e["group"]])
 	_tag.add_theme_stylebox_override("normal", UiStyle.box(OXBLOOD if foe else UiStyle.OLIVE, Vector2(10, 3), 3))
 	_tag.visible = known
 	_ref.text = GameState.long_ref(e["ref"])
@@ -266,16 +267,18 @@ func _fill_extra(e: Dictionary, known: bool, where: String) -> void:
 		c.queue_free()
 	if not known:
 		return
-	if e.has("slot"):
+	# A trade's knack (Trade): what it does faster than the rest of the crew
+	if e.has("slot") and GameState.trades:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
-		var sw := ColorRect.new()
-		sw.color = Palette.CREW[e["slot"]]
-		sw.custom_minimum_size = Vector2(14, 14) if _m else Vector2(18, 18)
-		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(sw)
-		row.add_child(_label(&"Eyebrow", 11 if _m else 13, UiStyle.INK_SOFT, false, "Wears this player's colour"))
+		var knack := _label(&"Eyebrow", 11 if _m else 13, UiStyle.CREAM, false, "Knack")
+		knack.add_theme_stylebox_override("normal", UiStyle.box(UiStyle.OLIVE, Vector2(10, 3), 3))
+		knack.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(knack)
+		row.add_child(_label(&"Body", 15 if _m else 17, UiStyle.INK, false, Trade.ABOUT[e["slot"]]))
 		_extra.add_child(row)
+		_extra.add_child(_label(&"Eyebrow", 11 if _m else 13, UiStyle.INK_MUTED, false,
+			"Anyone can do any job — pick your trade when the crew gathers"))
 	if e.has("enemy"):
 		var t := _enemy_type(e)
 		# Against the fastest, toughest, hardest-hitting of the three
@@ -681,7 +684,7 @@ func _wire_focus() -> void:
 ## A head-and-shoulders portrait in a tinted disc: olive for the crew, oxblood for foes
 func _medal(i: int) -> Control:
 	var e: Dictionary = ENTRIES[i]
-	var foe: bool = e["group"] == "foes"
+	var foe: bool = e["group"] != "friends"
 	var m := VBoxContainer.new()
 	m.add_theme_constant_override("separation", 6)
 	m.focus_mode = Control.FOCUS_ALL

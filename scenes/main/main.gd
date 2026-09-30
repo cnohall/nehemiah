@@ -103,6 +103,7 @@ func _ready() -> void:
 
 	NetworkManager.peer_connected.connect(_on_peer_connected)
 	NetworkManager.peer_disconnected.connect(_on_peer_disconnected)
+	NetworkManager.crew_info_changed.connect(_assign_colors)   # someone picked a trade
 	GameState.game_lost.connect(_on_game_lost)
 
 	camera.size = CAM_SIZE
@@ -323,9 +324,9 @@ func _carved_name(id: int, crew: Array) -> String:
 	var steam := NetworkManager.name_of(id)
 	if not steam.is_empty() and not Player.is_bot_id(id):
 		return steam
-	for slot in crew.size():
-		if int(crew[slot].name) == id:
-			return tr(CharacterRig.TRADES[slot % CharacterRig.TRADES.size()])
+	for p in crew:
+		if int(p.name) == id:
+			return tr(p.trade_name())
 	return ""
 
 # A dedication tablet set into the city face of the piece, chest high, the name cut in.
@@ -377,7 +378,7 @@ func _refresh_hud() -> void:
 		if slot < players.size():
 			var pl = players[slot]
 			hud.set_player_present(slot, true, pl.name == local_name, pl.is_bot(),
-				NetworkManager.name_of(pl.worker_id()), NetworkManager.is_loading(pl.worker_id()))
+				NetworkManager.name_of(pl.worker_id()), NetworkManager.is_loading(pl.worker_id()), pl.trade)
 			hud.set_player_health(slot, pl.health / pl.MAX_HEALTH)
 			hud.set_player_downed(slot, pl.downed)
 			hud.set_player_carry(slot, pl.carried_kind)
@@ -436,11 +437,13 @@ func _sorted_players() -> Array:
 
 func _assign_colors() -> void:
 	var players := _sorted_players()
+	var trades := Trade.assign(players.map(func(p): return NetworkManager.trade_of(p.worker_id())),
+		players.map(func(p): return p.is_bot()))
 	for slot in players.size():
 		var c: Color = PLAYER_COLORS[slot % PLAYER_COLORS.size()]
-		players[slot].set_slot(slot, c)
+		players[slot].set_slot(slot, c, trades[slot])
 		if hud:
-			hud.set_player_color(slot, c)
+			hud.set_player_color(slot, c, trades[slot])
 
 # ── Bots (server) ──────────────────────────────────────────
 

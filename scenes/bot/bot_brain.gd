@@ -164,11 +164,24 @@ func _decide() -> void:
 	if carrier != null:
 		_set_job(Job.HELP_BEAM, carrier)
 		return
-	if _guards() < _guards_wanted():
-		_set_job(Job.GUARD, _site_facing(_foes_near_work()))
+	# Trades (Trade): the overseer is the first to stand guard when foes close on the work
+	var foes := _foes_near_work()
+	if _guards() < _guards_wanted() or (_p.trade == Trade.OVERSEER and GameState.trades \
+			and not foes.is_empty() and _guards() == 0):
+		_set_job(Job.GUARD, _site_facing(foes))
 		return
-	var ready := _nearest_site(func(s): return s.can_build() and s.work() != null \
-		and (s.work().builder_count() < 2 or _job == Job.WORK and _target == s))
+	# …the water carrier would rather carry, while anything is wanted
+	if _p.trade == Trade.WATER_CARRIER and GameState.trades:
+		var haul := _pick_fetch()
+		if haul != null:
+			_set_job(Job.FETCH, haul)
+			return
+	var can_work := func(s): return s.can_build() and s.work() != null \
+		and (s.work().builder_count() < 2 or _job == Job.WORK and _target == s)
+	# …and builder and carpenter go to their own work first
+	var ready := _nearest_site(func(s): return can_work.call(s) and Trade.prefers(_p.trade, s.work_material()))
+	if ready == null:
+		ready = _nearest_site(can_work)
 	if ready == null:
 		ready = _nearest_post(func(s): return _posts_ok() and s.can_build() \
 			and (s.work().builder_count() < 1 or _job == Job.WORK and _target == s))
@@ -435,14 +448,16 @@ func _goes_to_ono(messenger: Node3D) -> bool:
 		_ono[messenger] = randf() < skill["ono"]
 	return _ono[messenger]
 
-func _follow_carrier(_delta: float) -> void:
+# Fallen behind: walk the nav path to the carrier, not a straight line — that pins the
+# helper against a ruin wall or a stall while the carrier goes round it
+func _follow_carrier(delta: float) -> void:
 	var carrier := _p._beam_partner()
 	if carrier == null:
 		return
-	var off := _flat(carrier.global_position - _p.global_position)
+	if _flat(carrier.global_position - _p.global_position).length() > FOLLOW_GAP:
+		_walk_to(carrier.global_position, delta, FOLLOW_GAP)
+		return
 	var dir := _flat(carrier.velocity)
-	if off.length() > FOLLOW_GAP:
-		dir += off
 	if dir.length() > 0.2:
 		_steer(dir.normalized())
 

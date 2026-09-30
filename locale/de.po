@@ -1869,3 +1869,45 @@ msgstr "In der Welt"
 
 msgid "Plaques"
 msgstr "Tafeln"
+
+msgid "The attackers"
+msgstr "Die Angreifer"
+
+msgid "Adversary"
+msgstr "Widersacher"
+
+msgid "Your trade: %s"
+msgstr "Dein Handwerk: %s"
+
+msgid "Lays stone faster"
+msgstr "Setzt Steine schneller"
+
+msgid "Walks faster with a load"
+msgstr "Geht schneller mit Last"
+
+msgid "Works timber faster — frames, doors, watch posts"
+msgstr "Arbeitet Holz schneller — Gerüste, Tore, Wachposten"
+
+msgid "Sword and sling hit harder"
+msgstr "Schwert und Schleuder treffen härter"
+
+msgid "The crew · A trade to choose"
+msgstr "Die Mannschaft · Ein Handwerk zur Wahl"
+
+msgid "The work is great and the wall is long, and the builders are spread thin along it. The overseer stands behind them with sword and sling, and where the horn sounds, the crew gathers."
+msgstr "Das Werk ist groß und die Mauer lang, und die Bauleute sind weit verteilt. Der Aufseher steht mit Schwert und Schleuder hinter ihnen, und wo das Horn ertönt, sammelt sich die Mannschaft."
+
+msgid "Knack"
+msgstr "Stärke"
+
+msgid "Anyone can do any job — pick your trade when the crew gathers"
+msgstr "Jeder kann jede Arbeit tun — wähle dein Handwerk, wenn sich die Mannschaft sammelt"
+
+msgid "Your trade — quicker hands at this work"
+msgstr "Dein Handwerk — flinkere Hände bei dieser Arbeit"
+
+msgid "Your trade — quicker with a load"
+msgstr "Dein Handwerk — schneller mit Last"
+
+msgid "Your trade — your blows land harder"
+msgstr "Dein Handwerk — deine Schläge treffen härter"
