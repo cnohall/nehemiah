@@ -21,7 +21,7 @@ const SECTIONS: Array = [
 	{ "name": "Tower of Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
 	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
 	{ "name": "Dung Gate",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
-	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55,
+	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55, "choices": ["table", "fields"],
 		"piles": { "StockWater": Vector2(-11.5, 4.5) } },
 	{ "name": "Water Gate",     "ref": "Neh. 3:26", "days": [37,38,39,40,41],    "twists": ["doors", "night"],            "yard": Vector2(6, 11),  "terrain": "ophel" },
 	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped"],          "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1 },
@@ -56,6 +56,8 @@ const BOONS := {
 	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "warn": 2.2, "work": 0.9 }, "posts": true },
 	"bundles": { "title": "Carry in bundles", "ref": "Neh. 3:14", "mods": { "carry": 1.25, "harm": 1.25 } },
 	"road": { "title": "Hold the road", "ref": "Neh. 3:14", "mods": { "harm": 0.8, "carry": 0.85 }, "posts": true },
+	"table": { "title": "Open Nehemiah's table", "ref": "Neh. 5:17", "mods": { "work": 1.2, "warn": 0.6 } },
+	"fields": { "title": "Give back their fields", "ref": "Neh. 5:11", "mods": { "harm": 0.8, "work": 0.85 }, "posts": true },
 }
 const DEFAULT_CHOICES := ["build", "guard"]
 # What a modifier means to the crew: [higher is better?, text for more, text for less]. Each
@@ -85,7 +87,7 @@ const TWIST_INTRO := {
 	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
 	"horn": "They come up the valley in surges — {horn} sounds the horn: gather there",
 	"haul": "A long haul from the yard — stack loads on the relay mat halfway, or drop one beside a friend",
-	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand",
+	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets, and they come back to the work",
 	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
 	"schemes": "Messengers will call you down to Ono — do not go with them",
@@ -248,7 +250,15 @@ func pressure() -> float:
 
 ## The boon's modifier `key` for this stretch (1 = none)
 func mod(key: String) -> float:
-	return BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	if key == "work":
+		v *= 1.0 + HOUSEHOLD_WORK * households_fed
+	return v
+
+## Households fed this stretch (Neh. 5, Households): each family back at the wall adds to
+## the work. Every peer counts its own; reset when the stretch changes.
+const HOUSEHOLD_WORK := 0.06
+var households_fed := 0
 
 ## The watch posts stand from dawn (the boon says so)
 func boon_posts() -> bool:
