@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b3rh8ksihfgos"
-path="res://.godot/imported/remember.jpg-c2c8131bd63edf3d8abb66bd24d083aa.ctex"
+uid="uid://cdgjfl3kbof6e"
+path="res://.godot/imported/lostheart.png-89cd85709c7718133b7d13b16a0498b1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/remember.jpg"
-dest_files=["res://.godot/imported/remember.jpg-c2c8131bd63edf3d8abb66bd24d083aa.ctex"]
+source_file="res://assets/story/lostheart.png"
+dest_files=["res://.godot/imported/lostheart.png-89cd85709c7718133b7d13b16a0498b1.ctex"]
 
 [params]
 

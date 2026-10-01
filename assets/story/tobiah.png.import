@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dqsuotlq56fs4"
-path="res://.godot/imported/build.jpg-9582553b6b35e56cd56c07f7ed06edc8.ctex"
+uid="uid://moxv6smia2s2"
+path="res://.godot/imported/tobiah.png-a90808ac5f0d94942422b27218f33c65.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/build.jpg"
-dest_files=["res://.godot/imported/build.jpg-9582553b6b35e56cd56c07f7ed06edc8.ctex"]
+source_file="res://assets/story/tobiah.png"
+dest_files=["res://.godot/imported/tobiah.png-a90808ac5f0d94942422b27218f33c65.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b0s6ce4fle2oc"
-path="res://.godot/imported/tobiah.jpg-7166981aa5f9efad661473c290a0818a.ctex"
+uid="uid://ny1f4cq7wel2"
+path="res://.godot/imported/sanballat.png-4ed3e2f45fddcd3c495c5da73e34979c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/tobiah.jpg"
-dest_files=["res://.godot/imported/tobiah.jpg-7166981aa5f9efad661473c290a0818a.ctex"]
+source_file="res://assets/story/sanballat.png"
+dest_files=["res://.godot/imported/sanballat.png-4ed3e2f45fddcd3c495c5da73e34979c.ctex"]
 
 [params]
 
