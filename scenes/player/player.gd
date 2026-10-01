@@ -403,9 +403,33 @@ func _handle_movement(delta: float) -> void:
 		var rate := ACCEL if target.length_squared() > velocity.length_squared() else DECEL
 		velocity = velocity.move_toward(target, rate * delta)
 	move_and_slide()
+	if _dash_time <= 0.0 and not on_beam:
+		_nudge_apart(delta)
 	_tether_to_partner()
 	global_position.x = clampf(global_position.x, PLAY_AREA.position.x, PLAY_AREA.end.x)
 	global_position.z = clampf(global_position.z, PLAY_AREA.position.y, PLAY_AREA.end.y)
+
+# Workers overlapping at a work site drift apart gently (a position nudge, not a
+# collision, so nobody gets blocked or shoved off their line)
+const NUDGE_RADIUS := 0.8
+const NUDGE_SPEED := 1.6
+
+func _nudge_apart(delta: float) -> void:
+	var push := Vector3.ZERO
+	for o in get_tree().get_nodes_in_group("players"):
+		if o == self or not (o is Node3D) or o.downed:
+			continue
+		var off: Vector3 = global_position - o.global_position
+		off.y = 0.0
+		var d := off.length()
+		if d >= NUDGE_RADIUS:
+			continue
+		if d < 0.02:   # exactly stacked: split by id so the pair goes opposite ways
+			off = Vector3.RIGHT * (1.0 if get_instance_id() > o.get_instance_id() else -1.0)
+			d = 0.02
+		push += off / d * (1.0 - d / NUDGE_RADIUS)
+	if push != Vector3.ZERO:
+		global_position += push.limit_length(1.0) * NUDGE_SPEED * delta
 
 # ── Beams ──────────────────────────────────────────────────
 

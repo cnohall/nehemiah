@@ -31,6 +31,10 @@ const GOAL_Z            := 23.0   # the stockpiles, so the crew can still run a 
 const GOAL_X_SPREAD     := 12.0
 const WRECKER_CHANCE    := 0.5    # share of scouts/raiders that go for the wall; brutes always do
 const WALL_STANDOFF     := 0.6    # where a wrecker stands, measured out from the wall face
+const SEP_RADIUS        := 1.0    # enemies closer than this (× body scale) push each other apart
+const SEP_WEIGHT        := 1.3    # push strength vs. the heading (1 = equal pull)
+const SEP_INTERVAL      := 0.12   # neighbour sweep period; the push is reused between sweeps
+const SEP_SETTLE_SPEED  := 1.2    # m/s slide that spreads attackers out round their target
 
 # Distinct silhouette per type (CharacterRig.enemy_look), one dark colour family
 const _LOOKS := { Type.SCOUT: "scout", Type.BRUTE: "brute", Type.RAIDER: "raider", Type.SABOTEUR: "saboteur" }
@@ -111,6 +115,9 @@ var _escaping := false
 var _climb_wall: Node3D
 var _climb_t := 0.0
 var _no_headway := 0.0
+var _sep := Vector3.ZERO   # cached push away from crowding neighbours
+var _sep_t := randf() * SEP_INTERVAL
+var _pace := randf_range(0.93, 1.07)   # a wave doesn't march in lockstep
 
 @onready var nav: NavigationAgent3D = $NavigationAgent3D
 @onready var _sprite: CharacterRig = $Figure
@@ -156,7 +163,7 @@ func _physics_process(delta: float) -> void:
 	if _busy:
 		return
 	_pick_target(delta)
-	if _try_attack_player() or _try_attack_wall():
+	if _try_attack_player(delta) or _try_attack_wall(delta):
 		return
 	_move(delta)
 	_check_stuck(delta)
@@ -235,10 +242,47 @@ func _move_to(dest: Vector3, delta: float) -> void:
 		step = dest - global_position
 		step.y = 0.0
 	if step.length_squared() > 0.01:
-		velocity = step.normalized() * SPEED[type]
+		var dir := step.normalized()
+		_refresh_separation(delta)
+		var steer := dir + _sep * SEP_WEIGHT
+		if steer.length_squared() > 0.0001:
+			dir = steer.normalized()
+		velocity = dir * SPEED[type] * _pace
 		move_and_slide()
 	else:
 		velocity = Vector3.ZERO
+
+# Soft push away from nearby enemies, stronger the closer they are. Swept on a timer
+# and cached so a full wave isn't an O(n²) every physics tick.
+func _refresh_separation(delta: float) -> void:
+	_sep_t -= delta
+	if _sep_t > 0.0:
+		return
+	_sep_t = SEP_INTERVAL
+	_sep = Vector3.ZERO
+	var mine: float = SEP_RADIUS * SCALE[type]
+	for o in get_tree().get_nodes_in_group("enemies"):
+		if o == self or not (o is Node3D):
+			continue
+		var off: Vector3 = global_position - o.global_position
+		off.y = 0.0
+		var reach: float = mine + (SEP_RADIUS * SCALE[o.type] - mine) * 0.5
+		var d := off.length()
+		if d >= reach:
+			continue
+		if d < 0.02:   # exactly stacked: any direction beats none
+			off = Vector3.RIGHT.rotated(Vector3.UP, randf() * TAU)
+			d = 0.02
+		_sep += off / d * (1.0 - d / reach)
+
+# Standing attackers slide apart so they ring their target instead of piling on one spot
+func _settle(delta: float) -> void:
+	_refresh_separation(delta)
+	if _sep.length_squared() < 0.0025:
+		return
+	velocity = _sep.limit_length(1.0) * SEP_SETTLE_SPEED
+	move_and_slide()
+	velocity = Vector3.ZERO
 
 # No progress for a while → something built is in the way; batter it
 func _check_stuck(delta: float) -> void:
@@ -268,17 +312,18 @@ func _nearest_wall() -> Node3D:
 
 # ── Attack ─────────────────────────────────────────────────
 
-func _try_attack_player() -> bool:
+func _try_attack_player(delta: float) -> bool:
 	if _target_player == null or _dist_flat(_target_player) > ATTACK_RANGE:
 		return false
 	velocity = Vector3.ZERO
 	if _attack_timer <= 0.0:
 		_attack(_target_player, _target_player.global_position)
 	else:
+		_settle(delta)
 		anim = "idle_" + _facing
 	return true
 
-func _try_attack_wall() -> bool:
+func _try_attack_wall(delta: float) -> bool:
 	if _target_player != null or _target_wall == null \
 			or _target_wall.distance_to_point(global_position) > WALL_REACH:
 		return false
@@ -287,6 +332,7 @@ func _try_attack_wall() -> bool:
 	if _attack_timer <= 0.0:
 		_attack(_target_wall, at)
 	else:
+		_settle(delta)
 		anim = "idle_" + _facing
 	return true
 

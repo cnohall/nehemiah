@@ -24,6 +24,9 @@ const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
 const TALLY_H       := 118.0   # …plus the numbers row…
 const CREW_H        := 40.0    # …plus one line per worker's share (multiplayer)
 const MARKS_H       := 64.0    # …plus the section's marks on its last day…
+const MARKS_BIG_H   := 154.0  # (a finished stretch: big gems, captions beneath)
+const STRIP_H       := 32.0    # (an ordinary day: the campaign strip above its counts)
+const TALLY_SMALL_H := 84.0   # (and then its counts, smaller)
 const READY_H       := 56.0    # …plus who's ready to go on
 const SUB_LINE_H    := 28.0    # …plus each extra line under the title (days to spare, the campaign)
 const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
@@ -863,7 +866,8 @@ func show_tally(stats: Dictionary) -> void:
 	var day := GameState.current_day
 	var section := GameState.get_current_section()
 	var title := tr("Day %d complete") % day
-	var sub := tr("Not one enemy got through.") if stats["breaches"] == 0 		else tr_n("%d slipped through — but the wall stands.", "%d slipped through — but the wall stands.", stats["breaches"]) % stats["breaches"]
+	# A clean day says nothing; only a breach earns a line
+	var sub := "" if stats["breaches"] == 0 		else tr_n("%d slipped through — but the wall stands.", "%d slipped through — but the wall stands.", stats["breaches"]) % stats["breaches"]
 	var unfinished: int = stats.get("unfinished", 0)
 	if unfinished > 0:
 		# The stars came first: the day ends, the rest waits for tomorrow
@@ -872,20 +876,31 @@ func show_tally(stats: Dictionary) -> void:
 	# The whole section is done (rated) — say so, and how many days it had to spare
 	elif stats.has("marks"):
 		title = tr("The %s stands") % tr(section["name"])
-		var lost: int = stats["section_breaches"]
-		sub = tr("Not one enemy got through.") if lost == 0 \
-			else tr_n("%d slipped through — but the wall stands.", "%d slipped through — but the wall stands.", lost) % lost
-		sub = tr("Section %d of %d complete  ·  %s") % [GameState.current_section_index + 1,
-			GameState.SECTIONS.size(), sub]
-		var spare: int = stats.get("spare", 0)
-		if GameState.sun_total > 0.0 and spare > 0:
-			sub += "\n" + tr_n("Finished with %d day to spare", "Finished with %d days to spare", spare) % spare
+		# One line: the marks below already say pace, breaches and soundness
+		sub = tr("Section %d of %d complete") % [GameState.current_section_index + 1, GameState.SECTIONS.size()]
 	# Where the campaign stands: the far goal in view every evening (a pull to day 52)
-	if not GameState.is_replay() and not GameState.attract:
-		var stood := GameState.current_section_index + (1 if stats.has("marks") else 0)
-		var days_left := GameState.TOTAL_DAYS - day
-		sub += "\n" + tr("%d of %d stretches stand  ·  %d days to the fifty-second") % [stood, GameState.SECTIONS.size(), days_left]
+	var campaign := not GameState.is_replay() and not GameState.attract
+	if campaign:
+		var days_left := tr("%d days to the fifty-second") % (GameState.TOTAL_DAYS - day)
+		sub += ("\n" if unfinished > 0 else "  ·  ") + days_left if sub != "" else days_left
 
+	# A finished stretch leads with its marks (the payoff); an ordinary day with the
+	# campaign strip, today's cell filling. Counts beneath either way, smaller.
+	var marks_line: Control = null
+	var strip: CircuitStrip = null
+	if stats.has("marks") and unfinished == 0:
+		var gap := Control.new()
+		gap.custom_minimum_size.y = 10
+		_tally.add_child(gap)
+		marks_line = _marks_line(stats, true)
+		_tally.add_child(marks_line)
+	elif campaign:
+		strip = CircuitStrip.new()
+		strip.day = day
+		strip.custom_minimum_size = Vector2(600, 22)
+		strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tally.add_child(strip)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 56)
@@ -895,22 +910,21 @@ func show_tally(stats: Dictionary) -> void:
 	var pre := "section_" if rated else ""
 	var secs := int(stats[pre + "time"])
 	var counts: Array = [
-		[secs, "Time", func(v: int): return "%d:%02d" % [v / 60, v % 60]],
 		[stats[pre + "loads"], "Loads carried", func(v: int): return str(v)],
 		[stats[pre + "foes"], "Foes felled", func(v: int): return str(v)],
 	]
+	if not rated:  # a finished stretch's time is the pace mark's "2:35 of 9:00"
+		counts.push_front([secs, "Time", func(v: int): return "%d:%02d" % [v / 60, v % 60]])
 	if stats.get("scattered", 0) > 0 and not rated:
 		counts.append([stats["scattered"], "Piles scattered", func(v: int): return str(v)])
 	for i in counts.size():
-		var cell := _stat(counts[i][2].call(0), counts[i][1])
+		var cell := _stat(counts[i][2].call(0), counts[i][1], 32 if (marks_line or strip) else 0)
 		row.add_child(cell)
 		_count_up(cell.get_child(0), counts[i][0], counts[i][2], i * TALLY_STEP + 0.5)
 
 	var crew: Array = stats[pre + "crew"]
 	if crew.size() > 1:
 		_tally.add_child(_crew_line(crew))
-	if rated:
-		_tally.add_child(_marks_line(stats))
 	# The tally stays until everyone is ready (playtest 2) — the title screen's crew
 	# has nobody to ask, so there it fades as before
 	var waits := not GameState.attract
@@ -922,18 +936,34 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(_ready_row)
 		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
+	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
 ") * SUB_LINE_H
 	_tally.show()
 	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
+	if strip and unfinished == 0:
+		# Today's cell fills in: the day's work, banked
+		var tw := create_tween()
+		tw.tween_interval(0.8)
+		tw.tween_property(strip, "today_progress", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_callback(Sfx.play.bind("tally_land"))
+	if marks_line:
+		# Taller than a plain tally: ride higher so the prompt stays on screen
+		banner.anchor_top = 0.5
+		banner.anchor_bottom = 0.5
+		_pop_marks(marks_line, 0.7)
+		# The title lands like a set stone
+		banner_title.pivot_offset = banner_title.size * 0.5
+		banner_title.scale = Vector2.ONE * 1.08
+		create_tween().tween_property(banner_title, "scale", Vector2.ONE, 0.4) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.2)
 
 # The section's three marks, each with what earned it (or what it needed)
-func _marks_line(stats: Dictionary) -> Control:
+func _marks_line(stats: Dictionary, big := false) -> Control:
 	var mask: int = stats["marks"]
 	var line := HBoxContainer.new()
 	line.alignment = BoxContainer.ALIGNMENT_CENTER
-	line.add_theme_constant_override("separation", 44)
+	line.add_theme_constant_override("separation", 72 if big else 44)
 	var secs := int(stats["section_time"])
 	var par := int(stats["par"])
 	var details := {
@@ -943,20 +973,44 @@ func _marks_line(stats: Dictionary) -> Control:
 	}
 	for m: int in GameState.MARKS:
 		var earned := bool(mask & m)
-		var chip := HBoxContainer.new()
-		chip.add_theme_constant_override("separation", 10)
-		var gem := MarkGem.new(earned, 22.0)
+		# Big: the hero of the tally — a large gem with its name and proof stacked beneath
+		var chip: BoxContainer = VBoxContainer.new() if big else HBoxContainer.new()
+		chip.add_theme_constant_override("separation", 6 if big else 10)
+		var gem := MarkGem.new(earned, 68.0 if big else 22.0)
 		gem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		gem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		chip.add_child(gem)
 		var text := VBoxContainer.new()
 		text.add_theme_constant_override("separation", -2)
-		text.add_child(_crew_label(GameState.MARK_NAMES[m], UiStyle.TERRACOTTA if earned else UiStyle.INK_MUTED))
+		var name_l := _crew_label(GameState.MARK_NAMES[m], UiStyle.TERRACOTTA if earned else UiStyle.INK_MUTED)
 		var detail := _crew_label(details[m], UiStyle.INK_SOFT if earned else Color(UiStyle.INK_MUTED, 0.8))
 		detail.add_theme_font_size_override("font_size", 15)
+		if big:
+			name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_l.add_theme_font_size_override("font_size", 20)
+		text.add_child(name_l)
 		text.add_child(detail)
 		chip.add_child(text)
 		line.add_child(chip)
 	return line
+
+# The marks land one at a time: gem pops in, thud and glint if earned, words follow
+func _pop_marks(line: Control, delay: float) -> void:
+	for i in line.get_child_count():
+		var chip: Control = line.get_child(i)
+		var gem: MarkGem = chip.get_child(0)
+		var text: Control = chip.get_child(1)
+		gem.scale = Vector2.ZERO
+		text.modulate.a = 0.0
+		var tw := create_tween().set_parallel()
+		var at := delay + i * 0.42
+		tw.tween_property(gem, "scale", Vector2.ONE, 0.38).set_delay(at) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(text, "modulate:a", 1.0, 0.4).set_delay(at + 0.15)
+		if gem.lit:
+			tw.tween_callback(Sfx.play.bind("tally_land")).set_delay(at + 0.2)
+			tw.tween_property(gem, "shine", 1.0, 0.6).from(0.0).set_delay(at + 0.25)
 
 # Each worker's share, in their colour; the day's best carrier and best shot in terracotta
 func _crew_line(crew: Array) -> Control:
@@ -1010,11 +1064,13 @@ func _count_up(label: Label, target: int, fmt: Callable, delay: float) -> void:
 		Sfx.play("tally_land"))
 	tw.tween_property(label, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-func _stat(value: String, caption: String) -> Control:
+func _stat(value: String, caption: String, font_size := 0) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 0)
 	var n := Label.new()
 	n.theme_type_variation = &"Numeral"
+	if font_size > 0:
+		n.add_theme_font_size_override("font_size", font_size)
 	n.text = value
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	n.add_theme_color_override("font_color", UiStyle.INK)
