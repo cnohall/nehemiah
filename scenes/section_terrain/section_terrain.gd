@@ -12,7 +12,6 @@ extends ScatterLayer
 
 const WOOD       := Color(0.46, 0.34, 0.22)
 const SOOT       := Color(0.24, 0.21, 0.19)
-const WOOL       := Color(0.93, 0.90, 0.82)
 const FISH       := Color(0.62, 0.66, 0.68)
 const WATER      := Color(0.20, 0.42, 0.46)
 const FLAME      := Color(1.0, 0.62, 0.22)
@@ -258,16 +257,201 @@ func _sheepfold(c: Vector3) -> void:
 		if i >= steps - 2:
 			continue   # the opening, toward the wall
 		_drystone(Vector2(c.x + cos(a0) * r, c.z + sin(a0) * r), Vector2(c.x + cos(a1) * r, c.z + sin(a1) * r), 0.7)
-	for i in 7:
-		var at := c + Vector3(_rng.randf_range(-2.0, 2.0), 0.35, _rng.randf_range(-2.0, 1.4))
-		_add("bush", Transform3D(_yaw().scaled(Vector3(1.1, 0.7, 0.8)), at), _vary(WOOL, 0.04))
-		_add("pebble", Transform3D(Basis.from_scale(Vector3(1.6, 2.0, 1.6)), at + Vector3(0.35, 0.1, 0.2)), Color(0.22, 0.18, 0.15))
+	# Leave daylight between their silhouettes at the game's camera angle.
+	var flock := [
+		[Vector3(-1.48, 0, -1.45), 0.15, "ewe"],
+		[Vector3(1.42, 0, -1.35), -1.35, "ewe"],
+		[Vector3(-1.47, 0, 1.1), -0.2, "ewe"],
+		[Vector3(0.75, 0, 1.4), 2.85, "lamb"],
+		[Vector3(1.9, 0, 1.15), -1.1, "lamb"],
+	]
+	for i in flock.size():
+		_sheep(c + flock[i][0], flock[i][1], flock[i][2], i + 1)
 	# A few strays grazing on the slope
-	for p: Vector3 in [Vector3(-8.5, 0, -9.5), Vector3(-7.2, 0, -10.4), Vector3(6.5, 0, -9.0)]:
-		var yaw := _yaw()
-		_add("bush", Transform3D(yaw.scaled(Vector3(1.1, 0.7, 0.8)), p + Vector3(0, 0.35, 0)), _vary(WOOL, 0.04))
-		# Head down to the grass
-		_add("pebble", Transform3D(yaw * Basis.from_scale(Vector3(1.6, 2.0, 1.6)), p + yaw * Vector3(0.38, 0.22, 0.0)), Color(0.22, 0.18, 0.15))
+	var strays := [Vector3(-8.5, 0, -9.5), Vector3(-5.5, 0, -10.4), Vector3(6.5, 0, -9.0)]
+	for i in strays.size():
+		_sheep(strays[i], _rng.randf() * TAU, "graze", i + 8)
+
+# The blockout is deliberately complete without any small wool forms. +X faces forward.
+# `detail = false` is used by the visual review tool to check the naked silhouette.
+func _sheep(c: Vector3, yaw: float, pose: String, style := 0, detail := true) -> void:
+	var b := Basis(Vector3.UP, yaw)
+	var size := (0.72 if pose == "lamb" else 1.0) * (1.0 + 0.025 * sin(style * 2.7))
+	var coat := Color(0.88, 0.82, 0.71).lerp(Color(0.83, 0.75, 0.64), 0.1 + 0.08 * sin(style * 3.1))
+	var face := Color(0.44, 0.29, 0.21).lerp(Color(0.51, 0.35, 0.25), 0.5 + 0.2 * sin(style * 1.7))
+	var hoof := Color(0.19, 0.14, 0.12)
+	var sheep_scale := Vector3(size, size * 1.32, size)
+	var put := func(kind: String, at: Vector3, sc: Vector3, tint: Color, turn := Basis.IDENTITY) -> void:
+		_add(kind, Transform3D(b * turn * Basis.from_scale(sc * sheep_scale), c + b * (at * sheep_scale)), tint)
+	put.call("sheep_torso", Vector3.ZERO, Vector3.ONE, coat)
+	# Leg sockets lie well inside the coat; each shaped shank is distinct below it.
+	for x: float in [-0.55, 0.42]:
+		for side: float in [-1.0, 1.0]:
+			var p := Vector3(x, 0, side * 0.31)
+			put.call("sheep_leg_hind" if x < 0.0 else "sheep_leg_front", p, Vector3.ONE, face.darkened(0.09))
+			for split: float in [-1.0, 1.0]:
+				put.call("blob", p + Vector3(0.07, 0.055, split * 0.063), Vector3(0.24, 0.105, 0.11), hoof)
+	# Broad short tail belongs to the rump, rather than hanging below it.
+	put.call("blob", Vector3(-0.79, 0.92, 0), Vector3(0.32, 0.28, 0.37), coat.darkened(0.015))
+	var head_turn := 0.08 * sin(style * 2.0)
+	var head_basis := Basis(Vector3.UP, head_turn)
+	if pose == "graze":
+		head_basis = Basis(Vector3.BACK, -0.52) * head_basis
+	var head_root := Vector3(0.52, 0.78, 0)
+	var head_put := func(kind: String, at: Vector3, sc: Vector3, tint: Color, turn := Basis.IDENTITY) -> void:
+		var p := head_root + head_basis * (at - head_root)
+		_add(kind, Transform3D(b * head_basis * turn * Basis.from_scale(sc * sheep_scale), c + b * (p * sheep_scale)), tint)
+	head_put.call("sheep_neck", Vector3.ZERO, Vector3.ONE, coat)
+	head_put.call("sheep_head", Vector3.ZERO, Vector3.ONE, face)
+	for side: float in [-1.0, 1.0]:
+		head_put.call("sheep_ear", Vector3(0.83, 1.2, side * 0.17), Vector3.ONE, face.darkened(0.045), Basis(Vector3.UP, 0.0 if side > 0.0 else PI))
+		head_put.call("blob", Vector3(1.05, 1.17, side * 0.185), Vector3(0.055, 0.055, 0.03), Color(0.105, 0.07, 0.055))
+		head_put.call("blob", Vector3(1.06, 1.185, side * 0.21), Vector3(0.016, 0.016, 0.012), Color(0.89, 0.76, 0.57))
+	for side: float in [-1.0, 1.0]:
+		head_put.call("blob", Vector3(1.45, 1.01, side * 0.087), Vector3(0.05, 0.032, 0.043), face.darkened(0.42))
+	if detail:
+		_sheep_fleece(put, head_put, coat, style)
+
+# A single coat carries the silhouette. Broad rises are sculpted into its surface,
+# so the wool stays connected without rows or seams between separate tufts.
+func _sheep_fleece(put: Callable, head_put: Callable, coat: Color, style: int) -> void:
+	put.call("sheep_coat_%d" % (style % 3), Vector3.ZERO, Vector3.ONE, coat)
+	# A soft collar and short crown frame the face without covering it.
+	head_put.call("sheep_wool", Vector3(0.65, 1.04, 0), Vector3(0.44, 0.34, 0.41), coat)
+	head_put.call("sheep_wool", Vector3(0.82, 1.24, 0), Vector3(0.44, 0.15, 0.35), coat.lightened(0.01))
+
+const SHEEP_TORSO := [
+	[Vector3(-0.88, 0.76, 0), 0.01, 0.01, 0.01],
+	[Vector3(-0.78, 0.76, 0), 0.25, 0.25, 0.25],
+	[Vector3(-0.63, 0.75, 0), 0.36, 0.34, 0.37],
+	[Vector3(-0.36, 0.74, 0), 0.42, 0.38, 0.44],
+	[Vector3(-0.04, 0.74, 0), 0.43, 0.39, 0.47],
+	[Vector3(0.25, 0.75, 0), 0.43, 0.4, 0.46],
+	[Vector3(0.51, 0.78, 0), 0.37, 0.37, 0.39],
+	[Vector3(0.67, 0.82, 0), 0.25, 0.28, 0.27],
+	[Vector3(0.73, 0.84, 0), 0.01, 0.01, 0.01],
+]
+const SHEEP_COAT := [
+	[Vector3(-0.91, 0.79, 0), 0.01, 0.01, 0.01],
+	[Vector3(-0.79, 0.78, 0), 0.27, 0.27, 0.27],
+	[Vector3(-0.6, 0.76, 0), 0.39, 0.37, 0.4],
+	[Vector3(-0.3, 0.75, 0), 0.46, 0.4, 0.48],
+	[Vector3(0.05, 0.75, 0), 0.47, 0.42, 0.51],
+	[Vector3(0.35, 0.77, 0), 0.46, 0.42, 0.49],
+	[Vector3(0.58, 0.81, 0), 0.35, 0.35, 0.39],
+	[Vector3(0.73, 0.85, 0), 0.01, 0.01, 0.01],
+]
+const SHEEP_NECK := [
+	[Vector3(0.43, 0.74, 0), 0.17, 0.22, 0.24],
+	[Vector3(0.59, 0.85, 0), 0.19, 0.2, 0.22],
+	[Vector3(0.7, 1.02, 0), 0.17, 0.18, 0.18],
+	[Vector3(0.79, 1.15, 0), 0.13, 0.13, 0.16],
+	[Vector3(0.82, 1.24, 0), 0.01, 0.01, 0.01],
+]
+const SHEEP_HEAD := [
+	[Vector3(0.76, 1.11, 0), 0.01, 0.01, 0.01],
+	[Vector3(0.82, 1.13, 0), 0.15, 0.16, 0.16],
+	[Vector3(0.96, 1.11, 0), 0.21, 0.2, 0.21],
+	[Vector3(1.11, 1.08, 0), 0.19, 0.19, 0.19],
+	[Vector3(1.25, 1.05, 0), 0.17, 0.18, 0.17],
+	[Vector3(1.38, 1.02, 0), 0.14, 0.14, 0.145],
+	[Vector3(1.46, 1.01, 0), 0.115, 0.11, 0.13],
+	[Vector3(1.5, 1.01, 0), 0.01, 0.01, 0.01],
+]
+
+static var _sheep_material: ShaderMaterial
+
+func _material_for(kind: String) -> Material:
+	if kind.begins_with("sheep_"):
+		if _sheep_material == null:
+			_sheep_material = Chunky.material(0.0, false, 0.0).duplicate() as ShaderMaterial
+			_sheep_material.set_shader_parameter("grain", 0.0)
+			_sheep_material.set_shader_parameter("top_light", 0.02)
+			_sheep_material.set_shader_parameter("ground_ao", 0.08)
+		return _sheep_material
+	return super._material_for(kind)
+
+func _mesh_for(kind: String) -> Mesh:
+	match kind:
+		"sheep_torso": return _loft(_resample(SHEEP_TORSO, 3))
+		"sheep_wool": return _sphere(0.5, 1.0, 12, 5)
+		"sheep_neck": return _loft(_resample(SHEEP_NECK, 3))
+		"sheep_head": return _loft(_resample(SHEEP_HEAD, 3))
+		"sheep_ear": return _sheep_ear_mesh()
+		"sheep_leg_front": return _sheep_leg_mesh(false)
+		"sheep_leg_hind": return _sheep_leg_mesh(true)
+	if kind.begins_with("sheep_coat_"):
+		return _sheep_coat_mesh(int(kind.get_slice("_", 2)))
+	return super._mesh_for(kind)
+
+static func _sheep_leg_mesh(hind: bool) -> ArrayMesh:
+	var bend := -0.055 if hind else 0.01
+	return _loft(_resample([
+		[Vector3(0.025, 0.045, 0), 0.07, 0.08, 0.085],
+		[Vector3(0.0, 0.16, 0), 0.072, 0.075, 0.08],
+		[Vector3(bend, 0.33, 0), 0.09, 0.095, 0.09],
+		[Vector3(bend - 0.035, 0.5, 0), 0.14, 0.14, 0.12],
+		[Vector3(bend - 0.035, 0.65, 0), 0.14, 0.14, 0.13],
+	], 2), [[0.0, TAU]], 0.0, 0.0, 10)
+
+static func _sheep_coat_mesh(variant: int) -> ArrayMesh:
+	# A handful of broad overlapping rises are sculpted directly into one surface.
+	# Variants shift them slightly without adding bead-like pieces or extra draw calls.
+	var rings := _resample(SHEEP_COAT, 3)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	const SEG := 20
+	for i in rings.size():
+		var r: Array = rings[i]
+		var x: float = r[0].x
+		var tangent: Vector3 = (rings[mini(i + 1, rings.size() - 1)][0] - rings[maxi(i - 1, 0)][0]).normalized()
+		var up := Vector3(-tangent.y, tangent.x, 0)
+		var envelope := minf(1.0, (x + 0.91) * 6.0) * minf(1.0, (0.73 - x) * 6.0)
+		for j in SEG:
+			var a := TAU * j / SEG
+			var wave := (0.014 * sin(x * 9.0 + a * 3.0) + 0.009 * cos(x * 5.0 - a * 4.0)) * maxf(envelope, 0.0)
+			for lobe: Vector4 in [
+				Vector4(-0.52 + 0.03 * variant, 1.18, 0.09, 0.3),
+				Vector4(0.12 - 0.02 * variant, 1.75, 0.078, 0.34),
+				Vector4(0.42, 0.3 + 0.08 * variant, 0.056, 0.28),
+				Vector4(-0.3, PI + 0.1 * variant, 0.063, 0.32),
+			]:
+				var da := atan2(sin(a - lobe.y), cos(a - lobe.y))
+				wave += lobe.z * exp(-0.5 * (pow((x - lobe.x) / lobe.w, 2.0) + pow(da / 0.62, 2.0))) * maxf(envelope, 0.0)
+			var h: float = r[1] if sin(a) > 0.0 else r[2]
+			st.add_vertex(r[0] + up * sin(a) * (h + wave) + Vector3.BACK * cos(a) * (r[3] + wave))
+	for i in rings.size() - 1:
+		for j in SEG:
+			var a := i * SEG + j
+			var b := i * SEG + (j + 1) % SEG
+			for idx: int in [a, b + SEG, a + SEG, a, b, b + SEG]:
+				st.add_index(idx)
+	st.generate_normals()
+	return st.commit()
+
+static func _sheep_ear_mesh() -> ArrayMesh:
+	var rings := [
+		[Vector3(0.0, 0.0, 0.0), 0.055, 0.03],
+		[Vector3(-0.035, -0.015, 0.11), 0.12, 0.045],
+		[Vector3(-0.09, -0.045, 0.28), 0.145, 0.042],
+		[Vector3(-0.15, -0.085, 0.43), 0.08, 0.03],
+		[Vector3(-0.17, -0.1, 0.48), 0.005, 0.005],
+	]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for ring: Array in rings:
+		for j in 10:
+			var a := TAU * j / 10.0
+			st.add_vertex(ring[0] + Vector3(cos(a) * ring[1], sin(a) * ring[2], 0))
+	for i in rings.size() - 1:
+		for j in 10:
+			var a := i * 10 + j
+			var b := i * 10 + (j + 1) % 10
+			for idx: int in [a, a + 10, b, b, a + 10, b + 10]:
+				st.add_index(idx)
+	st.generate_normals()
+	return st.commit()
+
 
 # Fish Gate (3:3): Tyrian fish sellers' stalls inside the gate (Neh. 13:16)
 func _fish_market() -> void:
