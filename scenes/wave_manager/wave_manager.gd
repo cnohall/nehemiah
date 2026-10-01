@@ -49,6 +49,14 @@ const MESSENGER_FIRST     := 12.0
 const MESSENGER_EVERY     := 24.0
 const MESSENGERS_PER_DAY  := 4
 
+# Saboteur (GDD §5.9): comes quietly with the trickle, never in a pack, on his own timer.
+# One at a time through day 20; from day 21, two with a crew of three or more.
+# Not scaled by section pressure; difficulty's pace scales the interval.
+const SABOTEUR_DAY        := 6       # the Fish Gate's second day: beams get a day to themselves
+const SABOTEUR_FIRST      := 22.0
+const SABOTEUR_EVERY      := 50.0
+const SABOTEUR_PAIR_DAY   := 21
+
 @onready var enemies_root: Node3D = get_parent().get_node("Enemies")
 @onready var players_root: Node3D = get_parent().get_node("Players")
 @onready var visitors_root: Node3D = get_parent().get_node("Visitors")
@@ -62,6 +70,7 @@ var _surge_at: Array[Vector3] = []   # where the warned pack(s) will come in
 var _surge_left := 0       # members of the current pack still to come
 var _surge_gap := 0.0
 var _msg_sent := 0
+var _sab_timer := 0.0
 
 
 func start(day: int) -> void:
@@ -75,6 +84,7 @@ func start(day: int) -> void:
 	_surge_left = 0
 
 	_msg_sent = 0
+	_sab_timer = SABOTEUR_FIRST
 
 func stop() -> void:
 	_active = false
@@ -83,6 +93,7 @@ func _physics_process(delta: float) -> void:
 	if not _active or not multiplayer.is_server():
 		return
 	_tick_messengers(delta)
+	_tick_saboteurs(delta)
 	_tick_surges(delta)
 	_timer -= delta
 	if _timer > 0.0:
@@ -151,7 +162,7 @@ func _tick_surges(delta: float) -> void:
 				var off := Vector3(randf_range(-spread, spread), 0, randf_range(-1.0, 1.0))
 				_do_spawn(_pick_type(), _surge_at[_surge_left % _surge_at.size()] + off)
 		return
-	var warn := SURGE_WARN if horn else WAVE_WARN
+	var warn := (SURGE_WARN if horn else WAVE_WARN) * GameState.mod("warn")
 	var was := _surge_timer
 	_surge_timer -= delta
 	if was > warn and _surge_timer <= warn:
@@ -179,6 +190,20 @@ func _warn_surge(at: Vector3, horn: bool, warn: float) -> void:
 	Sfx.play("alert")
 	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else "Wave", warn + 3.0)
 	get_tree().call_group("watchmen", "warn_wave", at, horn)
+
+func _tick_saboteurs(delta: float) -> void:
+	if not GameState.saboteur or _day < SABOTEUR_DAY:
+		return
+	_sab_timer -= delta
+	if _sab_timer > 0.0:
+		return
+	var most := 2 if _day >= SABOTEUR_PAIR_DAY and _crew() >= 3.0 else 1
+	var alive := enemies_root.get_children().filter(func(e): return e.type == Enemy.Type.SABOTEUR and e.health > 0.0).size()
+	if alive >= most:
+		_sab_timer = 5.0
+		return
+	_sab_timer = SABOTEUR_EVERY / Settings.diff()["pace"]
+	_do_spawn(Enemy.Type.SABOTEUR)
 
 func _tick_messengers(delta: float) -> void:
 	if not GameState.has_twist("schemes") or _msg_sent >= MESSENGERS_PER_DAY:

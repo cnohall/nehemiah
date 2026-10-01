@@ -58,6 +58,10 @@ var _section_stats := { "loads": 0, "foes": 0, "crew": {} }
 # Server: loads each worker brought to each unit this section — unit index → { peer_id: loads }.
 # When the stretch stands, each piece is carved with the name of the one who carried most.
 var _credit := {}
+# Server: the crew's picks for the stretch about to start (peer_id → boon key), and the one
+# they add up to. Put in play at the stretch's dawn (GameState.set_boon), for that stretch only.
+var _choices := {}
+var _chosen_boon := ""
 var _sun_resync := 0.0
 
 func _ready() -> void:
@@ -148,6 +152,16 @@ func _begin_day() -> void:
 		# Posts start bare too — including any raised while the crew was still gathering
 		# (section_changed doesn't fire going from the gathering into the first day)
 		get_tree().call_group("watch_posts", "reset_slot")
+		# The crew's pick for this stretch, put in play once (a later one starts from "plan")
+		# Debug builds: `-- --boon=<key>` plays every stretch with that boon (to A/B a trade)
+		if _chosen_boon.is_empty() and OS.is_debug_build():
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--boon=") and GameState.BOONS.has(arg.trim_prefix("--boon=")):
+					_chosen_boon = arg.trim_prefix("--boon=")
+		GameState.set_boon(_chosen_boon)
+		_chosen_boon = ""
+		if GameState.boon_posts():
+			get_tree().call_group("watch_posts", "fortify")
 	for unit in _units:
 		for part in unit:
 			if fresh_section:
@@ -298,16 +312,54 @@ func _on_game_over() -> void:
 # Server: everyone present reads; the day begins once they're all through
 func _start_story() -> void:
 	_story_day = GameState.current_day
+	_choices.clear()
 	GameState.set_phase(GameState.Phase.STORY)
 	for id: int in _scene_peers():
 		_show_story.rpc_id(id, _story_day)
 	_open_wait("story")
 
 func _end_story() -> void:
+	_chosen_boon = _resolve_boon()
 	_close_wait()
 	for id: int in _scene_peers():
 		_hide_story.rpc_id(id)
 	_begin_day()
+
+## Every peer: this reader's pick for the stretch (the choice card)
+func cast_choice(key: String) -> void:
+	if multiplayer.is_server():
+		_peer_choice(1, key)
+	else:
+		_choice_from_peer.rpc_id(1, key)
+
+@rpc("any_peer", "reliable")
+func _choice_from_peer(key: String) -> void:
+	if multiplayer.is_server():
+		_peer_choice(multiplayer.get_remote_sender_id(), key)
+
+func _peer_choice(id: int, key: String) -> void:
+	if GameState.phase == GameState.Phase.STORY and key in GameState.choices_for(GameState.current_section_index):
+		_choices[id] = key
+
+## Server: most votes wins; the host's pick breaks a tie; no votes, the first of the two.
+## "" where no choice was offered (the first stretch, a replay, the practice)
+func _resolve_boon() -> String:
+	var options: Array = GameState.choices_for(GameState.current_section_index)
+	if not StoryData.choice_offered(GameState.current_section_index):
+		_choices.clear()
+		return ""
+	var counts := {}
+	for key: String in _choices.values():
+		counts[key] = counts.get(key, 0) + 1
+	var best: String = options[0]
+	var top := 0
+	for key: String in options:
+		var n: int = counts.get(key, 0)
+		if n > top or (n == top and n > 0 and key == _choices.get(1, "")):
+			best = key
+			top = n
+	_choices.clear()
+	return best
 
 ## Server: a late joiner sees the story in progress (not waited on)
 func send_story_to(peer_id: int) -> void:
@@ -456,7 +508,7 @@ func _hide_story() -> void:
 # ── Tally ──────────────────────────────────────────────────
 
 func _reset_stats() -> void:
-	_stats = { "time": 0.0, "loads": 0, "foes": 0, "breaches": 0, "crew": {} }
+	_stats = { "time": 0.0, "loads": 0, "foes": 0, "breaches": 0, "scattered": 0, "crew": {} }
 	_breaches_at_dawn = GameState.breaches
 
 # Count one for the day and for the section ("loads" | "foes")
@@ -474,6 +526,11 @@ func note_load(peer_id: int, site: Node = null) -> void:
 		if site in _units[i]:
 			var by: Dictionary = _credit.get_or_add(i, {})
 			by[peer_id] = by.get(peer_id, 0) + 1
+
+## Server: a saboteur strewed a pile
+func note_scatter() -> void:
+	if GameState.phase == GameState.Phase.WORK:
+		_stats["scattered"] += 1
 
 ## Server: a worker went down to Ono with the messenger
 func note_ono() -> void:

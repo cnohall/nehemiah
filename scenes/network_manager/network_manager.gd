@@ -195,7 +195,7 @@ func disconnect_session() -> void:
 ## Server (host / solo): start the list with ourselves, once the game scene is up
 func open_crew() -> void:
 	if multiplayer.is_server():
-		crew_info[multiplayer.get_unique_id()] = { "name": steam_name(), "loading": false, "trade": Settings.trade }
+		crew_info[multiplayer.get_unique_id()] = { "name": steam_name(), "loading": false, "trade": Settings.trade, "dye": _my_dye() }
 		_broadcast_crew()
 
 ## A person's Steam name, or "" (no Steam, or not heard yet)
@@ -232,13 +232,43 @@ func _set_trade(id: int, trade: int) -> void:
 		crew_info[id]["trade"] = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
 		_broadcast_crew()
 
+## A person's robe dye (Dyes), 0 = undyed
+func dye_of(id: int) -> int:
+	return crew_info.get(id, {}).get("dye", 0)
+
+## Local player: wear dye `i` (only one this player has earned); remembered
+func choose_dye(i: int) -> void:
+	if not Dyes.unlocked(i):
+		return
+	Settings.dye = i
+	Settings.save()
+	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
+		_set_dye(multiplayer.get_unique_id(), i)
+	else:
+		_ask_dye.rpc_id(1, i)
+
+@rpc("any_peer", "reliable")
+func _ask_dye(i: int) -> void:
+	if multiplayer.is_server():
+		_set_dye(multiplayer.get_remote_sender_id(), i)
+
+func _set_dye(id: int, i: int) -> void:
+	if crew_info.has(id):
+		crew_info[id]["dye"] = clampi(i, 0, Dyes.LIST.size() - 1)
+		_broadcast_crew()
+
+## The saved dye, if this player has (still) earned it
+func _my_dye() -> int:
+	return Settings.dye if Dyes.unlocked(Settings.dye) else 0
+
 # Client → server, as soon as the connection is up: who we are
 @rpc("any_peer", "reliable")
-func _hello(display_name: String, trade: int) -> void:
+func _hello(display_name: String, trade: int, dye := 0) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if multiplayer.is_server() and crew_info.has(id):
 		crew_info[id]["name"] = display_name.left(32)
 		crew_info[id]["trade"] = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
+		crew_info[id]["dye"] = clampi(dye, 0, Dyes.LIST.size() - 1)
 		_broadcast_crew()
 
 @rpc("authority", "call_remote", "reliable")
@@ -306,7 +336,7 @@ func _on_peer_disconnected(id: int) -> void:
 	peer_disconnected.emit(id)
 
 func _on_connected_to_server() -> void:
-	_hello.rpc_id(1, steam_name(), Settings.trade)
+	_hello.rpc_id(1, steam_name(), Settings.trade, _my_dye())
 	lobby_joined.emit(true)
 
 func _on_connection_failed() -> void:

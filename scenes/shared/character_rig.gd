@@ -172,6 +172,11 @@ static func enemy_look(kind: String) -> Dictionary:
 			base.merge({"robe": Color(0.34, 0.22, 0.16), "armour": Color(0.50, 0.33, 0.19),
 				"sash": Color(0.22, 0.14, 0.10), "hat": "helmet", "hat_color": Color(0.74, 0.54, 0.26),
 				"beard": "full", "weapon": "spear", "shield": Color(0.56, 0.18, 0.12)})
+		"saboteur":
+			# Slim, dark hood, an empty sack on his back, no weapon: he's not here to fight
+			base.merge({"robe": Color(0.16, 0.14, 0.13), "sash": Color(0.30, 0.22, 0.14),
+				"hat": "hood", "hat_color": Color(0.10, 0.09, 0.09), "beard": "short",
+				"sack": Color(0.58, 0.48, 0.32)})
 		"raider":
 			base.merge({"robe": Color(0.20, 0.17, 0.18), "sash": Color(0.60, 0.16, 0.12),
 				"hat": "hood", "hat_color": Color(0.46, 0.12, 0.10), "beard": "short",
@@ -855,6 +860,11 @@ func _build(look: Dictionary) -> void:
 			var d := _pivot(hands[1], Vector3(0, -0.05, 0.05))
 			_part(d, _soft(Vector3(0.06, 0.34, 0.03), 0.01), Color(0.72, 0.70, 0.66), Vector3(0, -0.2, 0))
 			_part(d, _soft(Vector3(0.17, 0.05, 0.06), 0.015), Color(0.55, 0.42, 0.22), Vector3(0, -0.02, 0))
+	if look.has("sack"):
+		var sack := _pivot(_torso, Vector3(0, 0.38, -0.3))
+		sack.rotation.x = 0.25
+		_part(sack, _soft(Vector3(0.46, 0.5, 0.26), 0.12), look["sack"], Vector3.ZERO)
+		_part(sack, _soft(Vector3(0.14, 0.12, 0.14), 0.04), Color(look["sack"]).darkened(0.3), Vector3(0, 0.3, 0))
 	if look.has("shield"):
 		var sh := _pivot(_torso, Vector3(ARM_X + 0.1, 0.42, 0.2))
 		sh.rotation.y = 0.35

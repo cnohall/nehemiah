@@ -50,6 +50,7 @@ func _ready() -> void:
 	$Credits.size = $Credits.get_combined_minimum_size()
 	$Credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 32)
 	host_btn.pressed.connect(_on_host)
+	_build_continue()
 	# Replay map: an entry under Host, and the picker over everything
 	_sections_btn = join_btn.duplicate()
 	_sections_btn.name = "SectionsButton"
@@ -178,7 +179,7 @@ func _intro() -> void:
 	UiFx.stagger(column.get_children().filter(func(c): return c != menu and c != more), 0.7, 0.09, 0.25)
 	UiFx.stagger(menu.get_children() + more.get_children(), 0.45, 0.06, 0.65)
 	UiFx.fade_in(verse, 1.0, 1.0)
-	host_btn.grab_focus()
+	(_continue_btn if _continue_btn else host_btn).grab_focus()
 	# Backdrop moves on a Node2D rig: Control positions snap to whole pixels
 	# (gui/common/snap_controls_to_pixels), which turned a ~2px/s drift into
 	# visible one-pixel hops. Node2D transforms stay sub-pixel.
@@ -280,7 +281,30 @@ func _show_default_status() -> void:
 
 func _on_host() -> void:
 	GameState.replay_section = -1
+	GameState.restart_day = -1
 	_host()
+
+# A campaign saved at the dawn of its latest stretch: first on the menu, named by where
+# it stands. Host becomes "New Game" beside it.
+var _continue_btn: Button
+
+func _build_continue() -> void:
+	var saved := GameState.campaign_save()
+	if saved.is_empty():
+		return
+	_continue_btn = host_btn.duplicate() as Button
+	_continue_btn.name = "ContinueButton"
+	_continue_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_continue_btn.text = tr("Continue — %s, day %d") % [tr(GameState.SECTIONS[saved["section"]]["name"]), saved["day"]]
+	_continue_btn.tooltip_text = tr("Resumes at the start of this stretch. Progress is saved at the dawn of each new stretch.")
+	menu.add_child(_continue_btn)
+	menu.move_child(_continue_btn, host_btn.get_index())
+	_continue_btn.pressed.connect(func():
+		GameState.replay_section = -1
+		GameState.restart_day = saved["day"]
+		_host())
+	host_btn.text = "New Game"
+	host_btn.theme_type_variation = join_btn.theme_type_variation
 
 # Solo, offline: no hosting, the game scene runs as its own server
 func _on_learn() -> void:
@@ -318,6 +342,8 @@ func _host() -> void:
 	_stop_world()
 	host_btn.disabled = true
 	_sections_btn.disabled = true
+	if _continue_btn:
+		_continue_btn.disabled = true
 	if _use_steam():
 		net_status.text = "Creating Steam lobby…"
 		NetworkManager.host_steam()
@@ -327,6 +353,8 @@ func _host() -> void:
 func _on_host_failed(reason: String) -> void:
 	host_btn.disabled = false
 	_sections_btn.disabled = false
+	if _continue_btn:
+		_continue_btn.disabled = false
 	net_status.text = reason
 	_resume_world()
 

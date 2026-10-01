@@ -84,9 +84,12 @@ func _watch_newcomers() -> void:
 		var t = e.get("type")
 		if t == Enemy.Type.SCOUT or _seen_today.has(t):
 			continue
+		if t == Enemy.Type.SABOTEUR and not e.is_inside():
+			continue   # called when he's over, not while he's still sneaking up
 		_seen_today[t] = true
 		var line := tr("A brute! He'll batter the wall") if t == Enemy.Type.BRUTE \
-			else tr("Raiders — quick ones, mind the gaps!")
+			else (tr("One's slipped in — the yard! He's after the piles") if t == Enemy.Type.SABOTEUR \
+			else tr("Raiders — quick ones, mind the gaps!"))
 		_call(_nearest_man(e.global_position.x), line, false)
 		return
 

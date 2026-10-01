@@ -14,29 +14,77 @@ extends Node
 const DEFAULT_YARD := Vector2(0.0, 10.0)
 const SECTIONS: Array = [
 	{ "name": "Sheep Gate",     "ref": "Neh. 3:1",  "days": [1,2,3,4],           "twists": ["doors"],                     "yard": Vector2(0, 10),  "terrain": "sheepfold" },
-	{ "name": "Fish Gate",      "ref": "Neh. 3:3",  "days": [5,6,7,8],           "twists": ["doors", "beams"],            "yard": Vector2(-9, 10), "terrain": "fish_market" },
-	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams", "salvage"], "yard": Vector2(0, 11),  "terrain": "ruins" },
-	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "gate": false },
-	{ "name": "Tower of Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "gate": false },
-	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "pressure": 1.1 },
-	{ "name": "Dung Gate",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse" },
+	{ "name": "Fish Gate",      "ref": "Neh. 3:3",  "days": [5,6,7,8],           "twists": ["doors", "beams"],            "yard": Vector2(-9, 10), "terrain": "fish_market", "choices": ["porters", "market"] },
+	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams", "salvage", "ruins"], "yard": Vector2(0, 11),  "terrain": "ruins", "choices": ["dig", "shore"],
+		"recipes": { "Section1": "old", "Section3": "burned" } },
+	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "choices": ["rush", "pack"], "gate": false },
+	{ "name": "Tower of Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
+	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
+	{ "name": "Dung Gate",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
 	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55,
 		"piles": { "StockWater": Vector2(-11.5, 4.5) } },
 	{ "name": "Water Gate",     "ref": "Neh. 3:26", "days": [37,38,39,40,41],    "twists": ["doors", "night"],            "yard": Vector2(6, 11),  "terrain": "ophel" },
 	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped"],          "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1 },
 	{ "name": "East Gate",      "ref": "Neh. 3:29", "days": [48,49,50],          "twists": ["doors", "schemes"],          "yard": Vector2(4, 10),  "terrain": "kidron", "pressure": 1.2 },
-	{ "name": "Miphkad Gate",   "ref": "Neh. 3:31", "days": [51,52],             "twists": ["doors", "beams", "salvage", "mixing", "horn", "schemes"],
-		"yard": Vector2(0, 10), "terrain": "market", "pressure": 1.3 },
+	{ "name": "Miphkad Gate",   "ref": "Neh. 3:31", "days": [51,52],             "twists": ["doors", "beams", "salvage", "mixing", "horn", "schemes", "ruins"],
+		"yard": Vector2(0, 10), "terrain": "market", "pressure": 1.3, "recipes": { "Section1": "burned", "Section4": "old" } },
 ]
+# Choices before a stretch (GDD §6.5): the crew picks one of two ways to meet the work
+# ahead, each a real trade — a gain and a cost, tied to what the stretch brings. Picked on
+# the last card before the work (StoryPlayer), decided by DayDirector (most votes, the host's
+# pick breaks a tie, no votes = the first), in play for that stretch only and written on
+# the scribe's map. The card text is worked out from "mods", so it is always the truth.
+#   mods (1 = unchanged):  work    — hands-on building speed       harm  — blows the wall takes
+#     pressure — foes' pace and numbers     warn — warning time before a wave or surge
+#     beam_solo — a beam dragged alone     carry — walking speed with a load
+#     clear — burned timbers coming down   mix — mortar mixing time
+#   posts: true — the watch posts stand from dawn, stocked
+# Every stretch without its own pair offers the build / guard one: pace (the "In good
+# time" mark) against defence (the "None got through" and "The wall holds" marks).
+const BOONS := {
+	"build": { "title": "Press the work", "ref": "Neh. 4:6", "mods": { "work": 1.2, "harm": 1.25 } },
+	"guard": { "title": "Hold the line", "ref": "Neh. 4:13", "mods": { "work": 0.9, "harm": 0.75 }, "posts": true },
+	"porters": { "title": "Practised porters", "ref": "Neh. 3:3", "mods": { "beam_solo": 1.9, "pressure": 1.15 } },
+	"market": { "title": "Watch the market side", "ref": "Neh. 4:9", "mods": { "work": 0.9, "warn": 1.5 }, "posts": true },
+	"dig": { "title": "Dig out the rubble", "ref": "Neh. 4:2", "mods": { "clear": 2.0, "work": 1.1, "pressure": 1.2 } },
+	"shore": { "title": "Shore up the old courses", "ref": "Neh. 3:6", "mods": { "harm": 0.7, "clear": 0.6 } },
+	"rush": { "title": "Rush the faces", "ref": "Neh. 3:8", "mods": { "work": 1.3, "harm": 1.4 } },
+	"pack": { "title": "Pack the core", "ref": "Neh. 4:6", "mods": { "harm": 0.6, "work": 0.85 } },
+	"hot": { "title": "Fire the ovens high", "ref": "Neh. 3:11", "mods": { "mix": 0.5, "pressure": 1.2 } },
+	"bank": { "title": "Bank the ovens", "ref": "Neh. 3:11", "mods": { "mix": 1.5, "warn": 1.5 }, "posts": true },
+	"terraces": { "title": "Work the terraces", "ref": "Neh. 3:13", "mods": { "work": 1.2, "warn": 0.5 } },
+	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "warn": 2.2, "work": 0.9 }, "posts": true },
+	"bundles": { "title": "Carry in bundles", "ref": "Neh. 3:14", "mods": { "carry": 1.25, "harm": 1.25 } },
+	"road": { "title": "Hold the road", "ref": "Neh. 3:14", "mods": { "harm": 0.8, "carry": 0.85 }, "posts": true },
+}
+const DEFAULT_CHOICES := ["build", "guard"]
+# What a modifier means to the crew: [higher is better?, text for more, text for less]. Each
+# line is "%d%% …"; the % is how far from 1 it is, in the direction of the change.
+const MOD_TEXT := {
+	"work": [true, "Building is %d%% quicker", "Building is %d%% slower"],
+	"harm": [false, "The wall takes %d%% more harm from blows", "The wall takes %d%% less harm from blows"],
+	"pressure": [false, "%d%% more foes", "%d%% fewer foes"],
+	"warn": [true, "Warning time is %d%% longer", "Warning time is %d%% shorter"],
+	"beam_solo": [true, "A beam dragged alone goes %d%% faster", "A beam dragged alone goes %d%% slower"],
+	"carry": [true, "Loaded workers walk %d%% faster", "Loaded workers walk %d%% slower"],
+	"clear": [true, "Burned timbers come down %d%% faster", "Burned timbers come down %d%% slower"],
+	"mix": [false, "Mortar takes %d%% more time to mix", "Mortar takes %d%% less time to mix"],
+}
+# The boon in play for this stretch ("" = none: the first stretch, a replay; every peer,
+# set by DayDirector at its dawn)
+var boon := ""
+signal boon_changed
+
 # Shown under the dawn banner the first time a section uses a twist
 const TWIST_INTRO := {
 	"doors": "Finish the gate: hang its doors, bolts and bars",
 	"beams": "The beams are heavy — carry them in pairs",
-	"salvage": "No quarry stone here — salvage it from the burned rubble",
+	"salvage": "No quarry stone here — salvage it from the burned rubble; heaps outside the wall hold twice as much",
 	"mixing": "Make the mortar: lime and water into the trough, then to the wall",
-	"thick": "The Broad Wall: build it double-thick — more stone, and room for four at the work",
+	"ruins": "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built",
+	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
 	"horn": "They come up the valley in surges — {horn} sounds the horn: gather there",
-	"haul": "A long haul from the yard — drop a load beside a friend to pass it on",
+	"haul": "A long haul from the yard — stack loads on the relay mat halfway, or drop one beside a friend",
 	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand",
 	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
@@ -78,6 +126,9 @@ var posts: bool = "--no-posts" not in OS.get_cmdline_user_args()
 # Trades (GDD §5.10): longer hands-on work, each trade quicker at its own (Trade).
 # `-- --no-trades` for the old times and no perks
 var trades: bool = "--no-trades" not in OS.get_cmdline_user_args()
+# Saboteur (GDD §5.9): from day 6 one slips in now and then to strew the yard's piles.
+# `-- --no-saboteur` to play without him
+var saboteur: bool = "--no-saboteur" not in OS.get_cmdline_user_args()
 signal rules_changed
 
 # Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
@@ -107,7 +158,7 @@ const MARK_NAMES := { Mark.PACE: "In good time", Mark.CLEAN: "None got through",
 # that slow the work down. A section may set its own "par". TODO: tune from playtests
 # (DayDirector prints each section's time against par).
 const PAR_TIME := 420.0
-const PAR_TWIST := { "beams": 60.0, "salvage": 60.0, "mixing": 60.0, "haul": 120.0 }
+const PAR_TWIST := { "beams": 60.0, "salvage": 60.0, "mixing": 60.0, "haul": 120.0, "thick": 60.0 }
 const SOUND_WALL := 0.8    # average wall health for "The wall holds"
 # Each player's best marks per section, kept across runs (for replays)
 const PROGRESS_PATH := "user://progress.cfg"
@@ -193,7 +244,38 @@ func has_twist(twist: String) -> bool:
 
 ## Enemy pace for this section (Fountain Gate is a breather, the finale the hardest)
 func pressure() -> float:
-	return get_current_section().get("pressure", 1.0)
+	return get_current_section().get("pressure", 1.0) * mod("pressure")
+
+## The boon's modifier `key` for this stretch (1 = none)
+func mod(key: String) -> float:
+	return BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+
+## The watch posts stand from dawn (the boon says so)
+func boon_posts() -> bool:
+	return BOONS.has(boon) and BOONS[boon].get("posts", false)
+
+## The two ways to meet stretch `section_index`
+func choices_for(section_index: int) -> Array:
+	return SECTIONS[section_index].get("choices", DEFAULT_CHOICES)
+
+## What a boon gives and what it costs, in the player's language: { "gain": [...], "cost": [...] }
+func boon_lines(key: String) -> Dictionary:
+	var gain: PackedStringArray = []
+	var cost: PackedStringArray = []
+	var boon_def: Dictionary = BOONS[key]
+	for k: String in boon_def["mods"]:
+		var v: float = boon_def["mods"][k]
+		var text: Array = MOD_TEXT[k]
+		var more := v > 1.0
+		var pct := roundi(absf(v - 1.0) * 100.0)
+		var line: String = tr(text[1] if more else text[2]) % pct
+		if more == text[0]:
+			gain.append(line)
+		else:
+			cost.append(line)
+	if boon_def.get("posts", false):
+		gain.append(tr("The watch posts stand from dawn, stocked with stone"))
+	return { "gain": gain, "cost": cost }
 
 ## Today is a night-watch day: darkness falls while the work goes on
 func is_night_day() -> bool:
@@ -250,7 +332,7 @@ func best_marks(section_index: int) -> int:
 
 # Friends and Foes: the section where each foe first shows (enemies by WaveManager's
 # unlock days, the leaders by their story beat, the messenger by the "schemes" twist)
-const MET_AT := { "scout": 0, "brute": 2, "raider": 4, "sanballat": 2, "tobiah": 3, "geshem": 5, "messenger": 10 }
+const MET_AT := { "scout": 0, "brute": 2, "raider": 4, "saboteur": 1, "sanballat": 2, "tobiah": 3, "geshem": 5, "messenger": 10 }
 
 ## Friends and Foes (main menu): who this player has met, kept across runs. Enemies and
 ## the messenger count on sight, the three leaders when their story beat plays.
@@ -381,6 +463,7 @@ func reset() -> void:
 	players.clear()
 	section_marks = _no_marks()
 	chronicle = _no_chronicle()
+	boon = ""
 	_debug_start = attract or tutorial or festival
 
 ## Server: a replay starts on its section's first day
@@ -399,11 +482,63 @@ func apply_festival() -> void:
 func festival_district(section_index: int) -> void:
 	_apply(SECTIONS[section_index]["days"][0], section_index, phase, breaches, targets_done, targets_total)
 
-## Server: a "Play again" run picks up where the last one asked (see restart_day)
+## Server: a "Play again" run picks up where the last one asked (see restart_day). A run
+## picked up from the campaign save (Continue, or trying a stretch again) gets back the
+## marks and the scribe's map of the stretches already built.
 func apply_restart() -> void:
 	if restart_day > 0 and not is_replay():
+		var saved := campaign_save()
+		if saved.get("day", -1) == restart_day:
+			# Quietly: these were judged (and their achievements given) when first earned.
+			# Clients get them with the rest of the state when they ask for the roster.
+			for i in mini(section_marks.size(), saved["marks"].size()):
+				section_marks[i] = saved["marks"][i]
+			for i in mini(chronicle.size(), saved["chronicle"].size()):
+				chronicle[i] = saved["chronicle"][i]
 		_apply(restart_day, _section_index_for_day(restart_day), phase, breaches, targets_done, targets_total)
 	restart_day = -1
+
+# ── Campaign save (Continue) ───────────────────────────────
+# A campaign is ~1.5 hours; a crew that stops after three stretches must be able to pick
+# it up again. At the dawn of each new stretch (after the first) the run is saved as it
+# stood: that stretch's first day, the marks and the chronicle so far. Cleared on the win.
+# Every peer keeps its own; the host's is the one that counts.
+
+## The saved campaign: { day, section, marks, chronicle }, or {} when there is none
+func campaign_save() -> Dictionary:
+	var cfg := ConfigFile.new()
+	if cfg.load(PROGRESS_PATH) != OK or not cfg.has_section("campaign"):
+		return {}
+	var day: int = cfg.get_value("campaign", "day", -1)
+	if day < 1 or day > TOTAL_DAYS:
+		return {}
+	return { "day": day, "section": _section_index_for_day(day),
+		"marks": cfg.get_value("campaign", "marks", []), "chronicle": cfg.get_value("campaign", "chronicle", []) }
+
+func _saveable() -> bool:
+	return not (_debug_start or attract or tutorial or festival or is_replay())
+
+## This run is a campaign the save follows (the HUD says so in the pause menu)
+func saves_campaign() -> bool:
+	return _saveable()
+
+## The dawn of a stretch whose start is what the save now holds (Continue resumes here)
+func dawn_saved() -> bool:
+	return _saveable() and campaign_save().get("day", -1) == current_day
+
+func _save_campaign(day: int) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(PROGRESS_PATH)
+	cfg.set_value("campaign", "day", day)
+	cfg.set_value("campaign", "marks", section_marks.duplicate())
+	cfg.set_value("campaign", "chronicle", chronicle.duplicate(true))
+	cfg.save(PROGRESS_PATH)
+
+func clear_campaign() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(PROGRESS_PATH) == OK and cfg.has_section("campaign"):
+		cfg.erase_section("campaign")
+		cfg.save(PROGRESS_PATH)
 
 ## Debug builds: `-- --day=N` on the command line starts the campaign at day N
 ## (e.g. 8 for brutes, 20 for raiders). Server only, before day 1 begins.
@@ -426,14 +561,33 @@ func apply_attract_start() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
-	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades)
+	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur)
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size)
+	_sync_boon.rpc_id(peer_id, boon)
 	_sync_sun.rpc_id(peer_id, sun_total, sun_left)
 	for i in section_marks.size():
 		if section_marks[i] >= 0:
 			_sync_marks.rpc_id(peer_id, i, section_marks[i])
+
+## Server: the crew's pick for the stretch now dawning (DayDirector)
+func set_boon(key: String) -> void:
+	_apply_boon(key)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_boon.rpc(key)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_boon(key: String) -> void:
+	_apply_boon(key)
+
+func _apply_boon(key: String) -> void:
+	key = key if BOONS.has(key) else ""
+	if current_section_index < chronicle.size():
+		chronicle[current_section_index]["boon"] = key   # the scribe notes how the stretch was met
+	if key != boon:
+		boon = key
+		boon_changed.emit()
 
 ## Server: players joined/left
 func set_crew(size: int) -> void:
@@ -448,11 +602,12 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_rules(w: bool, s: bool, p: bool, t: bool) -> void:
+func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool) -> void:
 	waves = w
 	sun = s
 	posts = p
 	trades = t
+	saboteur = sab
 	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")
@@ -478,7 +633,7 @@ func _apply_marks(section_index: int, mask: int) -> void:
 func _no_chronicle() -> Array:
 	var a := []
 	for i in SECTIONS.size():
-		a.append({ "breaches": 0, "knocked": 0, "nightfalls": 0, "days": 0, "done": false, "late": false, "spare": 0 })
+		a.append({ "breaches": 0, "knocked": 0, "nightfalls": 0, "days": 0, "done": false, "late": false, "spare": 0, "boon": "" })
 	return a
 
 ## Every peer, at each dusk (Main): the day goes into the chronicle
@@ -547,6 +702,9 @@ func _set_state(day: int, section: int, p: Phase, b: int, done: int, total: int)
 	targets_done = done
 	targets_total = total
 	if section_new:
+		# A new stretch's dawn (not the first: a fresh run must not wipe a saved one)
+		if p == Phase.DAWN and section > 0 and _saveable():
+			_save_campaign(day)
 		section_changed.emit(section)
 	if day_new:
 		day_changed.emit(day)
@@ -557,6 +715,8 @@ func _set_state(day: int, section: int, p: Phase, b: int, done: int, total: int)
 	if phase_new:
 		phase_changed.emit(p)
 		if p == Phase.WON:
+			if _saveable():
+				clear_campaign()
 			game_won.emit()
 		elif p == Phase.LOST:
 			game_lost.emit()

@@ -1843,3 +1843,525 @@ msgstr "Seu ofício — mais rápido com carga"
 
 msgid "Your trade — your blows land harder"
 msgstr "Seu ofício — seus golpes acertam mais forte"
+
+msgid "Progress saved — Continue from the title screen"
+msgstr "Progresso salvo — continue pela tela de título"
+
+msgid "Progress is saved at the dawn of each new stretch."
+msgstr "O progresso é salvo ao amanhecer de cada novo trecho."
+
+msgid "Resumes at the start of this stretch. Progress is saved at the dawn of each new stretch."
+msgstr "Retoma no início deste trecho. O progresso é salvo ao amanhecer de cada novo trecho."
+
+msgid "from the north"
+msgstr "do norte"
+
+msgid "from the north-east"
+msgstr "do nordeste"
+
+msgid "from the south-east"
+msgstr "do sudeste"
+
+msgid "from the south"
+msgstr "do sul"
+
+msgid "from the south-west"
+msgstr "do sudoeste"
+
+msgid "from the north-west"
+msgstr "do noroeste"
+
+msgid "Take the other end  [%s]"
+msgstr "Pegue a outra ponta  [%s]"
+
+msgid "Relay mat  %d/%d"
+msgstr "Esteira de revezamento  %d/%d"
+
+msgid "Onslaught"
+msgstr "Investida"
+
+msgid "New at the %s"
+msgstr "Novidade na %s"
+
+msgid "Scattered — tidy  [%s]"
+msgstr "Espalhado — arrume  [%s]"
+
+msgid "What you can do — let go of %s to carry on"
+msgstr "O que você pode fazer — solte %s para continuar"
+
+msgid "%s Drop it — beside a friend, it goes into their hands"
+msgstr "%s Largue — perto de um amigo, vai para as mãos dele"
+
+msgid "A beam goes quicker with a partner on the other end"
+msgstr "Uma viga anda mais rápido com um parceiro na outra ponta"
+
+msgid "[%s] Sling · up close it's the sword"
+msgstr "[%s] Funda · de perto é a espada"
+
+msgid "[%s] Sound the horn — the crew gathers to you"
+msgstr "[%s] Toque o chifre — a equipe se reúne com você"
+
+msgid "%s Help up"
+msgstr "%s Ajudar a levantar"
+
+msgid "%s Take the other end"
+msgstr "%s Pegar a outra ponta"
+
+msgid "%s beside them: hand over the %s"
+msgstr "%s ao lado deles: entregue %s"
+
+msgid "%s Take %s"
+msgstr "%s Pegar %s"
+
+msgid "%s Pick up %s"
+msgstr "%s Pegar %s"
+
+msgid "%s Work it up"
+msgstr "%s Erguer o muro"
+
+msgid "%s Deliver the %s"
+msgstr "%s Entregar %s"
+
+msgid "Watch post: bring %s"
+msgstr "Posto de vigia: traga %s"
+
+msgid "Bring %s"
+msgstr "Traga %s"
+
+msgid "%s Climb over"
+msgstr "%s Escalar"
+
+msgid "%s Tidy the strewn pile"
+msgstr "%s Arrumar a pilha espalhada"
+
+msgid "Saboteur — stop him before he strews the yard"
+msgstr "Sabotador — pare-o antes que espalhe o pátio"
+
+msgid "Don't go with him — just walk away"
+msgstr "Não vá com ele — simplesmente se afaste"
+
+msgid "Watch the %s — %s"
+msgstr "Observe o %s — %s"
+
+msgid "The %s pile was strewn — tidy it (%s at the pile)"
+msgstr "A pilha de %s foi espalhada — arrume-a (%s na pilha)"
+
+msgid "A new robe dye earned: %s — wear it from the menu"
+msgstr "Novo corante de túnica conquistado: %s — vista-o pelo menu"
+
+msgid "%d of %d stretches stand  ·  %d days to the fifty-second"
+msgstr "%d de %d trechos de pé  ·  %d dias até o quinquagésimo segundo"
+
+msgid "Robe: %s"
+msgstr "Túnica: %s"
+
+msgid "%s at %d marks (you have %d)"
+msgstr "%s com %d marcas (você tem %d)"
+
+msgid "Continue — %s, day %d"
+msgstr "Continuar — %s, dia %d"
+
+msgid "One's slipped in — the yard! He's after the piles"
+msgstr "Um se infiltrou — o pátio! Ele quer as pilhas"
+
+msgid "At the gate! Torches!"
+msgstr "Ao portão! Tochas!"
+
+msgid "Beams take two"
+msgstr "Vigas pedem dois"
+
+msgid "Both ends at once — split up!"
+msgstr "As duas pontas ao mesmo tempo — dividam-se!"
+
+msgid "Both ends — mind the lanes!"
+msgstr "As duas pontas — cuidado com as vielas!"
+
+msgid "Brutes for the gate!"
+msgstr "Brutamontes no portão!"
+
+msgid "Brutes for the priests' houses!"
+msgstr "Brutamontes nas casas dos sacerdotes!"
+
+msgid "But now, strengthen my hands."
+msgstr "Agora, pois, fortalece as minhas mãos."
+
+msgid "By the pool"
+msgstr "Junto ao tanque"
+
+msgid "Carry it together to the wall"
+msgstr "Levem-na juntos até o muro"
+
+msgid "Carry the mortar to the wall"
+msgstr "Leve a argamassa até o muro"
+
+msgid "Dig the stone out of the rubble heaps"
+msgstr "Tire a pedra dos montes de entulho"
+
+msgid "Eliashib the high priest"
+msgstr "Eliasibe, o sumo sacerdote"
+
+msgid "Everyone gathers to the horn"
+msgstr "Todos se reúnem ao som do chifre"
+
+msgid "Everything they have — to the gate!"
+msgstr "Com tudo o que têm — ao portão!"
+
+msgid "Ezra the scribe"
+msgstr "Esdras, o escriba"
+
+msgid "Geshem's raiders, from the east!"
+msgstr "Os saqueadores de Gesém, vindos do leste!"
+
+msgid "Go with him and you're led away from the work"
+msgstr "Se for com ele, é afastado da obra"
+
+msgid "Half its height! And they've heard of it…"
+msgstr "Na metade da altura! E eles já ouviram falar…"
+
+msgid "Hananiah the perfumer"
+msgstr "Hananias, o perfumista"
+
+msgid "Hang the doors — the crew walks through, the foe can't"
+msgstr "Instale as portas — a equipe passa, o inimigo não"
+
+msgid "Hanun of Zanoah"
+msgstr "Hanum de Zanoa"
+
+msgid "Heaps outside the wall hold twice as much — if you dare"
+msgstr "Os montes fora do muro rendem o dobro — se você ousar"
+
+msgid "If a fox climbed up it, he would break down their stone wall."
+msgstr "Se uma raposa subisse nele, derrubaria o seu muro de pedra."
+
+msgid "Ignore him — he gives up and leaves"
+msgstr "Ignore-o — ele desiste e vai embora"
+
+msgid "It mixes by itself — wait a moment"
+msgstr "Ela se mistura sozinha — espere um momento"
+
+msgid "It stands up to the brutes twice as long"
+msgstr "Resiste aos brutamontes o dobro do tempo"
+
+msgid "Joiada and Meshullam"
+msgstr "Joiada e Mesulão"
+
+msgid "Lime and water into the trough"
+msgstr "Cal e água na gamela"
+
+msgid "Madder red"
+msgstr "Vermelho de garança"
+
+msgid "Malchijah and Hasshub"
+msgstr "Malquias e Hasube"
+
+msgid "Malchijah son of Rechab"
+msgstr "Malquias filho de Recabe"
+
+msgid "Malchijah the goldsmith"
+msgstr "Malquias, o ourives"
+
+msgid "Meremoth the priest"
+msgstr "Meremote, o sacerdote"
+
+msgid "Mix the mortar"
+msgstr "Misture a argamassa"
+
+msgid "More stone to each piece, four hands at the work"
+msgstr "Mais pedra em cada peça, quatro mãos na obra"
+
+msgid "Narrow lanes — one at a time"
+msgstr "Vielas estreitas — um de cada vez"
+
+msgid "Nehemiah son of Azbuk"
+msgstr "Neemias filho de Azbuque"
+
+msgid "Nehemiah the governor"
+msgstr "Neemias, o governador"
+
+msgid "New Game"
+msgstr "Novo jogo"
+
+msgid "Night falls on the work"
+msgstr "A noite cai sobre a obra"
+
+msgid "No stone pile here"
+msgstr "Aqui não há pilha de pedra"
+
+msgid "North up"
+msgstr "Norte para cima"
+
+msgid "Olive green"
+msgstr "Verde-oliva"
+
+msgid "Out of the dark — both ends!"
+msgstr "Saem da escuridão — pelas duas pontas!"
+
+msgid "Pass loads over rather than queue"
+msgstr "Passem as cargas de mão em mão em vez de fazer fila"
+
+msgid "Piles scattered"
+msgstr "Pilhas espalhadas"
+
+msgid "Priests' houses between yard and wall"
+msgstr "Casas de sacerdotes entre o pátio e o muro"
+
+msgid "Quiet in the valley today."
+msgstr "Hoje o vale está quieto."
+
+msgid "Quiet ones — after the yard!"
+msgstr "Os silenciosos — atrás do pátio!"
+
+msgid "Raiders on the haul road!"
+msgstr "Saqueadores na estrada de carga!"
+
+msgid "Raiders up both sides of the valley!"
+msgstr "Saqueadores subindo pelos dois lados do vale!"
+
+msgid "Raise both pillars of the gate"
+msgstr "Erga os dois pilares do portão"
+
+msgid "Shallum's daughters"
+msgstr "As filhas de Salum"
+
+msgid "Shallun son of Colhozeh"
+msgstr "Salum filho de Col-Hozé"
+
+msgid "So we did the work. Half of the people held the spears from the rising of the morning until the stars appeared."
+msgstr "Assim fazíamos a obra. Metade do povo segurava as lanças desde o raiar da manhã até que as estrelas aparecessem."
+
+msgid "Sound the horn"
+msgstr "Toque o chifre"
+
+msgid "Stack loads on the relay mat halfway"
+msgstr "Empilhe cargas na esteira de revezamento, no meio do caminho"
+
+msgid "Stone from the rubble"
+msgstr "Pedra do entulho"
+
+msgid "Take the other end"
+msgstr "Pegue a outra ponta"
+
+msgid "The Broad Wall"
+msgstr "O Muro Largo"
+
+msgid "The God of heaven will prosper us. Therefore we, his servants, will arise and build"
+msgstr "O Deus dos céus nos fará prosperar. Por isso nós, seus servos, nos levantaremos e construiremos"
+
+msgid "The foe comes out of the dark"
+msgstr "O inimigo sai da escuridão"
+
+msgid "The gatekeeper"
+msgstr "O porteiro"
+
+msgid "The last of it — hold on!"
+msgstr "O último trecho — aguentem firmes!"
+
+msgid "The last stone — all of them at once!"
+msgstr "A última pedra — todos de uma vez!"
+
+msgid "The long haul"
+msgstr "O longo transporte"
+
+msgid "The night watch"
+msgstr "A vigília da noite"
+
+msgid "The pool is by the wall"
+msgstr "O tanque fica junto ao muro"
+
+msgid "The priests' stretch is rising!"
+msgstr "O trecho dos sacerdotes está subindo!"
+
+msgid "The sons of Hassenaah"
+msgstr "Os filhos de Hassenaá"
+
+msgid "The temple servants of Ophel"
+msgstr "Os servos do templo de Ofel"
+
+msgid "The yard is far from the wall"
+msgstr "O pátio fica longe do muro"
+
+msgid "Then bring timber to the gap"
+msgstr "Depois leve madeira até a brecha"
+
+msgid "They come up the valley in surges"
+msgstr "Sobem pelo vale em ondas"
+
+msgid "They want the last gap!"
+msgstr "Eles querem a última brecha!"
+
+msgid "They will not know or see, until we come in among them and kill them, and cause the work to cease."
+msgstr "Eles não saberão nem verão, até que entremos no meio deles, os matemos e façamos cessar a obra."
+
+msgid "They'll try the gate before its doors hang!"
+msgstr "Vão tentar o portão antes que as portas sejam instaladas!"
+
+msgid "They're all coming!"
+msgstr "Estão vindo todos!"
+
+msgid "They're at the gate — hold it!"
+msgstr "Estão no portão — segurem!"
+
+msgid "They've all come together!"
+msgstr "Juntaram-se todos!"
+
+msgid "Torches light the way — each worker has a lamp"
+msgstr "Tochas iluminam o caminho — cada trabalhador leva uma lamparina"
+
+msgid "Tyrian purple"
+msgstr "Púrpura de Tiro"
+
+msgid "Undyed linen"
+msgstr "Linho cru"
+
+msgid "Uzziel the goldsmith"
+msgstr "Uziel, o ourives"
+
+msgid "Wall across"
+msgstr "Muro de lado a lado"
+
+msgid "Watch the carpenter — two to a beam"
+msgstr "Observe o carpinteiro — dois por viga"
+
+msgid "Water close at hand — mortar comes quickly"
+msgstr "Água por perto — a argamassa sai rápido"
+
+msgid "What are these feeble Jews doing?"
+msgstr "O que estão fazendo esses fracos judeus?"
+
+msgid "What can I do here?"
+msgstr "O que posso fazer aqui?"
+
+msgid "Wherever you hear the sound of the trumpet, rally there to us. Our God will fight for us."
+msgstr "Onde quer que vocês ouçam o som da trombeta, reúnam-se ali conosco. O nosso Deus lutará por nós."
+
+msgid "Woad blue"
+msgstr "Azul de pastel-dos-tintureiros"
+
+msgid "Before the work"
+msgstr "Antes do trabalho"
+
+msgid "How will you meet it?"
+msgstr "Como vocês vão enfrentá-lo?"
+
+msgid "The crew chose: %s"
+msgstr "A equipe escolheu: %s"
+
+msgid "Outer face"
+msgstr "Face externa"
+
+msgid "Inner face"
+msgstr "Face interna"
+
+msgid "Clear the charred timbers"
+msgstr "Derrubar as vigas queimadas"
+
+msgid "←  →   Choose          E · Click   Confirm"
+msgstr "←  →   Escolher          E · Clique   Confirmar"
+
+msgid "Old stones, burned timbers"
+msgstr "Pedras velhas, vigas queimadas"
+
+msgid "Old and burned"
+msgstr "Velho e queimado"
+
+msgid "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built"
+msgstr "Nem todo trecho começa vazio: em alguns ainda restam fiadas antigas, e as vigas queimadas precisam ser derrubadas antes de construir"
+
+msgid "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows"
+msgstr "A Muralha Larga: levantem a face externa, depois a interna e preencham entre elas — cabem quatro trabalhando, e ela recebe metade dos golpes"
+
+msgid "“The work is great and large.” Choose how the crew meets this stretch; each way has its price. The crew's pick decides; the host breaks a tie."
+msgstr "“A obra é grande e extensa.” Escolham como a equipe enfrentará este trecho; cada caminho tem seu preço. A maioria decide; o anfitrião desempata."
+
+msgid "Press the work"
+msgstr "Acelerar a obra"
+
+msgid "Hold the line"
+msgstr "Manter a linha"
+
+msgid "Practised porters"
+msgstr "Carregadores experientes"
+
+msgid "Watch the market side"
+msgstr "Vigiar o lado do mercado"
+
+msgid "Dig out the rubble"
+msgstr "Remover os entulhos"
+
+msgid "Shore up the old courses"
+msgstr "Escorar as fiadas antigas"
+
+msgid "Rush the faces"
+msgstr "Acelerar as faces"
+
+msgid "Pack the core"
+msgstr "Compactar bem o núcleo"
+
+msgid "Fire the ovens high"
+msgstr "Atiçar os fornos"
+
+msgid "Bank the ovens"
+msgstr "Moderar os fornos"
+
+msgid "Work the terraces"
+msgstr "Trabalhar nos terraços"
+
+msgid "Lookouts on the heights"
+msgstr "Vigias nas alturas"
+
+msgid "Carry in bundles"
+msgstr "Carregar em fardos"
+
+msgid "Hold the road"
+msgstr "Guardar o caminho"
+
+msgid "Building is %d%% quicker"
+msgstr "Constrói-se %d%% mais rápido"
+
+msgid "Building is %d%% slower"
+msgstr "Constrói-se %d%% mais devagar"
+
+msgid "The wall takes %d%% more harm from blows"
+msgstr "A muralha sofre %d%% mais dano dos golpes"
+
+msgid "The wall takes %d%% less harm from blows"
+msgstr "A muralha sofre %d%% menos dano dos golpes"
+
+msgid "%d%% more foes"
+msgstr "%d%% mais inimigos"
+
+msgid "%d%% fewer foes"
+msgstr "%d%% menos inimigos"
+
+msgid "Warning time is %d%% longer"
+msgstr "O aviso vem %d%% mais cedo"
+
+msgid "Warning time is %d%% shorter"
+msgstr "O aviso vem %d%% mais tarde"
+
+msgid "A beam dragged alone goes %d%% faster"
+msgstr "Uma viga arrastada sozinho vai %d%% mais rápido"
+
+msgid "A beam dragged alone goes %d%% slower"
+msgstr "Uma viga arrastada sozinho vai %d%% mais devagar"
+
+msgid "Loaded workers walk %d%% faster"
+msgstr "Quem leva carga anda %d%% mais rápido"
+
+msgid "Loaded workers walk %d%% slower"
+msgstr "Quem leva carga anda %d%% mais devagar"
+
+msgid "Burned timbers come down %d%% faster"
+msgstr "As vigas queimadas caem %d%% mais rápido"
+
+msgid "Burned timbers come down %d%% slower"
+msgstr "As vigas queimadas caem %d%% mais devagar"
+
+msgid "Mortar takes %d%% more time to mix"
+msgstr "A argamassa leva %d%% mais tempo para misturar"
+
+msgid "Mortar takes %d%% less time to mix"
+msgstr "A argamassa leva %d%% menos tempo para misturar"
+
+msgid "The watch posts stand from dawn, stocked with stone"
+msgstr "Os postos de guarda estão de pé desde o amanhecer, com pedras"

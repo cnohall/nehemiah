@@ -69,10 +69,16 @@ var _carvings: Array[Label3D] = []   # names on their tablets
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	# The stretch's own arc: the enemy answers the work at half and at the last unit
+	var beats := SectionBeats.new()
+	beats.name = "SectionBeats"
+	add_child(beats)
 	# The day's record and its threats, kept in the world (diegetic HUD)
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
 	add_child(Taunts.new())
+	add_child(RelayMat.new())   # the long haul's halfway stack (Dung Gate)
+	add_child(Leaders.new())    # Sanballat, Tobiah, Geshem watching from the rise at the peaks
 	if GameState.attract:
 		_start_attract()
 		return
@@ -103,6 +109,7 @@ func _ready() -> void:
 	hud.begin_now_requested.connect(director.force_ready)
 	director.story_ended.connect(story.close)
 	story.finished.connect(_on_story_finished)
+	story.choice_made.connect(director.cast_choice)
 	story.start_now_requested.connect(director.force_ready)
 	# After the ending story: the credits, then the end screen
 	credits = CreditsRoll.new()
@@ -510,7 +517,7 @@ func _assign_colors() -> void:
 		players.map(func(p): return p.is_bot()))
 	for slot in players.size():
 		var c: Color = PLAYER_COLORS[slot % PLAYER_COLORS.size()]
-		players[slot].set_slot(slot, c, trades[slot])
+		players[slot].set_slot(slot, c, trades[slot], NetworkManager.dye_of(players[slot].worker_id()))
 		if hud:
 			hud.set_player_color(slot, c, trades[slot])
 

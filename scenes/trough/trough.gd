@@ -55,7 +55,7 @@ func _process(delta: float) -> void:
 				has_lime = false
 				has_water = false
 				mortar_ready = true
-		_bar.show_value(1.0 - mix_left / MIX_TIME, BAR_COLOR)
+		_bar.show_value(1.0 - mix_left / (MIX_TIME * GameState.mod("mix")), BAR_COLOR)
 	_label.visible = _active() and not mixing and _local_player_near()
 
 # ── Build-site side: takes lime and water ──────────────────
@@ -78,7 +78,7 @@ func deposit(material: String, _amount: int) -> bool:
 	else:
 		has_water = true
 	if has_lime and has_water:
-		mix_left = MIX_TIME
+		mix_left = MIX_TIME * GameState.mod("mix")
 	return true
 
 func can_build() -> bool:

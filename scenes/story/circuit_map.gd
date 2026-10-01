@@ -442,6 +442,8 @@ func _note_for(c: Dictionary) -> PackedStringArray:
 		lines.append(tr_n("%d day to spare", "%d days to spare", c["spare"]) % c["spare"])
 	elif c["knocked"] > 0:
 		lines.append(tr("rebuilt what fell"))
+	if GameState.BOONS.has(c.get("boon", "")):
+		lines.append(tr(GameState.BOONS[c["boon"]]["title"]).to_lower())   # how the crew met it
 	return lines
 
 # Italic, a little aslant, like a hand in the margin

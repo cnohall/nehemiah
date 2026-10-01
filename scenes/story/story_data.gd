@@ -11,6 +11,10 @@ extends RefCounted
 #   sky   — "night" | "dawn" | "day" | "dusk"   (drawn backdrop)
 #   built — 0–1, how much of the wall stands     (drawn backdrop)
 #   met   — Friends and Foes key this slide introduces (GameState.mark_met)
+#   twist — a twist key (GameState.TWIST_INTRO): three drawn panels of how it works
+#           (TwistCard); one per twist new to the section, after its card
+#   choice — true: the crew picks a boon for the stretch (GameState.BOONS), sent to the
+#           DayDirector (StoryPlayer.choice_made)
 #   map   — section index: the circuit map instead of a backdrop (CircuitMap), sections
 #           before it standing; "inspect": true for the night ride, every stretch broken;
 #           "finale": true for the ending, the last stretch rises and the ring closes
@@ -124,7 +128,38 @@ static func slides_for_day(day: int) -> Array:
 		"ref": section["ref"],
 		"map": i,
 	})
+	# What's new here, drawn: the whole crew reads it before the work starts (the dawn
+	# banner alone went unread with scouts coming)
+	var before: Array = GameState.SECTIONS[i - 1].get("twists", []) if i > 0 else []
+	for twist: String in section.get("twists", []):
+		if twist in before or TwistCard.captions(twist).is_empty():
+			continue
+		slides.append({
+			"eyebrow": TranslationServer.translate("New at the %s") % TranslationServer.translate(section["name"]),
+			"title": TWIST_TITLES.get(twist, twist),
+			"twist": twist,
+		})
+	if choice_offered(i):
+		slides.append({
+			"eyebrow": "Before the work",
+			"title": "How will you meet it?",
+			"text": "“The work is great and large.” Choose how the crew meets this stretch; each way has its price. The crew's pick decides; the host breaks a tie.",
+			"ref": "Nehemiah 4:19",
+			"choice": true,
+			"sky": "dawn", "built": 0.3,
+		})
 	return slides
+
+## The last card before a new stretch asks how the crew will meet it (campaign only)
+static func choice_offered(section_index: int) -> bool:
+	return section_index > 0 and not GameState.is_replay() and not GameState.free_play() and not GameState.attract
+
+const TWIST_TITLES := {
+	"doors": "Hang the doors", "beams": "Beams take two", "salvage": "Stone from the rubble",
+	"mixing": "Mix the mortar", "thick": "The Broad Wall", "ruins": "Old stones, burned timbers", "horn": "Sound the horn",
+	"haul": "The long haul", "spring": "By the pool", "night": "The night watch",
+	"cramped": "Narrow lanes", "schemes": "Come down to Ono",
+}
 
 ## Debug builds: `-- --nostory` skips every card
 static func disabled() -> bool:

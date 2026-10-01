@@ -64,7 +64,7 @@ const DECEL           := 160.0    # ~0.05 s to a stop
 const BEAM_SOLO_SPEED := 2.4
 const BEAM_PAIR_SPEED := 4.8
 const BEAM_TETHER     := 2.4      # max distance between the two ends' carriers
-const BEAM_HELP_REACH := 2.0
+const BEAM_HELP_REACH := 3.2      # from the carrier: covers the dragging end, where the tag is
 const BEAM_HOLD_Y     := 1.25     # shoulder height
 const FOCUS_COLOR     := Color(0.99, 0.93, 0.74, 0.95)   # cream ring under what [E] will use
 const FOCUS_POLL      := 0.1
@@ -109,6 +109,7 @@ var slot_color := Color.WHITE   # ring / HUD colour, set by Main
 var _slot := 0                  # crew slot, set by Main (picks the dusk dance)
 var trade := 0                  # Trade, set by Main with the slot: what this worker is quicker at
 var _slotted := false
+var _dye := 0                   # robe dye (Dyes), set by Main with the slot
 var _facing := "down"
 var _is_busy := false
 var _sling_cd := 0.0
@@ -129,6 +130,7 @@ var _dash_dir := Vector3.ZERO
 var _focus_ring: MeshInstance3D
 var _focus_poll := 0.0
 var _beam: Node3D   # carried beam, placed in world space between the two ends
+var _beam_tag: WorldTag   # "Take the other end" over a lone beam's dragging end, for the others
 var _buffered := {}   # action → seconds left to act on an early press
 # Hands-on building: the site we're working at (owner) / registered with (server)
 var _work_site: Node3D
@@ -245,15 +247,16 @@ func _exit_tree() -> void:
 	if local == self:
 		local = null
 
-func set_slot(slot: int, c: Color, trade_index := -1) -> void:
+func set_slot(slot: int, c: Color, trade_index := -1, dye := 0) -> void:
 	var t := trade_index if trade_index >= 0 else slot % CharacterRig.TRADES.size()
-	if _slotted and slot == _slot and c == slot_color and t == trade:
+	if _slotted and slot == _slot and c == slot_color and t == trade and dye == _dye:
 		return   # the crew list changed, not us — don't rebuild the rig
 	_slotted = true
 	_slot = slot
 	slot_color = c
 	trade = t
-	_sprite.set_look(CharacterRig.worker_look(trade, c))
+	_dye = dye
+	_sprite.set_look(Dyes.apply(CharacterRig.worker_look(trade, c), dye))
 	_sprite.set_ring_color(Color(0, 0, 0, 0) if GameState.attract else c)   # the title backdrop stays unmarked
 	_refresh_pip()
 	_rebuild_carry_prop()   # a new rig means a new chest anchor
@@ -394,9 +397,9 @@ func _handle_movement(delta: float) -> void:
 		_dash_time -= delta
 		velocity = _dash_dir * DASH_SPEED
 	else:
-		var target := dir * (CARRY_SPEED * Trade.carry_mult(trade) if not carried_kind.is_empty() else RUN_SPEED)
+		var target := dir * (CARRY_SPEED * Trade.carry_mult(trade) * GameState.mod("carry") if not carried_kind.is_empty() else RUN_SPEED)
 		if on_beam:
-			target = dir * (BEAM_PAIR_SPEED if _beam_partner() != null else BEAM_SOLO_SPEED)
+			target = dir * (BEAM_PAIR_SPEED if _beam_partner() != null else minf(BEAM_SOLO_SPEED * GameState.mod("beam_solo"), BEAM_PAIR_SPEED))
 		if _charging:
 			target *= CHARGE_MOVE_MULT
 		var rate := ACCEL if target.length_squared() > velocity.length_squared() else DECEL
@@ -461,6 +464,7 @@ func _update_beam() -> void:
 		if _beam != null:
 			_beam.queue_free()
 			_beam = null
+			_beam_tag = null
 		return
 	if _beam == null:
 		_beam = Node3D.new()
@@ -484,6 +488,24 @@ func _update_beam() -> void:
 	if z.length_squared() < 0.01:
 		z = Vector3.FORWARD
 	_beam.global_transform = Transform3D(Basis(x, z.cross(x), z), (a + b) * 0.5)
+	_update_beam_tag(b, partner == null)
+
+# Playtest: nobody knew a beam takes two. While one drags it alone, the free end asks
+# every other worker (on their own screen) to take it — once they stand free to help.
+func _update_beam_tag(free_end: Vector3, alone: bool) -> void:
+	var me := Player.local
+	var shown := alone and me != null and me != self and not me.downed and me.carried_kind.is_empty() 		and me.helping_id == 0 and GameState.phase == GameState.Phase.WORK
+	if shown and _beam_tag == null:
+		_beam_tag = WorldTag.make(WorldTag.Kind.SITE)
+		_beam_tag.top_level = true
+		_beam.add_child(_beam_tag)
+	if _beam_tag == null:
+		return
+	_beam_tag.visible = shown
+	_beam_tag.pulse = shown
+	if shown:
+		_beam_tag.global_position = free_end + Vector3.UP * 1.6
+		_beam_tag.text = tr("Take the other end  [%s]") % InputMode.key("interact")
 
 func _facing_vector() -> Vector3:
 	match _facing:
@@ -532,7 +554,7 @@ func _dash_fx() -> void:
 ## What [E] acts on from `at`, in priority order: [Act, target]. The one rule for both
 ## the focus ring (owner, from replicated state — Overcooked's counter highlight) and
 ## _server_interact, so the ring always shows exactly what the press will do.
-enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK }
+enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK, TIDY }
 
 func _interact_choice(at: Vector3) -> Array:
 	# Helping a fallen teammate comes first
@@ -570,6 +592,10 @@ func _interact_choice(at: Vector3) -> Array:
 			return [Act.TALK, folk]
 	if site != null:
 		return [Act.WORK, site]
+	# A pile the saboteur strewed: tidy it (worked like a stage) before it gives anything
+	var mess := _nearest_in_reach("scattered_piles", at, func(p): return p.can_build())
+	if mess != null and (item == null or _reach_dist(mess, at) <= _reach_dist(item, at)):
+		return [Act.TIDY, mess]
 	# Whichever is closer: something lying on the ground, or a stockpile
 	if item != null and (pile == null or _reach_dist(item, at) <= _reach_dist(pile, at)):
 		return [Act.TAKE_ITEM, item]
@@ -603,11 +629,11 @@ func _update_focus(delta: float) -> void:
 	var spot := target.global_position
 	var size := 1.5
 	var lift := 0.05
-	if target.has_method("approach_point"):
-		spot = target.approach_point(global_position, 0.0)
-	elif target.is_in_group("supply_piles"):
+	if target.is_in_group("supply_piles") or target.is_in_group("scattered_piles"):
 		size = 2.6
 		lift = 0.1   # over the pile's flagstone pad
+	elif target.has_method("approach_point"):
+		spot = target.approach_point(global_position, 0.0)
 	elif target.is_in_group("dropped_items"):
 		size = 1.1
 	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + lift, spot.z)
@@ -715,6 +741,8 @@ func _server_interact(at: Vector3) -> void:
 				_start_work(target)
 			elif target.try_build():
 				_action.rpc("halfslash")
+		Act.TIDY:
+			_start_work(target)
 		Act.TAKE_ITEM:
 			var kind: String = target.kind
 			if target.take():
@@ -836,6 +864,12 @@ func _drop_carried(at: Vector3) -> void:
 	item.kind = carried_kind
 	item.position = Vector3(at.x + randf_range(-DROP_JITTER, DROP_JITTER), GROUND_Y,
 		at.z + randf_range(-DROP_JITTER, DROP_JITTER))
+	# The long haul's relay mat: stacked in a free place, not left loose
+	for mat: Node3D in get_tree().get_nodes_in_group("relay_mats"):
+		if at.distance_to(mat.global_position) < mat.REACH:
+			var slot: Vector3 = mat.free_slot()
+			if slot != Vector3.INF:
+				item.position = Vector3(slot.x, GROUND_Y, slot.z)
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
 	items.add_child(item, true)

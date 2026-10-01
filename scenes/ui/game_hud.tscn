@@ -463,6 +463,14 @@ theme_type_variation = &"Body"
 text = "The game keeps running for your crew while this is open."
 autowrap_mode = 3
 
+[node name="SaveHint" type="Label" parent="Root/PauseMenu/Center/Modal/VBox"]
+visible = false
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "Progress is saved at the dawn of each new stretch."
+autowrap_mode = 3
+
 [node name="Gap" type="Control" parent="Root/PauseMenu/Center/Modal/VBox"]
 custom_minimum_size = Vector2(0, 8)
 layout_mode = 2

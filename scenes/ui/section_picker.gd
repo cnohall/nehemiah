@@ -12,7 +12,7 @@ signal closed
 
 const TWIST_NAMES := {
 	"doors": "Doors", "beams": "Beams", "salvage": "Salvage", "mixing": "Mortar mixing",
-	"thick": "Double-thick wall", "horn": "The horn",
+	"thick": "Double-thick wall", "ruins": "Old and burned", "horn": "The horn",
 	"haul": "Long haul", "spring": "The spring", "night": "Night watch", "cramped": "Narrow lanes",
 	"schemes": "Schemes",
 }

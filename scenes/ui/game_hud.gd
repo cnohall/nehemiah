@@ -25,6 +25,7 @@ const TALLY_H       := 118.0   # …plus the numbers row…
 const CREW_H        := 40.0    # …plus one line per worker's share (multiplayer)
 const MARKS_H       := 64.0    # …plus the section's marks on its last day…
 const READY_H       := 56.0    # …plus who's ready to go on
+const SUB_LINE_H    := 28.0    # …plus each extra line under the title (days to spare, the campaign)
 const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
@@ -40,6 +41,7 @@ const CONTROLS := [
 	["dash", "Dash"],
 	["throw", "Sling — charge, then throw"],
 	["horn", "Horn — call the crew"],   # only in sections with the horn
+	["reveal", "Hold: what can I do here?"],
 	["pause", "Menu"],   # "Pause · menu" when playing alone (see _refresh_controls)
 ]
 
@@ -100,6 +102,8 @@ var _style_world := false
 # Where this stretch lies on the real wall, and which way north is in the view (the same
 # plan and needle as Explore Jerusalem's journal), top right under the threat plaque
 var _compass: RingCompass
+# Robe dyes open when this game began: a new one earned by today's marks gets a line
+var _dyes_at_start := -1
 
 func _ready() -> void:
 	# Keeps running while a solo game is paused (menus, settings, fades)
@@ -107,6 +111,7 @@ func _ready() -> void:
 	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
 		UiStyle.ornament(p)
 	_build_player_cards()
+	_dyes_at_start = Dyes.unlocked_count()
 	_build_controls_hint()
 	_build_next_line()
 	_build_next_caption()
@@ -120,6 +125,11 @@ func _ready() -> void:
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
 	$Root.move_child(alerts, banner.get_index())
+	# Hold [Tab] / View: a chip over everything near that answers a press
+	var lens := ActionLens.new()
+	$Root.add_child(lens)
+	$Root.move_child(lens, banner.get_index())
+	add_child(BotDemo.new())   # "Watch the carpenter — two to a beam"
 	if NetworkManager.in_steam_lobby():
 		_build_invite_panel()
 	breach_pips.count = GameState.MAX_BREACHES
@@ -141,6 +151,8 @@ func _ready() -> void:
 		_build_trade_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
 		var pause_vb := $Root/PauseMenu/Center/Modal/VBox
 		_build_trade_row(pause_vb, $Root/PauseMenu/Center/Modal/VBox/Settings.get_index(), true)
+		_build_dye_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
+		_build_dye_row(pause_vb, $Root/PauseMenu/Center/Modal/VBox/Settings.get_index(), true)
 	if is_host:
 		_build_bot_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
 		# Also from the menu: mid-day, and reachable on a pad
@@ -150,6 +162,7 @@ func _ready() -> void:
 		menu.add_child(rule)
 		menu.move_child(rule, at)
 		_build_bot_row(menu, at + 1, true)
+	$Root/PauseMenu/Center/Modal/VBox/SaveHint.visible = GameState.saves_campaign()
 	# Someone joined a paused solo game: the world can't stay frozen for them
 	NetworkManager.peer_connected.connect(func(_id: int):
 		get_tree().paused = false
@@ -282,12 +295,38 @@ func _close_pause() -> void:
 func _exit_tree() -> void:
 	InputMode.set_menu_open(false)
 	get_tree().paused = false
+	_log_session()
+
+# Playtest 3: where does a session stop? One line per game left (user://sessions.log):
+# when, where on the circuit, what was going on, how many played. Stops at a section's
+# boundary → the Continue save; stops mid-stretch → teaching and pacing.
+const SESSION_LOG := "user://sessions.log"
+
+var _logged := false
+
+func _log_session() -> void:
+	if _logged or GameState.attract or GameState.free_play():
+		return
+	_logged = true
+	var f := FileAccess.open(SESSION_LOG, FileAccess.READ_WRITE) if FileAccess.file_exists(SESSION_LOG) \
+		else FileAccess.open(SESSION_LOG, FileAccess.WRITE)
+	if f == null:
+		return
+	f.seek_end()
+	var pos := GameState.day_in_section(GameState.current_day)
+	f.store_line("%s  section=%d(%s) day=%d(%d/%d) phase=%s progress=%d/%d crew=%d replay=%d" % [
+		Time.get_datetime_string_from_system(), GameState.current_section_index,
+		GameState.get_current_section()["name"], GameState.current_day, pos.x + 1, pos.y,
+		GameState.Phase.keys()[GameState.phase], GameState.targets_done, GameState.targets_total,
+		GameState.crew_size, GameState.replay_section])
+	f.close()
 
 # No other people connected (bots don't count): pausing freezes the world
 func _solo() -> bool:
 	return multiplayer.get_peers().is_empty()
 
 func _leave() -> void:
+	_log_session()   # before the reset below wipes where we were
 	get_tree().paused = false
 	NetworkManager.disconnect_session()
 	GameState.reset()
@@ -430,6 +469,11 @@ func _next_text() -> String:
 	if Time.get_ticks_msec() < _knocked_until:
 		return "A finished piece was knocked down — build it back up"
 	var left := GameState.targets_total - GameState.targets_done
+	# A saboteur strewed a pile: nothing comes from it until it's tidied
+	if me.carried_kind.is_empty():
+		var mess := get_tree().get_first_node_in_group("scattered_piles")
+		if mess != null:
+			return tr("The %s pile was strewn — tidy it (%s at the pile)") % [_material_name(mess.kind), InputMode.key("interact")]
 	var site := SiteFocus.site()
 	if site == null:
 		# Only "done" when it is (playtest 2: players thought the wall stood and waited
@@ -534,6 +578,10 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			if first_day:
 				for twist: String in GameState.new_twists():
 					sub += "\n" + tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
+				if GameState.BOONS.has(GameState.boon):
+					var lines := GameState.boon_lines(GameState.boon)
+					sub += "\n" + tr("The crew chose: %s") % tr(GameState.BOONS[GameState.boon]["title"])
+					sub += "  ·  " + "  ·  ".join(lines["gain"] + lines["cost"])
 			if GameState.sun_total > 0.0:
 				var pos := GameState.day_in_section(GameState.current_day)
 				if pos.x == 0:
@@ -542,6 +590,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 					sub += "\n" + tr("The last day of this stretch — it must stand before the stars appear")
 				else:
 					sub += "\n" + tr("%d of %d stand — %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
+			if first_day and GameState.dawn_saved():
+				sub += "\n" + tr("Progress saved — Continue from the title screen")
 			if not GameState.free_play():
 				_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
@@ -835,6 +885,18 @@ func show_tally(stats: Dictionary) -> void:
 		var spare: int = stats.get("spare", 0)
 		if GameState.sun_total > 0.0 and spare > 0:
 			sub += "\n" + tr_n("Finished with %d day to spare", "Finished with %d days to spare", spare) % spare
+	# Marks turn into robe dyes (Dyes): say so the evening one is earned
+	if stats.has("marks") and not GameState.attract:
+		var now := Dyes.unlocked_count()
+		if now > _dyes_at_start:
+			_dyes_at_start = now
+			sub += "
+" + tr("A new robe dye earned: %s — wear it from the menu") % tr(Dyes.LIST[now - 1][0])
+	# Where the campaign stands: the far goal in view every evening (a pull to day 52)
+	if not GameState.is_replay() and not GameState.attract:
+		var stood := GameState.current_section_index + (1 if stats.has("marks") else 0)
+		var days_left := GameState.TOTAL_DAYS - day
+		sub += "\n" + tr("%d of %d stretches stand  ·  %d days to the fifty-second") % [stood, GameState.SECTIONS.size(), days_left]
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -849,6 +911,8 @@ func show_tally(stats: Dictionary) -> void:
 		[stats[pre + "loads"], "Loads carried", func(v: int): return str(v)],
 		[stats[pre + "foes"], "Foes felled", func(v: int): return str(v)],
 	]
+	if stats.get("scattered", 0) > 0 and not rated:
+		counts.append([stats["scattered"], "Piles scattered", func(v: int): return str(v)])
 	for i in counts.size():
 		var cell := _stat(counts[i][2].call(0), counts[i][1])
 		row.add_child(cell)
@@ -870,7 +934,8 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(_ready_row)
 		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0) + (READY_H if waits else 0.0)
+	banner.offset_bottom = BANNER_H + TALLY_H + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_H if rated else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
+") * SUB_LINE_H
 	_tally.show()
 	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
@@ -1084,6 +1149,31 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 
 # A trade to pick: the worker in its dress, its name under; the chosen one sits pressed
 # into the parchment with a terracotta frame
+# Robe dye (Dyes): one button that steps through the dyes this player has earned by
+# marks, and says what the next one takes
+func _build_dye_row(vb: Control, at: int, in_menu: bool) -> void:
+	var b := Button.new()
+	b.theme_type_variation = &"GhostButton"
+	b.focus_mode = Control.FOCUS_ALL if in_menu else Control.FOCUS_NONE
+	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	vb.add_child(b)
+	vb.move_child(b, at)
+	var refresh := func():
+		var marks := Dyes.earned()
+		var i: int = Settings.dye if Dyes.unlocked(Settings.dye, marks) else 0
+		var txt := tr("Robe: %s") % tr(Dyes.LIST[i][0])
+		var nxt := Dyes.next(marks)
+		if not nxt.is_empty():
+			txt += "  ·  " + tr("%s at %d marks (you have %d)") % [tr(nxt[0]), nxt[1], marks]
+		b.text = txt
+		b.disabled = Dyes.unlocked_count(marks) <= 1
+	b.pressed.connect(func():
+		var n := Dyes.unlocked_count()
+		NetworkManager.choose_dye((Settings.dye + 1) % maxi(1, n))
+		refresh.call())
+	_host_refreshers.append(refresh)
+	refresh.call()
+
 func _trade_tile(t: int, group: ButtonGroup, focusable: bool) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true

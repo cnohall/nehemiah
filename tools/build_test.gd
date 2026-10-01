@@ -152,6 +152,11 @@ func _process(delta: float) -> bool:
 			if _player.carried_kind.is_empty():
 				print("  player: busy=%s work_site=%s building=%s anim=%s led=%s downed=%s" % [_player._is_busy,
 					_player._work_site, _player.building_site, _player.anim, _player._led_by, _player.downed])
+				var choice: Array = _player._interact_choice(_player.global_position)
+				print("  press would: act=%d target=%s" % [choice[0], choice[1]])
+				if choice[1] != null and "count" in choice[1]:
+					print("  pile: count=%d scattered=%s phase=%d carried_after_direct=%s" % [choice[1].count, choice[1].scattered,
+						_main.get_node("/root/GameState").phase, choice[1].request_pickup()])
 				print("FAIL: pickup failed at ",_player.global_position, " for ", _site.next_need(),
 					" piles: ", _main.get_tree().get_nodes_in_group("supply_piles").map(func(p): return "%s@%s" % [p.kind, p.global_position]))
 				quit(1)
@@ -204,11 +209,16 @@ func _pile_for(kind: String) -> Node3D:
 	for p in _main.get_tree().get_nodes_in_group("supply_piles"):
 		if p.kind == kind:
 			return p
+	# A saboteur strewed it (GDD §5.9): the test tidies it at once and carries on
+	for p in _main.get_tree().get_nodes_in_group("scattered_piles"):
+		if p.kind == kind:
+			p.try_build()
+			return p
 	return null
 
 func _trough() -> Node3D:
 	for n in _main.find_children("*", "StaticBody3D", true, false):
-		if n.has_method("request_pickup") and n.has_method("work_material") and n.visible:
+		if n.has_method("request_pickup") and n.has_method("work_material") and not n.has_method("scatter") and n.visible:
 			return n
 	return null
 
