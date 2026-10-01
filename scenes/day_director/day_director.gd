@@ -8,6 +8,17 @@ extends Node
 #   DUSK  — enemies flee, the crew cheers, the day's tally shows; then the next day begins
 # Moving into a new circuit section (Nehemiah 3) resets the wall to bare foundations.
 
+# The ambush (GDD §5.15, Neh. 4:11): in a stretch listed here, the watch calls on one day
+# that they'll come in the night; at the next dawn, unless a watch post stands stocked
+# (4:9 — "we set a watch"), they pull one finished piece down two stages. Section index → the
+# stretch's day (0-based) the call comes on. Never on the last day, never without a piece to lose.
+const RAID := { 4: 2 }   # Tower of Ovens: called on the 3rd day, struck at the 4th dawn
+const RAID_STAGES := 2
+const RAID_LINES := {
+	"warn": ["They'll slip in tonight — a watch on the wall!", "But we made our prayer to our God, and set a watch against them day and night, because of them.", "Neh. 4:9"],
+	"held": ["The watch held — they crept off in the dark.", "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work.", "Neh. 4:15"],
+	"hit":  ["In the night they came — a stretch is pulled down!", "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall.", "Neh. 4:10"],
+}
 const DAWN_TIME        := 5.0
 const DUSK_TIME        := 9.0   # long enough to read the tally (title screen: nobody to wait for)
 const DUSK_MIN         := 4.0   # the cheer plays out even if everyone is ready at once
@@ -48,6 +59,8 @@ var _votes := {}   # server: end-screen picks, peer_id → "again" | "next"
 # Server: today's numbers. "crew" is peer_id → { loads, foes }
 var _stats := {}
 var _breaches_at_dawn := 0
+var _raid_pending := false   # server: the watch has called it; it strikes at the next dawn
+var _setbacks: bool = "--no-setbacks" not in OS.get_cmdline_user_args()
 # Server: this section so far, for its rating
 var _section_time := 0.0
 var _section_breaches := 0   # GameState.breaches when the section began
@@ -106,6 +119,7 @@ func _process(delta: float) -> void:
 			_timer -= delta
 			if _timer <= 0.0:
 				GameState.set_phase(GameState.Phase.WORK)
+				_setback_at_dawn()
 				_waves.start(GameState.current_day)
 		GameState.Phase.WORK:
 			_stats["time"] += delta
@@ -131,6 +145,59 @@ func _process(delta: float) -> void:
 				elif GameState.advance_day():
 					_begin_day()
 
+# ── Setbacks ───────────────────────────────────────────────
+
+## Server, as the work begins: the day's setback, if it has one
+func _setback_at_dawn() -> void:
+	var i := GameState.current_section_index
+	if not _setbacks or not RAID.has(i) or GameState.attract or GameState.free_play() or GameState.is_replay():
+		return
+	if _raid_pending:
+		_raid_pending = false
+		_night_raid()
+		return
+	var pos := GameState.day_in_section(GameState.current_day)
+	if pos.x == RAID[i] and pos.x < pos.y - 1 and _raid_piece() != null:
+		_raid_pending = true
+		_raid_report.rpc("warn", 0.0)
+
+## The finished single piece nearest the front of the work (the last built), or null
+func _raid_piece() -> Node3D:
+	for k in range(_units.size() - 1, -1, -1):
+		var unit: Array = _units[k]
+		if unit.size() == 1 and unit[0].is_complete() and not unit[0].decorative:
+			return unit[0]
+	return null
+
+func _night_raid() -> void:
+	for post: Node in get_tree().get_nodes_in_group("watch_posts"):
+		if post.built and post.ammo > 0:
+			_raid_report.rpc("held", 0.0)   # a stocked watch turned them back
+			return
+	var piece := _raid_piece()
+	if piece == null:
+		return
+	for n in RAID_STAGES:
+		piece._degrade()
+	print("DayDirector: night raid pulled down %s" % piece.name)
+	_raid_report.rpc("hit", piece.global_position.x)
+
+# Every peer: the nearest watchman calls it, with the verse; the pull-down is felt
+@rpc("authority", "call_local", "reliable")
+func _raid_report(kind: String, x: float) -> void:
+	var lines: Array = RAID_LINES[kind]
+	var line := "%s
+“%s” (%s)" % [tr(lines[0]), tr(lines[1]), GameState.short_ref(lines[2])]
+	for w in get_tree().get_nodes_in_group("watchmen"):
+		var man: Dictionary = w._nearest_man(x)
+		w._call(man, tr(lines[0]), kind != "held")
+		man["shout"].say(line, 6.5, kind != "held")
+	if kind == "warn":
+		Sfx.play("alert")
+	elif kind == "hit":
+		Sfx.play("breach")
+		get_tree().call_group("camera_rig", "shake", 0.4)
+
 # ── Day flow ───────────────────────────────────────────────
 
 func _begin_day() -> void:
@@ -145,6 +212,7 @@ func _begin_day() -> void:
 		_section_time = 0.0
 		_section_breaches = GameState.breaches
 		_section_ono = 0
+		_raid_pending = false
 		_section_stats = { "loads": 0, "foes": 0, "crew": {} }
 		_credit.clear()
 		for item in _items.get_children():

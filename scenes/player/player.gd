@@ -994,7 +994,7 @@ func _pot_in_reach() -> Node3D:
 
 ## Owner: cut at the nearest foe (or jar); the server works out what the blade catches
 func _swing_sword(foe: Node3D) -> void:
-	_sling_cd = SWORD_COOLDOWN
+	_sling_cd = SWORD_COOLDOWN * _rally(&"rally_sword_cd")
 	_face_aim(foe.global_position)
 	_play_action("sword")
 	_sprite.squash(Vector2(1.06, 0.95))
@@ -1018,7 +1018,7 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 		# A little slack on reach: the foe kept walking during the wind-up
 		if to.length() > SWORD_REACH + 0.4 or absf(fwd.angle_to(to)) > deg_to_rad(SWORD_ARC_DEG):
 			continue
-		enemy.take_damage(SWORD_DAMAGE * Trade.hit_mult(trade), worker_id())
+		enemy.take_damage(SWORD_DAMAGE * Trade.hit_mult(trade) * _rally(&"rally_damage", at), worker_id())
 		enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
 		hit = true
 	var pots := get_tree().get_first_node_in_group("breakable_set")
@@ -1129,7 +1129,7 @@ func _server_sling(at: Vector3, land: Vector3, charge: float, pad: bool) -> void
 	if flat.length() > reach:
 		land = Vector3(at.x, GROUND_Y, at.z) + flat.normalized() * reach
 	var target := _assist_target(at, land, reach, _assist_cone(pad))
-	var damage := lerpf(SLING_MIN_DAMAGE, SLING_MAX_DAMAGE, charge) * Trade.hit_mult(trade)
+	var damage := lerpf(SLING_MIN_DAMAGE, SLING_MAX_DAMAGE, charge) * Trade.hit_mult(trade) * _rally(&"rally_damage")
 	_throw_stone.rpc(target.get_path() if target else NodePath(), land, damage)
 
 # Every peer animates the stone; only the server's copy deals damage
@@ -1287,6 +1287,11 @@ func _on_strike() -> void:
 		InputMode.rumble(0.15, 0.0, 0.05)
 
 # ── Horn ("horn" twist) ────────────────────────────────────
+
+## What standing in a horn ring does for this worker (1 anywhere else): Horn.rally_*
+func _rally(what: StringName, at := Vector3.INF) -> float:
+	var horn := get_tree().get_first_node_in_group("horn")
+	return horn.call(what, global_position if at == Vector3.INF else at) if horn != null else 1.0
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_horn(at: Vector3) -> void:

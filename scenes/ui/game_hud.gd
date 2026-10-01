@@ -40,7 +40,7 @@ const CONTROLS := [
 	["drop", "Drop"],
 	["dash", "Dash"],
 	["throw", "Sling — charge, then throw"],
-	["horn", "Horn — call the crew"],   # only in sections with the horn
+	["horn", "Horn — rally the crew (stronger blows in its ring)"],   # only in sections with the horn
 	["reveal", "Hold: what can I do here?"],
 	["pause", "Menu"],   # "Pause · menu" when playing alone (see _refresh_controls)
 ]

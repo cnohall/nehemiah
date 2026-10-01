@@ -85,7 +85,7 @@ const TWIST_INTRO := {
 	"mixing": "Make the mortar: lime and water into the trough, then to the wall",
 	"ruins": "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built",
 	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
-	"horn": "They come up the valley in surges — {horn} sounds the horn: gather there",
+	"horn": "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder",
 	"haul": "A long haul from the yard — stack loads on the relay mat halfway, or drop one beside a friend",
 	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets, and they come back to the work",
 	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",

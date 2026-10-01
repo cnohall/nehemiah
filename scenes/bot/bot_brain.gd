@@ -11,9 +11,10 @@ extends RefCounted
 #   work a wall that has all its loads → fetch what the walls still miss → guard.
 # Between thinks it walks the job's path (NavigationServer, the enemies' mesh) and, on top
 # of any job, slings at enemies that threaten the wall or the crew.
-# Twists it doesn't know yet (horn, haul relays) fall back to the jobs above.
+# The horn (Horn): a bot with a pack on it sounds it; empty-handed bots not at the wall gather
+# in the ring while foes are about, where blows land harder. Haul relays fall back to the jobs above.
 
-enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY }
+enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY, RALLY }
 
 # Apprentice / Builder / Master builder. think = seconds between decisions; speed = stick
 # push (1 = full run); aim_err = metres off the enemy; charge = least wind-up;
@@ -46,6 +47,8 @@ const GUARD_BACK    := 2.5    # guards stand this far inside the wall they watch
 const THREAT_BONUS  := 4.0    # metres a harmful enemy is treated as nearer, for the sling
 const TROUGH_PRIORITY := 30.0 # fetch score bonus for the trough's lime and water
 const CHASE_RANGE   := 10.0   # empty hands this close to a saboteur inside the wall: after him
+const HORN_PACK_RANGE := 14.0 # foes this close…
+const HORN_PACK       := 3    # …three or more: sound the horn
 const SPACING       := 1.2    # workers don't collide: a bot edges away from any this close…
 const SPREAD_PUSH   := 0.6    # …this hard (stick units) when right on top of them
 
@@ -162,6 +165,22 @@ func _decide() -> void:
 			_press("drop")   # nobody wants it (the wall moved on) — clear the hands
 			_set_job(Job.IDLE, null)
 		return
+	# The horn: gather to a standing call while there are foes to fight; with a pack of
+	# them on us and no call standing, sound it
+	if GameState.has_twist("horn"):
+		var horn := get_tree_horn()
+		var foes_about := _p.get_tree().get_nodes_in_group("enemies")
+		if horn != null and not foes_about.is_empty():
+			var call: Dictionary = horn.open_call()
+			if not call.is_empty():
+				_set_job(Job.RALLY, call["root"])
+				return
+			var pack := 0
+			for e: Node3D in foes_about:
+				if _dist(e) < HORN_PACK_RANGE:
+					pack += 1
+			if pack >= HORN_PACK:
+				_press("horn")
 	# Beams go in pairs: take the far end of a lone one, or tag along with a bot on its
 	# way to fetch one (unless someone already is)
 	var carrier := _nearest_worker(BEAM_RANGE, func(w):
@@ -211,6 +230,9 @@ func _decide() -> void:
 
 ## "haul": a relay mat worth stopping at on the way to `site` — for the water carrier
 ## (the crew's hauler), when the mat has room and lies well short of the wall
+func get_tree_horn() -> Node:
+	return _p.get_tree().get_first_node_in_group("horn")
+
 func _relay_for(site: Node3D) -> Node3D:
 	if site == null or not GameState.has_twist("haul") or _p.trade != Trade.WATER_CARRIER or _p.carried_kind == "beam" \
 			or "--no-relay" in OS.get_cmdline_user_args():
@@ -474,6 +496,9 @@ func _act(delta: float) -> void:
 				_walk_to(_target.global_position, delta, 0.8)
 		Job.TIDY:
 			_go_and_press(_target, Player.INTERACT_REACH - 0.6, Player.Act.TIDY, delta)
+		Job.RALLY:
+			if _flat(_target.global_position - _p.global_position).length() > 1.8:
+				_walk_to(_target.global_position, delta, 1.0)
 		Job.CHASE:
 			if not _target.is_in_group("enemies"):
 				_set_job(Job.IDLE, null)

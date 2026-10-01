@@ -41,7 +41,7 @@ static func captions(t: String) -> Array:
 		"mixing": return ["Lime and water into the trough", "It mixes by itself — wait a moment", "Carry the mortar to the wall"]
 		"thick": return ["The Broad Wall is built in two faces", "Outer face first, then the inner — four hands at the work", "Filled and mortared, it takes half the blows"]
 		"ruins": return ["Some stretches still stand: only the mortar is wanted", "Some are burned: pull the charred timbers down [%s]" % "interact", "Then build as usual"]
-		"horn": return ["They come up the valley in surges", "Sound the horn [%s] where help is needed" % "horn", "Everyone gathers to the horn"]
+		"horn": return ["They come up the valley in surges", "Sound the horn [%s] — a ring marks the spot" % "horn", "Gather in the ring: blows land harder there"]
 		"haul": return ["The yard is far from the wall", "Stack loads on the relay mat halfway", "Or hand a load to a friend [%s]" % "drop"]
 		"spring": return ["The pool is by the wall", "Water close at hand — mortar comes quickly", "A quiet stretch: catch your breath"]
 		"night": return ["Night falls on the work", "Torches light the way — each worker has a lamp", "The foe comes out of the dark"]
