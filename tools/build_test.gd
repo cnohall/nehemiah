@@ -70,7 +70,7 @@ func _process(delta: float) -> bool:
 			nm.host_failed.connect(func(r): print("FAIL: host ", r); quit(1))
 			nm.host_online()
 		else:
-			nm.host()
+			nm.host(nm.TEST_PORT, 1)
 			_start_main()
 	elif _frame == 2 and _mode == "client" and not _online:
 		nm.join("127.0.0.1", nm.TEST_PORT)
