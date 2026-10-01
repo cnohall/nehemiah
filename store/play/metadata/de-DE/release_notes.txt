@@ -1,7 +1,7 @@
 Neu in diesem Build:
-• Stadtrundgang: um die fertige Mauer spazieren, beim Laubhüttenfest
-• Sonne, Schreiber und Wächter zeigen jetzt den Tag an
-• Spott der Feinde, von einem Herold ausgerufen
-• Krüge und Körbe zum Zerschlagen, Vögel über der Baustelle
-• Neue Bilder für die Geschichte und freundlichere Kamele
-• Mehr Musik und aktualisierte Übersetzungen
+• Fortsetzen: dort weiterspielen, wo du aufgehört hast
+• Wendungskarten: jeder Mauerabschnitt zeigt, was ihn besonders macht
+• Tab halten, um zu sehen, was die Baustelle braucht
+• Ein Saboteur kann sich unter die Bauleute mischen
+• Mittelmauer überarbeitet: Mannschaft vor jedem Abschnitt wählen
+• Aktualisierte Übersetzungen

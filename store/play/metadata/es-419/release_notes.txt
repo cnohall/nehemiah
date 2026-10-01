@@ -1,7 +1,7 @@
 Novedades de esta versión:
-• Recorrer la ciudad: pasea por la muralla terminada en la Fiesta de las Cabañas
-• El sol, el escriba y los centinelas ahora te dicen el día
-• Burlas del enemigo, anunciadas por un heraldo
-• Cántaros y cestas para romper, y pájaros por la obra
-• Nuevas ilustraciones de la historia y camellos más simpáticos
-• Más música y traducciones actualizadas
+• Continuar: retoma tu partida donde la dejaste
+• Tarjetas de giro: cada tramo muestra lo que lo hace distinto
+• Mantén Tab para ver lo que necesita la obra
+• Un saboteador puede colarse entre los constructores
+• Muralla central renovada: elige a tu equipo antes de cada tramo
+• Traducciones actualizadas

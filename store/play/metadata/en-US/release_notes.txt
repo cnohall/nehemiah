@@ -1,7 +1,7 @@
 New in this build:
-• Walk the City: stroll round the finished wall at the Festival of Booths
-• The sun, the scribe and the watchmen now tell you the day
-• Enemy taunts, called out by a herald
-• Jars and baskets to break, and birds about the site
-• New story art and friendlier camels
-• More music, and updated translations
+• Continue: pick your run up where you left off
+• Twist cards: each stretch of wall shows what makes it different
+• Hold Tab to see what the site needs
+• A saboteur can slip in among the builders
+• The middle of the wall reworked: choose your crew before each stretch
+• Updated translations
