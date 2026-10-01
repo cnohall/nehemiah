@@ -72,7 +72,7 @@ func _ready() -> void:
 		_tag = WorldTag.make(WorldTag.Kind.SITE)
 		_tag.position = Vector3(0, 2.6, 0)
 		_tag.clamp_to_screen = false
-		_tag.text = "%s\nPortion 0/1" % tr("Nothing prepared")
+		_tag.text = "%s\nPortion 0/1" % tr(tag_title)
 		add_child(_tag)
 
 func _process(delta: float) -> void:

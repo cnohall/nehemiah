@@ -565,6 +565,8 @@ func _interact_choice(at: Vector3) -> Array:
 	# Null target = nothing here wants the load.
 	if not carried_kind.is_empty():
 		var dest := _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
+		if dest == null:   # a hungry household of the Fountain Gate (Neh. 5)
+			dest = _nearest_in_reach("households", at, func(h): return h.needs(carried_kind))
 		if dest == null and carried_kind != "beam" and _wall_to_climb(at) != null:
 			return [Act.CLIMB, _wall_to_climb(at)]
 		return [Act.DELIVER, dest]

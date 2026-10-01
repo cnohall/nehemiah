@@ -87,7 +87,7 @@ const TWIST_INTRO := {
 	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
 	"horn": "They come up the valley in surges — {horn} sounds the horn: gather there",
 	"haul": "A long haul from the yard — stack loads on the relay mat halfway, or drop one beside a friend",
-	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand",
+	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets, and they come back to the work",
 	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
 	"schemes": "Messengers will call you down to Ono — do not go with them",
@@ -250,7 +250,15 @@ func pressure() -> float:
 
 ## The boon's modifier `key` for this stretch (1 = none)
 func mod(key: String) -> float:
-	return BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	if key == "work":
+		v *= 1.0 + HOUSEHOLD_WORK * households_fed
+	return v
+
+## Households fed this stretch (Neh. 5, Households): each family back at the wall adds to
+## the work. Every peer counts its own; reset when the stretch changes.
+const HOUSEHOLD_WORK := 0.06
+var households_fed := 0
 
 ## The watch posts stand from dawn (the boon says so)
 func boon_posts() -> bool:
