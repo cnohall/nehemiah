@@ -1135,7 +1135,7 @@ func _flush() -> void:
 	for kind: String in _batches:
 		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
 		# Ground-hugging bits: shadows cost more than they add
-		if kind in ["pebble", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash"]:
+		if kind in ["pebble", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash", "sheep_wool"]:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
 	_build_lamps()
