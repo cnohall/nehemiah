@@ -21,7 +21,7 @@ const SECTIONS: Array = [
 	{ "name": "Tower of Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
 	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
 	{ "name": "Dung Gate",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
-	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55,
+	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55, "choices": ["table", "fields"],
 		"piles": { "StockWater": Vector2(-11.5, 4.5) } },
 	{ "name": "Water Gate",     "ref": "Neh. 3:26", "days": [37,38,39,40,41],    "twists": ["doors", "night"],            "yard": Vector2(6, 11),  "terrain": "ophel" },
 	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped"],          "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1 },
@@ -56,6 +56,8 @@ const BOONS := {
 	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "warn": 2.2, "work": 0.9 }, "posts": true },
 	"bundles": { "title": "Carry in bundles", "ref": "Neh. 3:14", "mods": { "carry": 1.25, "harm": 1.25 } },
 	"road": { "title": "Hold the road", "ref": "Neh. 3:14", "mods": { "harm": 0.8, "carry": 0.85 }, "posts": true },
+	"table": { "title": "Open Nehemiah's table", "ref": "Neh. 5:17", "mods": { "work": 1.2, "warn": 0.6 } },
+	"fields": { "title": "Give back their fields", "ref": "Neh. 5:11", "mods": { "harm": 0.8, "work": 0.85 }, "posts": true },
 }
 const DEFAULT_CHOICES := ["build", "guard"]
 # What a modifier means to the crew: [higher is better?, text for more, text for less]. Each

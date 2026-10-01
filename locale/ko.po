@@ -1135,8 +1135,8 @@ msgstr "개발"
 msgid "Game design"
 msgstr "게임 디자인"
 
-msgid "Emotional support & spirit animal"
-msgstr "정서적 지원 & 영혼의 동물"
+msgid "Art director"
+msgstr "아트 디렉터"
 
 msgid "Scripture"
 msgstr "성경 본문"
