@@ -24,11 +24,14 @@ const EVENING_SUN     := 0.72   # sun energy at the very end of the day
 const EVENING_RATE    := 0.6
 # Sun clock, told by the sun itself (diegetic HUD): from the scene's mid-morning height
 # the sun sinks and swings west as the daylight runs out, so the shadows lengthen and
-# turn. Angles in degrees; bearing is the sun's direction in the ground plane (x, z).
+# turn. It stands where it would over that stretch of the real wall (RingCompass): on
+# the north wall it lights the city face, on the south it is behind the wall, on the
+# east it moves from outside to over the city. Angles in degrees; bearings are compass
+# bearings, clockwise from true north.
 const SUN_HIGH     := 61.4    # elevation of the scene's sun: where each day starts
 const SUN_LOW_ELEV := 22.0    # at the stars — low, long shadows, still readable
-const SUN_BEARING  := 140.0   # the scene's sun, south-west of the site…
-const SUN_SWING    := 38.0    # …turning toward the west over the day
+const SUN_MORNING  := 145.0   # mid-morning, south-east…
+const SUN_EVENING  := 240.0   # …round by the south to west-south-west at the stars
 const SUN_ARC_RATE := 0.5     # how fast it swings back up at a new dawn
 # Lamps in the windows (ScatterLayer, group "window_lamps"): lit one by one as evening
 # comes on (Neh. 4:21 "till the stars appeared"), all of them once night falls
@@ -55,8 +58,10 @@ func _ready() -> void:
 	GameState.phase_changed.connect(_retarget.unbind(1))
 	GameState.day_changed.connect(_retarget.unbind(1))
 	GameState.sun_changed.connect(_retarget)
+	GameState.section_changed.connect(_apply_arc.unbind(1))   # a new stretch, a new lie of the land
 	_retarget()
 	_apply()
+	_apply_arc()
 
 func _retarget() -> void:
 	var dark_phase := GameState.phase == GameState.Phase.WORK or GameState.phase == GameState.Phase.DUSK
@@ -77,8 +82,8 @@ func _arc_target() -> float:
 
 func _apply_arc() -> void:
 	var el := deg_to_rad(lerpf(SUN_HIGH, SUN_LOW_ELEV, _arc))
-	var bearing := deg_to_rad(SUN_BEARING + SUN_SWING * _arc)
-	var to_sun := Vector3(cos(el) * cos(bearing), sin(el), cos(el) * sin(bearing))
+	var ground := RingCompass.bearing_on_site(GameState.current_section_index, lerpf(SUN_MORNING, SUN_EVENING, _arc))
+	var to_sun := ground * cos(el) + Vector3.UP * sin(el)
 	_sun.global_basis = Basis.looking_at(-to_sun, Vector3.UP)
 
 func _process(delta: float) -> void:

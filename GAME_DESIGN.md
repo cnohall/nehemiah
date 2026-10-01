@@ -33,7 +33,7 @@ Three types, unlocked over the campaign (`wave_manager.gd`). Spawn rate and max 
 | Scout | Day 1 | 3.5 | 40 | 5 | ~50% go for the wall ("wreckers"), rest run for gaps |
 | Brute | Day 9 (25% of spawns) | 2.5 | 100 | 15 | Always a wrecker — slow, batters walls |
 | Raider | Day 21 (~30% late mix) | 4.0 | 60 | 8 | Fast; ~50% wreckers |
-| Saboteur *(planned, §5.9)* | Day 6 (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
+| Saboteur (§5.9) | Day 6 (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
 
 All but the saboteur attack nearby workers first. A wrecker that knocks a section back to bare foundation pours through the breach.
 Debug: run with `-- --day=N` (debug builds) to start at a later day and see brutes/raiders.
@@ -158,7 +158,7 @@ Three rules, each on by default and each switched off from the command line to A
 - **Taunts** (`Taunts`): a herald of Sanballat's outside the wall calls the taunt across it (as his servant came with the open letter, 6:5) — at the start of the work and every 40 s until the stretch is half built; the call slides in from the screen edge. Sheep Gate (2:19), Jeshanah / Broad Wall / Tower of Ovens (4:2-3), East Gate (Sanballat's letter, 6:6). (The line used to be daubed on the ground outside the wall too; cut Sep 29 2026, it read strangely)
 - **Wall cam**: when a stretch stands the camera runs along it (3.2 s) and a dedication tablet rises on each piece with the name of whoever carried most to it (Steam name, else the trade). Server credits each load to its unit (`DayDirector.note_load(peer, site)`); the tally waits for the run. Free trailer material
 - **Scribe's map** (`CircuitMap.aged`, `GameState.chronicle`): the circuit map on the story cards and the end screen wears with the run — edges darken with the days, folds at 4 and 8 sections, an ink blot where the enemy got in, a lamp-oil ring on stretches worked till the stars or past par, a margin note per stretch ("2 got in", "worked till the stars", "1 day to spare", "rebuilt what fell"). The end screen is the final map, words on a parchment column at left
-- **Walk the City** (`Festival`, title menu, solo offline, nothing saved): the Festival of Booths after the wall (Neh. 8) at the Water Gate. Ezra reads from a wooden platform (Lev. 23:40, 42; Neh. 8:15); fetch **branches** from the slopes outside and build five booths — broad place, courtyards, by the well, the temple court (8:15-16); carry **portions** to four with nothing prepared (8:10); talk to Nehemiah, a Levite, Shallum's daughters, Meremoth, a priest, the gatekeeper, children (`Folk`, [E]); go up to the **temple** (`Temple`: walled court, sanctuary facing east, altar with its fire). Journal ticks it off; all done → "There was very great gladness" (8:17). Not the Sabbath: Neh. 13:15-19 forbids carrying loads on it. Not the zero-menu start either — first launch should still meet the real loop (the practice); revisit if players want a gentler first minute
+- **Explore Jerusalem** (`Festival`, title menu, solo offline, nothing saved): the Festival of Booths after the wall (Neh. 8) at the Water Gate. Ezra reads from a wooden platform (Lev. 23:40, 42; Neh. 8:15); fetch **branches** from the slopes outside and build five booths — broad place, courtyards, by the well, the temple court (8:15-16); carry **portions** to four with nothing prepared (8:10); talk to Nehemiah, a Levite, Shallum's daughters, Meremoth, a priest, the gatekeeper, children (`Folk`, [E]); go up to the **temple** (`Temple`: walled court, sanctuary facing east, altar with its fire). Journal ticks it off; all done → "There was very great gladness" (8:17). Not the Sabbath: Neh. 13:15-19 forbids carrying loads on it. Not the zero-menu start either — first launch should still meet the real loop (the practice); revisit if players want a gentler first minute
   - **Round the wall** (30 Sep 2026): the whole circuit is walkable — walk off either end of a stretch and you come to the next in Neh. 3's order (a fade, the ground changes to that section's terrain), round from the Miphkad Gate back to the Sheep Gate; a signpost at each end names the next gate. Every stretch has the builders Neh. 3 names there (quoted), townsfolk and a booth site; three hold the feast in full: Water Gate (Ezra), Sheep Gate (the temple, moved here beside the priests' stretch, 3:1), Fountain Gate (pool of Shelah, branches from the King's Garden). Progress holds across stretches; the journal adds "Walk the wall round — n of 12 gates". Goals: 5 booths, all 4 portions, 8 builders met, Ezra, the temple. Next, if it earns it: a city behind the wall that differs by district (City of David south, temple mount north) instead of the same streets everywhere
 - **Breakables** (`Breakables`, `Breakable`; 29 Sep 2026): clay water jars, tall storage jars and reed baskets of figs stand about each stretch — by the landmarks first (jars beside the potters' stalls, baskets by the fish stalls and ovens, water jars at the Pool of Shelah and at each priest's door, olive baskets under the Kidron trees), then a few loose clusters inside the wall and out on the enemy's side. They rock when anyone brushes past; a sword cut, a sling stone or a dash breaks one, and so does a raider trampling through on the way to the wall (Zelda's pots, Hades' urns). Sherds, a wet patch that dries, spilled grain or scattered figs stay till dawn, when fresh ones are put out. No collision, nothing inside, no score — set dressing that answers back. The attack press cuts at a pot at your feet only when no foe is in sling range, so it never steals a throw. Watch: does breaking them distract from the work? If players want a reason, the next step is a rare fig cake that heals a little (1 Sam. 25:18)
 - **Birds** (`Birds`, `Bird`; 30 Sep 2026): flocks of house sparrows and rock doves (Matt. 10:29; Lev. 1:14) peck and hop on open ground each side of the wall (doves only on the city side). A worker walking into one puts it up; so do a foe coming on (the flocks outside lift before the enemy reaches the wall, an early warning shown in the world) and anything loud: a dash, a sword swing, a jar breaking, a wall piece falling, the horn, a breach (`Sfx.STARTLES`). One flock's wings can put up the next. They climb away sideways on screen (not at the camera), and come back once it's been quiet round their spot for 12–22 s. Sparrows chirp, doves coo. Local to each peer, nothing replicated. Watch: are the flushes readable at play zoom, and are they fun or just noise? Web: ~30 birds of 6 meshes each, so check draw calls
@@ -166,7 +166,7 @@ Three rules, each on by default and each switched off from the command line to A
 - Tests / shots: `tools/hud_shots.gd`, `wallcam_shots.gd`, `festival_shots.gd`, `map_age_shots.gd`, `breakable_test.gd`, `birds_test.gd`, `birds_shots.gd`
 - New strings are English only so far — run the i18n extract for es / pt_BR / de / ko
 
-### 5.9 Saboteur — ☐ spec (30 Sep 2026), not built
+### 5.9 Saboteur — ◐ first pass built (30 Sep 2026), needs playtest 3
 **Fun check:**
 - **Fantasy:** guarding the work, not just the wall — "cause the work to cease" (4:11) is what you're stopping
 - **Kind of fun:** Fellowship first (someone has to leave the wall — who?), then Challenge (a third thing to watch)
@@ -250,6 +250,35 @@ Three rules, each on by default and each switched off from the command line to A
 - Solo: is Builder the right default? Should solo work get the ×1.6 at all (`SOLO_WORK_MULT` already makes it 25% quicker)?
 - New strings English only; run the i18n extract for es / pt_BR / de / ko
 
+### 5.11 The pull to day 52 — ◐ first pass (30 Sep 2026), needs playtest 3
+**Feedback (friends, 30 Sep 2026):** fun for 2–3 stretches, then no pull to finish. It was often unclear what a player could do (two to a beam, and so on).
+
+**Diagnosis:**
+1. **Nothing brought people back after a session.** A campaign is about 1.5 hours, and Host always started at day 1. Most crews stop at a stretch's end and never return
+2. **Mechanics were announced, not taught.** One line on the dawn banner, read while scouts were coming
+3. **The middle twists were chores.** Salvage, thick and haul made the walk longer or the loads heavier, with no new decision
+4. **No escalation you could see.** The three leaders appeared only on story cards
+5. **Marks bought nothing.** A number on the card and nothing more
+
+**Built (each part can be cut on its own after playtest 3):**
+- **Continue** (`GameState.campaign_save`): the run is saved at the dawn of each new stretch after the first, with its day, marks and chronicle, and cleared on the win. The title shows "Continue — Broad Wall, day 13" first, and Host becomes "New Game". "Try the stretch again" restores the marks and map the same way. A new run doesn't overwrite the save until it reaches its second stretch. Test: `tools/continue_test.gd`
+- **Twist cards** (`TwistCard`, a StoryData slide per twist new to the section, after its card): three drawn panels with a caption each, e.g. *a beam dragged alone goes slowly → a friend takes the other end [E] → carry it together*. They're part of the story, so the ready check makes the whole crew see them before the work starts. Shots: `tools/twist_card_shots.gd`
+- **What can I do here?** (`ActionLens`): hold [Tab] or View (rebindable `reveal`). Everything within 16 m that answers a press gets a chip (take stone, work it up, help up, take the other end, hand over, climb over, tidy, don't go with him), plus a chip on yourself for the other buttons. It's listed on the controls card
+- **Beam prompt:** while one worker drags a beam alone, its free end says "Take the other end [E]" on every other free worker's screen. Help reach went up from 2.0 to 3.2 m so the end itself is in reach
+- **Bot demo** (`BotDemo`): the first time in a section that a bot does something the section brought (holds a beam end, carries lime or water, digs rubble, uses the relay mat), it gets a callout "Watch the carpenter — two to a beam" and an edge pointer
+- **Saboteur** (§5.9, first pass as specced): day 6+, own timer, climbs a finished piece if there's no gap, strews up to 2 piles and then leaves. Strewn piles are tidied like a stage (`SupplyPile` + `BuildWork`, `Act.TIDY`). Bots chase him within 10 m and tidy one pile each. There's a watchman call and an edge pointer while he's inside, and the tally says "Piles scattered". `--no-saboteur`. Test: `tools/saboteur_test.gd`
+- **Twists with a decision in them:**
+  - *salvage:* rubble heaps outside the wall hold twice the stone, in the enemy's reach
+  - *thick:* a double-thick piece takes half of every blow, so the extra stone pays back against brutes
+  - *haul:* a relay mat halfway (`RelayMat`). A load dropped on it stacks in a free place, so one worker can run the yard end and another the wall end. The water-carrier bot runs the yard end
+- **Leaders on the rise** (`Leaders`): Sanballat, Tobiah and Geshem come to a rise outside the wall at the arc's peaks and call across it in their own words (WEB). When the stretch stands, or on the win, they turn and go (6:16). They follow `SectionBeats.beat_fired` when a beat names a leader, and otherwise fall back to Broad Wall, Valley Gate, East Gate and the finale. They never fight
+- **The far goal in view:** every tally says "4 of 12 stretches stand · 36 days to the fifty-second"
+- **Session log** (`user://sessions.log`): one line per game left, recording where it stopped. It's for playtest 3 (PLAYTEST_3 §4a)
+
+**Not yet:** harder variants of a three-mark stretch (e.g. Broad Wall at night); the title-screen world changing with progress; the finished stretches staying visible from the next one; relay behaviour for people-only crews (the mat works, but only bots are told to use it).
+
+**Watch in playtests:** do people read the cards or skip them? Is the lens used without prompting? Does the saboteur park a player in the yard? Do crews come back to Continue?
+
 ### 5.2a Art direction — "slightly Overcooked"
 Keep the earthy palette, borrow Overcooked's readability:
 - Stations told apart by period-appropriate bases, not colour-coding: stone on a timber pallet, logs on sleeper beams, mortar on a reed mat with spilled lime (bright colour rugs tried and dropped: broke immersion)
@@ -292,8 +321,8 @@ Done and removed from the table: wall damage (§5.2), brute + raider (§2), ball
 |---|---|---|---|---|---|
 | 1 | **Sheep Gate** (3:1) | 1–4 | Core loop. Gates end with a **doors step**: hang the doors, fit bolts and bars — a recurring finale for every gate section | "set up its doors, its bolts and its bars" (3:3, 3:6, 3:13…) | Low — scouts only |
 | 2 | **Fish Gate** (3:3) | 5–8 | **Beams** — long timbers that need **two workers** to carry | "they laid its beams" (3:3, 3:6) | Low |
-| 3 | **Jeshanah (Old) Gate** (3:6) | 9–12 | **Salvage** — no stone stockpile; stone comes from rubble heaps scattered across the site | Sanballat: will they revive the stones from the heaps of rubbish, burned as they are? (4:2) | Brutes arrive |
-| 4 | **Broad Wall** (3:8) | 13–17 | **Double-thick sections** — more material per unit; work is split across more fronts | Built by goldsmiths and ointment makers — craftsmen, not masons (3:8) | Mockery beat (4:3) as the section intro |
+| 3 | **Jeshanah (Old) Gate** (3:6) | 9–12 | **Salvage** — no stone stockpile; stone comes from rubble heaps scattered across the site. **Old and burned units** (`ruins`, §6.4): one unit's courses still stand, another's charred framing must be pulled down first | Sanballat: will they revive the stones from the heaps of rubbish, burned as they are? (4:2) | Brutes arrive |
+| 4 | **Broad Wall** (3:8) | 13–17 | **Double-thick, two-face wall** — outer face, inner face, rubble core (§6.3); four hands per unit | Built by goldsmiths and ointment makers — craftsmen, not masons (3:8) | Mockery beat (4:3) as the section intro |
 | 5 | **Tower of the Ovens** (3:11) | 18–23 | **Mortar mixing** — carry lime + water to a trough, mix, then deliver. The Overcooked "cooking" step | Ovens / lime burning; mortar was made on site | Rising |
 | 6 | **Valley Gate** (3:13) | 24–29 | **The horn** — a worker can sound it to call everyone to a spot; enemies come in surges from the valley | "At the place where you hear the horn, gather to us" (4:20); half worked, half held spears (4:16) | **Peak #1** — conspiracy (4:7-8); raiders from day 21 |
 | 7 | **Dung Gate** (3:14) | 30–33 | **Long haul** — the site is far from the supply yard; chains of drops and hand-offs pay off | 1,000 cubits of wall up to the Dung Gate (3:13) | Medium |
@@ -328,5 +357,45 @@ Borrow Overcooked's **structure and readability**, not its tone.
    - **East Gate** `schemes`: up to 4 messengers a day (6:4), one at a time. He walks up and waits beside a worker; when he's nearer than anything else, [E] goes with him — led off ~7 s, then walk back. Ignored 12 s, he leaves
    - **Miphkad Gate**: doors + beams + salvage + mixing + schemes, pressure ×1.3; on the win the enemy withdraws (6:16)
    - ✅ **Valley Gate** `horn`: [R] / LB sounds the horn (8 s shared cooldown): everyone hears it (synth ram's horn), a standard in the caller's colour + ground ring stands 9 s, off-screen pointer "Horn" for the others. The enemy comes in **surges**: a "Surge" pointer + bell 3.5 s ahead, then a pack of 3 + day/12 from one spot every ~24 s, over a trickle thinned ×1.8. Also in the finale
-   - ✅ **Broad Wall** `thick`: plain stretches 1.3 m deep (collision too), +2 stone / +1 mortar per stage, work ×1.3, 4 hands per site instead of 3
+   - ✅ **Broad Wall** `thick`: plain stretches 2.2 m deep (collision too), built in **two faces** — the stone stage is two jobs, outer face (toward the foe, −z) then inner, each paid and worked on its own (`WallSection.face`, label "Outer face / Inner face", replicated); the rubble core fills between and is mortared last, with a parapet on both edges (a walkway). +2 stone / +1 mortar in all, work ×1.3, 4 hands per site instead of 3, takes half the blows. A blow back to the timber takes both faces. Shots: `tools/thick_shots.gd`. Not yet: the two faces worked by two crews at once (a real split) — if playtests say the sequence is just "longer", make the faces parallel
    - Still open: night on the finale?, per-section terrain *shape* (heights). Watch solo pacing on surge days
+
+### 6.5 A choice before each stretch — ◐ reworked (1 Oct 2026), needs playtest 3
+**Fun check:** *Fantasy* — Nehemiah deciding how to meet "the work is great and large" (4:19). *Kind of fun:* Fellowship (the crew agrees, or argues), Challenge (a price you chose to pay). *Where it can go sour:* one option is always right (then it's a chore, cut it); a vote that stalls a session in multiplayer; one more screen before the work.
+**First pass was too weak** (a free +20% daylight, a post nobody felt, a "keep to the plan" that lost to both, no memory of it). Reworked as **two real trades per stretch, tied to what the stretch brings**, and written down.
+**What:** the last story card of every new stretch (not the first, not a replay, not the tutorial/festival) — `StoryData` slide `choice: true`, shown by `StoryPlayer`, **no extra screen or phase**: it rides on the story ready check. ← → / 1–2 / click to pick, E to confirm. Each reader's pick goes to the server (`DayDirector.cast_choice`); **most votes win, the host's pick breaks a tie, no votes = the first of the two**. Bots don't vote. In play for that stretch only (`GameState.boon`, synced).
+**Every option is a gain and a cost, and the card text is generated from the modifiers** (`GameState.BOONS[k].mods`, `boon_lines()`), so what it says is what it does. Modifiers: `work` (build speed), `harm` (blows the wall takes), `pressure` (foes), `warn` (warning before waves/surges), `beam_solo`, `carry`, `clear` (burned timbers), `mix` (mortar), and `posts` (watch posts stand from dawn). `-- --boon=<key>` (debug) forces one for every stretch, to A/B a trade.
+**The axis everywhere:** pace (the *In good time* mark) against defence (*None got through*, *The wall holds*). Stretches without their own pair (Fountain Gate to Miphkad Gate) offer **Press the work** (build +20%, wall takes +25% harm) or **Hold the line** (watch posts from dawn, −25% harm, build −10%).
+**Tailored pairs** (each pair a trade on that stretch's twist; first = default):
+- Fish Gate (beams): *Practised porters* (a lone beam +90% faster; +15% foes) / *Watch the market side* (posts; warning +50%; build −10%)
+- Jeshanah (salvage, ruins): *Dig out the rubble* (burned timbers 2× faster, build +10%; +20% foes) / *Shore up the old courses* (−30% harm; timbers 40% slower)
+- Broad Wall (thick): *Rush the faces* (build +30%; +40% harm) / *Pack the core* (−40% harm; build −15%)
+- Tower of Ovens (mixing): *Fire the ovens high* (mortar mixes in half the time; +20% foes) / *Bank the ovens* (posts; warning +50%; mortar +50% time)
+- Valley Gate (horn): *Work the terraces* (build +20%; warning −50%) / *Lookouts on the heights* (warning +120%, posts; build −10%)
+- Dung Gate (haul): *Carry in bundles* (loaded walk +25%; +25% harm) / *Hold the road* (−20% harm, posts; loaded walk −15%)
+**Remembered:** the scribe's map writes how each stretch was met in its margin (`chronicle[i].boon`), saved with Continue. The dawn banner repeats the pick and its gain/cost.
+**Kill rule:** playtesters pick the same option every time at a stretch, or skip the card. **Tune:** every number above is a guess (the log prints time, breaches, and wall health per stretch — compare picks). **Later:** pairs for stretches 8–12, a carry-over cost ("worked till the stars" leaves the crew tired next stretch), "another portion" (3:11) as a bonus mark. Tests: `tools/choice_test.gd -- --day=N <out_dir> [key]` (also checks every boon has a gain and a cost).
+
+### 6.4 Section beats and the stretch's arc — ◐ first pass (30 Sep 2026), needs playtest 3
+**What the code says about "longer":** sections run 4 / 4 / 4 / 5 / 6 / 6 / 4 / 3 / 5 / 6 / 3 / 2 days, but under the sun clock every day of a section gets par ÷ days × `sun_slack`, so a section's total light ≈ par × 1.2 whatever its day count (Tower of Ovens: six ~96 s days; Miphkad: two ~360 s days). Every stretch is the same 6 units (`WorkFront.UNIT_ORDER`). More days only cuts the same work into more dawns and dusks. So arcs are keyed to **progress**, not to day numbers.
+
+**Fun check:**
+- **Fantasy:** the enemy answering the work, as in the text: "they heard that the repairing… went forward… they were very angry" (4:7)
+- **Kind of fun:** Challenge (a climax mid-stretch and at the end), Fellowship ("both ends — split up!")
+- **Where it can go sour:** a pack at the last unit that feels like a punishment for building; a verse bubble too long to read mid-fight
+- **A/B switch:** `-- --no-beats`
+- **Kill rule:** playtesters don't tell a beat from an ordinary wave
+
+**Rules** (`SectionBeats`, `scenes/section_beats/section_beats.gd`, all data in its `BEATS`): each section may have a **"half"** beat (half its units stand) and a **"last"** beat (one unit left). Each fires once per stretch, during the work only. A beat is a watchman's call, a WEB verse where the text has one, and usually a warned pack (5 s bell + "Onslaught" pointer) at the gate, one flank, both flanks, the east end (via `RingCompass`), or the end nearest the yard. Pack grows by one per two workers (bots by skill) × difficulty pace; a saboteur only when he's on. The Fountain Gate stays a breather (calls only). Broad Wall half = 4:6 "joined together to half its height" + anger; Tower of Ovens = 4:8 conspiracy, then 4:11 saboteur; Valley Gate last = 4:20; East Gate = Geshem from the east + 6:3, 6:9; Miphkad last = everything, 4:21.
+- `beat_fired(section_index, key, beat)` on every peer; `beat.leader` ("sanballat" / "tobiah" / "geshem" / "all") drives the leaders' set-pieces (`Leaders`)
+- Test: `tools/beats_test.gd` (`-- --nostory --day=9`)
+
+**Done (1 Oct 2026, first pass, needs playtest 3):**
+1. ✅ **Per-unit recipes** (twist `ruins`; `GameState.SECTIONS[i].recipes`, unit node name → recipe, `WallSection.recipe()`): not every unit starts from bare footing. `old` = the stone stage already stands (only mortar wanted, a quick unit); `burned` = charred framing to pull down first — a job of pure work, no materials, no loads accepted until it's down (`cleared`, label "Clear the charred timbers [E]", carpenters quicker at it). Jeshanah: Section1 old, Section3 burned (the *Old* Gate, 4:2). Miphkad finale: Section1 burned, Section4 old. Twist card + dawn line + picker chip. Test: `tools/recipes_test.gd` (`-- --nostory --day=9`, `--day=13` also checks the faces), shots `tools/ruins_shots.gd`
+2. ✅ **A choice before each new stretch** (§6.5) instead of spare days skipped
+
+**Next, in order** (each one mechanic, own `--no-` flag, playtest between):
+3. **Par scaled with days** if 6-day sections still feel choppy: fewer, longer days, or more work per unit where days are many
+4. **Mid-day events**, one at a time: timber caravan from Asaph's forest to escort in (2:8, beam sections), families to a weak spot (4:13)
+5. **Neighbour crews** (Neh. 3's "next to him…"): an NPC crew on the adjacent unit that lags (the Tekoite nobles, 3:5) or hands over leftovers. Needs AI work
+6. Walking work front (each day further along the wall): biggest; only if the above isn't enough

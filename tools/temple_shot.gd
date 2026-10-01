@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Walk the City at the Sheep Gate: shots of the house of God from the lane, the gate and
+# Explore Jerusalem at the Sheep Gate: shots of the house of God from the lane, the gate and
 # the court, in the turned view.
 #   Godot --path . --script res://tools/temple_shot.gd -- <out_dir>
 # Not headless — needs the GPU.

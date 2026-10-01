@@ -28,6 +28,8 @@ const ROLL := [
 	["name", "Chris Nohall", ""],
 	["role", "Game design", ""],
 	["name", "Joakim Henriquez", ""],
+	["role", "Emotional support & spirit animal", ""],
+	["name", "Joakim Müller", ""],
 	["gap", "", ""],
 	["role", "Scripture", ""],
 	["name", "World English Bible", ""],

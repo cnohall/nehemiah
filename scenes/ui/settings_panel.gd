@@ -27,11 +27,16 @@ const KEY_ROWS := [
 	["move_south", "Move down"], ["move_east", "Move right"],
 	["interact", "Pick up · deliver · build"], ["drop", "Drop"],
 	["dash", "Dash"], ["throw_charge", "Sling"], ["horn", "Horn"],
+	["reveal", "What can I do here?"],
 ]
 
 var _rumble_on: Button
 var _world_hud: Button
 var _plaque_hud: Button
+var _follow_cam: Button
+var _fixed_cam: Button
+var _game_view: Button
+var _map_view: Button
 var _rumble_off: Button
 var _hold: Button
 var _toggle_mode: Button
@@ -78,6 +83,10 @@ func open() -> void:
 	_rumble_off.button_pressed   = not Settings.rumble
 	_world_hud.button_pressed    = Settings.diegetic_hud
 	_plaque_hud.button_pressed   = not Settings.diegetic_hud
+	_follow_cam.button_pressed   = not Settings.fixed_camera
+	_fixed_cam.button_pressed    = Settings.fixed_camera
+	_game_view.button_pressed    = not Settings.turn_to_map
+	_map_view.button_pressed     = Settings.turn_to_map
 	_hold.button_pressed         = not Settings.toggle_charge
 	_toggle_mode.button_pressed  = Settings.toggle_charge
 	_show_keys(false)
@@ -158,6 +167,16 @@ func _build_extra_rows() -> void:
 	_plaque_hud = pair[1]
 	_world_hud.pressed.connect(_toggle.bind("diegetic_hud", true))
 	_plaque_hud.pressed.connect(_toggle.bind("diegetic_hud", false))
+	pair = _segment_row("Camera", "Follow", "Fixed")
+	_follow_cam = pair[0]
+	_fixed_cam = pair[1]
+	_follow_cam.pressed.connect(_toggle.bind("fixed_camera", false))
+	_fixed_cam.pressed.connect(_toggle.bind("fixed_camera", true))
+	pair = _segment_row("View", "Wall across", "North up")
+	_game_view = pair[0]
+	_map_view = pair[1]
+	_game_view.pressed.connect(_toggle.bind("turn_to_map", false))
+	_map_view.pressed.connect(_toggle.bind("turn_to_map", true))
 	pair = _segment_row("Sling", "Hold", "Toggle")
 	_hold = pair[0]
 	_toggle_mode = pair[1]

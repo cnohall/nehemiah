@@ -100,12 +100,12 @@ func _network(_delta: float) -> bool:
 		root.get_node("Settings").bot_count = 3 if _mode == "host" else 0
 		root.get_node("Settings").bot_skill = 2
 		if _mode == "host":
-			nm.host()
+			nm.host(nm.TEST_PORT, 1)
 			_main = load("res://scenes/main/main.tscn").instantiate()
 			root.add_child(_main)
 			current_scene = _main
 		else:
-			nm.join("127.0.0.1")
+			nm.join("127.0.0.1", nm.TEST_PORT)
 		return false
 	if _main == null:
 		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1:

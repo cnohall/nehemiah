@@ -70,7 +70,7 @@ func _process(delta: float) -> void:
 	if not site.can_build():
 		_release_all()
 		return
-	progress = minf(1.0, progress + delta * hands() / (work_time * Trade.work_mult()))
+	progress = minf(1.0, progress + delta * hands() * GameState.mod("work") / (work_time * Trade.work_mult()))
 	if progress >= 1.0:
 		progress = 0.0
 		site.try_build()

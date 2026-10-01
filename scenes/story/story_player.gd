@@ -7,6 +7,7 @@ extends CanvasLayer
 
 signal finished
 signal start_now_requested
+signal choice_made(key: String)   # this reader's pick on the choice card (GameState.BOONS)
 
 const FADE        := 0.45
 const TYPE_SPEED  := 55.0     # characters per second
@@ -24,6 +25,7 @@ var _frame: Control           # the "camera": art + backdrop, scaled for the dri
 var _art: TextureRect
 var _backdrop: StoryBackdrop
 var _map: CircuitMap
+var _twist: TwistCard
 var _content: Control
 var _eyebrow: Label
 var _title: Label
@@ -33,6 +35,11 @@ var _ref: Label
 var _page: Label
 var _hint: Label
 var _ready_row: ReadyRow
+var _choice_box: HBoxContainer
+var _choice_panels: Array[PanelContainer] = []
+var _choice_keys: Array = []
+var _choice_index := 0
+var _hint_text := ""
 
 var _slide_tween: Tween
 var _type_tween: Tween
@@ -52,8 +59,9 @@ func play(slides: Array) -> void:
 	_done = false
 	_ready_row.hide()
 	# With company, Esc doesn't skip the day — it says you're through and waits for the rest
-	_hint.text = "E · Click   Next          Esc   I'm ready" if _with_company() \
+	_hint_text = "E · Click   Next          Esc   I'm ready" if _with_company() \
 		else "E · Click   Continue          Esc   Skip"
+	_hint.text = _hint_text
 	_hint.show()
 	_root.show()
 	UiFx.fade_in(_root, 0.7)
@@ -86,6 +94,11 @@ func is_playing() -> bool:
 func _input(event: InputEvent) -> void:
 	if not _root.visible or _done:
 		return
+	# The choice card: pick with left / right or a click, confirm with E (Esc still skips)
+	if _on_choice_card() and not _typing() and not (_slide_tween and _slide_tween.is_running()) \
+			and _choice_input(event):
+		get_viewport().set_input_as_handled()
+		return
 	var click: bool = event is InputEventMouseButton and event.pressed \
 		and event.button_index == MOUSE_BUTTON_LEFT
 	if click or event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
@@ -94,6 +107,93 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("pause"):
 		get_viewport().set_input_as_handled()
 		_finish()
+
+func _typing() -> bool:
+	return _type_tween != null and _type_tween.is_running()
+
+func _on_choice_card() -> bool:
+	return _index >= 0 and _index < _slides.size() and _slides[_index].get("choice", false)
+
+## True when the event was the choice card's
+func _choice_input(event: InputEvent) -> bool:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		for i in _choice_panels.size():
+			if _choice_panels[i].get_global_rect().has_point(event.position):
+				_choice_index = i
+				_confirm_choice()
+				break
+		return true   # a click off the options does nothing here
+	if event.is_action_pressed("ui_left"):
+		_pick(_choice_index - 1)
+		return true
+	if event.is_action_pressed("ui_right"):
+		_pick(_choice_index + 1)
+		return true
+	if event is InputEventKey and event.pressed and not event.echo \
+			and event.keycode >= KEY_1 and event.keycode < KEY_1 + _choice_panels.size():
+		_pick(event.keycode - KEY_1)
+		return true
+	if event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
+		_confirm_choice()
+		return true
+	return false
+
+func _pick(i: int) -> void:
+	_choice_index = clampi(i, 0, _choice_panels.size() - 1)
+	_refresh_choices()
+
+func _confirm_choice() -> void:
+	choice_made.emit(_choice_keys[_choice_index])
+	_advance()   # the choice card is the last one: this reader is through
+
+func _fill_choices() -> void:
+	for c in _choice_box.get_children():
+		c.queue_free()
+	_choice_panels.clear()
+	_choice_keys = GameState.choices_for(GameState.current_section_index)
+	_choice_index = 0
+	for key: String in _choice_keys:
+		var boon: Dictionary = GameState.BOONS[key]
+		var lines := GameState.boon_lines(key)
+		var panel := PanelContainer.new()
+		panel.custom_minimum_size = Vector2(430, 0)
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 6)
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(box)
+		var title := _label(&"Heading", 22, UiStyle.CREAM)
+		title.text = boon["title"]
+		box.add_child(title)
+		var ref := _label(&"Eyebrow", 13, Color(UiStyle.GOLD, 0.85))
+		ref.text = GameState.long_ref(boon["ref"])
+		box.add_child(ref)
+		# What it gives, what it costs: worked out from the modifiers, so always the truth
+		for line: String in lines["gain"]:
+			box.add_child(_effect_line("+  " + line, UiStyle.GOLD))
+		for line: String in lines["cost"]:
+			box.add_child(_effect_line("−  " + line, Color(UiStyle.TERRACOTTA).lightened(0.25)))
+		_choice_box.add_child(panel)
+		_choice_panels.append(panel)
+	_refresh_choices()
+
+func _effect_line(text: String, color: Color) -> Label:
+	var l := _label(&"Body", 17, color)
+	l.text = text   # already in the player's language (GameState.boon_lines)
+	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	return l
+
+func _refresh_choices() -> void:
+	for i in _choice_panels.size():
+		var picked := i == _choice_index
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(UiStyle.DUSK, 0.82 if picked else 0.55)
+		style.border_color = UiStyle.GOLD if picked else Color(UiStyle.CREAM, 0.25)
+		style.set_border_width_all(3 if picked else 1)
+		style.set_corner_radius_all(6)
+		style.set_content_margin_all(16)
+		_choice_panels[i].add_theme_stylebox_override("panel", style)
+		_choice_panels[i].modulate.a = 1.0 if picked else 0.75
 
 # ── Slides ─────────────────────────────────────────────────
 
@@ -123,9 +223,16 @@ func _show_slide(slide: Dictionary) -> void:
 	var art_path: String = slide.get("art", "")
 	var has_art := not art_path.is_empty() and ResourceLoader.exists(art_path)
 	var has_map := slide.has("map")
-	_art.visible = has_art and not has_map
+	var has_twist := slide.has("twist")
+	_art.visible = has_art and not has_map and not has_twist
 	_backdrop.visible = not has_art and not has_map
 	_map.visible = has_map
+	_twist.visible = has_twist
+	if has_twist:
+		_twist.twist = slide["twist"]
+		_backdrop.sky = "dawn"
+		_backdrop.built = 0.2
+		_backdrop.pattern = hash(slide["twist"])
 	# The map sits on the right; the text keeps to a narrower column beside it
 	_content.custom_minimum_size.x = TEXT_WIDTH * (0.55 if has_map else 1.0)
 	if has_map:
@@ -140,6 +247,13 @@ func _show_slide(slide: Dictionary) -> void:
 		_backdrop.sky = slide.get("sky", "dusk")
 		_backdrop.built = slide.get("built", 0.0)
 		_backdrop.pattern = hash(slide.get("title", "")) + _index
+	var has_choice: bool = slide.get("choice", false)
+	_choice_box.visible = has_choice
+	if has_choice:
+		_fill_choices()
+		_hint.text = "←  →   Choose          E · Click   Confirm"
+	else:
+		_hint.text = _hint_text
 	_set_label(_eyebrow, slide.get("eyebrow", ""))
 	_set_label(_title, slide.get("title", ""))
 	_set_label(_text, slide.get("text", ""))
@@ -148,7 +262,7 @@ func _show_slide(slide: Dictionary) -> void:
 	_set_label(_ref, GameState.long_ref(ref) if not ref.is_empty() else "")
 	_page.text = "%d / %d" % [_index + 1, _slides.size()] if _slides.size() > 1 else ""
 
-	_drift(not has_map)
+	_drift(not has_map and not has_twist)
 	_content.modulate.a = 1.0
 	var fade := create_tween().set_parallel()
 	fade.tween_property(_frame, "modulate:a", 1.0, FADE).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -251,6 +365,10 @@ func _build() -> void:
 	# Vignette, then a dark wash under the text so it reads over any art
 	_root.add_child(_gradient_rect(true))
 	_root.add_child(_gradient_rect(false))
+	_twist = TwistCard.new()
+	_twist.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_twist.hide()
+	_root.add_child(_twist)   # over the washes: the panels are the slide
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -293,6 +411,11 @@ func _build() -> void:
 	content.add_child(_verse)
 	_ref = _label(&"Eyebrow", 14, Color(UiStyle.GOLD, 0.85))
 	content.add_child(_ref)
+	_choice_box = HBoxContainer.new()
+	_choice_box.add_theme_constant_override("separation", 18)
+	_choice_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_choice_box.hide()
+	content.add_child(_choice_box)
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 24)

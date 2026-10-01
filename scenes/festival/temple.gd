@@ -6,7 +6,7 @@ extends StaticBody3D
 # Solomon's gold. A walled court on a paved platform, its gate toward the city streets;
 # the house at the back of the court on a raised inner pavement, side chambers against
 # it, the tall porch before it, and the altar of burnt offering in front with its fire.
-# Walk the City turns the view here so the camera looks from the court's south-west
+# Explore Jerusalem turns the view here so the camera looks from the court's south-west
 # (-x, +z): the porch faces +z, the gate side, and nothing tall stands between it and
 # the camera. Chunky blocks like the rest of the world; walls, altar and house are
 # solid, the court itself open.

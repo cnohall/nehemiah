@@ -13,7 +13,7 @@ extends RefCounted
 # of any job, slings at enemies that threaten the wall or the crew.
 # Twists it doesn't know yet (horn, haul relays) fall back to the jobs above.
 
-enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD }
+enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY }
 
 # Apprentice / Builder / Master builder. think = seconds between decisions; speed = stick
 # push (1 = full run); aim_err = metres off the enemy; charge = least wind-up;
@@ -45,6 +45,7 @@ const FOLLOW_GAP    := 1.6    # holding a beam's far end: keep this close to the
 const GUARD_BACK    := 2.5    # guards stand this far inside the wall they watch
 const THREAT_BONUS  := 4.0    # metres a harmful enemy is treated as nearer, for the sling
 const TROUGH_PRIORITY := 30.0 # fetch score bonus for the trough's lime and water
+const CHASE_RANGE   := 10.0   # empty hands this close to a saboteur inside the wall: after him
 const SPACING       := 1.2    # workers don't collide: a bot edges away from any this close…
 const SPREAD_PUSH   := 0.6    # …this hard (stick units) when right on top of them
 
@@ -141,7 +142,11 @@ func _decide() -> void:
 			site = _nearest_site(func(s): return s.needs(_p.carried_kind))
 		if site == null:
 			site = _nearest_post(func(s): return s.needs(_p.carried_kind) and (s.built or _posts_ok()))
-		if site != null:
+		# The long haul: the yard runner sets it on the relay mat for the wall end
+		var mat := _relay_for(site)
+		if mat != null:
+			_set_job(Job.RELAY, mat)
+		elif site != null:
 			_set_job(Job.DELIVER, site)
 		elif _p.carried_kind in ["lime", "water"] and _trough() != null:
 			var trough := _trough()
@@ -163,6 +168,16 @@ func _decide() -> void:
 		return (w.carried_kind == "beam" and w._beam_partner() == null 			or w.brain != null and w.brain._fetch_kind == "beam") and not _escorted(w))
 	if carrier != null:
 		_set_job(Job.HELP_BEAM, carrier)
+		return
+	# Saboteur (GDD §5.9): after him with the sword if he's close; a strewn pile the work
+	# needs is tidied before anything else is fetched (one bot to a pile)
+	var sab := _saboteur_near()
+	if sab != null:
+		_set_job(Job.CHASE, sab)
+		return
+	var mess := _mess_to_tidy()
+	if mess != null:
+		_set_job(Job.TIDY, mess)
 		return
 	# Trades (Trade): the overseer is the first to stand guard when foes close on the work
 	var foes := _foes_near_work()
@@ -193,6 +208,37 @@ func _decide() -> void:
 		_set_job(Job.FETCH, source)
 		return
 	_set_job(Job.GUARD, _nearest_site(func(_s): return true))
+
+## "haul": a relay mat worth stopping at on the way to `site` — for the water carrier
+## (the crew's hauler), when the mat has room and lies well short of the wall
+func _relay_for(site: Node3D) -> Node3D:
+	if site == null or not GameState.has_twist("haul") or _p.trade != Trade.WATER_CARRIER or _p.carried_kind == "beam" \
+			or "--no-relay" in OS.get_cmdline_user_args():
+		return null
+	for mat: Node3D in _p.get_tree().get_nodes_in_group("relay_mats"):
+		if mat.free_slot() != Vector3.INF and _dist(mat) > 3.0 and _dist(site) > _dist(mat) + 8.0:
+			return mat
+	return null
+
+func _saboteur_near() -> Node3D:
+	for e: Node3D in _p.get_tree().get_nodes_in_group("enemies"):
+		if e.has_method("is_saboteur") and e.is_saboteur() and e.is_inside() and _dist(e) < CHASE_RANGE:
+			return e
+	return null
+
+## A strewn pile nobody else is tidying — the nearest (any: the work needs them all soon)
+func _mess_to_tidy() -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for pile: Node3D in _p.get_tree().get_nodes_in_group("scattered_piles"):
+		var taken := _p.get_tree().get_nodes_in_group("players").any(func(w):
+			return w != _p and w.brain != null and w.brain._job == Job.TIDY and w.brain._target == pile)
+		if taken or not pile.can_build():
+			continue
+		if _dist(pile) < best_d:
+			best_d = _dist(pile)
+			best = pile
+	return best
 
 # Another bot is already on its way to hold this one's beam
 func _escorted(w: Node3D) -> bool:
@@ -420,6 +466,19 @@ func _act(delta: float) -> void:
 		Job.GUARD:
 			if _target != null:
 				_walk_to(_guard_spot(_target), delta, 1.0)
+		Job.RELAY:
+			if _flat(_target.global_position - _p.global_position).length() < 1.2:
+				_press("drop")
+				_set_job(Job.IDLE, null)
+			else:
+				_walk_to(_target.global_position, delta, 0.8)
+		Job.TIDY:
+			_go_and_press(_target, Player.INTERACT_REACH - 0.6, Player.Act.TIDY, delta)
+		Job.CHASE:
+			if not _target.is_in_group("enemies"):
+				_set_job(Job.IDLE, null)
+			else:
+				_walk_to(_target.global_position, delta, 1.2)
 
 # Walk up to `target`; once in reach, press interact — but only when the press would do
 # what we mean (Player._interact_choice), so a messenger at our elbow doesn't get it by

@@ -61,6 +61,10 @@ const ENTRIES := [
 	  "role": "From day 9",
 	  "quote": "“They all conspired together to come and fight against Jerusalem.”", "ref": "Neh. 4:8",
 	  "text": "Helmet, shield and spear. Slow, but he hits hard, takes many stones, and always goes for the wall." },
+	{ "key": "saboteur", "group": "foes", "name": "Saboteur", "enemy": "saboteur", "move": "thrust",
+	  "role": "From day 6",
+	  "quote": "“They will not know or see, until we come in the middle of them… and cause the work to cease.”", "ref": "Neh. 4:11",
+	  "text": "Hooded, an empty sack on his back, no weapon. He slips over the wall for the yard and strews the pile the work needs. Two cuts bring him down; a strewn pile must be tidied before it gives anything." },
 	{ "key": "raider", "group": "foes", "name": "Raider", "enemy": "raider", "move": "slash",
 	  "role": "From day 21",
 	  "quote": "“…and cause the work to cease.”", "ref": "Neh. 4:11",
@@ -300,7 +304,7 @@ func _meter(share: float) -> Control:
 	return m
 
 static func _enemy_type(e: Dictionary) -> Enemy.Type:
-	return { "scout": Enemy.Type.SCOUT, "brute": Enemy.Type.BRUTE, "raider": Enemy.Type.RAIDER }[e["enemy"]]
+	return { "scout": Enemy.Type.SCOUT, "brute": Enemy.Type.BRUTE, "raider": Enemy.Type.RAIDER, "saboteur": Enemy.Type.SABOTEUR }[e["enemy"]]
 
 ## The figure: the crew in their slot colours, enemies as in the game, and the story's
 ## people dressed for their part (foes share the enemies' oxblood outline)
