@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c8xu01opin16x"
-path="res://.godot/imported/ono.jpg-a6d48da8341d64da3f1f04e58b34d506.ctex"
+uid="uid://cpw2gjbp8c0uh"
+path="res://.godot/imported/build.png-e33da8b5061fa4d15a704576f064de58.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/ono.jpg"
-dest_files=["res://.godot/imported/ono.jpg-a6d48da8341d64da3f1f04e58b34d506.ctex"]
+source_file="res://assets/story/build.png"
+dest_files=["res://.godot/imported/build.png-e33da8b5061fa4d15a704576f064de58.ctex"]
 
 [params]
 

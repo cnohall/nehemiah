@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2mpo58u6siaw"
-path="res://.godot/imported/sanballat.jpg-9a0876f6b85f6d2a8c12fd4896761c5e.ctex"
+uid="uid://coojcgd8vunj4"
+path="res://.godot/imported/judah.png-d54323c1d7fc5c20412e0ffa235d1f00.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/sanballat.jpg"
-dest_files=["res://.godot/imported/sanballat.jpg-9a0876f6b85f6d2a8c12fd4896761c5e.ctex"]
+source_file="res://assets/story/judah.png"
+dest_files=["res://.godot/imported/judah.png-d54323c1d7fc5c20412e0ffa235d1f00.ctex"]
 
 [params]
 

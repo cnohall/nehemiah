@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://lvper5iiv3n6"
-path="res://.godot/imported/lostheart.jpg-a1fb60d06009138b846c2dc3907283a6.ctex"
+uid="uid://ris3ler8wbyj"
+path="res://.godot/imported/dedication.png-f438e2e546347260a6b019b06354a58a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/lostheart.jpg"
-dest_files=["res://.godot/imported/lostheart.jpg-a1fb60d06009138b846c2dc3907283a6.ctex"]
+source_file="res://assets/story/dedication.png"
+dest_files=["res://.godot/imported/dedication.png-f438e2e546347260a6b019b06354a58a.ctex"]
 
 [params]
 

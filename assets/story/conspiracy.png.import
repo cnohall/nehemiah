@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://pui12cm3o4wt"
-path="res://.godot/imported/judah.jpg-f5b50b7ef813d9fcc3871d27d26c2603.ctex"
+uid="uid://lpv7ok78beiy"
+path="res://.godot/imported/conspiracy.png-901d86bf3c47f10edb6d938a105804a4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/judah.jpg"
-dest_files=["res://.godot/imported/judah.jpg-f5b50b7ef813d9fcc3871d27d26c2603.ctex"]
+source_file="res://assets/story/conspiracy.png"
+dest_files=["res://.godot/imported/conspiracy.png-901d86bf3c47f10edb6d938a105804a4.ctex"]
 
 [params]
 
