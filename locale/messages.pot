@@ -757,7 +757,7 @@ msgid "Eliashib the high priest and his brothers the priests take up the work at
 msgstr ""
 
 #: scenes\story\credits_roll.gd:31
-msgid "Emotional support & spirit animal"
+msgid "Art director"
 msgstr ""
 
 #: scenes\player\player.gd:1227

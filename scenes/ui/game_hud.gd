@@ -1068,11 +1068,31 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 		label.text = tr("Bots: %d") % Settings.bot_count
 		skill.text = tr("Bot skill: %s") % tr(sk["name"])
 		skill_about.text = tr(sk["about"])
-		skill.visible = Settings.bot_count > 0
-		skill_about.visible = Settings.bot_count > 0
+		# Hidden, not removed: they hold the panel's width when there are no bots
+		var has_bots := Settings.bot_count > 0
+		skill.modulate.a = 1.0 if has_bots else 0.0
+		skill.mouse_filter = Control.MOUSE_FILTER_STOP if has_bots else Control.MOUSE_FILTER_IGNORE
+		if in_menu:
+			skill.focus_mode = Control.FOCUS_ALL if has_bots else Control.FOCUS_NONE
+		skill_about.modulate.a = 1.0 if has_bots else 0.0
 		fewer.disabled = Settings.bot_count <= 0
 		more.disabled = Settings.bot_count >= NetworkManager.MAX_PLAYERS - 1
 	_host_refreshers.append(refresh)
+	# Size to the widest choice, so cycling never resizes the panel around it
+	var skill_texts: Array[String] = []
+	var skill_abouts: Array[String] = []
+	for s in BotBrain.SKILLS:
+		skill_texts.append(tr("Bot skill: %s") % tr(s["name"]))
+		skill_abouts.append(tr(s["about"]))
+	var diff_texts: Array[String] = []
+	var diff_abouts: Array[String] = []
+	for d in Settings.DIFFICULTIES:
+		diff_texts.append(tr("Difficulty: %s") % tr(d["name"]))
+		diff_abouts.append(tr(d["about"]))
+	_fit_widest(skill, skill_texts)
+	_fit_widest(skill_about, skill_abouts)
+	_fit_widest(diff, diff_texts)
+	_fit_widest(diff_about, diff_abouts)
 	var change := func(count: int, level: int):
 		Settings.bot_count = clampi(count, 0, NetworkManager.MAX_PLAYERS - 1)
 		Settings.bot_skill = level
@@ -1212,6 +1232,19 @@ func _host_caption() -> Label:
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	return l
+
+# Min width of a Button/Label = its widest candidate text (hidden/toggled controls keep their slot width)
+func _fit_widest(c: Control, texts: Array[String]) -> void:
+	var font := c.get_theme_font("font")
+	var px := c.get_theme_font_size("font_size")
+	if font == null:
+		return
+	var w := 0.0
+	for t in texts:
+		w = maxf(w, font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x)
+	if c is Button:
+		w += c.get_theme_stylebox("normal").get_minimum_size().x
+	c.custom_minimum_size.x = ceilf(w)
 
 func _bot_button(text: String, focusable := false) -> Button:
 	var b := Button.new()

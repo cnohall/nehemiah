@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bftut6rhqqrnf"
-path="res://.godot/imported/conspiracy.jpg-0eeb27ea55cb74a9118a98ca2f26b545.ctex"
+uid="uid://bhsmcj5yl1kc2"
+path="res://.godot/imported/armed.png-dc262e4f00d81d79e1ee16a0ec7c536a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/story/conspiracy.jpg"
-dest_files=["res://.godot/imported/conspiracy.jpg-0eeb27ea55cb74a9118a98ca2f26b545.ctex"]
+source_file="res://assets/story/armed.png"
+dest_files=["res://.godot/imported/armed.png-dc262e4f00d81d79e1ee16a0ec7c536a.ctex"]
 
 [params]
 

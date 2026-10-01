@@ -74,8 +74,10 @@ const BEATS := {
 		"half": { "call": "Raiders on the haul road!", "pack": [[R, 3]], "at": "yard" },
 		"last": { "call": "Brutes for the gate!", "pack": [[B, 3]], "at": "gate" },
 	},
-	7: {   # Fountain Gate — the breather: no packs
-		"half": { "call": "Quiet in the valley today.",
+	7: {   # Fountain Gate — the breather, and the trouble inside (Neh. 5): no packs
+		"half": { "call": "The families are back on their land.",
+			"verse": ["We will restore them, and will require nothing of them. We will do so, even as you say.", "Neh. 5:12"] },
+		"last": { "call": "Quiet in the valley today.",
 			"verse": ["They said, “Let’s rise up and build.” So they strengthened their hands for the good work.", "Neh. 2:18"] },
 	},
 	8: {   # Water Gate — out of the dark

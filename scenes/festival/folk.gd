@@ -23,6 +23,12 @@ var lines: Array = []
 ## Waiting for a portion (Neh. 8:10); `fed_line` is what they say after
 var hungry := false
 var fed_line: Array = ["", ""]
+## What they say while they wait, and the plaque over them (Neh. 8:10 by default)
+var hungry_line: Array = ["Nothing is prepared in my house for the feast.", ""]
+var tag_title := "Nothing prepared"
+## The group a hungry one is a build site in. The Fountain Gate's households (Neh. 5) use
+## their own, so enemies, bots and the work front never take them for wall.
+var site_group := "build_sites"
 var look := {}
 var size_scale := 0.9
 var facing := "down"
@@ -49,7 +55,7 @@ var _glad := false   # cheering / clapping: stand for it
 func _ready() -> void:
 	add_to_group("folk")
 	if hungry:
-		add_to_group("build_sites")
+		add_to_group(site_group)
 	_rig = CharacterRig.new()
 	add_child(_rig)
 	_rig.setup(look, size_scale)
@@ -66,7 +72,7 @@ func _ready() -> void:
 		_tag = WorldTag.make(WorldTag.Kind.SITE)
 		_tag.position = Vector3(0, 2.6, 0)
 		_tag.clamp_to_screen = false
-		_tag.text = "%s\nPortion 0/1" % tr("Nothing prepared")
+		_tag.text = "%s\nPortion 0/1" % tr(tag_title)
 		add_child(_tag)
 
 func _process(delta: float) -> void:
@@ -148,7 +154,7 @@ func talk(by: Node3D) -> void:
 		_play(("sway_" if sitting else "idle_") + facing)
 	var line: Array
 	if hungry:
-		line = ["Nothing is prepared in my house for the feast.", ""]
+		line = hungry_line
 	elif lines.is_empty():
 		line = fed_line
 	else:
@@ -188,8 +194,20 @@ func next_need() -> String:
 func deposit(kind: String, _amount: int) -> bool:
 	if not needs(kind):
 		return false
+	_become_fed()
+	say(fed_line)
+	fed.emit(self)
+	return true
+
+## Another peer: the server fed them (the cheer without the delivery)
+func apply_fed() -> void:
+	if hungry:
+		_become_fed()
+		say(fed_line)
+
+func _become_fed() -> void:
 	hungry = false
-	remove_from_group("build_sites")
+	remove_from_group(site_group)
 	# A cheer, some clapping, then back to standing about
 	_glad = true
 	_moving = false
@@ -201,9 +219,6 @@ func deposit(kind: String, _amount: int) -> bool:
 		if is_instance_valid(self):
 			_glad = false
 			_play("idle_" + facing))
-	say(fed_line)
-	fed.emit(self)
-	return true
 
 func can_build() -> bool:
 	return false
@@ -239,7 +254,7 @@ static func look_for(kind: String, dye: Color, seed_value: int) -> Dictionary:
 	var l := CharacterRig.worker_look(seed_value % 4, dye)
 	l["tool"] = false
 	l["sword"] = false
-	for k in ["basket", "basket_stones", "strap", "planks", "apron", "satchel", "scroll", "tool_always", "sculpted_builder", "bracers"]:
+	for k in ["basket", "basket_stones", "strap", "planks", "apron", "satchel", "scroll", "tool_always", "bracers"]:
 		l.erase(k)
 	match kind:
 		"man":
@@ -255,7 +270,7 @@ static func look_for(kind: String, dye: Color, seed_value: int) -> Dictionary:
 			l.merge({"beard": "long", "hair": Color(0.82, 0.80, 0.76), "hat": "wrap",
 				"hat_color": Palette.UNDYED.lightened(0.1), "long_robe": true}, true)
 		"governor":   # Nehemiah: the king's cupbearer, dressed for the court he came from
-			l.merge({"beard": "full", "hair": Color(0.32, 0.28, 0.26), "hat": "wrap", "hat_color": Palette.SAFFRON,
+			l.merge({"beard": "full", "hair": CharacterRig.HAIR_BROWN, "hat": "wrap", "hat_color": Palette.SAFFRON,
 				"band": Palette.MUREX, "robe": Palette.MUREX.lerp(Palette.UNDYED, 0.35), "long_robe": true,
 				"vest": Palette.SAFFRON}, true)
 		"priest":

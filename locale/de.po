@@ -1141,8 +1141,8 @@ msgstr "Entwicklung"
 msgid "Game design"
 msgstr "Spieldesign"
 
-msgid "Emotional support & spirit animal"
-msgstr "Emotionale Unterstützung & Krafttier"
+msgid "Art director"
+msgstr "Art Direction"
 
 msgid "Scripture"
 msgstr "Bibeltext"

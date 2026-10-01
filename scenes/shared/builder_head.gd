@@ -9,19 +9,36 @@ var _rig: Node3D
 var _head: Node3D
 var _skin: Color
 var _hair: Color
+var _brow: Color
+var _beard_kind := ""
+var _hat := "band"
+var _style := "short"
 
 func build(rig: Node3D, head: Node3D, look: Dictionary) -> void:
 	_rig = rig
 	_head = head
 	_skin = look["skin"]
-	_hair = Color(0.24, 0.115, 0.065)
+	_hair = look["hair"]
+	_brow = look.get("brow", _hair.darkened(0.12))
+	_beard_kind = look.get("beard", "")
+	_hat = look.get("hat", "band")
+	_style = look.get("hair_style", "short")
 	if _material == null:
 		_material = ShaderMaterial.new()
 		_material.shader = preload("res://assets/shaders/builder_sculpt.gdshader")
 	_face()
 	_beard()
 	_haircut()
-	_headband(look["hat_color"])
+	var cloth: Color = look["hat_color"]
+	match _hat:
+		"wrap":
+			_turban(cloth, look.get("band", cloth.darkened(0.3)))
+		"hood":
+			_hood(cloth)
+		"helmet":
+			_helmet(cloth)
+		_:
+			_headband(cloth, look.get("stripe", cloth.lightened(0.10)) if _hat == "scarf" else cloth.lightened(0.10))
 
 func _add(mesh: Mesh, color: Color, pos := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
 	var part: MeshInstance3D = _rig._part(_head, mesh, color, pos, rot)
@@ -29,7 +46,7 @@ func _add(mesh: Mesh, color: Color, pos := Vector3.ZERO, rot := Vector3.ZERO) ->
 	return part
 
 func _oval(size: Vector3, color: Color, pos: Vector3, rot := Vector3.ZERO) -> void:
-	_add(_rig._ellipsoid(size), color, pos, rot)
+	_add(_rig._ellipsoid(size, true), color, pos, rot)
 
 func _face() -> void:
 	# Skull, temples, cheekbones and jaw form one continuous surface.
@@ -53,7 +70,7 @@ func _face() -> void:
 		_lock("upper_lid%s" % side, [eye + Vector3(-0.077, 0.0, 0.017), eye + Vector3(-0.038, 0.065, 0.035), eye + Vector3(0.035, 0.061, 0.035), eye + Vector3(0.076, -0.004, 0.009)], 0.014, 0.013, _skin.darkened(0.28))
 		_lock("lower_lid%s" % side, [eye + Vector3(-0.071, -0.01, 0.017), eye + Vector3(-0.034, -0.057, 0.03), eye + Vector3(0.04, -0.057, 0.03), eye + Vector3(0.075, -0.004, 0.01)], 0.010, 0.010, _skin.lightened(0.04))
 		# Inner brow sits low; the outer end arches and tapers into the temple.
-		_lock("brow%s" % side, [Vector3(side * 0.038, 0.386, 0.285), Vector3(side * 0.10, 0.412, 0.307), Vector3(side * 0.18, 0.430, 0.287), Vector3(side * 0.232, 0.405, 0.247)], 0.032, 0.024, _hair.darkened(0.12))
+		_lock("brow%s" % side, [Vector3(side * 0.038, 0.386, 0.285), Vector3(side * 0.10, 0.412, 0.307), Vector3(side * 0.18, 0.430, 0.287), Vector3(side * 0.232, 0.405, 0.247)], 0.032, 0.024, _brow)
 	# One continuous bridge and tip, with the root embedded in the forehead.
 	_add(_profile("nose", [Vector4(0.225, 0.025, 0.310, 0.25),
 		Vector4(0.24, 0.056, 0.350, 0.25), Vector4(0.263, 0.071, 0.397, 0.25),
@@ -66,9 +83,13 @@ func _face() -> void:
 	_oval(Vector3(0.12, 0.025, 0.027), _skin.darkened(0.10), Vector3(0, 0.134, 0.303))
 
 func _beard() -> void:
+	if _beard_kind.is_empty():
+		return
+	var short := _beard_kind == "short"
 	# Compact chin mass leaves the neck and tunic visible, matching the turnaround.
-	_oval(Vector3(0.54, 0.22, 0.34), _hair, Vector3(0, 0.065, 0.125))
-	_add(_beard_surface(), _hair.lightened(0.012))
+	if not short:
+		_oval(Vector3(0.54, 0.22, 0.34), _hair, Vector3(0, 0.065, 0.125))
+		_add(_beard_surface(), _hair.lightened(0.012))
 	for side: float in [-1.0, 1.0]:
 		_oval(Vector3(0.16, 0.27, 0.31), _hair, Vector3(side * 0.255, 0.17, 0.078), Vector3(0.18, 0, side * -0.18))
 		for i in 3:
@@ -77,13 +98,48 @@ func _beard() -> void:
 			_lock("jaw%s_%s" % [side, i], [Vector3(x, y, 0.242), Vector3(x, y - 0.025, 0.271), Vector3(x - side * 0.013, y - 0.08, 0.282), Vector3(x - side * 0.025, y - 0.12, 0.263)], 0.034, 0.013, _hair.lightened(0.018 * (i % 2)))
 		# Moustache grows outward from the philtrum and hooks down at the corner.
 		_lock("moustache%s" % side, [Vector3(side * 0.006, 0.214, 0.333), Vector3(side * 0.068, 0.237, 0.36), Vector3(side * 0.125, 0.183, 0.348), Vector3(side * 0.175, 0.172, 0.300)], 0.033, 0.034, _hair.lightened(0.025))
+	if short:
+		# A close-cropped chin: a short, rounded tuft under the lip and a shadow along the jaw.
+		_oval(Vector3(0.40, 0.17, 0.26), _hair, Vector3(0, 0.07, 0.19))
+		for i in 5:
+			var x := (i - 2) * 0.05
+			_lock("tuft%s" % i, [Vector3(x, 0.10, 0.311), Vector3(x + 0.006, 0.07, 0.340), Vector3(x + 0.006, 0.035, 0.318), Vector3(x * 0.9, 0.012 + absf(x) * 0.12, 0.262)], 0.030, 0.014, _hair.lightened(0.013 * (i % 3)))
+		return
 	for i in 7:
 		var x := (i - 3) * 0.043
 		_lock("chin%s" % i, [Vector3(x, 0.10, 0.311), Vector3(x + 0.009, 0.07, 0.350), Vector3(x + 0.009, 0.018, 0.301), Vector3(x * 0.86, -0.029 + absf(x) * 0.20, 0.193)], 0.028, 0.014, _hair.lightened(0.013 * (i % 3)))
+	if _beard_kind == "long":
+		# A patriarch's beard: five heavy tails falling over the chest.
+		for i in 5:
+			var x := (i - 2) * 0.062
+			var fall := 0.40 - absf(i - 2) * 0.07
+			_lock("long%s" % i, [Vector3(x, -0.01, 0.255), Vector3(x * 1.1, -0.12, 0.335), Vector3(x * 0.8, -fall * 0.7, 0.33), Vector3(x * 0.5, -fall, 0.29)], 0.062, 0.030, _hair.lightened(0.014 * (i % 3)), Vector3.FORWARD, true)
 
 func _haircut() -> void:
+	if _hat == "wrap" or _hat == "hood" or _hat == "helmet":
+		# Only the nape and the sideburns show under the cloth.
+		_oval(Vector3(0.59, 0.40, 0.225), _hair, Vector3(0, 0.335, -0.205))
+		for side: float in [-1.0, 1.0]:
+			_lock("sideburn%s" % side, [Vector3(side * 0.287, 0.371, 0.125), Vector3(side * 0.31, 0.34, 0.16), Vector3(side * 0.28, 0.28, 0.17), Vector3(side * 0.27, 0.21, 0.21)], 0.037, 0.028, _hair, Vector3(side, 0, 0))
+		return
 	_oval(Vector3(0.65, 0.235, 0.61), _hair, Vector3(0, 0.552, -0.025))
 	_oval(Vector3(0.59, 0.40, 0.225), _hair, Vector3(0, 0.335, -0.205))
+	if _style == "curly":
+		# Tight curls: a cap of overlapping tufts over the band and down the nape.
+		for i in 16:
+			var h := float(hash(i * 5 + 1) % 9) / 9.0
+			var x := (i % 4 - 1.5) * 0.17
+			var z := (i / 4 - 1.5) * 0.16
+			_oval(Vector3(0.20, 0.17, 0.20), _hair.lightened(h * 0.10), Vector3(x, 0.62 + h * 0.03 - (absf(x) + absf(z)) * 0.20, z - 0.02), Vector3(h, h * 2.0, 0))
+		for i in 8:
+			var x := (i % 4 - 1.5) * 0.18
+			_oval(Vector3(0.19, 0.18, 0.17), _hair.lightened((i % 3) * 0.04), Vector3(x, 0.30 - (i / 4) * 0.15, -0.30))
+	elif _style == "bushy":
+		# Thick mane: heavy locks falling past the ears to the shoulders.
+		for side: float in [-1.0, 1.0]:
+			for i in 3:
+				_oval(Vector3(0.17, 0.30, 0.17), _hair.lightened(i * 0.025), Vector3(side * 0.31, 0.22 - i * 0.04, -0.02 - i * 0.12), Vector3(-0.25, 0, side * 0.15))
+		_oval(Vector3(0.60, 0.42, 0.22), _hair.lightened(0.02), Vector3(0, 0.10, -0.30))
 	# Staggered nape locks, swept off the ears. No grid of disconnected blobs.
 	for i in 7:
 		# Sweep around the back half of the skull (front is +Z).
@@ -118,14 +174,36 @@ func _haircut() -> void:
 	# One distinctive forelock curls over the band on the builder's left.
 	_lock("forelock", [Vector3(0.12, 0.622, 0.13), Vector3(0.30, 0.66, 0.20), Vector3(0.29, 0.52, 0.351), Vector3(0.21, 0.503, 0.335)], 0.063, 0.037, _hair.lightened(0.03), Vector3(0, 0.6, 0.8), true)
 
-func _headband(color: Color) -> void:
+func _headband(color: Color, fold: Color) -> void:
 	# A soft, uneven wrapped ribbon with diagonal folds; back knot and tapered tails.
 	_add(_band(), color)
 	for i in 2:
-		_lock("band_fold%s" % i, [Vector3(-0.28, 0.49 + i * 0.029, 0.16), Vector3(-0.13, 0.48 + i * 0.037, 0.358), Vector3(0.12, 0.53 + i * 0.028, 0.359), Vector3(0.28, 0.53 + i * 0.019, 0.17)], 0.010, 0.006, color.lightened(0.10))
+		_lock("band_fold%s" % i, [Vector3(-0.28, 0.49 + i * 0.029, 0.16), Vector3(-0.13, 0.48 + i * 0.037, 0.358), Vector3(0.12, 0.53 + i * 0.028, 0.359), Vector3(0.28, 0.53 + i * 0.019, 0.17)], 0.010, 0.006, fold)
 	_oval(Vector3(0.12, 0.105, 0.09), color.darkened(0.1), Vector3(-0.10, 0.49, -0.329))
 	for i in 2:
 		_lock("band_tail%s" % i, [Vector3(-0.10, 0.49, -0.33), Vector3(-0.17 - i * 0.03, 0.42, -0.40), Vector3(-0.22 + i * 0.17, 0.29, -0.42), Vector3(-0.26 + i * 0.19, 0.23 + i * 0.035, -0.39)], 0.067, 0.014, color.lightened(i * 0.06), Vector3.BACK)
+
+func _turban(cloth: Color, band: Color) -> void:
+	# Wound head-cloth over the crown, a coloured band, cloth falling behind to the shoulders.
+	_oval(Vector3(0.80, 0.40, 0.76), cloth, Vector3(0, 0.56, -0.02))
+	for k in 3:
+		_oval(Vector3(0.78 - k * 0.07, 0.19, 0.74 - k * 0.07), cloth.darkened(0.07 + k * 0.02), Vector3(0, 0.55 + k * 0.07, -0.02 - k * 0.02), Vector3(0, 0, 0.12 - k * 0.10))
+	_add(_band(), band)
+	_oval(Vector3(0.74, 0.50, 0.15), cloth.darkened(0.04), Vector3(0, 0.24, -0.37), Vector3(0.12, 0, 0))
+	for side: float in [-1.0, 1.0]:
+		_oval(Vector3(0.14, 0.52, 0.42), cloth.darkened(0.02), Vector3(side * 0.37, 0.24, -0.12), Vector3(-0.12, 0, side * 0.10))
+
+func _hood(cloth: Color) -> void:
+	_oval(Vector3(0.78, 0.40, 0.72), cloth, Vector3(0, 0.55, -0.06))
+	_oval(Vector3(0.76, 0.66, 0.30), cloth, Vector3(0, 0.28, -0.30))
+	for side: float in [-1.0, 1.0]:
+		_oval(Vector3(0.13, 0.56, 0.48), cloth, Vector3(side * 0.37, 0.30, -0.07), Vector3(0, 0, side * 0.05))
+	_oval(Vector3(0.86, 0.26, 0.56), cloth.darkened(0.06), Vector3(0, -0.06, -0.14))
+
+func _helmet(metal: Color) -> void:
+	_oval(Vector3(0.74, 0.50, 0.70), metal, Vector3(0, 0.56, -0.03))
+	_add(_rig._soft(Vector3(0.78, 0.07, 0.74), 0.02), metal.darkened(0.25), Vector3(0, 0.46, -0.02))
+	_add(_rig._soft(Vector3(0.07, 0.30, 0.06), 0.015), metal.darkened(0.15), Vector3(0, 0.34, 0.345))
 
 # Cubic sweep with a rounded root and a tapered tip. A shallow lobed
 # cross section gives each hair lock longitudinal sculpted grooves.
@@ -134,8 +212,8 @@ func _lock(key: String, points: Array, width: float, depth: float, color: Color,
 		var vertices := PackedVector3Array()
 		var indices := PackedInt32Array()
 		var uv := PackedVector2Array()
-		var steps := 24 if grooves else 12
-		var sides := 24 if grooves else 12
+		var steps := 16 if grooves else 10
+		var sides := 16 if grooves else 10
 		for i in steps + 1:
 			var t := float(i) / steps
 			var center: Vector3 = points[0].bezier_interpolate(points[1], points[2], points[3], t)
@@ -165,7 +243,7 @@ static func _profile(key: String, rings: Array, roundness: float) -> Mesh:
 		return _cache[key]
 	var vertices := PackedVector3Array()
 	var indices := PackedInt32Array()
-	const SIDES := 48
+	const SIDES := 36
 	var smooth_rings: Array[Vector4] = []
 	for i in rings.size() - 1:
 		var a: Vector4 = rings[maxi(0, i - 1)]
@@ -221,7 +299,7 @@ static func _band() -> Mesh:
 		return _cache["headband"]
 	var vertices := PackedVector3Array()
 	var indices := PackedInt32Array()
-	const SIDES := 64
+	const SIDES := 48
 	const RINGS := 6
 	for i in RINGS:
 		var t := float(i) / (RINGS - 1)
