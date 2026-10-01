@@ -273,7 +273,6 @@ Three rules, each on by default and each switched off from the command line to A
   - *haul:* a relay mat halfway (`RelayMat`). A load dropped on it stacks in a free place, so one worker can run the yard end and another the wall end. The water-carrier bot runs the yard end
 - **Leaders on the rise** (`Leaders`): Sanballat, Tobiah and Geshem come to a rise outside the wall at the arc's peaks and call across it in their own words (WEB). When the stretch stands, or on the win, they turn and go (6:16). They follow `SectionBeats.beat_fired` when a beat names a leader, and otherwise fall back to Broad Wall, Valley Gate, East Gate and the finale. They never fight
 - **The far goal in view:** every tally says "4 of 12 stretches stand · 36 days to the fifty-second"
-- **Robe dyes** (`Dyes`): best marks across all sections (up to 36) unlock 8 period dyes, from undyed linen to Tyrian purple, for the robe. The slot colour stays on the band and ring. The dye is picked in the gather panel and the menu, synced in `crew_info`, and the tally says when a new one is earned. Looks only
 - **Session log** (`user://sessions.log`): one line per game left, recording where it stopped. It's for playtest 3 (PLAYTEST_3 §4a)
 
 **Not yet:** harder variants of a three-mark stretch (e.g. Broad Wall at night); the title-screen world changing with progress; the finished stretches staying visible from the next one; relay behaviour for people-only crews (the mat works, but only bots are told to use it).

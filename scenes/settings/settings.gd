@@ -33,8 +33,6 @@ var bot_skill := 1   # index into BotBrain.SKILLS
 var difficulty := 1
 # This player's trade (Trade), or -1 for their place in the crew's own
 var trade := -1
-# Robe dye (Dyes), earned by marks; 0 = undyed
-var dye := 0
 
 # pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
 # harm: multiplies every enemy blow, on workers and on the wall
@@ -78,7 +76,6 @@ func _ready() -> void:
 		bot_skill = cfg.get_value("bots", "skill", bot_skill)
 		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
-		dye = clampi(cfg.get_value("general", "dye", dye), 0, Dyes.LIST.size() - 1)
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -138,7 +135,6 @@ func save() -> void:
 	cfg.set_value("bots", "skill", bot_skill)
 	cfg.set_value("general", "difficulty", difficulty)
 	cfg.set_value("general", "trade", trade)
-	cfg.set_value("general", "dye", dye)
 	cfg.save(PATH)
 
 ## The chosen difficulty's row of DIFFICULTIES

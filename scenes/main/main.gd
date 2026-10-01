@@ -517,7 +517,7 @@ func _assign_colors() -> void:
 		players.map(func(p): return p.is_bot()))
 	for slot in players.size():
 		var c: Color = PLAYER_COLORS[slot % PLAYER_COLORS.size()]
-		players[slot].set_slot(slot, c, trades[slot], NetworkManager.dye_of(players[slot].worker_id()))
+		players[slot].set_slot(slot, c, trades[slot])
 		if hud:
 			hud.set_player_color(slot, c, trades[slot])
 

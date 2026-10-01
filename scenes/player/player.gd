@@ -109,7 +109,6 @@ var slot_color := Color.WHITE   # ring / HUD colour, set by Main
 var _slot := 0                  # crew slot, set by Main (picks the dusk dance)
 var trade := 0                  # Trade, set by Main with the slot: what this worker is quicker at
 var _slotted := false
-var _dye := 0                   # robe dye (Dyes), set by Main with the slot
 var _facing := "down"
 var _is_busy := false
 var _sling_cd := 0.0
@@ -247,16 +246,15 @@ func _exit_tree() -> void:
 	if local == self:
 		local = null
 
-func set_slot(slot: int, c: Color, trade_index := -1, dye := 0) -> void:
+func set_slot(slot: int, c: Color, trade_index := -1) -> void:
 	var t := trade_index if trade_index >= 0 else slot % CharacterRig.TRADES.size()
-	if _slotted and slot == _slot and c == slot_color and t == trade and dye == _dye:
+	if _slotted and slot == _slot and c == slot_color and t == trade:
 		return   # the crew list changed, not us — don't rebuild the rig
 	_slotted = true
 	_slot = slot
 	slot_color = c
 	trade = t
-	_dye = dye
-	_sprite.set_look(Dyes.apply(CharacterRig.worker_look(trade, c), dye))
+	_sprite.set_look(CharacterRig.worker_look(trade, c))
 	_sprite.set_ring_color(Color(0, 0, 0, 0) if GameState.attract else c)   # the title backdrop stays unmarked
 	_refresh_pip()
 	_rebuild_carry_prop()   # a new rig means a new chest anchor

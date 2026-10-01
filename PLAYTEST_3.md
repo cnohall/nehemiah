@@ -102,7 +102,6 @@ Playtest feedback (30 Sep 2026): fun for 2–3 stretches, then no pull to finish
 - [ ] One player parked in the yard guarding the piles (bad sign, §5.9)
 - [ ] Used the relay mat at the Dung Gate, or dug the outside rubble heaps
 - [ ] Noticed Sanballat & co. on the rise; reacted when they left
-- [ ] Commented on a robe dye (their own or a friend's)
 - [ ] Broad Wall: said the wall looks thick, or asked why it takes two passes ("outer face / inner face")
 - [ ] Jeshanah: found the charred timbers without help; grumbled that clearing isn't building
 - [ ] Choice card: read it before picking; which option; did anyone argue; same option every time? (kill rule, GDD §6.5)
@@ -136,7 +135,6 @@ After the sessions, fill this in and copy the result into GDD §5.
 | What-can-I-do lens | — | | used unprompted? |
 | Saboteur | `--no-saboteur` | | parked guard = tune the interval |
 | Leaders on the rise | — | | |
-| Robe dyes | — | | |
 | Two-face Broad Wall | — | | sequential faces: just "longer"? then make them parallel |
 | Old / burned units (Jeshanah, Miphkad) | — | | |
 | Choice before each stretch (two trades, §6.5) | `-- --boon=<key>` | | one option always picked = cut; compare time, breaches, wall health per pick |

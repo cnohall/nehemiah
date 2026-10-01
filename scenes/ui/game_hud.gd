@@ -102,8 +102,6 @@ var _style_world := false
 # Where this stretch lies on the real wall, and which way north is in the view (the same
 # plan and needle as Explore Jerusalem's journal), top right under the threat plaque
 var _compass: RingCompass
-# Robe dyes open when this game began: a new one earned by today's marks gets a line
-var _dyes_at_start := -1
 
 func _ready() -> void:
 	# Keeps running while a solo game is paused (menus, settings, fades)
@@ -111,7 +109,6 @@ func _ready() -> void:
 	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
 		UiStyle.ornament(p)
 	_build_player_cards()
-	_dyes_at_start = Dyes.unlocked_count()
 	_build_controls_hint()
 	_build_next_line()
 	_build_next_caption()
@@ -151,8 +148,6 @@ func _ready() -> void:
 		_build_trade_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
 		var pause_vb := $Root/PauseMenu/Center/Modal/VBox
 		_build_trade_row(pause_vb, $Root/PauseMenu/Center/Modal/VBox/Settings.get_index(), true)
-		_build_dye_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
-		_build_dye_row(pause_vb, $Root/PauseMenu/Center/Modal/VBox/Settings.get_index(), true)
 	if is_host:
 		_build_bot_row($Root/GatherPanel/VBox, $Root/GatherPanel/VBox/Begin.get_index(), false)
 		# Also from the menu: mid-day, and reachable on a pad
@@ -885,13 +880,6 @@ func show_tally(stats: Dictionary) -> void:
 		var spare: int = stats.get("spare", 0)
 		if GameState.sun_total > 0.0 and spare > 0:
 			sub += "\n" + tr_n("Finished with %d day to spare", "Finished with %d days to spare", spare) % spare
-	# Marks turn into robe dyes (Dyes): say so the evening one is earned
-	if stats.has("marks") and not GameState.attract:
-		var now := Dyes.unlocked_count()
-		if now > _dyes_at_start:
-			_dyes_at_start = now
-			sub += "
-" + tr("A new robe dye earned: %s — wear it from the menu") % tr(Dyes.LIST[now - 1][0])
 	# Where the campaign stands: the far goal in view every evening (a pull to day 52)
 	if not GameState.is_replay() and not GameState.attract:
 		var stood := GameState.current_section_index + (1 if stats.has("marks") else 0)
@@ -1149,31 +1137,6 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 
 # A trade to pick: the worker in its dress, its name under; the chosen one sits pressed
 # into the parchment with a terracotta frame
-# Robe dye (Dyes): one button that steps through the dyes this player has earned by
-# marks, and says what the next one takes
-func _build_dye_row(vb: Control, at: int, in_menu: bool) -> void:
-	var b := Button.new()
-	b.theme_type_variation = &"GhostButton"
-	b.focus_mode = Control.FOCUS_ALL if in_menu else Control.FOCUS_NONE
-	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	vb.add_child(b)
-	vb.move_child(b, at)
-	var refresh := func():
-		var marks := Dyes.earned()
-		var i: int = Settings.dye if Dyes.unlocked(Settings.dye, marks) else 0
-		var txt := tr("Robe: %s") % tr(Dyes.LIST[i][0])
-		var nxt := Dyes.next(marks)
-		if not nxt.is_empty():
-			txt += "  ·  " + tr("%s at %d marks (you have %d)") % [tr(nxt[0]), nxt[1], marks]
-		b.text = txt
-		b.disabled = Dyes.unlocked_count(marks) <= 1
-	b.pressed.connect(func():
-		var n := Dyes.unlocked_count()
-		NetworkManager.choose_dye((Settings.dye + 1) % maxi(1, n))
-		refresh.call())
-	_host_refreshers.append(refresh)
-	refresh.call()
-
 func _trade_tile(t: int, group: ButtonGroup, focusable: bool) -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
