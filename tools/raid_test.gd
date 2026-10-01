@@ -41,6 +41,8 @@ func _process(delta: float) -> bool:
 	d._setback_at_dawn()
 	_check(piece.stage == 1, "dawn pulled the piece down two stages (stage %d)" % piece.stage)
 	_check(not d._raid_pending, "the call is spent")
+	var strewn := get_nodes_in_group("scattered_piles").size()
+	_check(strewn >= 1 and strewn <= d.RAID_STREWN, "yard piles left in rubble (%d)" % strewn)
 	# A stocked watch post turns it back
 	piece.stage = 3
 	var posts := get_nodes_in_group("watch_posts")

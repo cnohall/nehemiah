@@ -53,6 +53,7 @@ func _ready() -> void:
 	GameState.progress_changed.connect(_on_progress)
 	GameState.breaches_changed.connect(_refresh.unbind(1))
 	GameState.phase_changed.connect(_refresh.unbind(1))
+	GameState.journal_changed.connect(_refresh)
 	_place()
 	_refresh()
 
@@ -66,6 +67,7 @@ func _refresh() -> void:
 	_sheet.done = GameState.targets_done
 	_sheet.total = GameState.targets_total
 	_sheet.breaches = GameState.breaches
+	_sheet.notes = GameState.journal
 	_sheet.update_minimum_size()
 	_sheet.queue_redraw()
 	_day_open = GameState.phase in [GameState.Phase.DAWN, GameState.Phase.WORK, GameState.Phase.DUSK] \
@@ -143,6 +145,7 @@ class ScrollSheet extends Control:
 	var done := 0
 	var total := 0
 	var breaches := 0
+	var notes: Array[String] = []   # margin notes: what went wrong this stretch, with its verse
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -163,7 +166,10 @@ class ScrollSheet extends Control:
 		var tw := UiStyle.CINZEL_BOLD.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, TITLE_SIZE).x
 		var count_w := 48.0
 		var row := _label_w() + maxf(maxf(total, 1) * (BLOCK.x + GAP), _strokes_w()) + count_w
-		return Vector2(maxf(tw, row), 66)
+		var note_w := 0.0
+		for n in notes:
+			note_w = maxf(note_w, UiStyle.SPECTRAL_ITALIC.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL).x)
+		return Vector2(maxf(maxf(tw, row), note_w), 66 + notes.size() * 15)
 
 	func _draw() -> void:
 		_paper()
@@ -194,6 +200,9 @@ class ScrollSheet extends Control:
 			var hit := i < breaches
 			draw_line(Vector2(x, y + 1), Vector2(x + 2, y + 13), UiStyle.TERRACOTTA if hit else Color(UiStyle.RULE, 0.9),
 				2.4 if hit else 1.2, true)
+		# Margin notes, in the scribe's red ink
+		for k in notes.size():
+			draw_string(UiStyle.SPECTRAL_ITALIC, Vector2(0, 76 + k * 15), notes[k], HORIZONTAL_ALIGNMENT_LEFT, -1, SMALL, UiStyle.TERRACOTTA)
 		var danger := breaches >= ceili(GameState.MAX_BREACHES * 0.7)
 		draw_string(UiStyle.SPECTRAL_MEDIUM, Vector2(count_x, y + 12), "%d / %d" % [breaches, GameState.MAX_BREACHES],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, COUNT, UiStyle.TERRACOTTA if danger else UiStyle.INK_SOFT)

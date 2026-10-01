@@ -6,6 +6,10 @@ extends Node3D
 # reach of [E]. A worker who goes with him is led away from the wall for a while and
 # has to walk back; ignored, he gives up and leaves. The right answer, every time, is
 # to keep working (6:3).
+# Two others come by the same road (DayDirector, GDD §5.15): the fifth messenger with the
+# open letter (6:5, named "Letter": turned away, he answers the rumour) and Shemaiah at the
+# Miphkad Gate (6:10-13, named "Shemaiah": "let us shut the doors of the temple" — going
+# with him leads the worker off toward the city for a while; "Should a man like me flee?").
 # Server moves him; clients mirror position / anim / state via the synchronizer.
 
 enum State { COMING, WAITING, LEADING, LEAVING }
@@ -39,6 +43,9 @@ var _waited := 0.0
 var _facing := "down"
 var _exit := Vector3.ZERO
 var _label: WorldTag
+var lead_toast := "Going down to Ono…"
+var release_toast := "Why should the work stop? Back to the wall!"
+var _lead_time := LEAD_TIME
 
 @onready var _figure: CharacterRig = $Figure
 
@@ -64,7 +71,22 @@ func _ready() -> void:
 	scroll.position = Vector3(0.38, 1.25, 0.25)
 	scroll.rotation.z = PI / 2.4
 	add_child(scroll)
-	_label = WorldTag.make(WorldTag.Kind.NOTE, "Come down to the plain of Ono")
+	var note := "Come down to the plain of Ono"
+	if name == &"Letter":
+		note = "An open letter: “You would be their king”"
+		lead_toast = "Reading the letter…"
+	elif name == &"Shemaiah":
+		note = "Hide in the temple — they come tonight to kill you"
+		lead_toast = "Going to hide in the temple…"
+		release_toast = "Should a man like me flee? Back to the wall!"
+		_lead_time = 10.0
+		_figure.setup({
+			"skin": Color(0.62, 0.45, 0.33), "robe": Color(0.40, 0.42, 0.46), "trim": Color(0.22, 0.23, 0.26),
+			"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.80, 0.78, 0.72), "tool": false,
+			"band": Color(0.80, 0.62, 0.26), "beard": "short", "hair": Color(0.45, 0.42, 0.40),
+			"outline": Color(0.16, 0.17, 0.20),
+		})
+	_label = WorldTag.make(WorldTag.Kind.NOTE, note)
 	_label.position.y = 3.0
 	add_child(_label)
 	GameState.phase_changed.connect(_on_phase_changed)
@@ -104,7 +126,7 @@ func _physics_process(delta: float) -> void:
 				_face(to)
 				anim = "idle_" + _facing
 		State.LEADING:
-			if _timer > LEAD_TIME or not is_instance_valid(_led):
+			if _timer > _lead_time or not is_instance_valid(_led):
 				_release()
 				queue_free()
 				return
@@ -123,9 +145,10 @@ func accept(worker: Node3D) -> void:
 	_timer = 0.0
 	_exit = _exit_point()
 	state = State.LEADING
-	worker.lead_away(self, LEAD_TIME)
+	worker.lead_away(self, _lead_time)
 
 func _leave() -> void:
+	get_tree().call_group("day_director", "note_refused", str(name))   # turned away
 	_timer = 0.0
 	_exit = _exit_point()
 	state = State.LEAVING
@@ -137,6 +160,8 @@ func _release() -> void:
 
 # Out the nearer side of the site, along the inside of the wall
 func _exit_point() -> Vector3:
+	if name == &"Shemaiah":
+		return Vector3(global_position.x * 0.5, global_position.y, 46.0)   # in, toward the temple
 	var side := -1.0 if global_position.x < 4.0 else 1.0
 	return Vector3(side * 48.0, global_position.y, clampf(global_position.z, 6.0, 14.0))
 

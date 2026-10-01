@@ -735,7 +735,7 @@ func _server_interact(at: Vector3) -> void:
 			target.talk(self)
 		Act.MESSENGER:
 			target.accept(self)
-			get_tree().call_group("day_director", "note_ono")
+			get_tree().call_group("day_director", "note_shemaiah" if target.name == &"Shemaiah" else "note_ono")
 		Act.WORK:
 			if GameState.active_build:
 				_start_work(target)
@@ -1305,6 +1305,8 @@ func _server_horn(at: Vector3) -> void:
 
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 
+var _led_release_toast := "Why should the work stop? Back to the wall!"
+
 func is_led() -> bool:
 	return _led_server
 
@@ -1329,13 +1331,15 @@ func _set_led(path: NodePath, seconds: float) -> void:
 		return
 	var was_led := _led_by != null
 	_led_by = get_node_or_null(path) as Node3D if not path.is_empty() else null
+	if _led_by != null:
+		_led_release_toast = _led_by.get("release_toast")
 	_led_time = seconds
 	_cancel_charge()
 	_dash_time = 0.0
 	if _led_by != null:
-		_toast("Going down to Ono…")
+		_toast(_led_by.get("lead_toast"))
 	elif was_led:
-		_toast("Why should the work stop? Back to the wall!")
+		_toast(_led_release_toast)
 		anim = "idle_" + _facing
 
 # Owner: walk behind the messenger; no input until he lets go

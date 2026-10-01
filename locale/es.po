@@ -2365,3 +2365,123 @@ msgstr "El mortero tarda un %d%% menos en mezclarse"
 
 msgid "The watch posts stand from dawn, stocked with stone"
 msgstr "Los puestos de guardia están en pie desde el amanecer, con piedras"
+
+msgid "Sound the horn [horn] — a ring marks the spot"
+msgstr "Toca el cuerno [horn] — un círculo marca el lugar"
+
+msgid "Sound the horn [%s] — a ring marks the spot"
+msgstr "Toca el cuerno [%s] — un círculo marca el lugar"
+
+msgid "Gather in the ring: blows land harder there"
+msgstr "Reúnanse en el círculo: allí los golpes pegan más fuerte"
+
+msgid "Horn — rally the crew (stronger blows in its ring)"
+msgstr "Cuerno — reúne al equipo (golpes más fuertes en su círculo)"
+
+msgid "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder"
+msgstr "Suben por el valle en oleadas — {horn} toca el cuerno: reúnanse en su círculo y sus golpes serán más fuertes"
+
+msgid "[%s] Sound the horn — whoever stands in its ring strikes harder"
+msgstr "[%s] Toca el cuerno — quien esté en su círculo golpea más fuerte"
+
+msgid "RALLY — stronger blows here"
+msgstr "REUNIÓN — golpes más fuertes aquí"
+
+msgid "Rallied — your blows land harder here"
+msgstr "¡Reunidos! — aquí tus golpes pegan más fuerte"
+
+msgid "They'll slip in tonight — a watch on the wall!"
+msgstr "Se colarán esta noche. ¡Guardia en el muro!"
+
+msgid "But we made our prayer to our God, and set a watch against them day and night, because of them."
+msgstr "Pero oramos a nuestro Dios y, por causa de ellos, pusimos guardia contra ellos de día y de noche."
+
+msgid "The watch held — they crept off in the dark."
+msgstr "La guardia resistió: se esfumaron en la oscuridad."
+
+msgid "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work."
+msgstr "Cuando nuestros enemigos supieron que lo sabíamos y que Dios había frustrado su plan, todos volvimos al muro, cada uno a su trabajo."
+
+msgid "The watch held in the night"
+msgstr "La guardia resistió de noche"
+
+msgid "In the night they came — a stretch pulled down, the yard in rubble!"
+msgstr "Vinieron de noche: un tramo derribado y el patio hecho escombros."
+
+msgid "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall."
+msgstr "Las fuerzas de los cargadores flaquean y hay mucho escombro; no podemos edificar el muro."
+
+msgid "Pulled down in the night"
+msgstr "Derribado de noche"
+
+msgid "A fox! Tobiah said one would break our wall down…"
+msgstr "¡Un zorro! Tobías dijo que uno derribaría nuestro muro…"
+
+msgid "The hungry went back to their fields — we're short of hands."
+msgstr "Los hambrientos volvieron a sus campos: faltan manos."
+
+msgid "Yet now our flesh is as the flesh of our brothers, our children as their children."
+msgstr "Pero ahora nuestra carne es como la carne de nuestros hermanos, nuestros hijos como sus hijos."
+
+msgid "Short of hands: the hungry were not fed"
+msgstr "Faltan manos: no se alimentó a los hambrientos"
+
+msgid "A letter in the yard: they say you mean to be king!"
+msgstr "Una carta en el patio: ¡dicen que quieres ser rey!"
+
+msgid "You would be their king, according to these words."
+msgstr "Tú serías su rey, según estas palabras."
+
+msgid "A rumour weakens every hand"
+msgstr "Un rumor debilita todas las manos"
+
+msgid "“No such things are done” — the letter is turned away."
+msgstr "«Nada de eso ocurre»: la carta es rechazada."
+
+msgid "There are no such things done as you say, but you imagine them out of your own heart."
+msgstr "No se ha hecho nada de lo que dices; tú lo inventas en tu propio corazón."
+
+msgid "The letter answered"
+msgstr "La carta fue respondida"
+
+msgid "The rumour dies down — strengthen our hands!"
+msgstr "El rumor se apaga: ¡fortalece nuestras manos!"
+
+msgid "An open letter: “You would be their king”"
+msgstr "Una carta abierta: «Serías su rey»"
+
+msgid "Reading the letter…"
+msgstr "Leyendo la carta…"
+
+msgid "A man of the temple is asking for you — it's a trap!"
+msgstr "Un hombre del templo pregunta por ti: ¡es una trampa!"
+
+msgid "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple."
+msgstr "Reunámonos en la casa de Dios, dentro del templo, y cerremos las puertas del templo."
+
+msgid "He turned away. He was hired to frighten us."
+msgstr "Se fue. Lo habían pagado para asustarnos."
+
+msgid "Should a man like me flee? Who is there that, being such as I, would go into the temple to save his life? I will not go in."
+msgstr "¿Un hombre como yo ha de huir? ¿Quién, siendo como yo, entraría en el templo para salvar su vida? No entraré."
+
+msgid "Would not hide in the temple"
+msgstr "No se escondió en el templo"
+
+msgid "Someone has gone to hide in the temple!"
+msgstr "¡Alguien fue a esconderse en el templo!"
+
+msgid "He hired so that I would be afraid, do so, and sin."
+msgstr "Lo contrataron para que yo tuviera miedo, lo hiciera y pecara."
+
+msgid "One hid in the temple"
+msgstr "Uno se escondió en el templo"
+
+msgid "Hide in the temple — they come tonight to kill you"
+msgstr "Escóndete en el templo: vienen esta noche a matarte"
+
+msgid "Going to hide in the temple…"
+msgstr "Yendo a esconderse en el templo…"
+
+msgid "Should a man like me flee? Back to the wall!"
+msgstr "¿Un hombre como yo ha de huir? ¡De vuelta al muro!"

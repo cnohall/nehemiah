@@ -206,7 +206,9 @@ func _tick_saboteurs(delta: float) -> void:
 	_do_spawn(Enemy.Type.SABOTEUR)
 
 func _tick_messengers(delta: float) -> void:
-	if not GameState.has_twist("schemes") or _msg_sent >= MESSENGERS_PER_DAY:
+	# With the rumour out (DayDirector, Neh. 6:5) the fifth messenger carries the open letter
+	var limit := MESSENGERS_PER_DAY + (1 if GameState.rumour else 0)
+	if not GameState.has_twist("schemes") or _msg_sent >= limit:
 		return
 	_msg_timer -= delta
 	if _msg_timer > 0.0 or visitors_root.get_child_count() > 0:
@@ -214,6 +216,8 @@ func _tick_messengers(delta: float) -> void:
 	_msg_timer = MESSENGER_EVERY
 	_msg_sent += 1
 	var m: Node3D = MESSENGER_SCENE.instantiate()
+	if _msg_sent > MESSENGERS_PER_DAY:
+		m.name = "Letter"
 	# In from the side, along the inside of the wall
 	m.position = Vector3(26.0 if randf() < 0.5 else -26.0, 0.1, randf_range(7.0, 12.0))
 	NetworkManager.gate_sync(m.get_node("MultiplayerSynchronizer"))

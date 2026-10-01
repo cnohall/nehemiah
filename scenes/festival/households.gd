@@ -57,6 +57,9 @@ func _active() -> bool:
 ## The stretch changed: the households stand in the Fountain Gate and nowhere else, each
 ## stretch hungry again
 func _refresh() -> void:
+	# Those still hungry as the Fountain Gate ends are missing from the next stretch (Neh. 5:5)
+	var hungry := _families.filter(func(f): return is_instance_valid(f) and f.hungry).size()
+	GameState.hungry_left = 0 if _active() else hungry
 	for f in _families:
 		if is_instance_valid(f):
 			f.remove_from_group("households")

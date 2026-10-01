@@ -253,12 +253,33 @@ func mod(key: String) -> float:
 	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
 	if key == "work":
 		v *= 1.0 + HOUSEHOLD_WORK * households_fed
+		v *= 1.0 - HUNGRY_WORK * hungry_left
+		if rumour:
+			v *= RUMOUR_WORK
 	return v
 
 ## Households fed this stretch (Neh. 5, Households): each family back at the wall adds to
 ## the work. Every peer counts its own; reset when the stretch changes.
 const HOUSEHOLD_WORK := 0.06
 var households_fed := 0
+
+## Setbacks (GDD §5.15). Households left hungry when the Fountain Gate ends are missing from
+## the next stretch's work (5:3-5); an open letter's rumour weakens everyone's hands until
+## it is answered (6:5-9). Set on every peer by DayDirector / Households; cleared per stretch.
+const HUNGRY_WORK := 0.06
+const RUMOUR_WORK := 0.9
+var hungry_left := 0
+var rumour := false
+
+## The scribe's margin notes for this stretch (what went wrong, with its verse), newest last
+signal journal_changed
+var journal: Array[String] = []
+
+func add_journal(text: String) -> void:
+	journal.append(text)
+	if journal.size() > 2:
+		journal.pop_front()
+	journal_changed.emit()
 
 ## The watch posts stand from dawn (the boon says so)
 func boon_posts() -> bool:
@@ -715,6 +736,9 @@ func _set_state(day: int, section: int, p: Phase, b: int, done: int, total: int)
 		# A new stretch's dawn (not the first: a fresh run must not wipe a saved one)
 		if p == Phase.DAWN and section > 0 and _saveable():
 			_save_campaign(day)
+		journal.clear()
+		rumour = false
+		journal_changed.emit()
 		section_changed.emit(section)
 	if day_new:
 		day_changed.emit(day)
