@@ -19,6 +19,21 @@ var count: int = 999:
 			_show_stock()
 
 var _rubble_stones: Array[Node3D] = []
+
+# Saboteur (GDD §5.9, Neh. 4:11 "cause the work to cease"): he strews a pile's loads over
+# its pad and nothing can be taken from it until someone tidies it — worked like a wall
+# stage (BuildWork: hands on, progress kept, a hit stops it). Cleared at every dawn.
+const TIDY_TIME := 2.0
+var scattered := false:
+	set(value):
+		if value == scattered:
+			return
+		scattered = value
+		if is_node_ready():
+			_refresh_active()
+			_show_scatter()
+var _work: BuildWork
+var _strewn: Node3D
 # A picked heap isn't the end of it: more stone is dug out of the burned rubble while
 # the work goes on, one every RUBBLE_REGROW seconds, up to its stock — so a stretch can
 # never run dry, only slow down
@@ -48,15 +63,25 @@ func _ready() -> void:
 	add_child(count_label)
 	anchor.free()
 	count_label.text = kind.capitalize() + ("s" if kind == "beam" else "")
+	_work = BuildWork.new()
+	_work.name = "Work"
+	_work.work_time = TIDY_TIME
+	_work.position.y = 2.2
+	add_child(_work)
+	GameState.phase_changed.connect(_on_phase)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(kind) + hash(name)
 	if rubble_stock > 0:
+		# Out past the wall the rubble was never picked over: twice the stone, in the
+		# enemy's reach — the salvage twist's choice
+		if position.z < 0.0:
+			rubble_stock *= 2
 		count = rubble_stock
 		count_label.text = "Rubble"
 		add_to_group("restockable")
 		_build_rubble_heap(rng)
 		_fold_visual()
-		_build_sync()
+		_build_sync([^".:count", ^".:scattered", ^"Work:progress"])
 		GameState.section_changed.connect(_refresh_active.unbind(1))
 		_refresh_active()
 		return
@@ -83,6 +108,7 @@ func _ready() -> void:
 		"portion":
 			_build_food(rng)
 	_fold_visual()
+	_build_sync([^".:scattered", ^"Work:progress"])
 	GameState.section_changed.connect(_refresh_active.unbind(1))
 	_refresh_active()
 
@@ -92,10 +118,14 @@ func _refresh_active() -> void:
 	visible = active
 	$CollisionShape3D.set_deferred("disabled", not active)
 	# An emptied heap stays visible (a scrape of ash) but can't be picked from
-	if active and count > 0:
+	if active and count > 0 and not scattered:
 		add_to_group("supply_piles")
 	else:
 		remove_from_group("supply_piles")
+	if active and scattered:
+		add_to_group("scattered_piles")
+	else:
+		remove_from_group("scattered_piles")
 
 func _in_section() -> bool:
 	if twist.is_empty():
@@ -115,7 +145,7 @@ func _process(delta: float) -> void:
 		count += 1
 
 func request_pickup() -> bool:
-	if not multiplayer.is_server() or count <= 0:
+	if not multiplayer.is_server() or count <= 0 or scattered:
 		return false
 	count -= 1
 	return true
@@ -125,8 +155,78 @@ func restock() -> void:
 	if multiplayer.is_server() and rubble_stock > 0:
 		count = rubble_stock
 
-func _build_sync() -> void:
-	NetworkManager.add_sync(self, [^".:count"], SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE, 0.0)
+func _build_sync(props: Array[NodePath]) -> void:
+	NetworkManager.add_sync(self, props, SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE, 0.0)
+
+# ── Scattered (saboteur) ───────────────────────────────────
+
+## Server: a saboteur strews the pile. False if there's nothing to strew.
+func scatter() -> bool:
+	if not multiplayer.is_server() or scattered or not visible or kind == "beam":
+		return false
+	scattered = true
+	return true
+
+func _on_phase(phase: GameState.Phase) -> void:
+	if phase == GameState.Phase.DAWN and multiplayer.is_server():
+		scattered = false
+		_work.reset()
+
+# The tidying is a BuildWork on the pile: the same calls a wall answers
+func can_build() -> bool:
+	return scattered
+
+func try_build() -> bool:
+	if not scattered:
+		return false
+	scattered = false
+	return true
+
+func is_complete() -> bool:
+	return not scattered
+
+func work() -> BuildWork:
+	return _work
+
+func work_material() -> String:
+	return ""
+
+## The edge of the pad on `from`'s side (bots and the tidier walk here, not into the stack)
+const PAD_EDGE := 1.2
+
+func approach_point(from: Vector3, standoff: float) -> Vector3:
+	var out := Vector3(from.x - global_position.x, 0.0, from.z - global_position.z)
+	if out.length_squared() < 0.0001:
+		out = Vector3.BACK
+	var p := global_position + out.normalized() * (PAD_EDGE + standoff)
+	return Vector3(p.x, from.y, p.z)
+
+## Plain distance to the pile's centre (the reach pickups have always used)
+func distance_to_point(p: Vector3) -> float:
+	return Vector2(p.x - global_position.x, p.z - global_position.z).length()
+
+# Loads strewn round the pad, the stack itself hidden: unusable at a glance
+func _show_scatter() -> void:
+	if _strewn == null:
+		_strewn = Node3D.new()
+		add_child(_strewn)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(name) + 7
+		var c: Color = COLORS.get(kind, COLORS["stone"])
+		for i in 9:
+			var a := rng.randf() * TAU
+			var r := rng.randf_range(0.6, 1.9)
+			var sz := Vector3(rng.randf_range(0.25, 0.5), rng.randf_range(0.12, 0.22), rng.randf_range(0.2, 0.4))
+			_add(_box(sz), c.lerp(ASH, rng.randf_range(0.0, 0.25)), Vector3(cos(a) * r, 0.1 + sz.y * 0.5, sin(a) * r),
+				Vector3(rng.randf_range(-0.6, 0.6), rng.randf() * TAU, rng.randf_range(-0.6, 0.6))).reparent(_strewn, false)
+	_strewn.visible = scattered
+	_visual.visible = not scattered
+	if scattered:
+		count_label.text = tr("Scattered — tidy  [%s]") % InputMode.key("interact")
+		count_label.pulse = true
+	else:
+		count_label.pulse = false
+		count_label.text = ("Rubble" if count > 0 else "Digging out more") if rubble_stock > 0 			else kind.capitalize() + ("s" if kind == "beam" else "")
 
 # ── Visuals ────────────────────────────────────────────────
 

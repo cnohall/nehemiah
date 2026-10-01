@@ -2,6 +2,8 @@ extends Node
 
 const MAX_PLAYERS := 4
 const DEFAULT_PORT  := 7350
+# Headless test harnesses (tools/*_test.gd) host here, clear of a real game on DEFAULT_PORT
+const TEST_PORT     := 7360
 const MENU_SCENE    := "res://scenes/ui/main_menu.tscn"
 
 # 480 = Valve's public "Spacewar" test app. Swap for the real app ID once
@@ -68,17 +70,29 @@ func _ready() -> void:
 
 # ── ENet (LAN / direct IP, headless tests) ─────────────────
 
-func host(port: int = DEFAULT_PORT) -> void:
-	var peer := ENetMultiplayerPeer.new()
-	var err  := peer.create_server(port, MAX_PLAYERS)
-	if err != OK:
-		push_error("NetworkManager: create_server failed (err %d)" % err)
-		host_failed.emit(tr("Could not open port %d.") % port)
-		return
-	multiplayer.multiplayer_peer = peer
-	lobby_created.emit()
+# Port actually bound by the last successful host() — may be past `port` if it was taken
+var host_port := DEFAULT_PORT
 
+# Walks up `tries` ports when one is taken (a second copy of the game, a headless test);
+# joiners then type "ip:port". Tests pass tries = 1 so host and client never drift apart.
+func host(port: int = DEFAULT_PORT, tries: int = 5) -> void:
+	for p in range(port, port + tries):
+		var peer := ENetMultiplayerPeer.new()
+		if peer.create_server(p, MAX_PLAYERS) == OK:
+			host_port = p
+			if p != port:
+				print("NetworkManager: port %d taken, hosting on %d" % [port, p])
+			multiplayer.multiplayer_peer = peer
+			lobby_created.emit()
+			return
+	push_error("NetworkManager: create_server failed on ports %d–%d" % [port, port + tries - 1])
+	host_failed.emit(tr("Could not open port %d.") % port)
+
+# `address` may carry a port ("192.168.1.5:7351"); a bare IPv6 address (many colons) can't
 func join(address: String, port: int = DEFAULT_PORT) -> void:
+	if address.count(":") == 1 and address.get_slice(":", 1).is_valid_int():
+		port = address.get_slice(":", 1).to_int()
+		address = address.get_slice(":", 0)
 	var peer := ENetMultiplayerPeer.new()
 	var err  := peer.create_client(address, port)
 	if err != OK:
@@ -229,7 +243,9 @@ func _init_eos() -> void:
 func disconnect_session() -> void:
 	if multiplayer.multiplayer_peer:
 		multiplayer.multiplayer_peer.close()
-	multiplayer.multiplayer_peer = null
+	# Back to the boot state (offline, we are the server), not null: solo modes
+	# (practice, Explore Jerusalem) run straight after and ask for get_unique_id()
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	_ready_peers.clear()
 	if _steam and _lobby_id:
 		_steam.leaveLobby(_lobby_id)

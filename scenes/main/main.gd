@@ -9,6 +9,13 @@ const CAM_SIZE     := 18.0   # closer than true "strategy" framing: the crew rea
 const LOOK_AHEAD      := 0.3    # seconds of velocity
 const LOOK_AHEAD_MAX  := 2.5    # metres
 const LOOK_AHEAD_EASE := 2.5
+# Fixed camera (Settings.fixed_camera): the whole stretch in one view, Overcooked-style.
+# Frames FIXED_FRAME (x/z: the wall, the enemy line at WaveManager.SPAWN_Z, the near
+# side) grown to take in every stockpile, and leans a little toward you.
+const FIXED_FRAME  := Rect2(-20.0, -13.0, 40.0, 21.0)
+const FIXED_MARGIN := 3.0    # metres kept round each stockpile / heap
+const FIXED_DRIFT  := 3.0    # metres the view leans toward the local player
+const FIXED_SMOOTH := 3.0
 # Screen shake: trauma (0..1) decays; offset grows with trauma² so small bumps stay small
 const SHAKE_MAX_OFFSET := 0.45
 const SHAKE_DECAY      := 2.2
@@ -49,6 +56,8 @@ var credits: CreditsRoll = null
 var _cam_snapped := false
 var _cam_base := Vector3.ZERO
 var _lead := Vector3.ZERO
+var _zoom := 1.0             # the mood's camera size over CAM_SIZE (dusk leans in)
+var _was_fixed := false
 var _trauma := 0.0
 var _shake_t := 0.0
 var _hud_timer := 0.0
@@ -60,10 +69,16 @@ var _carvings: Array[Label3D] = []   # names on their tablets
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	# The stretch's own arc: the enemy answers the work at half and at the last unit
+	var beats := SectionBeats.new()
+	beats.name = "SectionBeats"
+	add_child(beats)
 	# The day's record and its threats, kept in the world (diegetic HUD)
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
 	add_child(Taunts.new())
+	add_child(RelayMat.new())   # the long haul's halfway stack (Dung Gate)
+	add_child(Leaders.new())    # Sanballat, Tobiah, Geshem watching from the rise at the peaks
 	if GameState.attract:
 		_start_attract()
 		return
@@ -95,6 +110,7 @@ func _ready() -> void:
 	hud.begin_now_requested.connect(director.force_ready)
 	director.story_ended.connect(story.close)
 	story.finished.connect(_on_story_finished)
+	story.choice_made.connect(director.cast_choice)
 	story.start_now_requested.connect(director.force_ready)
 	# After the ending story: the credits, then the end screen
 	credits = CreditsRoll.new()
@@ -142,6 +158,7 @@ func _process(delta: float) -> void:
 	if GameState.attract:
 		_frame_crew(delta)
 		return
+	_turn_to_map()
 	_follow_local_player(delta)
 	_hud_timer -= delta
 	if _hud_timer <= 0.0:
@@ -189,10 +206,26 @@ func _follow_local_player(delta: float) -> void:
 	var local_player := Player.local
 	if local_player == null or (_wall_cam != null and _wall_cam.is_running()):
 		return
-	var vel: Vector3 = local_player.velocity
-	var lead := Vector3(vel.x, 0.0, vel.z) * LOOK_AHEAD
-	_lead = _lead.lerp(lead.limit_length(LOOK_AHEAD_MAX), minf(1.0, delta * LOOK_AHEAD_EASE))
-	var p := local_player.global_position + _lead
+	var fixed := _fixed_cam()
+	if fixed != _was_fixed:
+		_was_fixed = fixed
+		if not fixed:   # back to the close follow framing
+			create_tween().tween_property(camera, "size", CAM_SIZE * _zoom, 0.6).set_trans(Tween.TRANS_SINE)
+	var p: Vector3
+	var smooth := CAM_SMOOTH
+	if fixed:
+		var frame := _fixed_frame()
+		var mid := Vector3(frame.get_center().x, 0.0, frame.get_center().y)
+		var toward := local_player.global_position - mid
+		p = mid + Vector3(toward.x, 0.0, toward.z).limit_length(FIXED_DRIFT)
+		smooth = FIXED_SMOOTH
+		var size := _fit_size(frame, mid) * _zoom
+		camera.size = size if not _cam_snapped else lerpf(camera.size, size, minf(1.0, delta * FIXED_SMOOTH))
+	else:
+		var vel: Vector3 = local_player.velocity
+		var lead := Vector3(vel.x, 0.0, vel.z) * LOOK_AHEAD
+		_lead = _lead.lerp(lead.limit_length(LOOK_AHEAD_MAX), minf(1.0, delta * LOOK_AHEAD_EASE))
+		p = local_player.global_position + _lead
 	var desired := p + _cam_offset()
 	desired.y = CAM_OFFSET.y
 	if not _cam_snapped:
@@ -200,10 +233,39 @@ func _follow_local_player(delta: float) -> void:
 		_cam_base = desired
 		_cam_snapped = true
 	else:
-		_cam_base = _cam_base.lerp(desired, delta * CAM_SMOOTH)
+		_cam_base = _cam_base.lerp(desired, minf(1.0, delta * smooth))
 	camera.global_position = _cam_base + _shake_offset(delta)
 
-## Walk the City: turn the view about the vertical (radians), so north can sit up-screen
+# Explore Jerusalem wanders the whole city: it always follows
+func _fixed_cam() -> bool:
+	return Settings.fixed_camera and not GameState.festival and not GameState.attract
+
+## The ground (x/z) the fixed camera keeps in view: FIXED_FRAME plus every stockpile
+## and heap standing this section (the yard moves — the Dung Gate's sits far east)
+func _fixed_frame() -> Rect2:
+	var frame := FIXED_FRAME
+	for group: Node in [$Supplies, $Rubble]:
+		for pile: Node3D in group.get_children():
+			if pile.is_visible_in_tree():
+				var at := Vector2(pile.global_position.x, pile.global_position.z)
+				frame = frame.expand(at - Vector2.ONE * FIXED_MARGIN).expand(at + Vector2.ONE * FIXED_MARGIN)
+	return frame
+
+## Orthographic size that fits the frame's four ground corners, seen from `mid`
+func _fit_size(frame: Rect2, mid: Vector3) -> float:
+	var right := camera.global_basis.x
+	var up := camera.global_basis.y
+	var half := Vector2.ZERO
+	for c: Vector2 in [frame.position, frame.end, Vector2(frame.position.x, frame.end.y), Vector2(frame.end.x, frame.position.y)]:
+		var v := Vector3(c.x, 0.0, c.y) - mid
+		half.x = maxf(half.x, absf(v.dot(right)))
+		half.y = maxf(half.y, absf(v.dot(up)))
+	var view := get_viewport().get_visible_rect().size
+	var aspect := view.x / view.y if view.y > 0.0 else 16.0 / 9.0
+	# size is the view's height (keep height); the drift can shift it by up to FIXED_DRIFT
+	return maxf(half.y * 2.0, half.x * 2.0 / aspect) + FIXED_DRIFT
+
+## Explore Jerusalem: turn the view about the vertical (radians), so north can sit up-screen
 ## as it does on a map. Movement turns with it (Player.view_yaw). 0 = the game's view.
 var view_yaw := 0.0
 
@@ -217,6 +279,16 @@ func set_view_yaw(yaw: float) -> void:
 	camera.global_position = target + _cam_offset()
 	camera.look_at(target, Vector3.UP)
 	_cam_snapped = false
+
+## Campaign, Settings.turn_to_map: each stretch seen north-up as in Explore Jerusalem
+## (which turns its own view). Checked every frame: a new section, or the setting
+## changed from the pause menu, turns it at once.
+func _turn_to_map() -> void:
+	if GameState.festival:
+		return
+	var yaw := RingCompass.north_up_yaw(GameState.current_section_index) if Settings.turn_to_map else 0.0
+	if not is_equal_approx(yaw, view_yaw):
+		set_view_yaw(yaw)
 
 func _cam_offset() -> Vector3:
 	return CAM_OFFSET.rotated(Vector3.UP, view_yaw)
@@ -239,6 +311,7 @@ func _shake_offset(delta: float) -> Vector3:
 
 func _exit_tree() -> void:
 	Engine.time_scale = 1.0
+	Player.view_yaw = 0.0   # a static: the next scene starts in the game's own view
 
 # ── Day mood ───────────────────────────────────────────────
 
@@ -276,7 +349,9 @@ func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
 	_mood_tween = create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_mood_tween.tween_property(sun, "light_color", sun_color, LIGHT_FADE)
 	_mood_tween.tween_property(sun, "light_energy", sun_energy, LIGHT_FADE)
-	_mood_tween.tween_property(camera, "size", cam_size, LIGHT_FADE)
+	_mood_tween.tween_property(self, "_zoom", cam_size / CAM_SIZE, LIGHT_FADE)
+	if not _fixed_cam():   # the fixed camera sizes itself each frame, _zoom included
+		_mood_tween.tween_property(camera, "size", cam_size, LIGHT_FADE)
 
 # ── Wall cam ───────────────────────────────────────────────
 
@@ -314,6 +389,8 @@ func _play_wall_cam(names: Array) -> void:
 	_wall_cam.tween_property(camera, "global_position", end, WALL_CAM_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_wall_cam.tween_callback(func():
 		_cam_base = camera.global_position
+		if _fixed_cam():
+			return   # the fixed camera eases back to its own framing
 		_mood_tween = create_tween()
 		_mood_tween.tween_property(camera, "size", DUSK_CAM_SIZE, 0.8).set_trans(Tween.TRANS_SINE))
 

@@ -1,6 +1,6 @@
 extends SceneTree
 
-# "Walk the City" screenshots at the Water Gate: hear Ezra, fetch branches, raise a
+# "Explore Jerusalem" screenshots at the Water Gate: hear Ezra, fetch branches, raise a
 # booth, send a portion. The round of every stretch: festival_tour.gd
 #   Godot --path . --script res://tools/festival_shots.gd -- <out_dir> [--lang=ko]
 # Not headless — needs the GPU.

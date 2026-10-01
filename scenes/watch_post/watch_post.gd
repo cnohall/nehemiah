@@ -238,6 +238,14 @@ func reset_slot() -> void:
 	built = false
 	_work.reset()
 
+## Server: "Set the watch" (GameState.BOONS) — the post stands from dawn, two loads in
+func fortify() -> void:
+	if not multiplayer.is_server() or not GameState.posts:
+		return
+	built = true
+	ammo = SHOTS_PER_LOAD * 2
+	_loads = 2
+
 func repair(_fraction: float) -> void:
 	pass
 
@@ -359,6 +367,7 @@ class _Parts:
 
 func _build_label() -> void:
 	_label = WorldTag.make(WorldTag.Kind.SITE)
+	_label.stack_name = true
 	_label.position = Vector3(0, DECK_Y + 1.9, 0)
 	_label.visible = false
 	add_child(_label)

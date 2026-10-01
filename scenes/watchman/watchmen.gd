@@ -53,8 +53,12 @@ func _process(delta: float) -> void:
 			tr("The sun is low!"), true)
 
 ## WaveManager (every peer): a wave or a surge is about to come in at `at`
+## A flank is named by its true quarter on the real wall (RingCompass): out across the
+## wall and toward that end of the stretch
 func warn_wave(at: Vector3, horn: bool) -> void:
-	var where := tr("from the west") if at.x < -6.0 else (tr("from the east") if at.x > 6.0 else tr("straight at the gate"))
+	var where := tr("straight at the gate")
+	if absf(at.x) > 6.0:
+		where = RingCompass.quarter(GameState.current_section_index, Vector3(signf(at.x), 0.0, -1.0))
 	var line := (tr("Up the valley — %s!") if horn else tr("They're coming — %s!")) % where
 	_call(_nearest_man(at.x), line, true)
 
@@ -80,9 +84,12 @@ func _watch_newcomers() -> void:
 		var t = e.get("type")
 		if t == Enemy.Type.SCOUT or _seen_today.has(t):
 			continue
+		if t == Enemy.Type.SABOTEUR and not e.is_inside():
+			continue   # called when he's over, not while he's still sneaking up
 		_seen_today[t] = true
 		var line := tr("A brute! He'll batter the wall") if t == Enemy.Type.BRUTE \
-			else tr("Raiders — quick ones, mind the gaps!")
+			else (tr("One's slipped in — the yard! He's after the piles") if t == Enemy.Type.SABOTEUR \
+			else tr("Raiders — quick ones, mind the gaps!"))
 		_call(_nearest_man(e.global_position.x), line, false)
 		return
 

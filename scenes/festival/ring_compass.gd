@@ -1,11 +1,13 @@
 class_name RingCompass
 extends Control
 
-# Where you are on the wall, for Walk the City: a small north-up plan of the circuit
+# Where you are on the wall, for Explore Jerusalem: a small north-up plan of the circuit
 # (CircuitDiorama.ring_unit — true to the city's shape) with the stretch you're on in
 # gold and a dot where you stand along it, and beside it a compass needle pointing to
-# true north as it lies in the view. Walk the City turns the view north-up on every
+# true north as it lies in the view. Explore Jerusalem turns the view north-up on every
 # stretch, so the needle stands up and the wall on screen lies as the gold does here.
+# The campaign shows it too (GameHud), following the section being built; its view
+# turns north-up only with Settings.turn_to_map.
 
 const MAP := 132.0        # px, the plan's square
 const PAD := 14.0         # px, clear round the ring inside it
@@ -13,8 +15,12 @@ const DIAL := 36.0        # px, the compass's radius
 const GAP := 18.0
 const SITE_HALF_X := 44.0 # the stretch's walkable ends (Player.PLAY_AREA)
 
+const SCREEN_UP := Vector3(-0.70710678, 0.0, -0.70710678)   # the game's view: away from the camera
+
 ## Section index of the stretch you're on
 var district := 0
+## Outside Explore Jerusalem: keep to the section being built
+var follow_section := false
 
 var _fit := Transform2D()   # unit space → the plan's px, the ring fitted inside PAD
 
@@ -23,6 +29,8 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _process(_delta: float) -> void:
+	if follow_section:
+		district = GameState.current_section_index
 	queue_redraw()
 
 ## Unit-space (x east, y south) direction along the stretch toward the next gate, and
@@ -42,6 +50,26 @@ static func north_on_site(i: int) -> Vector3:
 	var f := frame(i)
 	var n := Vector2(0, -1)
 	return Vector3(n.dot(f[0]) * Festival.FLOW, 0.0, -n.dot(f[1]))
+
+## The view yaw (Main.set_view_yaw) that puts true north straight up-screen, as on a map
+static func north_up_yaw(i: int) -> float:
+	return SCREEN_UP.signed_angle_to(north_on_site(i), Vector3.UP)
+
+## The ground direction on the site of a compass bearing (degrees, clockwise from north)
+static func bearing_on_site(i: int, degrees: float) -> Vector3:
+	return north_on_site(i).rotated(Vector3.UP, -deg_to_rad(degrees))
+
+## "from the north-east" etc. (translated): the quarter a ground direction on the site
+## points to, for the watchmen's calls
+static func quarter(i: int, dir: Vector3) -> String:
+	var n := north_on_site(i)
+	var e := bearing_on_site(i, 90.0)
+	var deg := rad_to_deg(atan2(dir.dot(e), dir.dot(n)))
+	var words := [TranslationServer.translate("from the north"), TranslationServer.translate("from the north-east"),
+		TranslationServer.translate("from the east"), TranslationServer.translate("from the south-east"),
+		TranslationServer.translate("from the south"), TranslationServer.translate("from the south-west"),
+		TranslationServer.translate("from the west"), TranslationServer.translate("from the north-west")]
+	return words[posmod(roundi(deg / 45.0), 8)]
 
 func _draw() -> void:
 	_draw_plan()

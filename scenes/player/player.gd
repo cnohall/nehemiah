@@ -64,7 +64,7 @@ const DECEL           := 160.0    # ~0.05 s to a stop
 const BEAM_SOLO_SPEED := 2.4
 const BEAM_PAIR_SPEED := 4.8
 const BEAM_TETHER     := 2.4      # max distance between the two ends' carriers
-const BEAM_HELP_REACH := 2.0
+const BEAM_HELP_REACH := 3.2      # from the carrier: covers the dragging end, where the tag is
 const BEAM_HOLD_Y     := 1.25     # shoulder height
 const FOCUS_COLOR     := Color(0.99, 0.93, 0.74, 0.95)   # cream ring under what [E] will use
 const FOCUS_POLL      := 0.1
@@ -130,6 +130,7 @@ var _dash_dir := Vector3.ZERO
 var _focus_ring: MeshInstance3D
 var _focus_poll := 0.0
 var _beam: Node3D   # carried beam, placed in world space between the two ends
+var _beam_tag: WorldTag   # "Take the other end" over a lone beam's dragging end, for the others
 var _buffered := {}   # action → seconds left to act on an early press
 # Hands-on building: the site we're working at (owner) / registered with (server)
 var _work_site: Node3D
@@ -342,8 +343,8 @@ func _physics_process(delta: float) -> void:
 
 ## Screen-space stick / keys → ground direction. Keys give length 1; a stick can be
 ## pushed part-way for a slower walk.
-## Walk the City turns the view so north sits up-screen (Main.set_view_yaw); the stick
-## turns with it. 0 everywhere else.
+## Explore Jerusalem (and the campaign with Settings.turn_to_map) turns the view so north
+## sits up-screen (Main.set_view_yaw); the stick turns with it. 0 everywhere else.
 static var view_yaw := 0.0
 
 static func screen_to_ground(v: Vector2) -> Vector3:
@@ -379,7 +380,8 @@ func _throw_just_pressed() -> bool:
 	return Input.is_action_just_pressed("throw_charge") and not InputMode.gameplay_blocked()
 
 func _handle_movement(delta: float) -> void:
-	var dir := screen_to_ground(_move_input())
+	# Bots steer in the game's own view: the host's turned camera is none of theirs
+	var dir := screen_to_ground(_move_input()) if brain == null 		else (SCREEN_RIGHT * brain.move.x + SCREEN_DOWN * brain.move.y)
 	if dir != Vector3.ZERO:
 		_move_dir = dir.normalized()
 	var on_beam := carried_kind == "beam" or helping_id != 0
@@ -394,9 +396,9 @@ func _handle_movement(delta: float) -> void:
 		_dash_time -= delta
 		velocity = _dash_dir * DASH_SPEED
 	else:
-		var target := dir * (CARRY_SPEED * Trade.carry_mult(trade) if not carried_kind.is_empty() else RUN_SPEED)
+		var target := dir * (CARRY_SPEED * Trade.carry_mult(trade) * GameState.mod("carry") if not carried_kind.is_empty() else RUN_SPEED)
 		if on_beam:
-			target = dir * (BEAM_PAIR_SPEED if _beam_partner() != null else BEAM_SOLO_SPEED)
+			target = dir * (BEAM_PAIR_SPEED if _beam_partner() != null else minf(BEAM_SOLO_SPEED * GameState.mod("beam_solo"), BEAM_PAIR_SPEED))
 		if _charging:
 			target *= CHARGE_MOVE_MULT
 		var rate := ACCEL if target.length_squared() > velocity.length_squared() else DECEL
@@ -461,6 +463,7 @@ func _update_beam() -> void:
 		if _beam != null:
 			_beam.queue_free()
 			_beam = null
+			_beam_tag = null
 		return
 	if _beam == null:
 		_beam = Node3D.new()
@@ -484,6 +487,24 @@ func _update_beam() -> void:
 	if z.length_squared() < 0.01:
 		z = Vector3.FORWARD
 	_beam.global_transform = Transform3D(Basis(x, z.cross(x), z), (a + b) * 0.5)
+	_update_beam_tag(b, partner == null)
+
+# Playtest: nobody knew a beam takes two. While one drags it alone, the free end asks
+# every other worker (on their own screen) to take it — once they stand free to help.
+func _update_beam_tag(free_end: Vector3, alone: bool) -> void:
+	var me := Player.local
+	var shown := alone and me != null and me != self and not me.downed and me.carried_kind.is_empty() 		and me.helping_id == 0 and GameState.phase == GameState.Phase.WORK
+	if shown and _beam_tag == null:
+		_beam_tag = WorldTag.make(WorldTag.Kind.SITE)
+		_beam_tag.top_level = true
+		_beam.add_child(_beam_tag)
+	if _beam_tag == null:
+		return
+	_beam_tag.visible = shown
+	_beam_tag.pulse = shown
+	if shown:
+		_beam_tag.global_position = free_end + Vector3.UP * 1.6
+		_beam_tag.text = tr("Take the other end  [%s]") % InputMode.key("interact")
 
 func _facing_vector() -> Vector3:
 	match _facing:
@@ -532,7 +553,7 @@ func _dash_fx() -> void:
 ## What [E] acts on from `at`, in priority order: [Act, target]. The one rule for both
 ## the focus ring (owner, from replicated state — Overcooked's counter highlight) and
 ## _server_interact, so the ring always shows exactly what the press will do.
-enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK }
+enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK, TIDY }
 
 func _interact_choice(at: Vector3) -> Array:
 	# Helping a fallen teammate comes first
@@ -570,6 +591,10 @@ func _interact_choice(at: Vector3) -> Array:
 			return [Act.TALK, folk]
 	if site != null:
 		return [Act.WORK, site]
+	# A pile the saboteur strewed: tidy it (worked like a stage) before it gives anything
+	var mess := _nearest_in_reach("scattered_piles", at, func(p): return p.can_build())
+	if mess != null and (item == null or _reach_dist(mess, at) <= _reach_dist(item, at)):
+		return [Act.TIDY, mess]
 	# Whichever is closer: something lying on the ground, or a stockpile
 	if item != null and (pile == null or _reach_dist(item, at) <= _reach_dist(pile, at)):
 		return [Act.TAKE_ITEM, item]
@@ -603,11 +628,11 @@ func _update_focus(delta: float) -> void:
 	var spot := target.global_position
 	var size := 1.5
 	var lift := 0.05
-	if target.has_method("approach_point"):
-		spot = target.approach_point(global_position, 0.0)
-	elif target.is_in_group("supply_piles"):
+	if target.is_in_group("supply_piles") or target.is_in_group("scattered_piles"):
 		size = 2.6
 		lift = 0.1   # over the pile's flagstone pad
+	elif target.has_method("approach_point"):
+		spot = target.approach_point(global_position, 0.0)
 	elif target.is_in_group("dropped_items"):
 		size = 1.1
 	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + lift, spot.z)
@@ -716,6 +741,8 @@ func _server_interact(at: Vector3) -> void:
 				_start_work(target)
 			elif target.try_build():
 				_action.rpc("halfslash")
+		Act.TIDY:
+			_start_work(target)
 		Act.TAKE_ITEM:
 			var kind: String = target.kind
 			if target.take():
@@ -837,6 +864,12 @@ func _drop_carried(at: Vector3) -> void:
 	item.kind = carried_kind
 	item.position = Vector3(at.x + randf_range(-DROP_JITTER, DROP_JITTER), GROUND_Y,
 		at.z + randf_range(-DROP_JITTER, DROP_JITTER))
+	# The long haul's relay mat: stacked in a free place, not left loose
+	for mat: Node3D in get_tree().get_nodes_in_group("relay_mats"):
+		if at.distance_to(mat.global_position) < mat.REACH:
+			var slot: Vector3 = mat.free_slot()
+			if slot != Vector3.INF:
+				item.position = Vector3(slot.x, GROUND_Y, slot.z)
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
 	items.add_child(item, true)
@@ -853,6 +886,8 @@ func _set_carried(kind: String) -> void:
 		_release_helper()
 	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
 		_toast("Heavy — a partner can take the other end {interact}")
+	elif not kind.is_empty() and is_multiplayer_authority() and Trade.carry_mult(trade) > 1.0:
+		_knack("Your trade — quicker with a load")
 	# Pick up → squashed under the load; put down → spring back up
 	_sprite.squash(Vector2(1.08, 0.92) if not kind.is_empty() else Vector2(0.95, 1.05))
 
@@ -943,6 +978,8 @@ func release_throw() -> void:
 	if _sprite.animation.begins_with("slash"):
 		_sprite.squash(Vector2(1.08, 0.94))
 		_server_sling.rpc_id(1, global_position, land, charge, wide)
+		if Trade.hit_mult(trade) > 1.0:
+			_knack("Your trade — your blows land harder")
 
 # ── Sword ──────────────────────────────────────────────────
 
@@ -978,6 +1015,8 @@ func _swing_sword(foe: Node3D) -> void:
 	if not is_instance_valid(self) or not _sprite.animation.begins_with("sword"):
 		return   # knocked out of the swing before it landed
 	_server_sword.rpc_id(1, global_position, aim_yaw)
+	if Trade.hit_mult(trade) > 1.0 and is_instance_valid(foe) and foe.is_in_group("enemies"):   # not a jar
+		_knack("Your trade — your blows land harder")
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_sword(at: Vector3, yaw: float) -> void:
@@ -1295,6 +1334,8 @@ func _set_working(site_path: NodePath) -> void:
 		_facing = CharAnim.dir_from_velocity(site.approach_point(global_position, 0.0) - global_position, _facing)
 		anim = "build_" + _facing
 		_sprite.squash(Vector2(1.06, 0.94))
+		if Trade.prefers(trade, site.work_material()):
+			_knack("Your trade — quicker hands at this work")
 	elif not downed and not _is_busy:
 		anim = "idle_" + _facing
 
@@ -1421,6 +1462,16 @@ func _feedback(text: String, need: String) -> void:
 	if multiplayer.get_remote_sender_id() == 1:
 		_toast(text, need)
 
+# Owner: the first time this game that the trade's knack (Trade) pays off, say so once —
+# never over another line still rising, or the two print on top of each other
+var _knack_told := false
+var _toast_until := 0   # msec: the last toast is still on screen until then
+
+func _knack(text: String) -> void:
+	if not _knack_told and brain == null and Time.get_ticks_msec() >= _toast_until:
+		_knack_told = true
+		_toast(text)
+
 # Short floating line above the head (local only)
 func _toast(text: String, need := "") -> void:
 	if brain != null:
@@ -1430,6 +1481,7 @@ func _toast(text: String, need := "") -> void:
 		"drop": "[%s]" % InputMode.key("drop"), "need": tr({"beam": "beams"}.get(need, need)) if not need.is_empty() else "" }))
 	l.position = Vector3(0, HP_BAR_Y + 0.3, 0)
 	add_child(l)
+	_toast_until = Time.get_ticks_msec() + int(TOAST_TIME * 1000.0)
 	var tw := l.create_tween()
 	tw.set_parallel()
 	tw.tween_property(l, "position:y", l.position.y + 0.5, TOAST_TIME)

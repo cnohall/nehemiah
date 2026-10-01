@@ -25,12 +25,27 @@ const SOLO_WORK_MULT := 0.75
 # "beams" twist (Neh. 3:3 "they laid its beams"): framing takes long beams, carried in
 # pairs, instead of loose timber
 const BEAM_COST_BY_CREW    := [1, 2, 2]
-# "thick" twist (Broad Wall, Neh. 3:8): plain stretches built double-thick — deeper, more
-# stone and mortar, longer work, and room for one more pair of hands
-const THICK_DEPTH          := 1.3
+# "thick" twist (Broad Wall, Neh. 3:8): plain stretches built double-thick — two faces
+# with a rubble core between them. The stone stage is two jobs: the outer face, facing
+# the foe, then the inner face; the core is filled and mortared last. More stone and
+# mortar, room for one more pair of hands, and it takes half the blows.
+const THICK_DEPTH          := 2.2
+const THICK_FACE_DEPTH     := 0.7    # how deep each face of courses is; the core fills between
+const THICK_FACES          := ["Outer face", "Inner face"]
 const THICK_EXTRA          := { Stage.STACKED: { "stone": 2 }, Stage.MORTARED: { "mortar": 1 } }
 const THICK_WORK_MULT      := 1.3
+const THICK_FACE_WORK      := 0.6    # one face's share of the stone stage's work time
+const CORE_COLOR           := Color(0.50, 0.44, 0.36)   # rubble between the faces
+const THICK_HARM           := 0.5    # a double-thick piece takes half of every blow
 const THIN_MAX_DEPTH       := 1.0    # only plain walls thicken, not towers or pillars
+# Per-unit recipes (GDD §6.4, the "ruins" twist): not every unit starts from bare footing.
+# A section's "recipes" map a unit's node name to RECIPE_OLD (old courses still stand — the
+# stone stage is done, only mortar is wanted) or RECIPE_BURNED (charred framing to pull
+# down first: a job of work alone, no materials, before the usual stages).
+const RECIPE_OLD           := "old"
+const RECIPE_BURNED        := "burned"
+const CLEAR_WORK_TIME      := 3.0
+const CHAR_COLOR           := Color(0.17, 0.14, 0.12)
 const MAX_HEALTH           := 150.0
 const DEGRADE_HEALTH_RATIO := 0.5
 const LABEL_RANGE          := 6.0
@@ -65,6 +80,27 @@ const TIMBER_WIDTH := 3.4   # squared scaffold timber, as a multiple of the old 
 			_dust_puff()
 			_bounce()
 			stage_changed.emit(stage)
+
+# Thick walls: faces of the stone stage already standing (0 outer next, 1 inner next, 2 both).
+# Replicated by the Sync; the preview and the standing wall both show them.
+var face := 0:
+	set(value):
+		if value == face:
+			return
+		face = value
+		if is_node_ready() and not decorative:
+			_prime_work()
+			_update_visuals()
+
+# Burned recipe: false until the charred framing is pulled down. Replicated by the Sync.
+var cleared := true:
+	set(value):
+		if value == cleared:
+			return
+		cleared = value
+		if is_node_ready() and not decorative:
+			_prime_work()
+			_update_visuals()
 
 # Outer stretches repaired by other families (Neh. 3) — not networked, not buildable.
 # They rise with the campaign (rubble on day 1, finished by day 52 — "the whole wall
@@ -107,6 +143,7 @@ var _work: BuildWork
 # The next stage going up while workers are at it, revealed block by block
 var _preview: Node3D
 var _preview_skip := 0
+var _previewing := false   # _build_stage is drawing the next stage's preview, not the standing wall
 
 @onready var _col: CollisionShape3D = $CollisionShape3D
 
@@ -161,6 +198,14 @@ func _apply_thickness(redraw := true) -> void:
 func is_thick() -> bool:
 	return _base_depth > 0.0 and GameState.has_twist("thick")
 
+## This unit's recipe in the current section ("" = bare footing, like every other)
+func recipe() -> String:
+	return "" if decorative else GameState.get_current_section().get("recipes", {}).get(str(name), "")
+
+## Burned recipe, charred framing still up (hands-on building only: the instant rule skips it)
+func _clearing() -> bool:
+	return not cleared and GameState.active_build and stage == Stage.EMPTY
+
 func _process(delta: float) -> void:
 	_label_poll -= delta
 	if _label_poll > 0.0:
@@ -190,6 +235,8 @@ func deposit(kind: String, amount: int) -> bool:
 	return true
 
 func needs(kind: String) -> bool:
+	if _clearing():
+		return false
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return false
@@ -207,6 +254,8 @@ func cost_for(target_stage: int) -> Dictionary:
 	if is_thick():
 		for kind: String in THICK_EXTRA.get(target_stage, {}):
 			cost[kind] += THICK_EXTRA[target_stage][kind]
+		if target_stage == Stage.STACKED:
+			cost["stone"] = ceili(cost["stone"] / 2.0)   # each face is paid for on its own
 	return cost
 
 ## BuildWork: the site that holds this progress
@@ -215,11 +264,15 @@ func work() -> BuildWork:
 
 ## Material being worked into the next stage ("" when finished) — picks the strike sound
 func work_material() -> String:
+	if _clearing():
+		return "wood"   # charred timbers — the carpenters' work
 	var next := stage + 1
 	return "" if next > Stage.MORTARED else cost_for(next).keys()[0]
 
 ## Material still missing for the next stage ("" when finished)
 func next_need() -> String:
+	if _clearing():
+		return ""
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return ""
@@ -230,6 +283,8 @@ func next_need() -> String:
 	return ""
 
 func can_build() -> bool:
+	if _clearing():
+		return true
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return false
@@ -242,23 +297,46 @@ func can_build() -> bool:
 func try_build() -> bool:
 	if not multiplayer.is_server() or not can_build():
 		return false
+	if _clearing():
+		cleared = true   # the charred framing is down; the usual stages follow
+		_prime_work()
+		return true
 	var next := stage + 1
 	var cost: Dictionary = cost_for(next)
 	for kind in cost:
 		pending[kind] -= cost[kind]
+	if next == Stage.STACKED and is_thick():
+		face += 1
+		if face < THICK_FACES.size():
+			_prime_work()   # the outer face stands; the inner one still wants its stone
+			return true
 	stage = next as Stage
 	_prime_work()
 	return true
 
+## Thick wall, stone stage: which face is being raised ("Outer face" / "Inner face"), else ""
+func face_name() -> String:
+	if is_thick() and stage + 1 == Stage.STACKED and face < THICK_FACES.size():
+		return THICK_FACES[face]
+	return ""
+
 func _prime_work() -> void:
 	if _work == null:
 		return
+	if _clearing():
+		_work.work_time = CLEAR_WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) / GameState.mod("clear")
+		return
 	var next := stage + 1
 	if next <= Stage.MORTARED:
-		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) 			* (THICK_WORK_MULT if is_thick() else 1.0)
+		var thick_mult := 1.0
+		if is_thick():
+			thick_mult = THICK_WORK_MULT * (THICK_FACE_WORK if next == Stage.STACKED else 1.0)
+		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) * thick_mult
 
 # Returns how much of the next stage's required material is pending (0.0–1.0)
 func get_build_progress() -> float:
+	if _clearing():
+		return 0.0
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return 1.0
@@ -298,7 +376,10 @@ func blocks_workers() -> bool:
 func reset_slot() -> void:
 	pending = _empty_pending()
 	health = MAX_HEALTH
-	stage = Stage.EMPTY
+	var r := recipe()
+	cleared = r != RECIPE_BURNED
+	face = 2 if r == RECIPE_OLD and is_thick() else 0
+	stage = Stage.STACKED if r == RECIPE_OLD else Stage.EMPTY
 	_work.reset()
 	_prime_work()
 
@@ -331,6 +412,9 @@ func approach_point(from: Vector3, standoff: float) -> Vector3:
 func take_damage(amount: float) -> void:
 	if stage == Stage.EMPTY:
 		return
+	if is_thick():
+		amount *= THICK_HARM
+	amount *= GameState.mod("harm")
 	health = clampf(health - amount, 0.0, MAX_HEALTH)
 	if health == 0.0:
 		_degrade()
@@ -338,6 +422,10 @@ func take_damage(amount: float) -> void:
 func _degrade() -> void:
 	pending = _empty_pending()
 	health = MAX_HEALTH * DEGRADE_HEALTH_RATIO
+	# A blow takes the stone stage back to the timber; a thick wall loses both faces
+	# with it, and one knocked back from the mortar keeps its two
+	if stage <= Stage.STACKED:
+		face = 0
 	stage = (stage - 1) as Stage
 	_work.reset()
 	_prime_work()
@@ -348,7 +436,7 @@ func _degrade() -> void:
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	NetworkManager.add_sync(self, [^".:stage", ^".:pending", ^".:health", ^".:is_target", ^"Work:progress"])
+	NetworkManager.add_sync(self, [^".:stage", ^".:face", ^".:cleared", ^".:pending", ^".:health", ^".:is_target", ^"Work:progress"])
 
 # ── Visuals ────────────────────────────────────────────────
 
@@ -370,7 +458,7 @@ func _visual_rng() -> RandomNumberGenerator:
 # Every peer: workers' progress → the next stage rises in the order it's built
 func _on_work_progress(value: float) -> void:
 	var next := stage + 1
-	if value <= 0.0 or next > Stage.MORTARED:
+	if value <= 0.0 or next > Stage.MORTARED or _clearing():
 		_clear_preview()
 		return
 	if _preview == null:
@@ -378,12 +466,15 @@ func _on_work_progress(value: float) -> void:
 		add_child(_preview)
 		var real := _visual
 		_visual = _preview
+		_previewing = true
 		_build_stage(next as Stage, _visual_rng())
+		_previewing = false
 		_visual = real
 		# Pieces already standing in this stage are shown from the start
 		match next:
 			Stage.STACKED:
-				_preview_skip = _first_multimesh_count(_visual)
+				# A thick wall's preview is just the face going up, all of it new
+				_preview_skip = 0 if is_thick() else _first_multimesh_count(_visual)
 			Stage.MORTARED:
 				_preview_skip = 1 + _first_multimesh_count(_preview)   # mortar core + courses
 			_:
@@ -402,22 +493,36 @@ static func _first_multimesh_count(root: Node) -> int:
 	return 0
 
 func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
+	var thick := is_thick()
 	match s:
 		Stage.EMPTY:
 			_add_ruin(rng)  # broken footing, walkable
+			if _clearing():
+				_add_charred(rng)
 		Stage.FRAMED:
 			_add_box(Vector3(_size.x - 0.1, minf(COURSE_H, _size.y) - 0.04, _size.z - 0.14),
 				Vector3(_center.x, 0.12 + minf(COURSE_H, _size.y) * 0.5, _center.z), Palette.STONE_JOINT)
 			_add_courses(rng, minf(COURSE_H, _size.y), GAP_ROUGH)
 			_add_scaffold(rng)
+			if thick and face > 0:
+				_add_faces(rng, _size.y, GAP_ROUGH, 1)   # the outer face is up, the inner one still open
 		Stage.STACKED:
+			if thick and _previewing:
+				_add_faces(rng, _size.y, GAP_ROUGH, 1, face)   # the face going up now
+				return
 			_add_box(Vector3(_size.x - 0.1, _size.y - 0.04, _size.z - 0.14),
-				_center, Palette.STONE_JOINT)
-			_add_courses(rng, _size.y, GAP_ROUGH)
+				_center, CORE_COLOR if thick else Palette.STONE_JOINT)
+			if thick:
+				_add_faces(rng, _size.y, GAP_ROUGH)
+			else:
+				_add_courses(rng, _size.y, GAP_ROUGH)
 		Stage.MORTARED:
 			_add_box(Vector3(_size.x - 0.12, _size.y - 0.05, _size.z - 0.12),
 				_center, MORTAR_COLOR)
-			_add_courses(rng, _size.y, GAP_MORTARED)
+			if thick:
+				_add_faces(rng, _size.y, GAP_MORTARED)
+			else:
+				_add_courses(rng, _size.y, GAP_MORTARED)
 			_add_merlons()
 
 func _add_foundation() -> void:
@@ -426,7 +531,9 @@ func _add_foundation() -> void:
 		TARGET_COLOR if is_target and not GameState.attract else EARTH_COLOR)  # the title backdrop stays unmarked
 
 # Staggered courses of rough-cut blocks, one MultiMesh for the whole section
-func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void:
+func _add_courses(rng: RandomNumberGenerator, height: float, gap: float, bands: Array = []) -> void:
+	if bands.is_empty():
+		bands = [[_center.z, _size.z]]
 	var rows := maxi(1, roundi(height / COURSE_H))
 	var row_h := height / rows
 	var transforms: Array[Transform3D] = []
@@ -434,26 +541,36 @@ func _add_courses(rng: RandomNumberGenerator, height: float, gap: float) -> void
 	var x0 := _center.x - _size.x * 0.5
 	var y0 := 0.12
 	for r in rows:
-		var x := x0
-		var first := true
-		while x < x0 + _size.x - 0.05:
-			var blen := rng.randf_range(0.7, 1.25)
-			if first and r % 2 == 1:
-				blen *= 0.5  # stagger joints
-			first = false
-			blen = minf(blen, x0 + _size.x - x)
-			var depth := _size.z + rng.randf_range(-0.06, 0.08)
-			var s := Vector3(blen - gap, row_h - gap, depth)
-			var pos := Vector3(x + blen * 0.5, y0 + row_h * (r + 0.5), _center.z)
-			transforms.append(Transform3D(Basis.from_scale(s), pos))
-			# Value jitter + a warm/cool drift per block; the odd weathered stone reused from rubble
-			var v := rng.randf_range(-0.11, 0.06)
-			if rng.randf() < 0.12:
-				v -= 0.12
-			var w := rng.randf_range(-0.025, 0.03)
-			colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v - w * 0.5))
-			x += blen
+		for band: Array in bands:
+			var x := x0
+			var first := true
+			while x < x0 + _size.x - 0.05:
+				var blen := rng.randf_range(0.7, 1.25)
+				if first and r % 2 == 1:
+					blen *= 0.5  # stagger joints
+				first = false
+				blen = minf(blen, x0 + _size.x - x)
+				var depth: float = band[1] + rng.randf_range(-0.06, 0.08)
+				var s := Vector3(blen - gap, row_h - gap, depth)
+				var pos := Vector3(x + blen * 0.5, y0 + row_h * (r + 0.5), band[0])
+				transforms.append(Transform3D(Basis.from_scale(s), pos))
+				# Value jitter + a warm/cool drift per block; the odd weathered stone reused from rubble
+				var v := rng.randf_range(-0.11, 0.06)
+				if rng.randf() < 0.12:
+					v -= 0.12
+				var w := rng.randf_range(-0.025, 0.03)
+				colors.append(Color(STONE_COLOR.r + v + w, STONE_COLOR.g + v, STONE_COLOR.b + v - w * 0.5))
+				x += blen
 	_add_multimesh(transforms, colors)
+
+# Thick wall: a face of courses on each side of the rubble core, outer (-z, toward the foe)
+# first. `count` faces from `first`; the default is both.
+func _add_faces(rng: RandomNumberGenerator, height: float, gap: float, count := 2, first := 0) -> void:
+	var bands: Array = []
+	for i in range(first, first + count):
+		var side := -1.0 if i == 0 else 1.0
+		bands.append([_center.z + side * (_size.z - THICK_FACE_DEPTH) * 0.5, THICK_FACE_DEPTH])
+	_add_courses(rng, height, gap, bands)
 
 # What's left of the old wall (Neh. 2:13 "broken down"): the bottom course, stones
 # cracked, sunk and tilted, a few gone, the odd one still standing a course higher
@@ -481,6 +598,19 @@ func _add_ruin(rng: RandomNumberGenerator) -> void:
 				colors.append(Color(STONE_COLOR.r - 0.06, STONE_COLOR.g - 0.06, STONE_COLOR.b - 0.07))
 		x += blen
 	_add_multimesh(transforms, colors)
+
+# Burned recipe: blackened framing, fallen across the footing
+func _add_charred(rng: RandomNumberGenerator) -> void:
+	var poles: Array[Transform3D] = []
+	var colors: Array[Color] = []
+	var n := maxi(3, roundi(_size.x / 1.2))
+	for i in n:
+		var x := _center.x - _size.x * 0.5 + _size.x / n * (i + 0.5) + rng.randf_range(-0.2, 0.2)
+		var z := _center.z + rng.randf_range(-0.25, 0.25)
+		var lean := Vector3(rng.randf_range(-0.9, 0.9), rng.randf_range(0.6, 1.3), rng.randf_range(-0.3, 0.3))
+		poles.append(_pole_transform(Vector3(x, 0.1, z), Vector3(x, 0.1, z) + lean, 0.06))
+		colors.append(CHAR_COLOR.lightened(rng.randf_range(0.0, 0.1)))
+	_add_multimesh(poles, colors, Chunky.unit_block(), Chunky.wood_material(0.03))
 
 func _add_merlons() -> void:
 	var top := 0.12 + _size.y
@@ -677,7 +807,14 @@ func _build_label() -> void:
 func _update_label() -> void:
 	var lines: PackedStringArray = []
 	var next := stage + 1
-	if GameState.active_build and can_build():
+	if _clearing():
+		lines.append("Clear the charred timbers  [%s]" % InputMode.key("interact"))
+	var face_label := face_name()
+	if not face_label.is_empty():
+		lines.append(face_label)
+	if _clearing():
+		pass   # the line above says it all
+	elif GameState.active_build and can_build():
 		# Everything's here — it needs hands, not loads
 		lines.append("Build  [%s]" % InputMode.key("interact"))
 	elif next <= Stage.MORTARED:

@@ -60,6 +60,11 @@ func _draw() -> void:
 		if not was:
 			Sfx.play("alert")
 		_pointer(at, p.slot_color, "Help", pulse)
+	for e: Node3D in get_tree().get_nodes_in_group("enemies"):
+		if e.has_method("is_saboteur") and e.is_saboteur() and e.is_inside():
+			var at := cam.unproject_position(e.global_position)
+			if not rect.has_point(at):
+				_pointer(at, UiStyle.TERRACOTTA, "Saboteur", pulse)
 	_pings = _pings.filter(func(pg): return pg[3] > now)
 	for pg: Array in _pings:
 		var at := cam.unproject_position(pg[0])

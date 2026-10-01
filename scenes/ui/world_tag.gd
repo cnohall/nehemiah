@@ -6,7 +6,7 @@ extends Node3D
 # node's 3D position every frame. Drop-in for the old Label3D world labels — set
 # `text`, `visible`, `modulate`, `position` the same way — and the text is read for
 # structure:
-#   "Stone 2/5  Mortar 0/1"  → one column per material: icon, name, count, pips
+#   "Stone 2/5  Mortar 0/1"  → one column per material: icon over count
 #   "Stone"                  → icon + name (a supply pile)
 #   "Wall 80%"               → a small condition bar
 #   "Build  [E]"             → text with the key drawn as a keycap
@@ -33,6 +33,9 @@ const DIM := 0.5   # alpha for a site tag that isn't where the next delivery goe
 const MOBILE_SCALE := 0.7
 const SHOUT_WRAP_CHARS := 56   # a shout longer than this wraps…
 const SHOUT_WIDTH := 460.0     # …at this width
+const SEE_THROUGH_ALPHA := 0.3   # a tag over a player fades to this…
+const SEE_THROUGH_SPEED := 6.0   # …this fast (per second, 0→1)
+const PLAYER_HEIGHT := 2.2       # feet to crown, m: the screen box tested against tags
 
 static var _layer: CanvasLayer
 static var _fonts: Dictionary = {}
@@ -51,6 +54,8 @@ var screen_lift := 0.0
 var pulse := false
 ## Slide in from the screen edge when the spot is off-screen (false: just hide)
 var clamp_to_screen := true
+## A site's name stacks word over word (a narrow sign over a narrow thing)
+var stack_name := false
 ## Drawn instead of the parsed text (Kind.SCROLL)
 var custom: Control:
 	set(value):
@@ -62,6 +67,7 @@ var _panel: PanelContainer
 var _box: VBoxContainer
 var _pointer: Control
 var _dirty := true
+var _see_through := 0.0   # 0 → solid, 1 → a player is behind the tag
 
 static func make(k: Kind, t := "") -> WorldTag:
 	var w := WorldTag.new()
@@ -91,6 +97,20 @@ static func _overlay(vp: Viewport) -> CanvasLayer:
 			_layer.scale = Vector2.ONE * MOBILE_SCALE
 		vp.add_child.call_deferred(_layer)
 	return _layer
+
+func _covers_player(cam: Camera3D, rect: Rect2) -> bool:
+	for p in get_tree().get_nodes_in_group("players"):
+		var body := p as Node3D
+		# Own tags (a toast, "Help up") ride on the player — never fade for them
+		if body == null or body.is_ancestor_of(self) or cam.is_position_behind(body.global_position):
+			continue
+		var feet := cam.unproject_position(body.global_position)
+		var head := cam.unproject_position(body.global_position + Vector3.UP * PLAYER_HEIGHT)
+		var h := absf(feet.y - head.y)
+		var box := Rect2(Vector2(feet.x - h * 0.25, minf(head.y, feet.y)), Vector2(h * 0.5, h))
+		if rect.intersects(box):
+			return true
+	return false
 
 func _process(_delta: float) -> void:
 	if _root == null:
@@ -123,7 +143,10 @@ func _process(_delta: float) -> void:
 	_root.position = at.round()
 	if _pointer != null:
 		_pointer.modulate.a = 1.0 if at.is_equal_approx(want) else 0.0
-	_root.modulate = modulate
+	# A worker standing behind the tag shows through it
+	var covers := _covers_player(cam, Rect2(at, sz).grow(4.0))
+	_see_through = move_toward(_see_through, 1.0 if covers else 0.0, _delta * SEE_THROUGH_SPEED)
+	_root.modulate = modulate * Color(1, 1, 1, lerpf(1.0, SEE_THROUGH_ALPHA, _see_through))
 	if pulse:
 		var k := 1.0 + PULSE_AMOUNT * (0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.005))
 		_root.pivot_offset = Vector2(sz.x * 0.5, sz.y)
@@ -149,7 +172,7 @@ func _build() -> void:
 	sb.shadow_color = Color(0.08, 0.05, 0.02, 0.35)
 	sb.shadow_size = 6
 	sb.shadow_offset = Vector2(0, 3)
-	var pad := Vector2(12, 7) if kind in [Kind.SITE, Kind.SHOUT] else Vector2(10, 5)
+	var pad := Vector2(12, 7) if kind == Kind.SHOUT else (Vector2(8, 5) if kind == Kind.SITE else Vector2(10, 5))
 	if kind == Kind.SCROLL:
 		pad = Vector2(20, 6)   # room for the rolled ends
 	sb.content_margin_left = pad.x
@@ -212,7 +235,7 @@ func _rebuild() -> void:
 	for line in text.split("\n", false):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_theme_constant_override("separation", 14)
+		row.add_theme_constant_override("separation", 10)
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_box.add_child(row)
 		# A shout or a note is prose: kept whole ("Sanballat · Tobiah · Geshem")
@@ -241,7 +264,17 @@ func _segment(seg: String) -> Control:
 		return _condition(int(words[1].trim_suffix("%")) / 100.0)
 	# A site's name ("Watch post") — small caps, like everything else on a dark tag
 	if kind == Kind.SITE and not seg.contains("["):
-		return _label(seg, "caps", 14, TEXT)
+		var l := _label(seg, "caps", 14, TEXT)
+		if stack_name and words.size() > 1:
+			# Wrapped at the widest word: one word a line, short ones may share
+			var font := _font("caps")
+			var w := 0.0
+			for word in l.text.split(" ", false):
+				w = maxf(w, font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x)
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			l.custom_minimum_size.x = ceilf(w) + 2.0
+		return l
 	return _rich(seg)
 
 func _need(mat: String, have: int, need: int) -> Control:
@@ -255,25 +288,14 @@ func _need(mat: String, have: int, need: int) -> Control:
 	if done:
 		icon.modulate = Color(1, 1, 1, 0.55)
 	col.add_child(icon)
-	var name_l := _label(mat.capitalize(), "caps", 13, TEXT_DIM)
-	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(name_l)
-	var count := _label("%d/%d" % [have, need], "bold", 19, DONE if done else TEXT)
+	# Icon + count only: the sign stays small
+	var count := _label("%d/%d" % [have, need], "bold", 17, DONE if done else TEXT)
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(count)
-	if need > 1 and need <= 8:
-		var pips := PipStrip.new()
-		pips.have = have
-		pips.need = need
-		pips.on = DONE if done else UiStyle.AMBER
-		pips.off = PIP_OFF
-		pips.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		col.add_child(pips)
 	return col
 
 func _condition(f: float) -> Control:
 	var row := _hbox(8)
-	row.add_child(_label("Wall", "caps", 13, TEXT_DIM))
 	var bar := PipStrip.new()
 	bar.bar = true
 	bar.fraction = f

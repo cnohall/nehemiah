@@ -6,12 +6,12 @@ extends CharacterBody3D
 # nearest built wall and batter it until it falls back a stage. Nearby workers are
 # attacked either way, so only killing them stops the damage.
 
-enum Type { SCOUT, BRUTE, RAIDER }
+enum Type { SCOUT, BRUTE, RAIDER, SABOTEUR }
 
-const SPEED        := { Type.SCOUT: 3.5, Type.BRUTE: 2.5, Type.RAIDER: 4.0 }
-const HEALTH       := { Type.SCOUT: 40.0, Type.BRUTE: 100.0, Type.RAIDER: 60.0 }
-const DAMAGE       := { Type.SCOUT: 5.0,  Type.BRUTE: 15.0,  Type.RAIDER: 8.0  }
-const SCALE        := { Type.SCOUT: 1.0, Type.BRUTE: 1.2, Type.RAIDER: 1.0 }
+const SPEED        := { Type.SCOUT: 3.5, Type.BRUTE: 2.5, Type.RAIDER: 4.0, Type.SABOTEUR: 4.2 }
+const HEALTH       := { Type.SCOUT: 40.0, Type.BRUTE: 100.0, Type.RAIDER: 60.0, Type.SABOTEUR: 30.0 }
+const DAMAGE       := { Type.SCOUT: 5.0,  Type.BRUTE: 15.0,  Type.RAIDER: 8.0, Type.SABOTEUR: 0.0 }
+const SCALE        := { Type.SCOUT: 1.0, Type.BRUTE: 1.2, Type.RAIDER: 1.0, Type.SABOTEUR: 0.95 }
 
 const AGGRO_RANGE       := 4.5    # start chasing a worker this close
 const LEASH_RANGE       := 8.0    # give up the chase beyond this
@@ -21,7 +21,7 @@ const ATTACK_CD         := 1.6
 const STAGGER_TIME      := 0.3    # a sling hit knocks the wind out briefly
 const HITSTOP_TIME      := 0.09   # sprite holds its frame on a hit
 const KNOCK_DECEL       := 40.0   # m/s² a sword shove bleeds off at
-const KNOCK_TAKE        := { Type.SCOUT: 1.0, Type.BRUTE: 0.35, Type.RAIDER: 0.8 }   # share of a shove felt
+const KNOCK_TAKE        := { Type.SCOUT: 1.0, Type.BRUTE: 0.35, Type.RAIDER: 0.8, Type.SABOTEUR: 1.2 }   # share of a shove felt
 const REPATH_INTERVAL   := 0.3
 const SCAN_INTERVAL     := 0.2    # how often to look around for a new worker / wall
 const STUCK_WINDOW      := 0.6    # seconds of no progress before bashing a wall
@@ -33,7 +33,20 @@ const WRECKER_CHANCE    := 0.5    # share of scouts/raiders that go for the wall
 const WALL_STANDOFF     := 0.6    # where a wrecker stands, measured out from the wall face
 
 # Distinct silhouette per type (CharacterRig.enemy_look), one dark colour family
-const _LOOKS := { Type.SCOUT: "scout", Type.BRUTE: "brute", Type.RAIDER: "raider" }
+const _LOOKS := { Type.SCOUT: "scout", Type.BRUTE: "brute", Type.RAIDER: "raider", Type.SABOTEUR: "saboteur" }
+
+# Saboteur (GDD §5.9, Neh. 4:11 "…and cause the work to cease"): he comes for the yard,
+# not the wall. In through a gap — or over a finished piece, a slow climb in plain view
+# that any hit knocks him off — to the pile the work needs now; strews it (SupplyPile.
+# scatter), then another, then out the way he came. He never fights and never counts
+# as a breach: the harm he does is lost time.
+const SCATTER_TIME := 1.5
+const SCATTER_MAX  := 2
+const CLIMB_TIME   := 2.5
+const CLIMB_STUCK  := 1.0    # no headway this long beside a finished piece → climb it
+const CLIMB_CLEAR  := 1.0
+const PILE_REACH   := 2.0
+const ESCAPE_Z     := -15.0
 const CORPSE_TIME := 0.9
 # Dusk: the day is lost for them — they turn tail and run for the hills
 const FLEE_TIME    := 2.4
@@ -90,6 +103,14 @@ var _stagger := 0.0
 var _knock := Vector3.ZERO   # shove velocity, spent over the stagger (sword hits)
 var _last_hitter := 0     # server: peer whose stone hit last (credited in the tally)
 var _fleeing := false
+# Saboteur (server)
+var _pile: Node3D
+var _scatter_t := 0.0
+var _scattered_n := 0
+var _escaping := false
+var _climb_wall: Node3D
+var _climb_t := 0.0
+var _no_headway := 0.0
 
 @onready var nav: NavigationAgent3D = $NavigationAgent3D
 @onready var _sprite: CharacterRig = $Figure
@@ -107,7 +128,7 @@ func _ready() -> void:
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
 	_goal = Vector3(randf_range(-GOAL_X_SPREAD, GOAL_X_SPREAD), 0.0, GOAL_Z)
-	_wrecker = type == Type.BRUTE or randf() < WRECKER_CHANCE
+	_wrecker = type == Type.BRUTE or (type != Type.SABOTEUR and randf() < WRECKER_CHANCE)
 	_stuck_origin = global_position
 	GameState.phase_changed.connect(_on_phase_changed)
 
@@ -116,6 +137,9 @@ func _physics_process(delta: float) -> void:
 		return
 	if _fleeing:
 		_run_away()
+		return
+	if type == Type.SABOTEUR:
+		_saboteur(delta)
 		return
 	if global_position.z > BREACH_Z:
 		GameState.add_breach()
@@ -196,6 +220,9 @@ func _move(delta: float) -> void:
 		dest = _target_player.global_position
 	elif _target_wall:
 		dest = _target_wall.approach_point(global_position, WALL_STANDOFF)
+	_move_to(dest, delta)
+
+func _move_to(dest: Vector3, delta: float) -> void:
 	_repath_timer -= delta
 	if _repath_timer <= 0.0:
 		_repath_timer = REPATH_INTERVAL
@@ -289,6 +316,9 @@ func take_damage(amount: float, by := 0) -> void:
 		return
 	if by != 0:
 		_last_hitter = by
+	# A saboteur hit mid-climb falls back and starts over; mid-strewing, he loses his grip
+	_climb_t = 0.0
+	_scatter_t = 0.0
 	health = maxf(health - amount, 0.0)
 	hits += 1
 	_stagger = STAGGER_TIME
@@ -351,3 +381,119 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 		return
 	DustFx.puff(self, global_position + Vector3.UP * 0.5, 10, 0.7)
 	create_tween().tween_property(_sprite, "scale", Vector3.ONE * 0.01, 0.35) 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+
+# ── Saboteur ───────────────────────────────────────────────
+
+func is_saboteur() -> bool:
+	return type == Type.SABOTEUR
+
+## Inside the wall (the off-screen pointer and the watchman's call follow him there)
+func is_inside() -> bool:
+	return global_position.z > 1.5
+
+func _saboteur(delta: float) -> void:
+	if _stagger > 0.0:
+		_stagger -= delta
+		velocity = _knock
+		if _knock != Vector3.ZERO:
+			move_and_slide()
+			_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECEL * delta)
+		return
+	if _climb_wall != null:
+		_climbing(delta)
+		return
+	var dest: Vector3
+	if _escaping:
+		if global_position.z < ESCAPE_Z:
+			queue_free()   # gone back into the hills
+			return
+		dest = Vector3(global_position.x, 0.0, ESCAPE_Z - 6.0)
+	else:
+		if not _pile_open(_pile):
+			_pile = _choose_pile()
+			if _pile == null:
+				_escaping = true
+				return
+		dest = _pile.global_position
+		if _dist_flat(_pile) < PILE_REACH:
+			velocity = Vector3.ZERO
+			_facing = CharAnim.dir_from_velocity(dest - global_position, _facing)
+			anim = "thrust_" + _facing
+			_scatter_t += delta
+			if _scatter_t >= SCATTER_TIME:
+				_scatter_t = 0.0
+				if _pile.scatter():
+					_scattered_n += 1
+					get_tree().call_group("day_director", "note_scatter")
+				_pile = null
+				_escaping = _scattered_n >= SCATTER_MAX
+			return
+	var before := global_position
+	_move_to(dest, delta)
+	_update_anim()
+	# Walled off: over the finished piece in the way
+	if global_position.distance_to(before) < SPEED[type] * delta * 0.25:
+		_no_headway += delta
+	else:
+		_no_headway = 0.0
+	if _no_headway >= CLIMB_STUCK:
+		_no_headway = 0.0
+		var wall := _wall_in_the_way()
+		if wall != null:
+			_climb_wall = wall
+			_climb_t = 0.0
+
+func _pile_open(pile: Node3D) -> bool:
+	return is_instance_valid(pile) and pile.is_in_group("supply_piles") and pile.has_method("scatter")
+
+## The pile whose material the work wants now (a target piece's next need); else the nearest
+func _choose_pile() -> Node3D:
+	var wanted := {}
+	for site: Node3D in get_tree().get_nodes_in_group("build_sites"):
+		if site.get("is_target") and not site.is_complete():
+			var need: String = site.next_need()
+			if not need.is_empty():
+				wanted[need] = true
+	var best: Node3D = null
+	var best_score := INF
+	for pile: Node3D in get_tree().get_nodes_in_group("supply_piles"):
+		if not _pile_open(pile) or pile.kind == "beam" or not pile.is_visible_in_tree():
+			continue
+		var score := _dist_flat(pile) - (100.0 if wanted.has(pile.kind) else 0.0)
+		if score < best_score:
+			best_score = score
+			best = pile
+	return best
+
+func _wall_in_the_way() -> Node3D:
+	var best: Node3D = null
+	var best_d := WALL_REACH + 0.6
+	for site: Node3D in get_tree().get_nodes_in_group("build_sites"):
+		if not site.has_method("blocks_workers") or not site.blocks_workers():
+			continue
+		var d: float = site.distance_to_point(global_position)
+		if d < best_d:
+			best_d = d
+			best = site
+	return best
+
+# In plain view at the wall: hauling himself up for CLIMB_TIME (a hit starts it over),
+# then down on the far side
+func _climbing(delta: float) -> void:
+	velocity = Vector3.ZERO
+	if not is_instance_valid(_climb_wall):
+		_climb_wall = null
+		return
+	var face: Vector3 = _climb_wall.approach_point(global_position, 0.0)
+	_facing = CharAnim.dir_from_velocity(face - global_position, _facing)
+	anim = "thrust_" + _facing
+	_climb_t += delta
+	if _climb_t < CLIMB_TIME:
+		return
+	var here := _climb_wall.to_local(global_position)
+	var far := _climb_wall.to_global(Vector3(here.x, here.y, -here.z))
+	var land: Vector3 = _climb_wall.approach_point(far, CLIMB_CLEAR)
+	global_position = Vector3(land.x, global_position.y, land.z)
+	_climb_wall = null
+	_climb_t = 0.0
+	_repath_timer = 0.0

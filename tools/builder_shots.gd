@@ -1,9 +1,10 @@
 extends SceneTree
 
 # Reproducible studio turnarounds, independent of gameplay UI and camera tracking.
-# Godot --path . --script res://tools/builder_shots.gd -- <out_dir> [--before]
+# Godot --path . --script res://tools/builder_shots.gd -- <out_dir> [--before] [--body]
 var _out := "res://build/builder-review"
 var _before := false
+var _body_review := false
 var _rig: CharacterRig
 var _camera: Camera3D
 var _frame := 0
@@ -14,6 +15,8 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg == "--before":
 			_before = true
+		elif arg == "--body":
+			_body_review = true
 		elif not arg.begins_with("--"):
 			_out = arg
 	DirAccess.make_dir_recursive_absolute(_out)
@@ -54,7 +57,10 @@ func _initialize() -> void:
 	stage.add_child(_rig)
 	var look := CharacterRig.worker_look(0, Color(0.16, 0.36, 0.83))
 	if _before:
-		look["sculpted_builder"] = false
+		if _body_review:
+			look["sculpted_body"] = false
+		else:
+			look["sculpted_builder"] = false
 	_rig.setup(look)
 	_rig.play("idle_down")
 	_rig.process_mode = Node.PROCESS_MODE_DISABLED
@@ -70,6 +76,10 @@ func _set_view() -> void:
 	var target := Vector3(0, 1.70, 0)
 	_camera.size = 1.30
 	var offset := Vector3(0, 0.20, 5)
+	if _body_review and _view < 4:
+		target = Vector3(0, 1.08, 0)
+		_camera.size = 2.75
+		offset = Vector3(0, 1.6, 5)
 	if _view >= 4 and _view <= 6:
 		target = Vector3(0, 1.08, 0)
 		_camera.size = 2.75 if _view == 4 else 3.20

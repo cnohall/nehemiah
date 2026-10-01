@@ -4,8 +4,8 @@ extends Node3D
 # The day's record kept in the world instead of on a plaque (diegetic HUD): a scribe at
 # a low desk by the supply yard writes up the stretch — the day, which pieces stand, and
 # how many of the enemy got through (red strokes; ten, and the city falls). His scroll
-# floats over him while he's on screen. When a piece stands or falls he calls it out, and
-# the call slides in from the screen edge, so it's heard from anywhere.
+# floats over him only while you stand right by his desk. When a piece stands or falls
+# he calls it out, and the call slides in from the screen edge, so it's heard from anywhere.
 # Every peer, from GameState alone. Moves with the yard from section to section.
 
 const OFFSET     := Vector2(-8.5, 0.8)   # from the yard centre: west of the stone pile
@@ -13,6 +13,10 @@ const ROBE       := Palette.INDIGO
 const DESK_COLOR := Color(0.46, 0.32, 0.19)
 const SCROLL_COLOR := Color(0.90, 0.82, 0.62)
 const TAG_Y      := 3.1
+# The scroll shows when the local player comes this close (m, ground plane), and goes
+# again past the far one — a gap so it doesn't flicker at the edge
+const NEAR_SHOW  := 3.0
+const NEAR_HIDE  := 4.0
 
 var _rig: CharacterRig
 var _scroll: WorldTag
@@ -20,6 +24,8 @@ var _sheet: ScrollSheet
 var _shout: Shout
 var _last_done := -1
 var _last_total := -1
+var _day_open := false   # a phase with a record to show
+var _near := false
 
 func _ready() -> void:
 	_build_desk()
@@ -62,8 +68,18 @@ func _refresh() -> void:
 	_sheet.breaches = GameState.breaches
 	_sheet.update_minimum_size()
 	_sheet.queue_redraw()
-	_scroll.visible = GameState.phase in [GameState.Phase.DAWN, GameState.Phase.WORK, GameState.Phase.DUSK] \
+	_day_open = GameState.phase in [GameState.Phase.DAWN, GameState.Phase.WORK, GameState.Phase.DUSK] \
 		and not GameState.free_play()
+	_scroll.visible = _day_open and _near
+
+func _process(_delta: float) -> void:
+	var me := Player.local
+	if me == null or not is_instance_valid(me):
+		_near = false
+	else:
+		var d := Vector2(me.global_position.x - global_position.x, me.global_position.z - global_position.z).length()
+		_near = d < (NEAR_HIDE if _near else NEAR_SHOW)
+	_scroll.visible = _day_open and _near
 
 # A piece stood (or fell): write it up, look up, say it
 func _on_progress(done: int, total: int) -> void:

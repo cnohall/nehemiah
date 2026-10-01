@@ -85,6 +85,34 @@ For the players, in plain words:
 
 ---
 
+## 4a. Retention: the pull to day 52 (GDD §5.11)
+
+Playtest feedback (30 Sep 2026): fun for 2–3 stretches, then no pull to finish; "not always explained what you can do" (two to a beam).
+
+**Where sessions stop.** Every game left writes a line to `user://sessions.log` (section, day, phase, progress, crew). Collect the file from each tester after the session.
+- Stops at a stretch's end (DUSK, progress n/n) → a session-length problem; the Continue button is the answer. Did they use it next time?
+- Stops mid-stretch (WORK) → confusion or boredom there; note which twist
+
+**Observer ticks**
+- [ ] Read a twist card through (didn't skip it)
+- [ ] Held [Tab] / View to see what they could do: how often, and did it answer the question?
+- [ ] Took the other end of a beam without being told
+- [ ] Noticed a "Watch the carpenter…" callout and copied the bot
+- [ ] Saw the saboteur coming (watchman call / pointer) before a pile was strewn
+- [ ] One player parked in the yard guarding the piles (bad sign, §5.9)
+- [ ] Used the relay mat at the Dung Gate, or dug the outside rubble heaps
+- [ ] Noticed Sanballat & co. on the rise; reacted when they left
+- [ ] Broad Wall: said the wall looks thick, or asked why it takes two passes ("outer face / inner face")
+- [ ] Jeshanah: found the charred timbers without help; grumbled that clearing isn't building
+- [ ] Choice card: read it before picking; which option; did anyone argue; same option every time? (kill rule, GDD §6.5)
+
+**Questions**
+1. What could you do that you didn't know about until someone told you?
+2. Would you press Continue tomorrow? What would make you?
+3. Which stretch felt most like "more of the same"?
+
+---
+
 ## 5. Deciding
 
 After the sessions, fill this in and copy the result into GDD §5.
@@ -103,6 +131,13 @@ After the sessions, fill this in and copy the result into GDD §5.
 | Breakables | — | | |
 | Birds | — | | |
 | Lamps at dusk | — | | (cost is web draw calls, not fun) |
+| Twist cards | — | | read, or skipped? |
+| What-can-I-do lens | — | | used unprompted? |
+| Saboteur | `--no-saboteur` | | parked guard = tune the interval |
+| Leaders on the rise | — | | |
+| Two-face Broad Wall | — | | sequential faces: just "longer"? then make them parallel |
+| Old / burned units (Jeshanah, Miphkad) | — | | |
+| Choice before each stretch (two trades, §6.5) | `-- --boon=<key>` | | one option always picked = cut; compare time, breaches, wall health per pick |
 
 **Rules for deciding**
 - **Cut** if it causes friction and nobody names it as a best moment

@@ -90,9 +90,9 @@ func _network() -> bool:
 	match _state:
 		"start":
 			if _mode == "host":
-				nm.host()
+				nm.host(nm.TEST_PORT, 1)
 			else:
-				nm.join("127.0.0.1")
+				nm.join("127.0.0.1", nm.TEST_PORT)
 			_state = "connect"
 		"connect":
 			var up: bool = _mode == "host" or (root.multiplayer.multiplayer_peer.get_connection_status() \
