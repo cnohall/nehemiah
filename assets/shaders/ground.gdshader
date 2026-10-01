@@ -24,8 +24,6 @@ uniform vec3 section_tint : source_color = vec3(0.5, 0.5, 0.5);
 uniform float tint_amount = 0.0;
 uniform float outside_shade = 0.0;
 
-// Relief: gentle mounds and ripples, lit by the sun through the normal
-uniform float relief = 0.6;
 // Meadows: green ground under the grass colonies ScatterLayer plants — same mask as
 // ScatterLayer.meadow(); kept off the work yard (work_rect: x0, z0, x1, z1)
 uniform vec3 col_meadow     : source_color = vec3(0.560, 0.590, 0.300);   // dusty late-summer green
@@ -46,14 +44,11 @@ float hash2(vec2 p) {
 }
 
 float vnoise(vec2 p) {
-	vec2 i = floor(p);
-	vec2 f = fract(p);
-	vec2 u = f * f * (3.0 - 2.0 * f);
-	return mix(
-		mix(hash2(i),             hash2(i + vec2(1,0)), u.x),
-		mix(hash2(i + vec2(0,1)), hash2(i + vec2(1,1)), u.x),
-		u.y
-	);
+	// Continuous, differently angled waves avoid the visible cells of grid noise.
+	float a = sin(p.x * 1.70 + p.y * 0.87 + sin(p.y * 0.33));
+	float b = sin(p.x * -0.73 + p.y * 1.43 + 0.6 * sin(p.x * 0.58));
+	float c = sin(p.x * 2.31 - p.y * 1.17);
+	return 0.5 + 0.16 * a + 0.11 * b + 0.07 * c;
 }
 
 float fbm(vec2 p) {
@@ -77,27 +72,6 @@ float work_area(vec2 w) {
 	vec2 hi = work_rect.zw;
 	vec2 d = max(lo - w, w - hi);
 	return 1.0 - smoothstep(0.0, 4.0, max(d.x, d.y));
-}
-
-float height_at(vec2 w) {
-	return vnoise(w * 0.33) * 0.65 + vnoise(w * 1.1 + 3.7) * 0.28 + vnoise(w * 3.4 + 9.1) * 0.07;
-}
-
-// Cellular edge distance (F2 - F1): the network of cracks in dry earth
-float cracks(vec2 w) {
-	vec2 g = floor(w);
-	vec2 f = fract(w);
-	float d1 = 8.0;
-	float d2 = 8.0;
-	for (int y = -1; y <= 1; y++) {
-		for (int x = -1; x <= 1; x++) {
-			vec2 o = vec2(float(x), float(y));
-			vec2 pt = o + vec2(hash2(g + o), hash2(g + o + 5.3)) * 0.85;
-			float d = length(pt - f);
-			if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
-		}
-	}
-	return d2 - d1;
 }
 
 void fragment() {
@@ -139,11 +113,9 @@ void fragment() {
 	vec3 scrub_col = mix(col_scrub, col_scrub_lit, smoothstep(0.35, 0.75, detail));
 	col = mix(col, scrub_col, scrub * 0.45);
 
-	// Red-ochre earth breaking through in patches, with a network of dry cracks
+	// Red-ochre earth breaking through in soft, irregular patches.
 	float ochre = smoothstep(0.58, 0.74, fbm(p * 1.9 + vec2(21.7, 3.3))) * (1.0 - trodden * 0.6);
 	col = mix(col, col_ochre, ochre * 0.4);
-	float crack = 1.0 - smoothstep(0.02, 0.06, cracks(world_xz * 1.6));
-	col *= 1.0 - crack * (0.24 * ochre + 0.04 * trodden);
 
 	// Meadows: green ground where the grass colonies grow, darker at the heart
 	float mm = meadow_mask(world_xz) + (detail - 0.5) * 0.3;
@@ -188,15 +160,6 @@ void fragment() {
 		float sgn = bh > 0.82 ? 0.07 : (k == 0 ? -0.08 : -0.11);
 		col *= 1.0 + dotm * sgn * (1.0 - scrub * 0.6);
 	}
-
-	// Relief: normal from the height field, and hollows a touch darker
-	float e = 0.12;
-	float h0 = height_at(world_xz);
-	float hx = height_at(world_xz + vec2(e, 0.0)) - h0;
-	float hz = height_at(world_xz + vec2(0.0, e)) - h0;
-	vec3 n_world = normalize(vec3(-hx / e * relief, 1.0, -hz / e * relief));
-	NORMAL = normalize((VIEW_MATRIX * vec4(n_world, 0.0)).xyz);
-	col *= 0.9 + 0.2 * h0;
 
 	ALBEDO    = col;
 	ROUGHNESS = roughness;

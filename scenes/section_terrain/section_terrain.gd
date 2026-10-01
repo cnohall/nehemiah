@@ -16,7 +16,6 @@ const WOOL       := Color(0.93, 0.90, 0.82)
 const FISH       := Color(0.62, 0.66, 0.68)
 const WATER      := Color(0.20, 0.42, 0.46)
 const FLAME      := Color(1.0, 0.62, 0.22)
-const FIG_LEAF   := Color(0.30, 0.46, 0.20)
 const FLOWERS    := [Color(0.86, 0.30, 0.24), Color(0.95, 0.78, 0.30), Color(0.62, 0.36, 0.62)]
 # Ground looks: scrub_bias (+ greener), tint + tint_amount, outside_shade (valley fall)
 const GROUND_DEFAULT := { "scrub_bias": 0.0, "tint": Color(0.5, 0.5, 0.5), "tint_amount": 0.0, "outside_shade": 0.0 }
@@ -58,7 +57,9 @@ func _rebuild() -> void:
 	_collect_keep_clear()
 	var ground := GROUND_DEFAULT.duplicate()
 	match GameState.SECTIONS[index].get("terrain", ""):
-		"sheepfold":   _sheepfold(Vector3(-15.0, 0.0, -7.2))
+		"sheepfold":
+			_sheepfold(Vector3(-15.0, 0.0, -7.2))
+			_first_map_olive()
 		"fish_market": _fish_market()
 		"ruins":       _ruins(ground)
 		"workshops":   _workshops(ground)
@@ -195,15 +196,27 @@ func _stall(c: Vector3, w: float, d: float, goods: String) -> void:
 			_prop("basket", c + Vector3(-w * 0.5 - 0.55, 0, 0.2))
 
 # Tree with a small solid trunk (the canopy is walked under)
-func _tree(at: Vector3, fig := false) -> void:
-	if fig:
-		_add("trunk", Transform3D(Basis.from_scale(Vector3(1.2, 1.1, 1.2)), at + Vector3(0, 0.55, 0)), _vary(OLIVE_TRUNK, 0.04))
-		for i in 4:
-			var off := Vector3(_rng.randf_range(-0.8, 0.8), _rng.randf_range(1.2, 1.7), _rng.randf_range(-0.8, 0.8))
-			_add("leaf", Transform3D(_yaw().scaled(Vector3.ONE * _rng.randf_range(1.0, 1.4)), at + off), _vary(FIG_LEAF, 0.05))
+func _tree(at: Vector3, myrtle := false) -> void:
+	if myrtle:
+		_myrtle(at, true)
 	else:
 		_olive(at)
 	_collider(at, Vector3(0.5, 1.5, 0.5))
+# A lone old olive beyond the Sheep Gate, west of the sheepfold and away from the
+# hauling lanes. Its roots sit among the same limestone and dry grass as the slope.
+func _first_map_olive() -> void:
+	var at := Vector3(-22.0, 0.0, -8.5)
+	var olive := OldOlive.new()
+	olive.name = "OldOlive"
+	olive.position = at
+	olive.rotation.y = PI / 5.0
+	add_child(olive)
+	_collider(at, Vector3(1.0, 2.0, 1.0))
+	for offset: Vector3 in [Vector3(-1.25, 0.18, 0.55), Vector3(1.05, 0.14, -0.6), Vector3(0.4, 0.12, 1.2)]:
+		_add("boulder", Transform3D(_yaw().scaled(Vector3(0.7, 0.42, 0.55)), at + offset), _vary(ROCK_COLOR, 0.04))
+	for offset: Vector3 in [Vector3(-1.5, 0, -0.5), Vector3(1.35, 0, 0.8), Vector3(0.65, 0, -1.45)]:
+		_tuft(at + offset + Vector3(0, 0.1, 0))
+
 
 ## Torch on a pole — lit by DayLight when night falls (group "torches")
 func _torch(at: Vector3) -> void:
@@ -368,10 +381,17 @@ func _garden(g: Dictionary) -> void:
 	# Stairs going down from the City of David (3:15), beside the pool
 	for i in 5:
 		_add("slab", Transform3D(Basis.from_scale(Vector3(2.4, 0.12, 0.5)), pool + Vector3(pw * 0.5 + 1.6, 0.06 + (4 - i) * 0.02, -1.0 + i * 0.5)), _vary(PAVING_COLOR, 0.03))
-	# The King's Garden: figs and olives in rows, flower beds between
-	for x: float in [9.0, 13.0, 17.0, 21.0]:
-		for z: float in [6.0, 10.0]:
-			_tree(Vector3(x + _rng.randf_range(-0.4, 0.4), 0, z + _rng.randf_range(-0.3, 0.3)), (x + z) as int % 2 == 0)
+	# The King's Garden: olives and flowering myrtle, with palms near the water.
+	for xi in 4:
+		for zi in 2:
+			var x := 9.0 + xi * 4.0
+			var z := 6.0 + zi * 4.0
+			_tree(Vector3(x + _rng.randf_range(-0.4, 0.4), 0, z + _rng.randf_range(-0.3, 0.3)), (xi + zi) % 2 == 0)
+	for p: Vector3 in [Vector3(-9.5, 0, 10.0), Vector3(5.0, 0, 10.5)]:
+		_date_palm(p)
+		_collider(p, Vector3(0.55, 3.8, 0.55))
+	for p: Vector3 in [Vector3(6.5, 0, 5.0), Vector3(12.0, 0, 13.0), Vector3(19.5, 0, 13.0)]:
+		_myrtle(p)
 	for i in 14:
 		var at := Vector3(_rng.randf_range(8.0, 22.0), 0.15, _rng.randf_range(7.4, 8.6))
 		_add("pebble", Transform3D(_yaw().scaled(Vector3(1.4, 1.4, 1.4)), at), FLOWERS[_rng.randi() % FLOWERS.size()])
@@ -432,6 +452,8 @@ func _kidron(g: Dictionary) -> void:
 				_prop("basket", at + Vector3(0.9, 0, 0.7))   # olives picked into it
 	for x: float in [-20.0, -16.5]:
 		_tree(Vector3(x, 0, -7.5))
+	for x: float in [-13.0, -4.0, 1.5]:
+		_dry_scrub(Vector3(x, 0, -9.5))
 
 # Inspection Gate (3:31-32): the goldsmiths and traders by the Sheep Gate; the circuit
 # closes where it began, so the sheepfold is back outside
