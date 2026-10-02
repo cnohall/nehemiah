@@ -2711,14 +2711,6 @@ msgstr ""
 msgid "Wall across"
 msgstr ""
 
-#: scenes\game_state\game_state.gd:69
-msgid "Warning time is %d%% longer"
-msgstr ""
-
-#: scenes\game_state\game_state.gd:69
-msgid "Warning time is %d%% shorter"
-msgstr ""
-
 #: scenes\watch_post\watch_post.gd:379
 msgid "Watch post"
 msgstr ""

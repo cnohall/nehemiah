@@ -162,7 +162,7 @@ func _tick_surges(delta: float) -> void:
 				var off := Vector3(randf_range(-spread, spread), 0, randf_range(-1.0, 1.0))
 				_do_spawn(_pick_type(), _surge_at[_surge_left % _surge_at.size()] + off)
 		return
-	var warn := (SURGE_WARN if horn else WAVE_WARN) * GameState.mod("warn")
+	var warn := SURGE_WARN if horn else WAVE_WARN
 	var was := _surge_timer
 	_surge_timer -= delta
 	if was > warn and _surge_timer <= warn:

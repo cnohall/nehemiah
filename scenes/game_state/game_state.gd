@@ -35,8 +35,8 @@ const SECTIONS: Array = [
 # pick breaks a tie, no votes = the first), in play for that stretch only and written on
 # the scribe's map. The card text is worked out from "mods", so it is always the truth.
 #   mods (1 = unchanged):  work    — hands-on building speed       harm  — blows the wall takes
-#     pressure — foes' pace and numbers     warn — warning time before a wave or surge
-#     beam_solo — a beam dragged alone     carry — walking speed with a load
+#     pressure — foes' pace and numbers     beam_solo — a beam dragged alone
+#     carry — walking speed with a load
 #     clear — burned timbers coming down   mix — mortar mixing time
 #   posts: true — the watch posts stand from dawn, stocked
 # Every stretch without its own pair offers the build / guard one: pace (the "In good
@@ -45,18 +45,18 @@ const BOONS := {
 	"build": { "title": "Press the work", "ref": "Neh. 4:6", "mods": { "work": 1.2, "harm": 1.25 } },
 	"guard": { "title": "Hold the line", "ref": "Neh. 4:13", "mods": { "work": 0.9, "harm": 0.75 }, "posts": true },
 	"porters": { "title": "Practised porters", "ref": "Neh. 3:3", "mods": { "beam_solo": 1.9, "pressure": 1.15 } },
-	"market": { "title": "Watch the market side", "ref": "Neh. 4:9", "mods": { "work": 0.9, "warn": 1.5 }, "posts": true },
+	"market": { "title": "Watch the market side", "ref": "Neh. 4:9", "mods": { "work": 0.9, "pressure": 0.8 }, "posts": true },
 	"dig": { "title": "Dig out the rubble", "ref": "Neh. 4:2", "mods": { "clear": 2.0, "work": 1.1, "pressure": 1.2 } },
 	"shore": { "title": "Shore up the old courses", "ref": "Neh. 3:6", "mods": { "harm": 0.7, "clear": 0.6 } },
 	"rush": { "title": "Rush the faces", "ref": "Neh. 3:8", "mods": { "work": 1.3, "harm": 1.4 } },
 	"pack": { "title": "Pack the core", "ref": "Neh. 4:6", "mods": { "harm": 0.6, "work": 0.85 } },
 	"hot": { "title": "Fire the ovens high", "ref": "Neh. 3:11", "mods": { "mix": 0.5, "pressure": 1.2 } },
-	"bank": { "title": "Bank the ovens", "ref": "Neh. 3:11", "mods": { "mix": 1.5, "warn": 1.5 }, "posts": true },
-	"terraces": { "title": "Work the terraces", "ref": "Neh. 3:13", "mods": { "work": 1.2, "warn": 0.5 } },
-	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "warn": 2.2, "work": 0.9 }, "posts": true },
+	"bank": { "title": "Bank the ovens", "ref": "Neh. 3:11", "mods": { "mix": 1.5, "pressure": 0.8 }, "posts": true },
+	"terraces": { "title": "Work the terraces", "ref": "Neh. 3:13", "mods": { "work": 1.2, "harm": 1.3 } },
+	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "pressure": 0.75, "work": 0.9 }, "posts": true },
 	"bundles": { "title": "Carry in bundles", "ref": "Neh. 3:14", "mods": { "carry": 1.25, "harm": 1.25 } },
 	"road": { "title": "Hold the road", "ref": "Neh. 3:14", "mods": { "harm": 0.8, "carry": 0.85 }, "posts": true },
-	"table": { "title": "Open Nehemiah's table", "ref": "Neh. 5:17", "mods": { "work": 1.2, "warn": 0.6 } },
+	"table": { "title": "Open Nehemiah's table", "ref": "Neh. 5:17", "mods": { "work": 1.2, "carry": 0.8 } },
 	"fields": { "title": "Give back their fields", "ref": "Neh. 5:11", "mods": { "harm": 0.8, "work": 0.85 }, "posts": true },
 }
 const DEFAULT_CHOICES := ["build", "guard"]
@@ -66,7 +66,6 @@ const MOD_TEXT := {
 	"work": [true, "Building is %d%% quicker", "Building is %d%% slower"],
 	"harm": [false, "The wall takes %d%% more harm from blows", "The wall takes %d%% less harm from blows"],
 	"pressure": [false, "%d%% more foes", "%d%% fewer foes"],
-	"warn": [true, "Warning time is %d%% longer", "Warning time is %d%% shorter"],
 	"beam_solo": [true, "A beam dragged alone goes %d%% faster", "A beam dragged alone goes %d%% slower"],
 	"carry": [true, "Loaded workers walk %d%% faster", "Loaded workers walk %d%% slower"],
 	"clear": [true, "Burned timbers come down %d%% faster", "Burned timbers come down %d%% slower"],
@@ -131,6 +130,10 @@ var trades: bool = "--no-trades" not in OS.get_cmdline_user_args()
 # Saboteur (GDD §5.9): from day 6 one slips in now and then to strew the yard's piles.
 # `-- --no-saboteur` to play without him
 var saboteur: bool = "--no-saboteur" not in OS.get_cmdline_user_args()
+# The sling pass (GDD §5.16). `-- --no-tell`: foes strike without drawing back first (no
+# wind-up to read, nothing to knock aside). `-- --no-true-shot`: no glint, every throw alike
+var tell: bool = "--no-tell" not in OS.get_cmdline_user_args()
+var true_shot: bool = "--no-true-shot" not in OS.get_cmdline_user_args()
 signal rules_changed
 
 # Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
@@ -592,7 +595,7 @@ func apply_attract_start() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
-	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur)
+	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot)
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size)
@@ -633,12 +636,14 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool) -> void:
+func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool) -> void:
 	waves = w
 	sun = s
 	posts = p
 	trades = t
 	saboteur = sab
+	tell = tl
+	true_shot = ts
 	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")

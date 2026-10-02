@@ -24,11 +24,11 @@ enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RE
 # WaveManager sizes the enemy to the crew (a weak bot shouldn't bring a full worker's foes);
 # about = the one line the gathering screen shows under the choice
 const SKILLS := [
-	{ "name": "Apprentice",     "think": 0.7,  "speed": 0.72, "aim_err": 2.2,  "charge": 0.35, "reach": 6.0,  "dawdle": 0.12, "ono": 0.35, "guard": false, "crew": 0.5,
+	{ "name": "Apprentice",     "think": 0.7,  "speed": 0.72, "aim_err": 2.2,  "charge": 0.35, "true": 0.0, "reach": 6.0,  "dawdle": 0.12, "ono": 0.35, "guard": false, "crew": 0.5,
 		"about": "Slow, misses often, may wander off" },
-	{ "name": "Builder",        "think": 0.4,  "speed": 0.88, "aim_err": 1.0,  "charge": 0.6,  "reach": 8.5,  "dawdle": 0.04, "ono": 0.08, "guard": false, "crew": 0.75,
+	{ "name": "Builder",        "think": 0.4,  "speed": 0.88, "aim_err": 1.0,  "charge": 0.6,  "true": 0.12, "reach": 8.5,  "dawdle": 0.04, "ono": 0.08, "guard": false, "crew": 0.75,
 		"about": "Steady hands, a fair aim" },
-	{ "name": "Master builder", "think": 0.18, "speed": 1.0,  "aim_err": 0.35, "charge": 0.8,  "reach": 10.0, "dawdle": 0.0,  "ono": 0.0,  "guard": true,  "crew": 1.0,
+	{ "name": "Master builder", "think": 0.18, "speed": 1.0,  "aim_err": 0.35, "charge": 0.8,  "true": 0.35, "reach": 10.0, "dawdle": 0.0,  "ono": 0.0,  "guard": true,  "crew": 1.0,
 		"about": "Quick, sure shot, leaves the work to guard" },
 ]
 
@@ -48,7 +48,9 @@ const THREAT_BONUS  := 4.0    # metres a harmful enemy is treated as nearer, for
 const TROUGH_PRIORITY := 30.0 # fetch score bonus for the trough's lime and water
 const CHASE_RANGE   := 10.0   # empty hands this close to a saboteur inside the wall: after him
 const HORN_PACK_RANGE := 14.0 # foes this close…
-const HORN_PACK       := 3    # …three or more: sound the horn
+const HORN_PACK       := 6    # …six or more: sound the horn
+const HORN_BOT_CD     := 45.0 # a bot sounds it at most this often (s)
+const HORN_JOIN_RANGE := 16.0 # only bots this near a standing call drop work to gather
 const SPACING       := 1.2    # workers don't collide: a bot edges away from any this close…
 const SPREAD_PUSH   := 0.6    # …this hard (stick units) when right on top of them
 
@@ -76,7 +78,8 @@ var _sidestep_dir := Vector3.ZERO
 var _dawdle := 0.0
 var _foe: Node3D                  # enemy being wound up for
 var _aim_off := Vector3.ZERO
-var _ono := {}                    # messenger → true/false: go with him when he asks?
+var _horn_ready := 0.0            # clock time (s) this bot may sound the horn again
+var _ono := {}                   # messenger → true/false: go with him when he asks?
 
 func _init(player: Player, skill_index: int) -> void:
 	_p = player
@@ -173,14 +176,17 @@ func _decide() -> void:
 		if horn != null and not foes_about.is_empty():
 			var call: Dictionary = horn.open_call()
 			if not call.is_empty():
-				_set_job(Job.RALLY, call["root"])
-				return
-			var pack := 0
-			for e: Node3D in foes_about:
-				if _dist(e) < HORN_PACK_RANGE:
-					pack += 1
-			if pack >= HORN_PACK:
-				_press("horn")
+				if _dist(call["root"]) < HORN_JOIN_RANGE:
+					_set_job(Job.RALLY, call["root"])
+					return
+			elif Time.get_ticks_msec() * 0.001 >= _horn_ready:
+				var pack := 0
+				for e: Node3D in foes_about:
+					if _dist(e) < HORN_PACK_RANGE:
+						pack += 1
+				if pack >= HORN_PACK:
+					_horn_ready = Time.get_ticks_msec() * 0.001 + HORN_BOT_CD
+					_press("horn")
 	# Beams go in pairs: take the far end of a lone one, or tag along with a bot on its
 	# way to fetch one (unless someone already is)
 	var carrier := _nearest_worker(BEAM_RANGE, func(w):

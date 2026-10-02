@@ -2333,12 +2333,6 @@ msgstr "%d%% mehr Feinde"
 msgid "%d%% fewer foes"
 msgstr "%d%% weniger Feinde"
 
-msgid "Warning time is %d%% longer"
-msgstr "Die Vorwarnzeit ist %d%% länger"
-
-msgid "Warning time is %d%% shorter"
-msgstr "Die Vorwarnzeit ist %d%% kürzer"
-
 msgid "A beam dragged alone goes %d%% faster"
 msgstr "Ein allein gezogener Balken geht %d%% schneller"
 

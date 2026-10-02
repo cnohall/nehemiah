@@ -18,6 +18,19 @@ const SLING_MAX_DAMAGE := 25.0
 const SLING_CHARGE_TIME := 0.9    # seconds to full charge
 const SLING_COOLDOWN   := 0.6
 const SLING_MIN_THROW  := 1.5     # never land closer than this
+const SLING_KNOCK_MIN  := 0.15    # m a stone shoves a scout back, light charge…
+const SLING_KNOCK_MAX  := 0.55    # …and full
+# True shot (GDD §5.16, Judg. 20:16 "could sling stones at a hair and not miss"): at full
+# spin the stone glints once a beat — at full charge, then every TRUE_PERIOD. Let go within
+# TRUE_HALF of a glint and the stone strikes ×TRUE_MULT and knocks the foe off his feet.
+# A ring closes on the aim ring over TRUE_LEAD before each glint, so it can be timed
+const TRUE_PERIOD      := 0.75
+const TRUE_HALF        := 0.11
+const TRUE_LEAD        := 0.4
+const TRUE_MULT        := 1.5
+const TRUE_KNOCK       := 1.4     # m a true shot throws a scout back as he goes down
+const AIM_RING_TRUE    := Color(1.0, 0.86, 0.48, 1.0)    # the aim ring in the window: gold
+const ARC_DOTS         := 9       # dotted flight arc from the hand to the aim ring
 const SWORD_REACH     := 2.0      # a foe this close turns the sling press into a sword cut
 const SWORD_ARC_DEG   := 65.0     # half-width of the cut, either side of the foe we turned to
 const SWORD_DAMAGE    := 20.0     # scout 2 cuts, raider 3, brute 5
@@ -122,6 +135,13 @@ var _aim_marker: MeshInstance3D
 var _whirl: Node3D
 var _whirl_time := 0.0
 var _whirl_angle := 0.0
+var _whirl_stone: Node3D        # the stone in the pouch (where a glint shows)
+var _whirl_rev := 0             # passes round the head so far (one whoosh each)
+var _glint_beat := -1           # last true-shot beat glinted
+var _held := 0.0                # owner: seconds the sling has been whirling this throw
+var _approach: MeshInstance3D   # owner: the ring that closes on the aim ring before a glint
+var _arc_dots: Array[MeshInstance3D] = []
+static var _true_told := false  # the "let go as it glints" hint, once a session
 var _hp_bar: HealthBar
 var _dash_time := 0.0
 var _dash_cd := 0.0
@@ -145,6 +165,8 @@ var whirling := false:
 	set(value):
 		whirling = value
 		_whirl_time = 0.0
+		_whirl_rev = int(_whirl_angle / TAU)
+		_glint_beat = -1
 		if _whirl != null:
 			_whirl.visible = value
 
@@ -946,12 +968,14 @@ func _handle_attack(delta: float) -> void:
 				return
 			_charging = true
 			_charge = 0.0
+			_held = 0.0
 			whirling = true
 		return
 	if brain == null and InputMode.gameplay_blocked():
 		_cancel_charge()   # opened the menu mid wind-up
 		return
 	_charge = minf(1.0, _charge + delta / SLING_CHARGE_TIME)
+	_held += delta
 	if brain != null:
 		_update_aim(brain.aim_point)
 		if _charge >= brain.charge_goal:
@@ -977,6 +1001,12 @@ func release_throw() -> void:
 		return
 	var land := _aim_point
 	var charge := _charge
+	# Judged at the release press, not when the stone leaves the hand. Bots land one now
+	# and then by skill (their let-go at full charge always falls on the first glint)
+	var true_shot := GameState.true_shot and absf(true_offset(_held)) <= TRUE_HALF \
+		and (brain == null or randf() < float(brain.skill.get("true", 0.0)))
+	if true_shot:
+		charge = 1.0   # a hair early still counts as full
 	_cancel_charge(true)   # the stone keeps whirling through the cast until it's let go
 	_sling_cd = SLING_COOLDOWN
 	_face_aim(land)
@@ -990,7 +1020,9 @@ func release_throw() -> void:
 	whirling = false
 	if _sprite.animation.begins_with("slash"):
 		_sprite.squash(Vector2(1.08, 0.94))
-		_server_sling.rpc_id(1, global_position, land, charge, InputMode.using_pad or brain != null)
+		_server_sling.rpc_id(1, global_position, land, charge, InputMode.using_pad or brain != null, true_shot)
+		if true_shot and brain == null:
+			InputMode.rumble(0.2, 0.0, 0.06)
 		if Trade.hit_mult(trade) > 1.0:
 			_knack("Your trade — your blows land harder")
 
@@ -1072,6 +1104,18 @@ func _cancel_charge(keep_whirl := false) -> void:
 		whirling = false
 	if _aim_marker:
 		_aim_marker.visible = false
+	if _approach:
+		_approach.visible = false
+	for dot in _arc_dots:
+		dot.visible = false
+
+## Seconds from the nearest true-shot glint after `held` seconds of whirling (negative =
+## before it). Glints fall at full charge and every TRUE_PERIOD after
+static func true_offset(held: float) -> float:
+	var s := held - SLING_CHARGE_TIME
+	if s <= 0.0:
+		return s
+	return s - roundf(s / TRUE_PERIOD) * TRUE_PERIOD
 
 # Clamp the cursor point to the charge's range and place the landing ring
 func _update_aim(cursor: Vector3) -> void:
@@ -1098,26 +1142,82 @@ func _cursor_on_ground() -> Vector3:
 
 func _show_aim_marker(at: Vector3, locked: bool) -> void:
 	if _aim_marker == null:
-		var quad := QuadMesh.new()
-		# Ring drawn at the stone's real impact radius (0.9 m)
-		quad.size = Vector2(2.4, 2.4)
-		quad.orientation = PlaneMesh.FACE_Y
-		var mat := ShaderMaterial.new()
-		mat.shader = MARKER_SHADER
-		mat.set_shader_parameter("shadow_color", Color(0, 0, 0, 0))
-		mat.set_shader_parameter("ring_radius", 0.375)
-		mat.set_shader_parameter("ring_width", 0.03)
-		_aim_marker = MeshInstance3D.new()
-		_aim_marker.mesh = quad
-		_aim_marker.material_override = mat
-		_aim_marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_aim_marker.top_level = true
-		add_child(_aim_marker)
+		_aim_marker = _ground_ring(0.03)
+		_approach = _ground_ring(0.022)
+		_build_arc_dots()
 	var c := AIM_RING_LOCKED if locked else AIM_RING_FREE
 	c.a *= lerpf(0.45, 1.0, _charge)  # ring firms up as the charge builds
+	var ground := Vector3(at.x, GROUND_Y + 0.04, at.z)
+	# True shot: a ring closes on the aim ring over TRUE_LEAD, and the aim ring burns gold
+	# for the window round each glint
+	var off := true_offset(_held)
+	var in_window := GameState.true_shot and absf(off) <= TRUE_HALF
+	if in_window:
+		c = AIM_RING_TRUE
 	_aim_marker.material_override.set_shader_parameter("ring_color", c)
-	_aim_marker.global_position = Vector3(at.x, GROUND_Y + 0.04, at.z)
+	_aim_marker.global_position = ground
+	_aim_marker.scale = Vector3.ONE * (1.12 if in_window else 1.0)
 	_aim_marker.visible = true
+	var lead := -off if off < 0.0 else TRUE_PERIOD - off   # seconds to the next glint
+	if GameState.true_shot and lead <= TRUE_LEAD and not in_window:
+		var k := lead / TRUE_LEAD
+		var ac := AIM_RING_TRUE
+		ac.a = lerpf(0.95, 0.25, k)
+		_approach.material_override.set_shader_parameter("ring_color", ac)
+		_approach.global_position = ground
+		_approach.scale = Vector3.ONE * lerpf(1.0, 2.3, k)
+		_approach.visible = true
+	else:
+		_approach.visible = false
+	_place_arc(at + Vector3.UP * 0.9 if locked else ground, c)
+
+# A ring on the ground at the stone's real impact radius (0.9 m), owner only
+func _ground_ring(width: float) -> MeshInstance3D:
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.4, 2.4)
+	quad.orientation = PlaneMesh.FACE_Y
+	var mat := ShaderMaterial.new()
+	mat.shader = MARKER_SHADER
+	mat.set_shader_parameter("shadow_color", Color(0, 0, 0, 0))
+	mat.set_shader_parameter("ring_radius", 0.375)
+	mat.set_shader_parameter("ring_width", width)
+	var ring := MeshInstance3D.new()
+	ring.mesh = quad
+	ring.material_override = mat
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ring.top_level = true
+	add_child(ring)
+	return ring
+
+func _build_arc_dots() -> void:
+	var dot := SphereMesh.new()
+	dot.radius = 0.075
+	dot.height = 0.15
+	dot.radial_segments = 6
+	dot.rings = 3
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dot.material = mat
+	for i in ARC_DOTS:
+		var mi := MeshInstance3D.new()
+		mi.mesh = dot
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.top_level = true
+		mi.visible = false
+		add_child(mi)
+		_arc_dots.append(mi)
+
+# The stone's own flight path (SlingStone's arc) as a dotted line, firming with the charge
+func _place_arc(to: Vector3, c: Color) -> void:
+	var from := global_position + Vector3(0, SLING_RELEASE_Y, 0)
+	var arc := from.distance_to(to) * SlingStone.ARC_HEIGHT
+	var mat: StandardMaterial3D = _arc_dots[0].mesh.material
+	mat.albedo_color = Color(c.r, c.g, c.b, c.a * lerpf(0.4, 0.9, _charge))
+	for i in ARC_DOTS:
+		var t := float(i + 1) / float(ARC_DOTS + 1)
+		_arc_dots[i].global_position = from.lerp(to, t) + Vector3.UP * sin(t * PI) * arc
+		_arc_dots[i].visible = true
 
 static func _assist_cone(pad: bool) -> float:
 	return PAD_ASSIST_DEG if pad else AIM_ASSIST_DEG
@@ -1143,10 +1243,11 @@ func _assist_target(from: Vector3, land: Vector3, reach: float, cone_deg: float)
 	return best
 
 @rpc("any_peer", "call_local", "reliable")
-func _server_sling(at: Vector3, land: Vector3, charge: float, pad: bool) -> void:
+func _server_sling(at: Vector3, land: Vector3, charge: float, pad: bool, true_shot := false) -> void:
 	if not _from_owner() or downed:
 		return
 	charge = clampf(charge, 0.0, 1.0)
+	true_shot = true_shot and GameState.true_shot
 	var reach := _sling_range(charge)
 	# Don't trust the client's landing point beyond what its charge allows
 	var flat := Vector3(land.x - at.x, 0.0, land.z - at.z)
@@ -1154,22 +1255,26 @@ func _server_sling(at: Vector3, land: Vector3, charge: float, pad: bool) -> void
 		land = Vector3(at.x, GROUND_Y, at.z) + flat.normalized() * reach
 	var target := _assist_target(at, land, reach, _assist_cone(pad))
 	var damage := lerpf(SLING_MIN_DAMAGE, SLING_MAX_DAMAGE, charge) * Trade.hit_mult(trade) * _rally(&"rally_damage")
-	_throw_stone.rpc(target.get_path() if target else NodePath(), land, damage)
+	if true_shot:
+		damage *= TRUE_MULT
+	var knock := TRUE_KNOCK if true_shot else lerpf(SLING_KNOCK_MIN, SLING_KNOCK_MAX, charge)
+	_throw_stone.rpc(target.get_path() if target else NodePath(), land, damage, knock, true_shot)
 
 # Every peer animates the stone; only the server's copy deals damage
 @rpc("any_peer", "call_local", "reliable")
-func _throw_stone(target_path: NodePath, land: Vector3, damage: float) -> void:
+func _throw_stone(target_path: NodePath, land: Vector3, damage: float, knock := 0.0, true_shot := false) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	var target: Node3D = null
 	if not target_path.is_empty():
 		target = get_node_or_null(target_path) as Node3D
 	Sfx.play("throw", global_position)
+	Sfx.play("sling_crack", global_position + Vector3(0, SLING_RELEASE_Y, 0), 0.92 if true_shot else 1.0)
 	var stone := SLING_STONE.instantiate()
 	get_tree().current_scene.add_child(stone)
 	stone.global_position = global_position + Vector3(0, SLING_RELEASE_Y, 0)
 	stone.shooter = worker_id()
-	stone.init(target, land, damage)
+	stone.init(target, land, damage, knock, true_shot)
 
 # Owner: the day's work is done — throw both arms up. A beat late, so the server's
 # revive / down-tools messages (sent alongside the phase) land first.
@@ -1480,6 +1585,7 @@ func _build_whirl() -> void:
 	stone_mi.material_override = stone_mat
 	stone_mi.position.x = WHIRL_RADIUS
 	_whirl.add_child(stone_mi)
+	_whirl_stone = stone_mi
 	# Faint motion-blur ring along the stone's path, so the spin reads at a glance
 	var blur := QuadMesh.new()
 	blur.size = Vector2(WHIRL_RADIUS * 2.5, WHIRL_RADIUS * 2.5)  # local XY plane
@@ -1517,6 +1623,26 @@ func _update_whirl(delta: float) -> void:
 	var spin := -1.0 if x.dot(fwd) > 0.0 else 1.0
 	_whirl.global_transform = Transform3D(Basis(x, y, z) * Basis(Vector3.BACK, _whirl_angle * spin),
 		_sprite.hand_position())
+	# A whoosh each pass round the head, rising as it speeds up
+	var rev := int(_whirl_angle / TAU)
+	if rev != _whirl_rev:
+		_whirl_rev = rev
+		Sfx.play("sling_whirl", _whirl.global_position, lerpf(0.85, 1.25, minf(_whirl_time / SLING_CHARGE_TIME, 1.0)))
+	# True shot: the stone glints on each beat at full spin (time-based, so every peer sees
+	# it about when the slinger does)
+	if GameState.true_shot and _whirl_time >= SLING_CHARGE_TIME:
+		var beat := int((_whirl_time - SLING_CHARGE_TIME) / TRUE_PERIOD)
+		if beat != _glint_beat:
+			_glint_beat = beat
+			_glint()
+
+# A star of light on the pouch and the cord's ting: let go now
+func _glint() -> void:
+	Sfx.play("sling_glint", _whirl_stone.global_position)
+	SlingStone.flash(get_tree().current_scene, _whirl_stone.global_position, 0.9, 0.2)
+	if self == local and brain == null and not _true_told:
+		_true_told = true
+		_toast("Let go as it glints — a true shot")
 
 # ── Carried prop ───────────────────────────────────────────
 

@@ -22,9 +22,9 @@ const WALL_CAM_HOLD := 3.3     # Main.WALL_CAM_TIME + its lead-in, less a beat
 const BANNER_PAD    := 28.0    # space above and below the banner text
 const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
 const TALLY_H       := 118.0   # …plus the numbers row…
-const CREW_H        := 40.0    # …plus one line per worker's share (multiplayer)
+const CREW_H        := 62.0   # …plus one line per worker's share (multiplayer)
 const MARKS_H       := 64.0    # …plus the section's marks on its last day…
-const MARKS_BIG_H   := 154.0  # (a finished stretch: big gems, captions beneath)
+const MARKS_BIG_H   := 172.0  # (a finished stretch: big gems, captions beneath)
 const STRIP_H       := 32.0    # (an ordinary day: the campaign strip above its counts)
 const TALLY_SMALL_H := 84.0   # (and then its counts, smaller)
 const READY_H       := 56.0    # …plus who's ready to go on
@@ -894,6 +894,9 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(gap)
 		marks_line = _marks_line(stats, true)
 		_tally.add_child(marks_line)
+		var after := Control.new()  # air between the marks and the counts
+		after.custom_minimum_size.y = 8
+		_tally.add_child(after)
 	elif campaign:
 		strip = CircuitStrip.new()
 		strip.day = day
@@ -903,7 +906,7 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(strip)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 56)
+	row.add_theme_constant_override("separation", 0)
 	_tally.add_child(row)
 	# A stretch that stands counts the whole stretch, not just its last day
 	var rated := stats.has("marks")
@@ -918,7 +921,11 @@ func show_tally(stats: Dictionary) -> void:
 	if stats.get("scattered", 0) > 0 and not rated:
 		counts.append([stats["scattered"], "Piles scattered", func(v: int): return str(v)])
 	for i in counts.size():
+		if i > 0:
+			row.add_child(_rule_v(40))
 		var cell := _stat(counts[i][2].call(0), counts[i][1], 32 if (marks_line or strip) else 0)
+		# Equal cells: the numbers sit evenly however long their captions run
+		cell.custom_minimum_size.x = 190
 		row.add_child(cell)
 		_count_up(cell.get_child(0), counts[i][0], counts[i][2], i * TALLY_STEP + 0.5)
 
@@ -963,7 +970,7 @@ func _marks_line(stats: Dictionary, big := false) -> Control:
 	var mask: int = stats["marks"]
 	var line := HBoxContainer.new()
 	line.alignment = BoxContainer.ALIGNMENT_CENTER
-	line.add_theme_constant_override("separation", 72 if big else 44)
+	line.add_theme_constant_override("separation", 24 if big else 44)
 	var secs := int(stats["section_time"])
 	var par := int(stats["par"])
 	var details := {
@@ -976,6 +983,8 @@ func _marks_line(stats: Dictionary, big := false) -> Control:
 		# Big: the hero of the tally — a large gem with its name and proof stacked beneath
 		var chip: BoxContainer = VBoxContainer.new() if big else HBoxContainer.new()
 		chip.add_theme_constant_override("separation", 6 if big else 10)
+		if big:  # equal columns: the gems sit evenly whatever their captions say
+			chip.custom_minimum_size.x = 200
 		var gem := MarkGem.new(earned, 68.0 if big else 22.0)
 		gem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		gem.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1012,31 +1021,57 @@ func _pop_marks(line: Control, delay: float) -> void:
 			tw.tween_callback(Sfx.play.bind("tally_land")).set_delay(at + 0.2)
 			tw.tween_property(gem, "shine", 1.0, 0.6).from(0.0).set_delay(at + 0.25)
 
-# Each worker's share, in their colour; the day's best carrier and best shot in terracotta
+# Each worker's share as a small card edged in their colour, name over numbers;
+# the day's best carrier and best shot in terracotta
 func _crew_line(crew: Array) -> Control:
 	var line := HBoxContainer.new()
 	line.alignment = BoxContainer.ALIGNMENT_CENTER
-	line.add_theme_constant_override("separation", 30)
+	line.add_theme_constant_override("separation", 12)
 	var top_loads: int = crew.map(func(r): return r[1]).max()
 	var top_foes: int = crew.map(func(r): return r[2]).max()
 	for slot in crew.size():
 		var r: Array = crew[slot]
-		var chip := HBoxContainer.new()
-		chip.add_theme_constant_override("separation", 8)
-		var swatch := ColorRect.new()
-		swatch.custom_minimum_size = Vector2(12, 12)
-		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		swatch.color = _slot_colors[slot % _slot_colors.size()]
-		chip.add_child(swatch)
+		var card := PanelContainer.new()
+		card.custom_minimum_size.x = 150
+		var sb := UiStyle.box(Color(UiStyle.PARCHMENT_DEEP, 0.5), Vector2(14, 7), 3)
+		sb.border_width_left = 4
+		sb.border_color = _slot_colors[slot % _slot_colors.size()]
+		card.add_theme_stylebox_override("panel", sb)
+		var vb := VBoxContainer.new()
+		vb.add_theme_constant_override("separation", -2)
+		card.add_child(vb)
 		var worker := _worker(r[0])
-		var who: String = "You" if r[0] == multiplayer.get_unique_id() \
+		var me: bool = r[0] == multiplayer.get_unique_id()
+		var who: String = "You" if me \
 			else (worker.trade_name() if worker != null else CharacterRig.TRADES[slot % CharacterRig.TRADES.size()])
-		chip.add_child(_crew_label(who, UiStyle.INK))
-		chip.add_child(_crew_label(tr_n("%d load", "%d loads", r[1]) % r[1], UiStyle.TERRACOTTA if r[1] > 0 and r[1] == top_loads else UiStyle.INK_SOFT))
-		chip.add_child(_crew_label("·", UiStyle.INK_MUTED))
-		chip.add_child(_crew_label(tr_n("%d foe", "%d foes", r[2]) % r[2], UiStyle.TERRACOTTA if r[2] > 0 and r[2] == top_foes else UiStyle.INK_SOFT))
-		line.add_child(chip)
+		var name_l := _crew_label(who, UiStyle.INK)
+		if me:
+			name_l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
+		vb.add_child(name_l)
+		var nums := HBoxContainer.new()
+		nums.add_theme_constant_override("separation", 6)
+		nums.add_child(_crew_num(tr_n("%d load", "%d loads", r[1]) % r[1], r[1] > 0 and r[1] == top_loads))
+		nums.add_child(_crew_num("·", false, UiStyle.INK_MUTED))
+		nums.add_child(_crew_num(tr_n("%d foe", "%d foes", r[2]) % r[2], r[2] > 0 and r[2] == top_foes))
+		vb.add_child(nums)
+		line.add_child(card)
 	return line
+
+func _crew_num(text: String, best: bool, color := UiStyle.INK_SOFT) -> Label:
+	var l := _crew_label(text, UiStyle.TERRACOTTA if best else color)
+	l.add_theme_font_size_override("font_size", 15)
+	if best:
+		l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
+	return l
+
+# A hairline between the tally's counts
+func _rule_v(h: float) -> Control:
+	var r := ColorRect.new()
+	r.color = Color(UiStyle.RULE, 0.55)
+	r.custom_minimum_size = Vector2(1, h)
+	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
 
 func _worker(id: int) -> Player:
 	for p: Player in get_tree().get_nodes_in_group("players"):

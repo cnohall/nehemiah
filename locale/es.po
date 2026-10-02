@@ -2333,12 +2333,6 @@ msgstr "%d%% más enemigos"
 msgid "%d%% fewer foes"
 msgstr "%d%% menos enemigos"
 
-msgid "Warning time is %d%% longer"
-msgstr "El aviso llega un %d%% antes"
-
-msgid "Warning time is %d%% shorter"
-msgstr "El aviso llega un %d%% después"
-
 msgid "A beam dragged alone goes %d%% faster"
 msgstr "Una viga arrastrada a solas va un %d%% más rápido"
 

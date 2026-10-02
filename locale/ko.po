@@ -2320,12 +2320,6 @@ msgstr "적이 %d%% 더 많아집니다"
 msgid "%d%% fewer foes"
 msgstr "적이 %d%% 줄어듭니다"
 
-msgid "Warning time is %d%% longer"
-msgstr "경고 시간이 %d%% 길어집니다"
-
-msgid "Warning time is %d%% shorter"
-msgstr "경고 시간이 %d%% 짧아집니다"
-
 msgid "A beam dragged alone goes %d%% faster"
 msgstr "혼자 끄는 들보가 %d%% 빨라집니다"
 

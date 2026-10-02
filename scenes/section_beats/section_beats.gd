@@ -162,7 +162,7 @@ func _fire(key: String) -> void:
 	var beat: Dictionary = beats_for(i)[key]
 	var spots := _spots(beat.get("at", "gate"), i)
 	_queue = _pack(beat.get("pack", []), spots)
-	_warn = WARN * GameState.mod("warn")
+	_warn = WARN
 	_gap = 0.0
 	print("SectionBeats: %s \"%s\" — %d foes" % [GameState.SECTIONS[i]["name"], key, _queue.size()])
 	_announce.rpc(i, key, spots if not _queue.is_empty() else [])

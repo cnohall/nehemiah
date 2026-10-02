@@ -140,7 +140,7 @@ func _build_meadows() -> void:
 			if m < 0.62 or WORK_RECT.grow(1.5).has_point(p) or _blocked(p) or _on_street(p, 1.0):
 				continue
 			_tuft(Vector3(p.x, 0.1, p.y), true, clampf(remap(m, 0.62, 1.1, 0.0, 1.0), 0.0, 1.0))
-			if m > 0.85 and _rng.randf() < 0.12:
+			if m > 0.85 and _rng.randf() < 0.12 and not _on_track(p, 1.2):
 				_bush(Vector3(p.x, 0.0, p.y))
 		z += 1.1
 
@@ -257,10 +257,21 @@ func _build_stone_clusters() -> void:
 			if shown:
 				_add("chip", Transform3D(tilt.scaled(s), Vector3(p.x, 0.0, p.y) + off), col)
 
+## Centre line of the dirt track north of the gate — keep in step with ground.gdshader track_x
+static func track_x(z: float) -> float:
+	return GATE_X - 3.0 * sin(z * 0.09) - (z + 1.5) * 0.12 if z < -1.5 else GATE_X
+
+## True if (x,z) `p` sits on the dirt track, or within `margin` of it
+static func _on_track(p: Vector2, margin := 0.0) -> bool:
+	return p.y < 15.0 and absf(p.x - track_x(p.y)) < 2.0 + margin
+
 func _build_bushes() -> void:
 	# Low myrtle in sheltered spots, silver dry scrub on the exposed slopes.
 	for p in _free_points(46, true, false):
-		if p.y < -10.0 and _rng.randf() < 0.65:
+		var scrub := p.y < -10.0 and _rng.randf() < 0.65   # draw kept so the layout elsewhere holds
+		if _on_track(p, 1.2):   # nothing grows in the road
+			continue
+		if scrub:
 			_dry_scrub(Vector3(p.x, 0.0, p.y))
 		else:
 			_bush(Vector3(p.x, 0.0, p.y))
@@ -282,12 +293,15 @@ func _myrtle(at: Vector3, tree := false) -> void:
 		var tip := at + Vector3(cos(a) * spread * rng.randf_range(0.55, 1.0), height * rng.randf_range(0.75, 1.1), sin(a) * spread * rng.randf_range(0.55, 1.0))
 		_wood_between(foot, tip, 0.15 if tree else 0.075, wood)
 		# Rounded overlapping crowns establish the dense silhouette in the reference.
-		var crown_size := Vector3(0.95, 0.65, 0.84) if tree else Vector3(0.82, 0.54, 0.73)
-		_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(crown_size), tip + Vector3(0, 0.05, 0)), MYRTLE_LEAF.darkened(rng.randf_range(0.02, 0.14)))
+		# Uneven lobes and a dusty sage cast break up the uniform green cabbage look
+		var lobe := rng.randf_range(0.65, 1.3)
+		var crown_size := (Vector3(0.95, 0.65, 0.84) if tree else Vector3(0.82, 0.54, 0.73)) * lobe
+		var dusty := MYRTLE_LEAF.lerp(SCRUB_LEAF, rng.randf_range(0.25, 0.55))
+		_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(crown_size), tip + Vector3(0, 0.05, 0)), dusty.darkened(rng.randf_range(0.02, 0.12)))
 		for j in 4:
 			var pos := tip + Vector3(rng.randf_range(-0.26, 0.26), rng.randf_range(-0.15, 0.2), rng.randf_range(-0.26, 0.26))
 			var scale := Vector3(0.62, 0.4, 0.54) * (1.15 if tree else 0.8)
-			_add("myrtle_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(scale), pos + Vector3(0, 0.17, 0)), MYRTLE_LEAF.lightened(rng.randf_range(0.08, 0.28)))
+			_add("myrtle_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(scale), pos + Vector3(0, 0.17, 0)), dusty.lightened(rng.randf_range(0.08, 0.26)))
 		if stem % 2 == 0:
 			for petal in 3:
 				var flower := tip + Vector3(rng.randf_range(-0.3, 0.3), 0.22, rng.randf_range(-0.3, 0.3))

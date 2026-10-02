@@ -101,6 +101,8 @@ var _move_speed := 0.0   # ground speed of the parent, measured from its motion
 var _stride := 0.0       # leg phase for stepping while in a non-locomotion pose
 var _blend_from: Dictionary = {}
 var _blend := 1.0        # 0..1 progress of the cross-fade from _blend_from
+var _recoil := 0.0       # a blow rocking the figure back (radians of lean), springing out
+var _recoil_tween: Tween
 
 # Pivots
 var _body: Node3D        # feet pivot — squash, bob, collapse
@@ -265,6 +267,15 @@ func hitstop(duration: float) -> void:
 	await get_tree().create_timer(duration).timeout
 	if is_instance_valid(self) and not _playing:
 		play()
+
+## A blow rocks the upper body back by `amount` radians and it springs upright again,
+## on top of whatever the animation is doing (visual only)
+func recoil(amount: float) -> void:
+	if _recoil_tween:
+		_recoil_tween.kill()
+	_recoil = amount
+	_recoil_tween = create_tween()
+	_recoil_tween.tween_property(self, "_recoil", 0.0, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 ## Cartoon squash & stretch (x, y factors), springing back. Feet stay planted.
 func squash(amount: Vector2) -> void:
@@ -475,6 +486,50 @@ func _apply_pose() -> void:
 			lean = j * 0.3
 			spear_rx = PI * 0.5 * minf(1.0, k * 4.0) * (1.0 if k < 0.85 else (1.0 - k) / 0.15)
 			spear_z = j * 0.45
+		"brace":
+			# The tell: spear levelled and drawn back past the hip, weight rocked onto the
+			# back foot, shoulders coiled — then held, trembling, until the blow
+			var e := ease(k, 0.45)
+			ar = Vector3(lerpf(-0.6, -0.95, e), 0, lerpf(-0.1, -0.35, e))
+			al = Vector3(lerpf(-0.5, -1.1, e), 0, 0.35)
+			lean = -0.2 * e
+			twist = -0.4 * e
+			head_ry = 0.3 * e
+			ll = -0.32 * e
+			lr = 0.28 * e
+			body_y = -0.035 * e
+			spear_rx = PI * 0.5 * e
+			spear_z = -0.3 * e
+			if k >= 1.0:
+				var shake := sin(Time.get_ticks_msec() * 0.06) * 0.02
+				lean += shake
+				twist += shake
+		"reel":
+			# Knocked aside: thrown back a step, spear jerked up, arms out for balance
+			var j := sin(k * PI)
+			lean = -0.38 * j
+			body_y = 0.05 * j
+			ar = Vector3(-0.6 - 1.7 * j, 0, -0.2 - 0.3 * j)
+			al = Vector3(-0.5 - 1.1 * j, 0, 0.35 + 0.4 * j)
+			head_rx = -0.3 * j
+			ll = 0.35 * j
+			lr = -0.15 * j
+			spear_rx = -0.5 * j
+		"knocked":
+			# Off his feet (a true shot): down on his back, a beat on the ground, up again
+			var c: float
+			if k < 0.22:
+				c = ease(k / 0.22, 2.4)
+			elif k < 0.62:
+				c = 1.0
+			else:
+				c = 1.0 - ease((k - 0.62) / 0.38, 0.6)
+			body_rx = -1.3 * c
+			al = Vector3(-0.3 - 1.2 * c, 0, 0.14 + c * 0.9)
+			ar = Vector3(-0.3 - 1.2 * c, 0, -0.14 - c * 0.9)
+			ll = -0.5 * c
+			lr = -0.2 * c
+			head_rx = -0.25 * c + (0.15 if k > 0.22 and k < 0.3 else 0.0)   # head knocks the ground
 		"cheer":
 			# Two hops; arms fly up on the first and wave overhead
 			var hop := absf(sin(k * TAU))
@@ -568,7 +623,8 @@ func _apply_pose() -> void:
 	_body.position.y = body_y
 	_body.rotation.x = body_rx
 	_body.scale = Vector3(_squash.x, _squash.y, _squash.x)
-	_torso.rotation.x = lean
+	_torso.rotation.x = lean - _recoil
+	head_rx -= _recoil * 0.7
 	_torso.rotation.y = twist
 	_head.rotation.x = head_rx
 	_head.rotation.y = head_ry
