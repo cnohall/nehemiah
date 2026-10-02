@@ -155,7 +155,7 @@ func _open_for_work() -> bool:
 		and _pillars.all(func(p): return p.is_complete())
 
 func _cost() -> int:
-	var cost: int = COST_BY_CREW[clampi(GameState.crew_size, 1, COST_BY_CREW.size()) - 1]
+	var cost: int = COST_BY_CREW[clampi(GameState.cost_crew(), 1, COST_BY_CREW.size()) - 1]
 	return maxi(1, cost - 1) if GameState.active_build else cost
 
 func work() -> BuildWork:
@@ -168,7 +168,7 @@ func _on_work_progress() -> void:
 	_refresh()
 
 func _prime_work() -> void:
-	_work.work_time = WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0)
+	_work.work_time = WORK_TIME * GameState.solo_mult(SOLO_WORK_MULT)
 
 # ── Visuals ────────────────────────────────────────────────
 

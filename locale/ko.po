@@ -2496,3 +2496,60 @@ msgstr "석판화"
 
 msgid "Cel"
 msgstr "셀 셰이딩"
+
+msgid "Hold on — I'm coming!"
+msgstr "버텨요, 지금 가요!"
+
+msgid "I've got your back!"
+msgstr "내가 지켜 줄게요!"
+
+msgid "A thief in the yard!"
+msgstr "마당에 도둑이다!"
+
+msgid "I'll take the other end."
+msgstr "반대쪽은 내가 들게요."
+
+msgid "Foes at the wall!"
+msgstr "적이 성벽에 왔다!"
+
+msgid "I've fallen — help me up!"
+msgstr "쓰러졌어요, 일으켜 줘요!"
+
+msgid "Thank you, friend!"
+msgstr "고마워요, 친구!"
+
+msgid "Answer him"
+msgstr "대답하기"
+
+msgid "Hear him"
+msgstr "들어 보기"
+
+msgid "Go with him"
+msgstr "따라가기"
+
+msgid "From the villages: “Wherever you turn, they will attack us”"
+msgstr "마을에서 온 사람: “어디로 돌아서든 그들이 우리를 칠 것이오”"
+
+msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
+msgstr "집에 틀어박힌 스마야: “하나님의 집에서 함께 만납시다”"
+
+msgid "I am doing a great work — I can't come down!"
+msgstr "나는 큰 일을 하고 있으니 내려갈 수 없소!"
+
+msgid "No such things are done as you say!"
+msgstr "네가 말한 그런 일은 없다!"
+
+msgid "He points to where they'll come — watch there!"
+msgstr "그가 적이 올 곳을 가리킨다. 그곳을 지켜라!"
+
+msgid "All quiet on the road for now"
+msgstr "지금은 길이 조용하다"
+
+msgid "Hide in the temple? {interact} go with him, or walk on"
+msgstr "성전에 숨을까? {interact} 따라가기, 아니면 그냥 지나가기"
+
+msgid "He talks and talks — your work goes slower. {interact} to answer him"
+msgstr "그가 계속 말을 건다. 일이 느려진다. {interact} 대답하기"
+
+msgid "Messengers will call you down to Ono — answer them and keep working"
+msgstr "사자들이 오노로 내려오라 부를 것이다. 대답하고 일을 계속하라"

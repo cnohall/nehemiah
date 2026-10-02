@@ -123,6 +123,7 @@ var _met := {}             # who → true
 var _seen := {}            # district → true
 var _fade: ColorRect
 var _compass: RingCompass
+var _dedication: Dedication
 
 var _panel: PanelContainer
 var _rows := {}   # task → [Tick, Label]
@@ -144,6 +145,9 @@ func _ready() -> void:
 	_feast = not _built.has(false)
 	_clear_the_yard()
 	_build_fade()
+	_dedication = Dedication.new(self)
+	add_child(_dedication)
+	_dedication.finished.connect(_refresh)
 	_build_journal()
 	_enter(START if _feast else maxi(_built.find(false), 0))
 
@@ -214,6 +218,8 @@ func _enter(district: int) -> void:
 	else:
 		_ruin_the_wall()
 	_build_district()
+	if _feast:
+		_dedication.district_ready(district, _root)
 	var sec: Dictionary = GameState.SECTIONS[district]
 	var first := not _seen.has(district)
 	_seen[district] = true
@@ -227,6 +233,13 @@ func _enter(district: int) -> void:
 	if first:
 		sub = tr("%s  ·  walk off either end of the wall to go on round") % sub
 	_main.hud._show_banner(tr(sec["name"]), sub, 2.6 if first else 1.6)
+
+## A banner for the dedication's walk (Dedication)
+func announce(title: String, sub: String, hold := 3.0) -> void:
+	_main.hud._show_banner(title, sub, hold)
+
+func refresh_journal() -> void:
+	_refresh()
 
 func _build_fade() -> void:
 	_fade = ColorRect.new()
@@ -529,7 +542,7 @@ func _build_journal() -> void:
 	sub.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	vb.add_child(sub)
 	vb.add_child(HSeparator.new())
-	var tasks := ["hear", "booths", "portions", "people", "temple", "circuit"] if _feast else ["built", "circuit"]
+	var tasks := ["hear", "booths", "portions", "people", "temple", "dedication", "circuit"] if _feast else ["built", "circuit"]
 	for task: String in tasks:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
@@ -584,6 +597,9 @@ func _refresh() -> void:
 		tr("Send portions to those with nothing prepared — %d of %d") % [fed, hungry])
 	_set_row("people", met >= PEOPLE_GOAL, tr("Meet the people who built the wall — %d of %d") % [mini(met, PEOPLE_GOAL), PEOPLE_GOAL])
 	_set_row("temple", _visited, tr("Go up to the house of God, by the Sheep Gate"))
+	var walked := _dedication != null and _dedication.done
+	_set_row("dedication", walked, tr("Walk the wall with a choir, from the Valley Gate to the temple") if _dedication == null or not _dedication.active
+		else tr("Follow the company round the wall to the house of God"))
 	var all := _heard and _visited and booths >= BOOTH_GOAL and fed >= hungry and met >= PEOPLE_GOAL
 	if all and not _done_shown:
 		_done_shown = true

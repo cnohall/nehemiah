@@ -363,7 +363,7 @@ func repairing() -> bool:
 	return is_complete() and not decorative and health < MAX_HEALTH * REPAIR_BELOW
 
 func cost_for(target_stage: int) -> Dictionary:
-	var tier := clampi(GameState.crew_size, 1, MATERIAL_COST_BY_CREW.size()) - 1
+	var tier := clampi(GameState.cost_crew(), 1, MATERIAL_COST_BY_CREW.size()) - 1
 	if target_stage == Stage.FRAMED and GameState.has_twist("beams"):
 		return { "beam": BEAM_COST_BY_CREW[tier] }
 	var cost: Dictionary = MATERIAL_COST_BY_CREW[tier][target_stage].duplicate()
@@ -450,7 +450,7 @@ func _strew_debris() -> void:
 	var items := get_tree().current_scene.get_node_or_null("Items")
 	if items == null:
 		return
-	var n := DEBRIS_BASE + mini(GameState.crew_size, 3)
+	var n := DEBRIS_BASE + mini(GameState.cost_crew(), 3)
 	for i in n:
 		var item: DroppedItem = DEBRIS_ITEM.instantiate()
 		item.kind = "debris"
@@ -471,17 +471,17 @@ func _prime_work() -> void:
 	if _work == null:
 		return
 	if _clearing():
-		_work.work_time = CLEAR_WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) / GameState.mod("clear")
+		_work.work_time = CLEAR_WORK_TIME * GameState.solo_mult(SOLO_WORK_MULT) / GameState.mod("clear")
 		return
 	if repairing():
-		_work.work_time = REPAIR_WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0)
+		_work.work_time = REPAIR_WORK_TIME * GameState.solo_mult(SOLO_WORK_MULT)
 		return
 	var next := stage + 1
 	if next <= Stage.MORTARED:
 		var thick_mult := 1.0
 		if is_thick():
 			thick_mult = THICK_WORK_MULT * (THICK_FACE_WORK if next == Stage.STACKED else 1.0)
-		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) * thick_mult
+		_work.work_time = WORK_TIME[next] * GameState.solo_mult(SOLO_WORK_MULT) * thick_mult
 
 # Returns how much of the next stage's required material is pending (0.0–1.0)
 func get_build_progress() -> float:

@@ -349,6 +349,11 @@ func _physics_process(delta: float) -> void:
 	if _led_by != null:
 		_follow_leader(delta)
 		return
+	if _hold_time > 0.0:   # answering a visitor: stand and say it
+		_hold_time -= delta
+		velocity = Vector3.ZERO
+		_update_anim()
+		return
 	if _work_site != null:
 		if _wants_to_stop_work():
 			_stop_work()
@@ -631,10 +636,13 @@ func _interact_choice(at: Vector3) -> Array:
 	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
 	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
 	var pile := _nearest_in_reach("supply_piles", at, func(_p): return true)
-	# An Ono messenger standing closer than anything else goes first. He waits right
-	# beside you, so a careless press goes with him — that's the trap.
+	# A visitor talking at our elbow (GDD §6.7) takes [E] — answer him, hear him — even over
+	# the wall he caught us at. Old rules (`--old-messenger`): only when nearer than anything
+	# else, and the press goes with him — a careless press was the trap.
 	var messenger := _nearest_in_reach("messengers", at, func(_m): return true)
 	if messenger != null:
+		if not Messenger.old_rules and messenger.at_elbow(self):
+			return [Act.MESSENGER, messenger]
 		var d := _reach_dist(messenger, at)
 		if [site, item, pile].all(func(o): return o == null or _reach_dist(o, at) >= d):
 			return [Act.MESSENGER, messenger]
@@ -776,6 +784,8 @@ func _server_interact(at: Vector3) -> void:
 		Act.REVIVE:
 			target._set_downed.rpc(false)
 			_action.rpc("halfslash")
+			if brain == null:
+				target.bark("Thank you, friend!", true)   # a bot helped up by a person
 		Act.LET_GO:
 			_set_helping.rpc(0)
 			_tell("Let go of the beam")
@@ -788,8 +798,7 @@ func _server_interact(at: Vector3) -> void:
 		Act.TALK:
 			target.talk(self)
 		Act.MESSENGER:
-			target.accept(self)
-			get_tree().call_group("day_director", "note_shemaiah" if target.name == &"Shemaiah" else "note_ono")
+			target.answer(self)
 		Act.WORK:
 			if GameState.active_build:
 				_start_work(target)
@@ -1432,12 +1441,48 @@ func _set_downed(value: bool) -> void:
 		_down_timer = DOWNED_TIME
 		if is_multiplayer_authority():
 			_jolt(0.6, 0.3, 0.8, 0.35)
+		if multiplayer.is_server() and not _nobody_to_raise():
+			bark("I've fallen — help me up!", true)
 	else:
 		health = MAX_HEALTH * REVIVE_HEALTH
 	if is_multiplayer_authority():
 		_is_busy = value
 		_sprite.speed_scale = 1.0
 		anim = "collapse" if value else "idle_" + _facing
+
+# ── Bot calls ──────────────────────────────────────────────
+
+# A bot says what it's doing when it matters to the people nearby (BotBrain._bark_for):
+# a Shout over its head, so a crew of bots reads as people. Kept rare: one bot at most
+# every BARK_GAP, the whole crew every BARK_CREW_GAP. Not on the title or in the tutorial.
+const BARK_Y        := PIP_Y + 1.1   # over the pip and the "Help up" tag
+const BARK_GAP      := 9.0
+const BARK_CREW_GAP := 3.5
+static var _crew_barked_at := -INF
+var _barked_at := -INF
+var _bark_shout: Shout
+
+## Server: a bot says `line` (English; each peer translates). `urgent` (down, helped up)
+## skips the wait and makes it breathe.
+func bark(line: String, urgent := false) -> void:
+	if brain == null or GameState.attract or GameState.tutorial:
+		return
+	var now := Time.get_ticks_msec() * 0.001
+	if not urgent and (now < _barked_at + BARK_GAP or now < _crew_barked_at + BARK_CREW_GAP):
+		return
+	_barked_at = now
+	_crew_barked_at = now
+	_say.rpc(line, urgent)
+
+@rpc("any_peer", "call_local", "reliable")
+func _say(line: String, urgent: bool) -> void:
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	if _bark_shout == null:
+		_bark_shout = Shout.make_shout()
+		_bark_shout.position.y = BARK_Y
+		add_child(_bark_shout)
+	_bark_shout.say(tr(line), Shout.HOLD, urgent)
 
 # ── Working at the wall ────────────────────────────────────
 
@@ -1487,6 +1532,9 @@ func _set_working(site_path: NodePath) -> void:
 
 # Owner: walking off, dashing, dropping or reaching for the sling ends the work
 func _wants_to_stop_work() -> bool:
+	# A visitor at our elbow: the press is for him (kept, so _handle_interact sends it)
+	if _buffered.has("interact") and _visitor_at_elbow():
+		return true
 	_consume("interact")   # already working — a repeat press does nothing
 	return _move_input().length() > 0.35 or _buffered.has("dash") or _buffered.has("drop") \
 		or _throw_just_pressed() or _is_busy
@@ -1527,6 +1575,35 @@ func _server_horn(at: Vector3) -> void:
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 
 var _led_release_toast := "Why should the work stop? Back to the wall!"
+var _hold_time := 0.0   # owner: standing to answer / hear a visitor (GDD §6.7)
+
+## Every peer: a visitor stands talking at our elbow (his [E] is ours)
+func _visitor_at_elbow() -> bool:
+	return not Messenger.old_rules and get_tree().get_nodes_in_group("messengers").any(
+		func(m): return m.at_elbow(self))
+
+## Server: work pace while one of Sanballat's men talks at us (BuildWork)
+func pester_mult() -> float:
+	for m in get_tree().get_nodes_in_group("messengers"):
+		if m.pesters(self):
+			return Messenger.PESTER_MULT
+	return 1.0
+
+## Server: stop `seconds` to answer or hear a visitor, saying `line`
+func answer_pause(seconds: float, line: String) -> void:
+	if building_site != null:
+		building_site.work().remove_builder(self)
+		stop_building_from_server()
+	_set_hold.rpc_id(get_multiplayer_authority(), seconds, line)
+
+@rpc("any_peer", "call_local", "reliable")
+func _set_hold(seconds: float, line: String) -> void:
+	if multiplayer.get_remote_sender_id() != 1 or not is_multiplayer_authority():
+		return
+	_hold_time = seconds
+	_cancel_charge()
+	_dash_time = 0.0
+	_toast(line)
 
 func is_led() -> bool:
 	return _led_server

@@ -2509,3 +2509,60 @@ msgstr "Litografía"
 
 msgid "Cel"
 msgstr "Cel"
+
+msgid "Hold on — I'm coming!"
+msgstr "¡Aguanta, ya voy!"
+
+msgid "I've got your back!"
+msgstr "¡Yo te cubro!"
+
+msgid "A thief in the yard!"
+msgstr "¡Un ladrón en el patio!"
+
+msgid "I'll take the other end."
+msgstr "Yo tomo el otro extremo."
+
+msgid "Foes at the wall!"
+msgstr "¡Enemigos en el muro!"
+
+msgid "I've fallen — help me up!"
+msgstr "¡Caí, levántame!"
+
+msgid "Thank you, friend!"
+msgstr "¡Gracias, amigo!"
+
+msgid "Answer him"
+msgstr "Respóndele"
+
+msgid "Hear him"
+msgstr "Escúchalo"
+
+msgid "Go with him"
+msgstr "Ve con él"
+
+msgid "From the villages: “Wherever you turn, they will attack us”"
+msgstr "De las aldeas: «Por dondequiera que te vuelvas, nos atacarán»"
+
+msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
+msgstr "Semaías, encerrado en su casa: «Reunámonos en la casa de Dios»"
+
+msgid "I am doing a great work — I can't come down!"
+msgstr "¡Estoy haciendo una gran obra, no puedo bajar!"
+
+msgid "No such things are done as you say!"
+msgstr "¡No ha sucedido nada de lo que dices!"
+
+msgid "He points to where they'll come — watch there!"
+msgstr "Señala por dónde vendrán: ¡vigilen allí!"
+
+msgid "All quiet on the road for now"
+msgstr "Por ahora, el camino está tranquilo"
+
+msgid "Hide in the temple? {interact} go with him, or walk on"
+msgstr "¿Esconderte en el templo? {interact} ir con él, o seguir tu camino"
+
+msgid "He talks and talks — your work goes slower. {interact} to answer him"
+msgstr "Habla y habla: tu trabajo va más lento. {interact} para responderle"
+
+msgid "Messengers will call you down to Ono — answer them and keep working"
+msgstr "Llegarán mensajeros a llamarte a Ono: respóndeles y sigue trabajando"

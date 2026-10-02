@@ -46,7 +46,7 @@ static func captions(t: String) -> Array:
 		"spring": return ["The pool is by the wall", "Water close at hand — mortar comes quickly", "A quiet stretch: catch your breath"]
 		"night": return ["Night falls on the work", "Torches light the way — each worker has a lamp", "The foe comes out of the dark"]
 		"cramped": return ["Priests' houses between yard and wall", "Narrow lanes — one at a time", "Pass loads over rather than queue"]
-		"schemes": return ["A messenger calls you down to Ono", "Go with him and you're led away from the work", "Ignore him — he gives up and leaves"]
+		"schemes": return ["A messenger calls you down to Ono", "While he talks at you, your work goes slower — answer him [%s]" % "interact", "A neighbour in plain wool brings a warning: hear him"]
 	return []
 
 func _draw() -> void:
@@ -262,15 +262,14 @@ func _panel(i: int, r: Rect2, k: float) -> void:
 			_messenger(Vector2(cx + 40 * k, g), u)
 			draw_rect(Rect2(cx + 44 * k, g - u * 1.5, 20 * k, 14 * k), LIME)
 		"schemes1":
-			_messenger(Vector2(cx + 40 * k, g), u)
-			_worker(Vector2(cx - 10 * k, g), u, 0, "")
-			_arrow(Vector2(cx + 60 * k, g - u * 0.6), Vector2(cx + 130 * k, g - u * 0.6), Color(INK, 0.5), 3 * k)
-			_wall(Rect2(cx - 130 * k, g - u * 1.0, 40 * k, u * 1.0), 1)
+			_wall(Rect2(cx - 110 * k, g - u * 1.5, 40 * k, u * 1.5), 2)
+			_worker(Vector2(cx - 40 * k, g), u, 0, "")
+			_messenger(Vector2(cx + 30 * k, g), u)
+			draw_rect(Rect2(cx + 34 * k, g - u * 1.5, 20 * k, 14 * k), LIME)
 		"schemes2":
 			_worker(Vector2(cx - 40 * k, g), u, 0, "stone")
-			_wall(Rect2(cx - 110 * k, g - u * 1.5, 40 * k, u * 1.5), 3)
-			_messenger(Vector2(cx + 80 * k, g), u * 0.8)
-			_arrow(Vector2(cx + 100 * k, g - u), Vector2(cx + 140 * k, g - u), Color(INK, 0.5), 3 * k)
+			_messenger(Vector2(cx + 40 * k, g), u, Messenger.HOMESPUN)
+			_arrow(Vector2(cx + 60 * k, g - u * 1.2), Vector2(cx + 130 * k, g - u * 2.0), UiStyle.TERRACOTTA, 3 * k)
 
 # ── Shapes ─────────────────────────────────────────────────
 
@@ -313,9 +312,9 @@ func _foe(at: Vector2, u: float, brute := false) -> void:
 	draw_line(at + Vector2(w + 4, 0), at + Vector2(w + 4, -u * 2.1), Color(0.35, 0.25, 0.16), maxf(2.0, u * 0.07))
 	draw_colored_polygon(PackedVector2Array([at + Vector2(w + 4, -u * 2.35), at + Vector2(w - 2, -u * 2.08), at + Vector2(w + 10, -u * 2.08)]), Color(0.60, 0.48, 0.30))
 
-func _messenger(at: Vector2, u: float) -> void:
+func _messenger(at: Vector2, u: float, robe := Color(0.42, 0.30, 0.44)) -> void:
 	var body := PackedVector2Array([at + Vector2(-u * 0.4, 0), at + Vector2(u * 0.4, 0), at + Vector2(u * 0.24, -u * 1.25), at + Vector2(-u * 0.24, -u * 1.25)])
-	draw_colored_polygon(body, Color(0.42, 0.30, 0.44))
+	draw_colored_polygon(body, robe)
 	draw_polyline(body + PackedVector2Array([body[0]]), INK, 1.5)
 	draw_circle(at + Vector2(0, -u * 1.5), u * 0.28, Color(0.78, 0.60, 0.44))
 	draw_arc(at + Vector2(0, -u * 1.5), u * 0.28, 0, TAU, 20, INK, 1.5)

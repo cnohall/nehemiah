@@ -77,13 +77,16 @@ func _process(delta: float) -> void:
 		_release_all()
 		finished.emit()
 
-## Server: workers at it, in one-worker paces. Each trade works at its own pace (Trade);
+## Server: workers at it, in one-worker paces. Each trade works at its own pace (Trade), a
+## worker an envoy is talking at at ×0.6;
 ## the quickest counts in full, every other hand adds EXTRA_HAND of theirs.
 func hands() -> float:
 	var site := get_parent()
 	var material: String = site.work_material() if site.has_method("work_material") else ""
 	var paces: Array = _builders.map(func(p: Node3D) -> float:
-		return Trade.work_pace(p.trade, material) if "trade" in p else 1.0)
+		# An envoy talking at a worker slows their hands (Messenger, GDD §6.7)
+		var pester: float = p.pester_mult() if p.has_method("pester_mult") else 1.0
+		return (Trade.work_pace(p.trade, material) if "trade" in p else 1.0) * pester)
 	paces.sort()
 	paces.reverse()
 	var total := 0.0

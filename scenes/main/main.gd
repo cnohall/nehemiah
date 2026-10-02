@@ -498,7 +498,14 @@ func _despawn(id: int) -> void:
 	GameState.remove_player(id)
 	_assign_colors()
 	if multiplayer.is_server():
-		GameState.set_crew(players_root.get_child_count())
+		_set_crew()
+
+# Server: head count, and the crew's weight with each bot counted by its skill
+func _set_crew() -> void:
+	var weight := 0.0
+	for p in players_root.get_children():
+		weight += p.brain.skill["crew"] if p.brain != null else 1.0
+	GameState.set_crew(players_root.get_child_count(), weight)
 
 # `peer_id` is a worker id: a peer's own, or a bot's (Player.BOT_ID_BASE and up, owned
 # by the host — whose copy gets the brain)
@@ -519,7 +526,7 @@ func _spawn_player(peer_id: int) -> void:
 	GameState.register_player(peer_id, "Bot" if bot else "Builder")
 	_assign_colors()
 	if multiplayer.is_server():
-		GameState.set_crew(players_root.get_child_count())
+		_set_crew()
 
 # Sorted by peer id so every peer agrees on slot → colour
 func _sorted_players() -> Array:
@@ -562,6 +569,7 @@ func fit_bots(count := -1) -> void:
 		bots.append(players_root.get_node(str(next)))
 		for peer in _ready_peers():
 			_receive_roster_entry.rpc_id(peer, next)
+	_set_crew()   # a new skill reweighs the bots already here
 
 # The title-screen crew shows the game played well
 func _bot_skill() -> int:

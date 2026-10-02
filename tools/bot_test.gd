@@ -64,7 +64,8 @@ func _process(delta: float) -> bool:
 		_main.director.day_tallied.connect(_on_tally)
 		return false
 	if _frame == 3:
-		print("Crew: %d (%d bots, skill %d)" % [gs.crew_size, _bots, _skill])
+		print("Crew: %d (%d bots, skill %d) — weight %.2f, cost tier %d, solo work ×%.2f, day %.0f s" % [
+			gs.crew_size, _bots, _skill, gs.crew_weight, gs.cost_crew(), gs.solo_mult(0.75), gs.day_length()])
 		Engine.time_scale = _speed
 		_main.director.begin()
 	if "--trace" in OS.get_cmdline_user_args() and _frame % 60 == 0 and _main:

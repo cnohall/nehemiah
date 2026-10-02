@@ -7,14 +7,16 @@ extends RefCounted
 # carrying, delivering, working, the sling, beams and networking are the Player's own.
 #
 # Each think (every skill["think"] seconds) picks one job, in order:
-#   revive a fallen worker → take the other end of a lone beam → deliver what's carried →
-#   work a wall that has all its loads → fetch what the walls still miss → guard.
-# Between thinks it walks the job's path (NavigationServer, the enemies' mesh) and, on top
-# of any job, slings at enemies that threaten the wall or the crew.
+#   revive a fallen worker → stand by a person at work with a foe on them (COVER, Neh. 4:17:
+#   hands on the wall can't sling) → take the other end of a lone beam → deliver what's
+#   carried → work a wall that has all its loads → fetch what the walls still miss → guard.
+# Between thinks it walks the job's path (NavigationServer, the
+# enemies' mesh) and, on top of any job, slings at enemies that threaten the wall or the crew.
+# Taking up a job that matters, it says so (Player.bark) — a crew of bots reads as people.
 # The horn (Horn): a bot with a pack on it sounds it; empty-handed bots not at the wall gather
 # in the ring while foes are about, where blows land harder. Haul relays fall back to the jobs above.
 
-enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY, RALLY }
+enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY, RALLY, COVER }
 
 # Apprentice / Builder / Master builder. think = seconds between decisions; speed = stick
 # push (1 = full run); aim_err = metres off the enemy; charge = least wind-up;
@@ -51,6 +53,9 @@ const HORN_PACK_RANGE := 14.0 # foes this close…
 const HORN_PACK       := 6    # …six or more: sound the horn
 const HORN_BOT_CD     := 45.0 # a bot sounds it at most this often (s)
 const HORN_JOIN_RANGE := 16.0 # only bots this near a standing call drop work to gather
+const COVER_RANGE   := 24.0   # how far a free bot comes to stand by a person at work…
+const COVER_THREAT  := 8.0    # …with a foe this close to them
+const COVER_GAP     := 2.0    # where it stands: within this of them
 const SPACING       := 1.2    # workers don't collide: a bot edges away from any this close…
 const SPREAD_PUSH   := 0.6    # …this hard (stick units) when right on top of them
 
@@ -110,6 +115,8 @@ func think(delta: float) -> void:
 		_think = skill["think"] * randf_range(0.8, 1.2)
 		_decide()
 	_sling()
+	if _answer_visitor():
+		return
 	if _p._work_site != null:
 		return
 	if _dawdle <= 0.0:
@@ -139,6 +146,12 @@ func _decide() -> void:
 	var fallen := _nearest_worker(REVIVE_RANGE, func(w): return w.downed)
 	if fallen != null:
 		_set_job(Job.REVIVE, fallen)
+		return
+	# A person at the wall can't sling: with a foe on them, the nearest bot not at work stands
+	# by (a load in hand doesn't stop the sling; a beam does)
+	var builder := _builder_to_cover() if _p.carried_kind != "beam" else null
+	if builder != null:
+		_set_job(Job.COVER, builder)
 		return
 	if _p.carried_kind == "debris":
 		# Charred timbers go to the tip past the wall's inner face, not to any wall
@@ -331,7 +344,34 @@ func _site_facing(foes: Array) -> Node3D:
 			best = s
 	return best
 
+## A person (not a bot) working a wall with a foe close on them, that no other bot covers
+func _builder_to_cover() -> Node3D:
+	var best: Node3D = null
+	var best_d := COVER_RANGE
+	for w in _p.get_tree().get_nodes_in_group("players"):
+		if w == _p or w.brain != null or w.downed or w.building_site == null:
+			continue
+		if _foe_near(w.global_position, COVER_THREAT) == null:
+			continue
+		var taken := _p.get_tree().get_nodes_in_group("players").any(func(b):
+			return b != _p and b.brain != null and b.brain._job == Job.COVER and b.brain._target == w)
+		if taken:
+			continue
+		var d := _dist(w)
+		if d < best_d:
+			best_d = d
+			best = w
+	return best
+
+func _foe_near(at: Vector3, within: float) -> Node3D:
+	for e: Node3D in _p.get_tree().get_nodes_in_group("enemies"):
+		if _flat(e.global_position - at).length() < within:
+			return e
+	return null
+
 func _set_job(job: Job, target: Node3D) -> void:
+	if job != _job:
+		_bark_for(job, target)
 	if job != _job or target != _target:
 		_path = PackedVector3Array()
 		_repath = 0.0
@@ -339,6 +379,22 @@ func _set_job(job: Job, target: Node3D) -> void:
 	_target = target
 	if job != Job.FETCH:
 		_fetch_kind = ""
+
+# A few words on taking up a job that matters to the people nearby (Player.bark keeps it rare)
+func _bark_for(job: Job, target: Node3D) -> void:
+	match job:
+		Job.REVIVE:
+			_p.bark("Hold on — I'm coming!")
+		Job.COVER:
+			_p.bark("I've got your back!")
+		Job.CHASE:
+			_p.bark("A thief in the yard!")
+		Job.HELP_BEAM:
+			if target != null and target.brain == null:
+				_p.bark("I'll take the other end.")
+		Job.GUARD:
+			if _nearest_foe(GUARD_RANGE) != null:
+				_p.bark("Foes at the wall!")
 
 ## What the day's walls still miss, less what others are already carrying or fetching —
 ## the nearest source of the most-wanted material, or null when it's all covered
@@ -551,6 +607,8 @@ func _act(delta: float) -> void:
 		Job.RALLY:
 			if _flat(_target.global_position - _p.global_position).length() > 1.8:
 				_walk_to(_target.global_position, delta, 1.0)
+		Job.COVER:
+			_walk_to(_target.global_position, delta, COVER_GAP)
 		Job.CHASE:
 			if not _target.is_in_group("enemies"):
 				_set_job(Job.IDLE, null)
@@ -566,7 +624,7 @@ func _go_and_press(target: Node3D, reach: float, want: Player.Act, delta: float)
 		_press("interact")
 		return
 	if choice[0] == Player.Act.MESSENGER and _p._reach_dist(target, _p.global_position) <= reach + 1.0:
-		if _goes_to_ono(choice[1]):
+		if (_goes_to_ono(choice[1]) if Messenger.old_rules else _answers(choice[1])):
 			_press("interact")
 		else:
 			_steer(_flat(_p.global_position - choice[1].global_position).normalized())
@@ -578,6 +636,25 @@ func _go_and_press(target: Node3D, reach: float, want: Player.Act, delta: float)
 		_walk_to(spot, delta, ARRIVE)
 	else:
 		_steer(_flat(target.global_position - _p.global_position).normalized() * 0.5)
+
+# A visitor talking at our elbow (GDD §6.7), even at the wall: answer Sanballat's man and hear
+# a neighbour when no foe is close; otherwise keep on (and be slowed). Shemaiah, once heard,
+# by this bot's old "ono" chance.
+const ANSWER_CLEAR := 8.0
+
+func _answer_visitor() -> bool:
+	if Messenger.old_rules:
+		return false
+	for m: Node3D in _p.get_tree().get_nodes_in_group("messengers"):
+		if m.at_elbow(_p) and _answers(m):
+			_press("interact")
+			return true
+	return false
+
+func _answers(m: Node3D) -> bool:
+	if m.kind == Messenger.Kind.SHEMAIAH and m.heard:
+		return _goes_to_ono(m)
+	return _foe_near(_p.global_position, ANSWER_CLEAR) == null
 
 func _goes_to_ono(messenger: Node3D) -> bool:
 	if not _ono.has(messenger):
@@ -643,6 +720,10 @@ func _pressing_foe() -> Node3D:
 		if d > reach:
 			continue
 		var score := d - (THREAT_BONUS if _threatens(e) else 0.0)
+		# Covering someone at work: the foe on them first
+		if _job == Job.COVER and is_instance_valid(_target) \
+				and _flat(e.global_position - _target.global_position).length() < COVER_THREAT:
+			score -= THREAT_BONUS
 		if score < best_score:
 			best_score = score
 			best = e

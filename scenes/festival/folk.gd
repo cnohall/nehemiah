@@ -7,6 +7,7 @@ extends Node3D
 # portion, and once fed they say so. Solo festival: the server is the only peer.
 
 signal spoken(folk: Folk)
+signal talked(folk: Folk)   # every press of [E], not just the first
 signal fed(folk: Folk)
 
 const TALK_REACH := 1.4   # added to the player's reach: they stand a little apart
@@ -161,9 +162,39 @@ func talk(by: Node3D) -> void:
 		line = lines[_next % lines.size()]
 		_next += 1
 	say(line)
+	talked.emit(self)
 	if not met:
 		met = true
 		spoken.emit(self)
+
+## Walk to a ground point at `speed` (Dedication's choirs); true once there
+func march_to(point: Vector3, speed: float, delta: float) -> bool:
+	var to := point - global_position
+	to.y = 0.0
+	if to.length() <= speed * delta:
+		global_position = Vector3(point.x, global_position.y, point.z)
+		return true
+	var dir := to.normalized()
+	_hold(NAN)
+	global_position += dir * speed * delta
+	facing = CharAnim.dir_from_velocity(dir, facing)
+	_play("walk_" + facing)
+	return false
+
+## Stand still, turned toward a point
+func halt(toward := Vector3.ZERO) -> void:
+	if toward != Vector3.ZERO:
+		face(toward)
+	_play("idle_" + facing)
+
+## Clap and cheer, and keep at it (the dedication, Neh. 12:43)
+func rejoice() -> void:
+	_glad = true
+	_moving = false
+	_play("cheer_" + facing)
+	get_tree().create_timer(1.4).timeout.connect(func():
+		if is_instance_valid(self) and _glad:
+			_play("clap_" + facing))
 
 func say(line: Array) -> void:
 	var text := tr(line[0])

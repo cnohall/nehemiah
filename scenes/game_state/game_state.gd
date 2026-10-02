@@ -89,7 +89,7 @@ const TWIST_INTRO := {
 	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
 	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
-	"schemes": "Messengers will call you down to Ono — do not go with them",
+	"schemes": "Messengers will call you down to Ono — answer them and keep working",
 }
 ## A verse reference in the player's language: short ("Neh. 3:1") for plaques, long
 ## ("Nehemiah 3:1") for cards and quotes. Takes either English form.
@@ -145,7 +145,7 @@ signal rules_changed
 # TODO: tune from playtests — `-- --sun-slack=1.3` to try another; the DayDirector log
 # prints each day's work time against its daylight.
 var sun_slack := _arg_float("--sun-slack=", 1.2)
-const SUN_SOLO  := 1.25    # a lone worker (and bots) gets a little longer
+const SUN_SOLO  := 1.25    # a lone worker gets a little longer (solo_mult: fades as bots add up)
 const SUN_LOW   := 0.25    # share of daylight left when "the sun is low" warns
 # Why the run was lost: "overrun" (breaches) or "stars" (a section unfinished at nightfall
 # of its last day). Synced before the LOST phase.
@@ -191,8 +191,12 @@ var phase: Phase = Phase.GATHER
 var breaches: int = 0
 var targets_done: int = 0
 var targets_total: int = 0
-# Players in the session — building costs scale with it (see WallSection.cost_for)
+# Players in the session, bots included (the work front, the pips)
 var crew_size: int = 1
+# The crew as the work and the light weigh it: a person counts whole, a bot by its skill's
+# "crew" (BotBrain.SKILLS, as WaveManager sizes the enemy) — so adding a weak bot never
+# costs a lone player more than it brings (cost_crew, solo_mult)
+var crew_weight: float = 1.0
 # peer_id → { "role": String }
 var players: Dictionary = {}
 var section_marks: Array = _no_marks()
@@ -332,7 +336,16 @@ func new_twists() -> Array:
 ## Seconds of daylight for each day of the current section
 func day_length() -> float:
 	var t := par_time() / day_in_section(current_day).y * sun_slack
-	return t * (SUN_SOLO if crew_size == 1 else 1.0)
+	return t * solo_mult(SUN_SOLO)
+
+## Crew size for the cost tables: whole workers only, so a lone player with a bot or two
+## of less than a full worker still pays a lone builder's costs
+func cost_crew() -> int:
+	return maxi(1, floori(crew_weight + 0.01))
+
+## A lone worker's edge `mult`, fading to none as helpers add up to one more worker
+func solo_mult(mult: float) -> float:
+	return lerpf(mult, 1.0, clampf(crew_weight - 1.0, 0.0, 1.0))
 
 static func _arg_float(prefix: String, default: float) -> float:
 	for a in OS.get_cmdline_user_args():
@@ -627,7 +640,7 @@ func send_state_to(peer_id: int) -> void:
 	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot, riposte)
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
-	_sync_crew.rpc_id(peer_id, crew_size)
+	_sync_crew.rpc_id(peer_id, crew_size, crew_weight)
 	_sync_boon.rpc_id(peer_id, boon)
 	_sync_sun.rpc_id(peer_id, sun_total, sun_left)
 	for i in section_marks.size():
@@ -652,11 +665,13 @@ func _apply_boon(key: String) -> void:
 		boon = key
 		boon_changed.emit()
 
-## Server: players joined/left
-func set_crew(size: int) -> void:
-	_apply_crew(size)
+## Server: players joined/left, or the bots' skill changed (no weight: all whole workers)
+func set_crew(size: int, weight := -1.0) -> void:
+	if weight < 0.0:
+		weight = size
+	_apply_crew(size, weight)
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
-		_sync_crew.rpc(size)
+		_sync_crew.rpc(size, weight)
 
 ## Server: the section's last unit stands — record its marks everywhere
 func rate_section(section_index: int, mask: int) -> void:
@@ -720,13 +735,15 @@ func _no_marks() -> Array:
 	return a
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_crew(size: int) -> void:
-	_apply_crew(size)
+func _sync_crew(size: int, weight: float) -> void:
+	_apply_crew(size, weight)
 
-func _apply_crew(size: int) -> void:
+func _apply_crew(size: int, weight: float) -> void:
 	size = maxi(1, size)
-	if size != crew_size:
+	weight = maxf(1.0, weight)
+	if size != crew_size or not is_equal_approx(weight, crew_weight):
 		crew_size = size
+		crew_weight = weight
 		crew_changed.emit(size)
 
 # ── Players ────────────────────────────────────────────────

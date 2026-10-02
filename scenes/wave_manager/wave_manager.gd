@@ -48,6 +48,10 @@ const WAVE_TRICKLE_MULT   := 2.0
 const MESSENGER_FIRST     := 12.0
 const MESSENGER_EVERY     := 24.0
 const MESSENGERS_PER_DAY  := 4
+# …and between them, now and then, a neighbour from the villages with a warning (4:12, GDD
+# §6.7): never the day's first visitor, never two in a row, at most two a day
+const NEIGHBOUR_CHANCE    := 0.34
+const NEIGHBOURS_PER_DAY  := 2
 
 # Saboteur (GDD §5.9): comes quietly with the trickle, never in a pack, on his own timer.
 # One at a time through day 20; from day 21, two with a crew of three or more.
@@ -69,7 +73,10 @@ var _surge_timer := 0.0
 var _surge_at: Array[Vector3] = []   # where the warned pack(s) will come in
 var _surge_left := 0       # members of the current pack still to come
 var _surge_gap := 0.0
-var _msg_sent := 0
+var _msg_sent := 0          # Sanballat's men today (the four, then the letter)
+var _nb_sent := 0           # neighbours today
+var _last_neighbour := false
+var _warned_early := false  # a neighbour already told where the next pack comes in
 var _sab_timer := 0.0
 
 
@@ -84,6 +91,9 @@ func start(day: int) -> void:
 	_surge_left = 0
 
 	_msg_sent = 0
+	_nb_sent = 0
+	_last_neighbour = false
+	_warned_early = false
 	_sab_timer = SABOTEUR_FIRST
 
 func stop() -> void:
@@ -166,17 +176,13 @@ func _tick_surges(delta: float) -> void:
 	var was := _surge_timer
 	_surge_timer -= delta
 	if was > warn and _surge_timer <= warn:
-		_surge_at.clear()
-		var spots := 2 if not horn and _day >= WAVE_SPLIT_DAY else 1
-		for i in spots:
-			# Two spots: one on each half of the front, so the crew has to split
-			var lo := -SPAWN_X_HALF if spots == 1 or i == 0 else 2.0
-			var hi := SPAWN_X_HALF if spots == 1 or i == 1 else -2.0
-			_surge_at.append(Vector3(randf_range(lo, hi), 0.1, SPAWN_Z))
+		if not _warned_early:
+			_pick_surge_spots(horn)
 		for at in _surge_at:
 			_warn_surge.rpc(at, horn, warn)
 	elif _surge_timer <= 0.0:
 		_surge_gap = 0.0
+		_warned_early = false
 		if horn:
 			_surge_left = roundi((3 + floori(_day / 12.0)) * Settings.diff()["pace"])
 			_surge_timer = SURGE_EVERY / _pressure()
@@ -184,6 +190,38 @@ func _tick_surges(delta: float) -> void:
 			_surge_left = roundi((WAVE_BASE + floori(_day / WAVE_PER_DAYS) + floori((_crew() - 1.0) / WAVE_PER_CREW)) * _pressure())
 			var t := (_day - 1) / float(GameState.TOTAL_DAYS - 1)
 			_surge_timer = lerpf(WAVE_EVERY_DAY1, WAVE_EVERY_DAY52, t)
+
+func _pick_surge_spots(horn: bool) -> void:
+	_surge_at.clear()
+	var spots := 2 if not horn and _day >= WAVE_SPLIT_DAY else 1
+	for i in spots:
+		# Two spots: one on each half of the front, so the crew has to split
+		var lo := -SPAWN_X_HALF if spots == 1 or i == 0 else 2.0
+		var hi := SPAWN_X_HALF if spots == 1 or i == 1 else -2.0
+		_surge_at.append(Vector3(randf_range(lo, hi), 0.1, SPAWN_Z))
+
+## Server: a neighbour from the villages (Neh. 4:12, Messenger) tells where the next pack
+## comes in: its spot is chosen now and marked until it comes, long before the bell.
+## A pack already coming in: he points at it. False when there are no warned packs (no waves).
+func warn_early() -> bool:
+	var horn := GameState.has_twist("horn")
+	if not _active or (not horn and not GameState.waves):
+		return false
+	if _surge_left > 0:
+		for at in _surge_at:
+			_mark_surge.rpc(at, horn, _surge_left * SURGE_GAP)
+		return true
+	if not _warned_early:
+		_pick_surge_spots(horn)
+		_warned_early = true
+	for at in _surge_at:
+		_mark_surge.rpc(at, horn, _surge_timer)
+	return true
+
+# A quiet mark (no bell): the bell still rings at the usual warning
+@rpc("authority", "call_local", "reliable")
+func _mark_surge(at: Vector3, horn: bool, until: float) -> void:
+	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else "Wave", until + 3.0)
 
 @rpc("authority", "call_local", "reliable")
 func _warn_surge(at: Vector3, horn: bool, warn: float) -> void:
@@ -214,10 +252,17 @@ func _tick_messengers(delta: float) -> void:
 	if _msg_timer > 0.0 or visitors_root.get_child_count() > 0:
 		return
 	_msg_timer = MESSENGER_EVERY
-	_msg_sent += 1
 	var m: Node3D = MESSENGER_SCENE.instantiate()
-	if _msg_sent > MESSENGERS_PER_DAY:
-		m.name = "Letter"
+	var neighbour := not Messenger.old_rules and _msg_sent > 0 and not _last_neighbour 		and _nb_sent < NEIGHBOURS_PER_DAY and randf() < NEIGHBOUR_CHANCE
+	_last_neighbour = neighbour
+	if neighbour:
+		_nb_sent += 1
+		m.name = "Neighbour"
+		_msg_timer = MESSENGER_EVERY * 0.5   # a short call: the four (and the letter) still fit the day
+	else:
+		_msg_sent += 1
+		if _msg_sent > MESSENGERS_PER_DAY:
+			m.name = "Letter"
 	# In from the side, along the inside of the wall
 	m.position = Vector3(26.0 if randf() < 0.5 else -26.0, 0.1, randf_range(7.0, 12.0))
 	NetworkManager.gate_sync(m.get_node("MultiplayerSynchronizer"))

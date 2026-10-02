@@ -93,6 +93,8 @@ func _begin_panel() -> void:
 	if _spec.has("messenger"):
 		var m = load("res://scenes/messenger/messenger.tscn").instantiate()
 		m.position = _spec["messenger"][0]
+		if _spec["messenger"].size() > 3:
+			m.name = _spec["messenger"][3]   # "Neighbour": the homespun visitor (Messenger.kind_of)
 		root.get_node("NetworkManager").gate_sync(m.get_node("MultiplayerSynchronizer"))
 		_main.get_node("Visitors").add_child(m, true)
 		m.set_physics_process(false)
@@ -378,23 +380,24 @@ func _stage(twist: String, i: int) -> Dictionary:
 		"cramped2":
 			return { "look": Vector3(6.5, 0, 8.6), "size": 8.5,
 				"crew": [[Vector3(6.5, 0.1, 10.0), "up", "stone"], [Vector3(6.5, 0.1, 7.9), "down", ""]] }
-		# East Gate: a messenger from the enemy, led away, or ignored
+		# East Gate (GDD §6.7): a messenger from the enemy, one talking at a worker at the
+		# wall, and a neighbour from the villages with a warning
 		"schemes0":
 			var at := Vector3(4, 0.1, 7)
 			return { "look": _o(at, 0.8, 0), "size": 8.5,
 				"crew": [[at, "right", ""]],
 				"messenger": [_o(at, 1.7, 0.3), 1, "left"] }
 		"schemes1":
-			var at := Vector3(14, 0.1, 9)
-			return { "look": _o(at, 0.6, 0), "size": 9.0,
-				"crew": [[_o(at, -1.4, 0), "right", ""]],
-				"messenger": [_o(at, 1.8, 0), 2, "right"] }
-		"schemes2":
 			var s := _section("Section3")
 			var at: Vector3 = s.global_position
-			return { "look": _o(at, 1.8, 1.4), "size": 10.0,
-				"crew": [[_o(at, -1.0, 2.6), "up", "stone"]],
-				"messenger": [_o(at, 3.6, 2.6), 3, "right"] }
+			return { "look": _o(at, 1.2, 1.6), "size": 9.0,
+				"crew": [[_o(at, 0.0, 1.6), "up", ""]],
+				"messenger": [_o(at, 1.1, 2.2), 1, "left"] }
+		"schemes2":
+			var at := Vector3(4, 0.1, 9)
+			return { "look": _o(at, 0.8, 0), "size": 8.5,
+				"crew": [[at, "right", "stone"]],
+				"messenger": [_o(at, 1.7, 0.3), 1, "left", "Neighbour"] }
 	return { "look": Vector3(0, 0, 4) }
 
 ## A spot on the Fish Gate yard along the screen's horizontal

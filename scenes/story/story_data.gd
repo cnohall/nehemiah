@@ -44,6 +44,24 @@ const SECTION_LINES := [
 	"The last stretch: from the Inspection Gate back around to the Sheep Gate. Close the circuit.",
 ]
 
+# Who built each stretch, in Neh 3's own "next to him" chain (index = GameState.SECTIONS
+# index). Shown on the tally when the stretch stands. Names only, picked from the chapter's
+# verses for that stretch — the real texture of the passage; trimmed to fit a line or two.
+const BUILDERS := [
+	"Eliashib the high priest and his brothers · next to him the men of Jericho · next to them Zaccur son of Imri",
+	"The sons of Hassenaah · next to them Meremoth son of Uriah · next to him Meshullam son of Berechiah · next to him Zadok son of Baana",
+	"Joiada son of Paseah and Meshullam son of Besodeiah · next to them Melatiah the Gibeonite and Jadon the Meronothite",
+	"Uzziel the goldsmith · next to him Hananiah, one of the ointment makers · next to them Rephaiah son of Hur, ruler of half of Jerusalem",
+	"Jedaiah son of Harumaph · next to him Hattush · Malchijah and Hasshub, with the Tower of the Ovens · next to him Shallum and his daughters",
+	"Hanun and the people of Zanoah, a thousand cubits of wall to the Dung Gate",
+	"Malchijah son of Rechab, ruler of the district of Beth-haccherem",
+	"Shallun son of Col-hozeh, ruler of the district of Mizpah · next to him Nehemiah son of Azbuk",
+	"The Levites Rehum, Hashabiah and Bavvai · Meremoth again · Palal, Pedaiah · the temple servants of Ophel · the Tekoites, a second portion",
+	"The priests, each one in front of his own house · Zadok son of Immer",
+	"Shemaiah son of Shecaniah, keeper of the East Gate · next to him Hananiah and Hanun · Meshullam opposite his chamber",
+	"Malchijah the goldsmith · then the goldsmiths and the merchants, to the Sheep Gate",
+]
+
 # Beats that play before a section's card (section index → slides)
 const BEATS := {
 	0: [
