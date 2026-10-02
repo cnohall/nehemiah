@@ -2466,3 +2466,24 @@ msgstr "성전으로 숨으러 가는 중…"
 
 msgid "Should a man like me flee? Back to the wall!"
 msgstr "나 같은 사람이 도망가겠는가? 성벽으로 돌아가자!"
+
+msgid "Graphics"
+msgstr "그래픽"
+
+msgid "3D resolution"
+msgstr "3D 해상도"
+
+msgid "Low"
+msgstr "낮음"
+
+msgid "Medium"
+msgstr "보통"
+
+msgid "High"
+msgstr "높음"
+
+msgid "Window size"
+msgstr "창 크기"
+
+msgid "Default"
+msgstr "기본값"

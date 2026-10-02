@@ -270,7 +270,7 @@ func _move_to(dest: Vector3, delta: float) -> void:
 		var steer := dir + _sep * SEP_WEIGHT
 		if steer.length_squared() > 0.0001:
 			dir = steer.normalized()
-		velocity = dir * SPEED[type] * _pace
+		velocity = dir * SPEED[type] * _pace * Terrain.ground_drag(global_position.x, global_position.z)
 		move_and_slide()
 	else:
 		velocity = Vector3.ZERO

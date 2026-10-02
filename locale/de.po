@@ -2479,3 +2479,24 @@ msgstr "Geht, sich im Tempel zu verstecken …"
 
 msgid "Should a man like me flee? Back to the wall!"
 msgstr "Sollte ein Mann wie ich fliehen? Zurück zur Mauer!"
+
+msgid "Graphics"
+msgstr "Grafik"
+
+msgid "3D resolution"
+msgstr "3D-Auflösung"
+
+msgid "Low"
+msgstr "Niedrig"
+
+msgid "Medium"
+msgstr "Mittel"
+
+msgid "High"
+msgstr "Hoch"
+
+msgid "Window size"
+msgstr "Fenstergröße"
+
+msgid "Default"
+msgstr "Standard"

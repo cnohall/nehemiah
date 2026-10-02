@@ -3106,3 +3106,31 @@ msgstr ""
 msgid "← →  or  Click   Choose          Esc   Back"
 msgstr ""
 
+
+#: scenes\ui\settings_panel.gd
+msgid "Graphics"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd
+msgid "3D resolution"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd
+msgid "Low"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd
+msgid "Medium"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd
+msgid "High"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd
+msgid "Window size"
+msgstr ""
+
+#: scenes\ui\settings_panel.gd
+msgid "Default"
+msgstr ""

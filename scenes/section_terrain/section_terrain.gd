@@ -17,7 +17,10 @@ const WATER      := Color(0.20, 0.42, 0.46)
 const FLAME      := Color(1.0, 0.62, 0.22)
 const FLOWERS    := [Color(0.86, 0.30, 0.24), Color(0.95, 0.78, 0.30), Color(0.62, 0.36, 0.62)]
 # Ground looks: scrub_bias (+ greener), tint + tint_amount, outside_shade (valley fall)
-const GROUND_DEFAULT := { "scrub_bias": 0.0, "tint": Color(0.5, 0.5, 0.5), "tint_amount": 0.0, "outside_shade": 0.0 }
+const GROUND_DEFAULT := { "scrub_bias": 0.0, "tint": Color(0.5, 0.5, 0.5), "tint_amount": 0.0, "outside_shade": 0.0, "feature": 0 }
+## The ground shader's painted feature (ground.gdshader `feature`) for each landmark set
+const GROUND_FEATURE := { "sheepfold": 7, "fish_market": 5, "ruins": 3, "workshops": 6, "ovens": 3, "valley": 1,
+	"refuse": 3, "garden": 2, "ophel": 4, "priests": 4, "kidron": 1 }
 
 # Solid pieces must leave these clear: the wall line and its working strip, and the
 # enemy spawn line outside (WaveManager.SPAWN_Z)
@@ -55,6 +58,7 @@ func _rebuild() -> void:
 	add_child(_body)
 	_collect_keep_clear()
 	var ground := GROUND_DEFAULT.duplicate()
+	ground["feature"] = GROUND_FEATURE.get(GameState.SECTIONS[index].get("terrain", ""), 0)
 	match GameState.SECTIONS[index].get("terrain", ""):
 		"sheepfold":
 			_sheepfold(Vector3(-15.0, 0.0, -7.2))
@@ -114,6 +118,7 @@ func _apply_ground(g: Dictionary) -> void:
 	for key: String in ["scrub_bias", "tint_amount", "outside_shade"]:
 		mat.set_shader_parameter(key, g[key])
 	mat.set_shader_parameter("section_tint", g["tint"])
+	mat.set_shader_parameter("feature", g["feature"])
 
 # ── Pieces ────────────────────────────────────────────────────
 
@@ -551,11 +556,7 @@ func _garden(g: Dictionary) -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(pw - 0.5, pd - 0.5)
 	water.mesh = plane
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = WATER
-	mat.roughness = 0.15
-	mat.metallic_specular = 0.8
-	water.material_override = mat
+	water.material_override = water_material()
 	water.position = pool + Vector3(0, 0.3, 0)
 	add_child(water)
 	# Water jars left by the pool steps, and by the far rim

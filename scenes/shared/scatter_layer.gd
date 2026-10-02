@@ -56,6 +56,12 @@ const AWNINGS      := [Palette.INDIGO, Palette.MADDER, Palette.INDIGO, Palette.S
 const LAMPLIGHT    := Color(1.0, 0.58, 0.2)   # a clay oil lamp behind the window, at dusk
 
 var _rng := RandomNumberGenerator.new()
+var _built_for := -1
+## Flat roofs in the lower city where someone sits out the day (flat positions; Passersby
+## seats them): picked by position hash like the chimneys, so the layout RNG isn't touched
+var roof_spots: Array[Vector3] = []
+## Every house door as [flat position (x, z), outward z (±1)] (Passersby comes and goes by them)
+var door_spots: Array = []
 # House details added after the layout was fixed draw from here, so nothing shifts
 var _deco := RandomNumberGenerator.new()
 # Instances collected by kind, flushed into one MultiMesh each at the end
@@ -68,6 +74,26 @@ var _halos: MultiMesh   # the soft glow round each lit window, same order
 static var _halo_mat: StandardMaterial3D
 
 func _ready() -> void:
+	GameState.section_changed.connect(_regenerate.unbind(1))
+	_generate()
+
+# Same layout every time (fixed seeds); only the lie of the land (Terrain) changes per
+# section, and props sit on it — so a new section lifts everything onto its own slope
+func _regenerate() -> void:
+	if _built_for == GameState.current_section_index:
+		return
+	for c in get_children():
+		remove_child(c)
+		c.queue_free()
+	_batches.clear()
+	_lamp_spots.clear()
+	roof_spots.clear()
+	door_spots.clear()
+	_generate()
+
+func _generate() -> void:
+	_built_for = GameState.current_section_index
+	Terrain.use_section(_built_for)
 	_rng.seed = 42
 	_deco.seed = 4242
 	_build_pebbles()
@@ -86,6 +112,7 @@ func _ready() -> void:
 	_build_tuft_pairs()
 	_build_meadows()
 	_build_rock_clusters()
+	_build_hillside()
 	_flush()
 
 # ── Ground cover ──────────────────────────────────────────────
@@ -768,10 +795,27 @@ func _rope(a: Vector3, b: Vector3) -> void:
 	_add("timber", Transform3D(Basis.from_scale(Vector3(0.06, 0.2, 0.06)), b + Vector3(0, 0.08, 0)), BEAM_COLOR)
 
 ## Slow smoke going up (a cook fire, an oven, a smouldering heap)
-func _smoke(at: Vector3, dark := false) -> void:
+## A cooking fire's chimney on a flat roof: a stub of stone and a thin, tall thread of smoke
+## on the wind. Which houses have one comes from their position, not the layout's RNG, so
+## nothing seeded after it shifts.
+func _chimney(c: Vector3, w: float, d: float, h: float) -> void:
+	var k := fposmod(sin(c.x * 12.9898 + c.z * 78.233) * 43758.5453, 1.0)
+	if k > 0.45 and k < 0.75 and c.z < 40.0:
+		roof_spots.append(Vector3(c.x - w * 0.2, h + 0.1, c.z - d * 0.15))
+	if k > 0.14:
+		return
+	var at := c + Vector3(w * 0.28 * (1.0 if k < 0.07 else -1.0), h + 0.1, d * 0.2)
+	_add("block", Transform3D(Basis.from_scale(Vector3(0.32, 0.55, 0.32)), at + Vector3(0, 0.27, 0)), Palette.WALL_STONE.darkened(0.12))
+	_smoke(at + Vector3(0, 0.62, 0) + Vector3(0, Terrain.height(at.x, at.z), 0), false, true)
+
+func _smoke(at: Vector3, dark := false, thin := false) -> void:
 	var p := CPUParticles3D.new()
 	p.amount = 10
 	p.lifetime = 4.0
+	if thin:
+		p.amount = 9
+		p.lifetime = 7.0
+		p.preprocess = 7.0
 	p.direction = Vector3.UP
 	p.spread = 12.0
 	p.gravity = Vector3(0.25, 0.35, 0.1)
@@ -779,11 +823,17 @@ func _smoke(at: Vector3, dark := false) -> void:
 	p.initial_velocity_max = 0.6
 	p.scale_amount_min = 0.8
 	p.scale_amount_max = 1.4
+	if thin:
+		p.gravity = Vector3(0.28, 0.22, 0.17)   # leans downwind (Breeze.WIND)
+		p.initial_velocity_min = 0.25
+		p.initial_velocity_max = 0.4
+		p.scale_amount_min = 0.6
+		p.scale_amount_max = 1.1
 	p.scale_amount_curve = DustFx.grow_curve()
 	var c := Color(0.35, 0.33, 0.32) if dark else Color(0.85, 0.82, 0.78)
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(c, 0.0))
-	ramp.add_point(0.2, Color(c, 0.35))
+	ramp.add_point(0.2, Color(c, 0.6 if thin else 0.35))
 	ramp.set_color(1, Color(c, 0.0))
 	p.color_ramp = ramp
 	var quad := QuadMesh.new()
@@ -807,7 +857,15 @@ func _build_streets() -> void:
 	# Packed-earth bed the setts sit in: the joints read as grout, not bare sand
 	var z0 := CITY.position.y - 1.0
 	var z1 := CITY.end.y + 2.0
-	_add("bed", Transform3D(Basis.from_scale(Vector3(MAIN_HALF_W * 2.0 - 1.4, 0.02, z1 - z0)), Vector3(GATE_X, 0.1, (z0 + z1) * 0.5)), GROUT)
+	# The main street climbs the terraces (Terrain.RISERS): laid in short lengths, each
+	# on its own height, so the bed follows the steps instead of hanging level over them
+	var bz := z0
+	while bz < z1:
+		var len := minf(0.5, z1 - bz)
+		var bm := bz + len * 0.5
+		if not _on_stair(Vector2(GATE_X, bm)):   # the stair's own treads cover it there
+			_add("bed", Transform3D(_slope(bm) * Basis.from_scale(Vector3(MAIN_HALF_W * 2.0 - 1.4, 0.12, len + 0.05)), Vector3(GATE_X, 0.05 + _lift(bm), bm)), GROUT)
+		bz += len
 	_add("bed", Transform3D(Basis.from_scale(Vector3(HALF_X * 2.0, 0.02, CROSS_Z.y - CROSS_Z.x - 1.3)), Vector3(0, 0.1, (CROSS_Z.x + CROSS_Z.y) * 0.5)), GROUT)
 	var z := CITY.position.y - 1.0
 	var row := 0
@@ -830,10 +888,16 @@ func _build_streets() -> void:
 						c = c.lerp(Color(0.66, 0.66, 0.64), 0.5)
 					elif r < 0.48:
 						c = c.darkened(0.14)
-					_add("slab", Transform3D(Basis(Vector3.UP, _rng.randf_range(-0.25, 0.25)) * Basis.from_scale(s), at), c)
+					at.y += _lift(z)
+					var spin := _rng.randf_range(-0.25, 0.25)   # drawn either way: the layout stays put
+					if not _on_stair(p):
+						_add("slab", Transform3D(_slope(z) * Basis(Vector3.UP, spin) * Basis.from_scale(s), at), c)
 			x += STEP
 		z += STEP * 0.95
 		row += 1
+	for rz: float in Terrain.RISERS:
+		if rz > CROSS_Z.y and rz < z1:
+			_street_stair(rz)
 	# Well at the crossing: stone drum, dark water, and a trough
 	_well(WELL_POS)
 
@@ -856,7 +920,7 @@ func _well(c: Vector3) -> void:
 			c + Vector3(cos(a) * R, 0.69, sin(a) * R)), Palette.WALL_STONE.lightened(0.04))
 	# Dark shaft, water a way down
 	_add("drum", Transform3D(Basis.from_scale(Vector3(1.0, 0.5, 1.0)), c + Vector3(0, 0.36, 0)), Color(0.16, 0.13, 0.11))
-	_add("drum", Transform3D(Basis.from_scale(Vector3(0.98, 0.02, 0.98)), c + Vector3(0, 0.5, 0)), WATER_COLOR.darkened(0.35))
+	_add("water_disc", Transform3D(Basis.from_scale(Vector3(0.98, 0.02, 0.98)), c + Vector3(0, 0.5, 0)), WATER_COLOR)
 	# Frame: two posts, a crossbeam, the bucket hanging on its rope
 	for sx: float in [-1.0, 1.0]:
 		_add("timber", Transform3D(Basis.from_scale(Vector3(0.14, 1.9, 0.14)), c + Vector3(sx * 0.95, 0.95, 0)), BEAM_COLOR)
@@ -872,7 +936,48 @@ func _well(c: Vector3) -> void:
 		_add("block", Transform3D(Basis.from_scale(Vector3(1.5, 0.22, 0.1)), t + Vector3(0, 0.3, sz * 0.225)), tc)
 	for sx: float in [-1.0, 1.0]:
 		_add("block", Transform3D(Basis.from_scale(Vector3(0.1, 0.22, 0.35)), t + Vector3(sx * 0.7, 0.3, 0)), tc)
-	_add("block", Transform3D(Basis.from_scale(Vector3(1.3, 0.04, 0.36)), t + Vector3(0, 0.3, 0)), WATER_COLOR)
+	_add("water", Transform3D(Basis.from_scale(Vector3(1.3, 0.04, 0.36)), t + Vector3(0, 0.3, 0)), WATER_COLOR)
+
+# Where the main street climbs a terrace (below the cross street's own step): stone stairs
+# instead of setts tilted up a metre-high slope, which read as a dark crack from above
+func _on_stair(p: Vector2) -> bool:
+	if p.y < CROSS_Z.y or absf(p.x - GATE_X) > MAIN_HALF_W + 0.3:
+		return false
+	for rz: float in Terrain.RISERS:
+		if p.y > rz - 0.3 and p.y < rz + Terrain.RISER_W + 0.3:
+			return true
+	return false
+
+# Cut treads up the riser at `rz`, each block reaching down to the terrace below so no side
+# shows a gap. No RNG draws (tint from position).
+func _street_stair(rz: float) -> void:
+	const N := 3
+	var w := MAIN_HALF_W * 2.0 - 0.3
+	var base := Terrain.height(GATE_X, rz - 0.3)
+	var top := Terrain.height(GATE_X, rz + Terrain.RISER_W + 0.3)
+	var tread := (Terrain.RISER_W + 0.6) / N
+	for i in N:
+		var z_mid := rz - 0.3 + tread * (i + 0.5)
+		var y_top := base + (top - base) * (i + 1) / N
+		var hgt := y_top - base + 0.25
+		# _add lifts by the ground under the origin; these heights are absolute
+		var at := Vector3(GATE_X, 0.1 + y_top - hgt * 0.5, z_mid)
+		at.y -= Terrain.height(at.x, at.z)
+		var tint := 0.05 * sin(rz * 3.1 + i * 1.7)
+		_add("block", Transform3D(Basis.from_scale(Vector3(w, hgt, tread + 0.02)), at), PAVING_COLOR.darkened(0.04 + tint))
+		# Worn nosing: a paler lip along the tread's front edge
+		var nose := Vector3(GATE_X, 0.1 + y_top - 0.02, z_mid - tread * 0.5 + 0.07)
+		nose.y -= Terrain.height(nose.x, nose.z)
+		_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.04, 0.06, 0.14)), nose), PAVING_COLOR.lightened(0.05))
+
+# Terrace risers are steep: paving there is tilted to the ground and lifted a little, since
+# the ground mesh is linear between its samples while Terrain.height is smooth
+func _slope(z: float) -> Basis:
+	var s := (Terrain.height(GATE_X, z + 0.2) - Terrain.height(GATE_X, z - 0.2)) / 0.4
+	return Basis(Vector3.RIGHT, -atan(s))
+
+func _lift(z: float) -> float:
+	return absf(Terrain.height(GATE_X, z + 0.2) - Terrain.height(GATE_X, z - 0.2)) * 0.5
 
 # Distance inside the street's edge (negative within the last metre)
 func _street_edge(p: Vector2) -> float:
@@ -919,6 +1024,67 @@ func _build_city() -> void:
 			_house(body, Vector3(x + w * 0.5, 0.0, cz), w, d, faces_north)
 			x += w + _rng.randf_range(0.3, 1.4)
 
+# The upper city, stepping up the hill behind the lower one (Terrain.RISERS): one row of
+# houses per terrace, doors to the wall, a lane left open for the main street's stair.
+# Out of reach (the walkable ground ends at Terrain.FLAT_CITY), so no collision. Own RNG,
+# drawn after everything else, so the layout seeded above doesn't shift.
+func _build_hillside() -> void:
+	var layout_rng := _rng
+	_rng = RandomNumberGenerator.new()
+	_rng.seed = 7007
+	var dummy := StaticBody3D.new()   # _house wants a body for its colliders; never in the tree
+	for k in range(3, Terrain.RISERS.size()):
+		var front: float = Terrain.RISERS[k - 1] + Terrain.RISER_W + 0.7
+		var depth_room: float = Terrain.RISERS[k] - front - 0.5
+		var reach := 48.0 + 4.0 * k
+		var x := -reach + _rng.randf_range(0.0, 1.5)
+		while x < reach - 3.0:
+			var w := _rng.randf_range(3.2, 5.5)
+			if absf(x + w * 0.5 - GATE_X) < MAIN_HALF_W * 0.7 + w * 0.5:
+				x = GATE_X + MAIN_HALF_W * 0.7 + 0.5
+				continue
+			if _rng.randf() < 0.3:
+				var spot := Vector3(x + w * 0.5, 0.0, front + depth_room * 0.5)
+				if _rng.randf() < 0.55:
+					_olive(spot)
+				else:
+					_bush(spot)
+				x += w + _rng.randf_range(0.6, 1.4)
+				continue
+			var d := minf(_rng.randf_range(3.0, 4.2), depth_room)
+			_house(dummy, Vector3(x + w * 0.5, 0.0, front + d * 0.5), w, d, true)
+			x += w + _rng.randf_range(0.3, 1.2)
+	for shape in dummy.get_children():
+		shape.free()
+	dummy.free()
+	_street_barricade()
+	_rng = layout_rng
+
+# Where the main street leaves the cross street and climbs the first terrace the walkable
+# ground ends (Terrain.FLAT_CITY), so the foot of the stair is barred: poles on crossed-leg
+# trestles right across, sacks and jars piled under them (the families keeping their own
+# part, Neh 4:13). The player stops against it rather than at an open stair. Shallow, so the
+# cross street's walkers pass in front of it, and short of the riser, so nothing is lifted.
+func _street_barricade() -> void:
+	const Z := Terrain.FLAT_CITY + 0.3
+	var x0 := GATE_X - MAIN_HALF_W
+	var x1 := GATE_X + MAIN_HALF_W
+	var legs := [x0 + 0.3, GATE_X, x1 - 0.3]
+	for x: float in legs:
+		for lean: float in [-0.35, 0.35]:
+			_add("timber", Transform3D(Basis(Vector3.BACK, lean).scaled_local(Vector3(0.09, 1.15, 0.09)), Vector3(x, 0.55, Z)), _vary(BEAM_COLOR, 0.05))
+	for i in 2:
+		var mid: float = (legs[i] + legs[i + 1]) * 0.5
+		_add("timber", Transform3D(Basis(Vector3.BACK, 0.03 * (1 - 2 * i)).scaled_local(Vector3(2.9, 0.12, 0.12)), Vector3(mid, 0.98 - 0.03 * i, Z)), _vary(BEAM_COLOR, 0.04).lightened(0.06))
+	_sack(Vector3(x0 + 0.9, 0.0, Z + 0.2))
+	_sack(Vector3(x0 + 1.5, 0.0, Z + 0.25))
+	_sack(Vector3(x0 + 1.2, 0.45, Z + 0.25))
+	_sack(Vector3(x1 - 1.6, 0.0, Z + 0.2))
+	_jar(Vector3(GATE_X + 0.5, 0.0, Z + 0.15), 0.9)
+	_jar(Vector3(x1 - 0.8, 0.0, Z + 0.1), 0.85)
+	_jar(Vector3(x1 - 0.45, 0.0, Z + 0.4), 0.7)
+	_firewood(Vector3(GATE_X - 0.8, 0.0, Z + 0.25))
+
 func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: bool) -> void:
 	var h := _rng.randf_range(2.2, 3.2)
 	var tint := _vary(HOUSE_COLORS[_rng.randi() % HOUSE_COLORS.size()], 0.02)
@@ -946,6 +1112,7 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 	var face := -1.0 if faces_north else 1.0
 	var door_x := _rng.randf_range(-w * 0.25, w * 0.25)
 	_door(c + Vector3(door_x, 0, face * d * 0.5), face)
+	door_spots.append([Vector2(c.x + door_x, c.z + face * d * 0.5), face])
 	_window(c + Vector3(w * 0.5, h * 0.62, _rng.randf_range(-d * 0.2, d * 0.2)))
 	# Rug or cloth laid out on the roof to dry
 	var rug_at := Vector3.INF
@@ -977,6 +1144,7 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 		# Up the back wall, the +z face the camera sees (the door is round the front)
 		_stair(body, c + Vector3(0, 0, d * 0.5), w, h, 1.0 if _deco.randf() < 0.5 else -1.0)
 	_roof_life(c, w, d, h, rug_at, rug_half, upper, ux, uw)
+	_chimney(c, w, d, h)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(w, top, d)
@@ -1147,10 +1315,9 @@ func _cistern(c: Vector3) -> void:
 				var l2 := minf(_rng.randf_range(0.5, 0.7), 0.82 - z)
 				_add("block", Transform3D(Basis.from_scale(Vector3(0.36, 0.24, l2 - 0.04)), c + Vector3(side * 1.07, y, z + l2 * 0.5)), _vary(Palette.WALL_STONE, 0.07))
 				z += l2
-	_add("block", Transform3D(Basis.from_scale(Vector3(1.8, 0.06, 1.7)), c + Vector3(0, 0.44, 0)), WATER_COLOR)
-	# Light on the water: a few pale streaks
-	for i in 4:
-		_add("slab", Transform3D(Basis(Vector3.UP, 0.5).scaled(Vector3(_rng.randf_range(0.3, 0.6), 0.01, 0.05)), c + Vector3(_rng.randf_range(-0.6, 0.6), 0.475, _rng.randf_range(-0.6, 0.6))), WATER_COLOR.lightened(0.45))
+	_add("water", Transform3D(Basis.from_scale(Vector3(1.8, 0.06, 1.7)), c + Vector3(0, 0.44, 0)), WATER_COLOR)
+	for i in 12:
+		_rng.randf()   # the pale streaks that were painted here: the layout's draws stay the same
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
 			_add("timber", Transform3D(Basis.from_scale(Vector3(0.16, 2.4, 0.16)), c + Vector3(sx * 1.5, 1.2, sz * 1.35)), _vary(BEAM_COLOR, 0.04))
@@ -1244,6 +1411,7 @@ func _add(kind: String, xf: Transform3D, color: Color) -> void:
 		for r: Rect2 in CAMP_CLEAR:
 			if r.has_point(Vector2(xf.origin.x, xf.origin.z)):
 				return
+	xf.origin.y += Terrain.height(xf.origin.x, xf.origin.z)
 	if not _batches.has(kind):
 		_batches[kind] = [[] as Array[Transform3D], [] as Array[Color]]
 	_batches[kind][0].append(xf)
@@ -1263,6 +1431,8 @@ func _build_lamps() -> void:
 	_halos = null
 	if _lamp_spots.is_empty():
 		return
+	for k in _lamp_spots.size():
+		_lamp_spots[k].origin.y += Terrain.height(_lamp_spots[k].origin.x, _lamp_spots[k].origin.z)
 	# Own RNG: the layout's _rng must not shift
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4021 + _lamp_spots.size()
@@ -1319,8 +1489,18 @@ static func _lamp_halo_material() -> StandardMaterial3D:
 ## DayLight: light `share` (0 … 1) of the windows
 func set_lamps(share: float) -> void:
 	if _lamps:
-		_lamps.visible_instance_count = roundi(share * _lamps.instance_count)
+		# Snap to all once the evening is all but over: with more windows a rounded 0.99 left one dark
+		_lamps.visible_instance_count = _lamps.instance_count if share > 0.985 else roundi(share * _lamps.instance_count)
 		_halos.visible_instance_count = _lamps.visible_instance_count
+
+static var _water_mat: ShaderMaterial
+
+## Shared moving-water material (assets/shaders/water.gdshader): pools, the well, troughs
+static func water_material() -> ShaderMaterial:
+	if not _water_mat:
+		_water_mat = ShaderMaterial.new()
+		_water_mat.shader = preload("res://assets/shaders/water.gdshader")
+	return _water_mat
 
 static var _grass_mat: ShaderMaterial
 static var _ember_mat: StandardMaterial3D
@@ -1349,6 +1529,7 @@ func _material_for(kind: String) -> Material:
 		"slab":             return Chunky.material(0.1, false, 0.28)
 		"bush", "leaf", "olive_sprig", "myrtle_sprig", "palm_frond": return Chunky.foliage_material()
 		"tuft", "tuft_b":   return _grass_material()
+		"water", "water_disc": return water_material()
 		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
 	return Chunky.material(0.0, false, 0.0)
 
@@ -1371,7 +1552,7 @@ func _mesh_for(kind: String) -> Mesh:
 		"blob":    return _sphere(0.5, 1.0, 12, 6)
 		"ember":   return _sphere(0.5, 1.0, 8, 3)
 		"trunk":   return _cylinder(0.12, 0.2, 1.0, 7)
-		"drum":    return _cylinder(0.5, 0.5, 1.0, 12)
+		"drum", "water_disc": return _cylinder(0.5, 0.5, 1.0, 12)
 		"camel_body":  return _loft(_resample(CAMEL_BODY, 3), [[0.0, TAU]], 0.0, CAMEL_RIDGE)
 		# Pale undersides: the same lofts, just proud, over the lower arc only
 		"camel_belly": return _loft(_resample(CAMEL_BODY, 3), [[PI + 0.3, TAU - 0.3]], 0.006, CAMEL_RIDGE)

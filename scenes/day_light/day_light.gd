@@ -16,6 +16,7 @@ const TORCH_ENERGY    := 2.6
 const LAMP_ENERGY     := 1.3
 const LAMP_RANGE      := 4.5
 const LAMP_COLOR      := Color(1.0, 0.78, 0.52)
+const CLOUD_SHADOW   := 0.13   # ground.gdshader cloud_strength by day
 const LAMP_POLL       := 0.5   # once night has settled, how often to hand out lamps
 # Sun clock (GameState.sun): the light warms and sinks as the day's last quarter runs
 # out; if the stars catch the work unfinished, night falls over the dusk
@@ -120,6 +121,12 @@ func _apply() -> void:
 		torch.get_node("Light").light_energy = TORCH_ENERGY * k
 		torch.get_node("Flame").visible = k > 0.15
 	_update_lamps()
+	# Cloud shadows go with the daylight
+	var floor_mesh: MeshInstance3D = get_parent().get_node_or_null("Floor/Mesh")
+	if floor_mesh != null:
+		var gm := floor_mesh.get_surface_override_material(0) as ShaderMaterial
+		if gm != null:
+			gm.set_shader_parameter("cloud_strength", CLOUD_SHADOW * (1.0 - k) * (1.0 - evening * 0.6))
 
 func _update_lamps() -> void:
 	var k := darkness * darkness * (3.0 - 2.0 * darkness)

@@ -142,8 +142,14 @@ func _decide() -> void:
 		return
 	if _p.carried_kind == "debris":
 		# Charred timbers go to the tip past the wall's inner face, not to any wall
-		# (the load in hand is off the pad, so the last one must still find the tip: key on "pulled")
-		var foul := _nearest_site(func(s): return s.has_method("debris_on_pad") and s.pulled and not s.is_complete())
+		# (a load in hand keeps the wall hauling, so the last one still finds its tip; "pulled"
+		# alone would also match a wall cleared earlier, whose tip no longer takes anything).
+		# Any hauling wall, on today's front or not: _debris_to_haul picks up from all of
+		# them, and a load with nowhere to go is only dropped and taken up again.
+		var foul: Node3D = null
+		for s in _p.get_tree().get_nodes_in_group("build_sites"):
+			if s.has_method("hauling") and s.hauling() and (foul == null or _dist(s) < _dist(foul)):
+				foul = s
 		if foul != null:
 			_set_job(Job.RELAY, foul.dump_marker())
 		else:
@@ -461,22 +467,26 @@ func _empty_post() -> Node3D:
 				return false
 		return true)
 
-# A charred length lying on a footing, that no other bot is already fetching
+# A charred length to carry to a tip, that no other bot is already fetching: one on a
+# footing, or one set down short of the tip — while some wall still takes rubbish (else
+# there's nowhere to carry it, and it would only be picked up and dropped again)
 func _debris_to_haul() -> Node3D:
+	var walls := _p.get_tree().get_nodes_in_group("build_sites").filter(func(s): return s.has_method("hauling"))
+	if not walls.any(func(s): return s.hauling()):
+		return null
 	var best: Node3D = null
 	var best_d := INF
-	for s in _p.get_tree().get_nodes_in_group("build_sites"):
-		if not s.has_method("debris_on_pad"):
+	for it: Node3D in _p.get_tree().get_nodes_in_group("dropped_items"):
+		if it.kind != "debris" or walls.any(func(s): return s.at_tip(it.global_position)):
 			continue
-		for it: Node3D in s.debris_on_pad():
-			var taken := false
-			for w in _p.get_tree().get_nodes_in_group("players"):
-				if w != _p and w.brain != null and w.brain._job == Job.FETCH and w.brain._target == it:
-					taken = true
-			var d := _dist(it)
-			if not taken and d < best_d:
-				best_d = d
-				best = it
+		var taken := false
+		for w in _p.get_tree().get_nodes_in_group("players"):
+			if w != _p and w.brain != null and w.brain._job == Job.FETCH and w.brain._target == it:
+				taken = true
+		var d := _dist(it)
+		if not taken and d < best_d:
+			best_d = d
+			best = it
 	return best
 
 # A load of `kind`: lying on the ground, or a pile (the trough counts once it's mixed)

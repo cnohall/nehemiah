@@ -161,6 +161,7 @@ func _build_visuals() -> void:
 		_box(Vector3(0.1, 0.3, 0.9), Vector3(x, 0.6, 0), STONE)            # ends
 	_lime_layer = _box(Vector3(1.45, 0.08, 0.66), Vector3(0, 0.54, 0), LIME)
 	_water_layer = _box(Vector3(1.45, 0.08, 0.66), Vector3(0, 0.56, 0), WATER)
+	_water_layer.material_override = ScatterLayer.water_material()
 	_paste = _box(Vector3(1.45, 0.14, 0.66), Vector3(0, 0.57, 0), MORTAR)
 	_paddle = Node3D.new()
 	_paddle.position = Vector3(0, 0.6, 0)

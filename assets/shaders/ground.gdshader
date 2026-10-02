@@ -31,10 +31,24 @@ uniform vec3 col_meadow_dk  : source_color = vec3(0.440, 0.490, 0.230);
 uniform vec3 col_ochre      : source_color = vec3(0.780, 0.500, 0.280);  // red-ochre earth
 uniform vec4 work_rect = vec4(-14.0, -2.5, 14.0, 13.0);
 
+// Cloud shadows drifting on the wind (DayLight fades the strength with the evening)
+uniform float cloud_strength = 0.13;
+uniform vec2 wind_dir = vec2(0.85, 0.52);
+uniform float cloud_speed = 1.3;   // metres a second
+
+// A painted feature of the section's ground (SectionTerrain sets it): 0 none, 1 dry wadi,
+// 2 ploughed furrows, 3 ash and soot, 4 bare limestone, 5 damp market ground,
+// 6 sawdust and shavings, 7 trampled fold
+uniform int feature = 0;
+
 varying vec2 world_xz;
+varying float world_y;
+varying float slope;
 
 void vertex() {
 	world_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+	world_y = VERTEX.y;
+	slope = 1.0 - NORMAL.y;
 }
 
 float hash2(vec2 p) {
@@ -124,6 +138,52 @@ void fragment() {
 	vec3 meadow_col = mix(col_meadow, col_meadow_dk, smoothstep(0.8, 1.1, mm));
 	col = mix(col, meadow_col, meadow * 0.62);
 
+	float rough_out = roughness;
+	if (feature == 1) {
+		// A dry wadi winding across the enemy's approach: pale water-worn gravel, banks a shade darker
+		float cz = -8.5 + 2.4 * sin(world_xz.x * 0.11 + 0.7) + 1.1 * sin(world_xz.x * 0.31);
+		float dd = abs(world_xz.y - cz) + (detail - 0.5) * 0.9;
+		float bed = 1.0 - smoothstep(1.3, 2.3, dd);
+		float bank = (1.0 - smoothstep(2.3, 3.2, dd)) - bed;
+		col = mix(col, col * 0.84, bank * 0.55);
+		col = mix(col, mix(vec3(0.76, 0.69, 0.57), vec3(0.60, 0.55, 0.47), micro), bed * 0.72);
+	} else if (feature == 2) {
+		// A ploughed plot beside the wall: furrows run along x, a haze of green in the rows
+		vec2 fr = world_xz - vec2(23.0, -9.5);
+		float inside = (1.0 - smoothstep(6.5, 8.0, abs(fr.x))) * (1.0 - smoothstep(3.0, 4.0, abs(fr.y) + (detail - 0.5) * 0.7));
+		float rows = sin(world_xz.y * 5.4 + sin(world_xz.x * 0.3) * 0.5) * 0.5 + 0.5;
+		col = mix(col, col * (0.80 + 0.28 * rows), inside * 0.9);
+		col = mix(col, vec3(0.44, 0.54, 0.25), inside * smoothstep(0.55, 1.0, rows) * 0.3);
+	} else if (feature == 3) {
+		// Ash and soot: burned ground in drifts, darkest round the middle
+		float soot = smoothstep(0.52, 0.74, fbm(p * 1.3 + vec2(3.0, 9.0)) + (mid - 0.5) * 0.3);
+		soot *= (1.0 - smoothstep(18.0, 28.0, abs(world_xz.x))) * (1.0 - smoothstep(9.0, 18.0, abs(world_xz.y)));
+		col = mix(col, col * vec3(0.46, 0.42, 0.40), soot * 0.72);
+	} else if (feature == 4) {
+		// Bare limestone breaking through the earth: pale, in tilted strata
+		float rockm = smoothstep(0.56, 0.74, fbm(p * 1.6 + vec2(13.0, 5.0)) + (detail - 0.5) * 0.25) * (1.0 - trodden);
+		float strata = 0.5 + 0.5 * sin((world_xz.x * 0.55 + world_xz.y * 0.95) * 2.2 + detail * 3.0);
+		col = mix(col, mix(vec3(0.78, 0.74, 0.66), vec3(0.68, 0.64, 0.56), strata), rockm * 0.8);
+	} else if (feature == 5) {
+		// Fish market: hosed, trodden wet ground
+		float damp = smoothstep(0.50, 0.70, fbm(p * 2.4 + vec2(8.0, 2.0)) + (mid - 0.5) * 0.3);
+		damp *= (1.0 - smoothstep(14.0, 22.0, abs(world_xz.x))) * (1.0 - smoothstep(6.0, 11.0, abs(world_xz.y)));
+		col = mix(col, col * vec3(0.72, 0.77, 0.80), damp * 0.6);
+		rough_out = mix(roughness, 0.35, damp);
+	} else if (feature == 6) {
+		// Workshops: pale sawdust and shavings, with a dark scatter of filings
+		float saw = smoothstep(0.54, 0.72, fbm(p * 2.0 + vec2(17.0, 6.0)) + (mid - 0.5) * 0.3);
+		saw *= (1.0 - smoothstep(16.0, 24.0, abs(world_xz.x))) * (1.0 - smoothstep(8.0, 14.0, abs(world_xz.y)));
+		col = mix(col, vec3(0.90, 0.80, 0.58), saw * 0.55);
+		col *= 1.0 - saw * step(0.82, micro) * 0.25;
+	} else if (feature == 7) {
+		// Sheepfold: ground trampled bare and dark round the fold, straw in the dirt
+		float fd = length((world_xz - vec2(-15.0, -7.2)) * vec2(1.0, 1.15)) + (detail - 0.5) * 2.0;
+		float tr = 1.0 - smoothstep(4.0, 8.5, fd);
+		col = mix(col, vec3(0.60, 0.46, 0.32), tr * 0.7);
+		col = mix(col, vec3(0.86, 0.76, 0.46), tr * step(0.84, micro) * 0.6);
+	}
+
 	col = mix(col, section_tint, tint_amount * (0.7 + 0.6 * (mid - 0.5)));
 	// Falling away outside the wall: darker and a touch cooler with distance
 	float fall = smoothstep(-4.0, -30.0, world_xz.y) * outside_shade;
@@ -161,7 +221,27 @@ void fragment() {
 		col *= 1.0 + dotm * sgn * (1.0 - scrub * 0.6);
 	}
 
+	// Steep ground is stone: the terrace risers read as dry-stone retaining walls (courses
+	// run level, each stone its own value), the valley sides as bare limestone
+	float rock = smoothstep(0.10, 0.34, slope);
+	if (rock > 0.0) {
+		float course = floor(world_y * 3.2);
+		float stone = hash2(vec2(floor(world_xz.x * 1.1 + course * 0.37), course));
+		vec3 rock_col = mix(vec3(0.74, 0.69, 0.58), vec3(0.62, 0.56, 0.46), stone);
+		float joint = smoothstep(0.0, 0.07, fract(world_y * 3.2)) * smoothstep(0.0, 0.05, fract(world_xz.x * 1.1 + course * 0.37));
+		rock_col *= 0.84 + 0.16 * joint;
+		rock_col *= 0.9 + 0.2 * detail;
+		col = mix(col, rock_col, rock);
+	}
+
+	// Cloud shadows: two slow layers of soft blobs sliding downwind, cool-tinted
+	vec2 cq = (world_xz - wind_dir * TIME * cloud_speed) * 0.032;
+	float cn = vnoise(cq) * 0.62 + vnoise(cq * 2.3 + vec2(7.1, 2.9) - wind_dir * TIME * 0.03) * 0.38;
+	float cloud = smoothstep(0.50, 0.70, cn);
+	col *= mix(vec3(1.0), vec3(0.78, 0.83, 0.95), cloud * cloud_strength * 4.0);
+	col *= 1.0 - cloud * cloud_strength;
+
 	ALBEDO    = col;
-	ROUGHNESS = roughness;
+	ROUGHNESS = rough_out;
 	SPECULAR  = 0.0;
 }

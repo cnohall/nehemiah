@@ -87,6 +87,7 @@ func request(worker: Node3D, at: Vector3) -> bool:
 func _sound(at: Vector3, color: Color) -> void:
 	Sfx.play("horn")
 	get_tree().call_group("camera_rig", "shake", 0.12)
+	get_tree().call_group("townsfolk", "heard_horn")
 	get_tree().call_group("offscreen_alerts", "ping", at, color, "Horn", CALL_TIME)
 	_raise_standard(at, color)
 

@@ -236,9 +236,22 @@ func _clearing() -> bool:
 func _hauling() -> bool:
 	return _clearing() and pulled
 
-## Where the debris goes: a tip on the city side of the footing (the outer face is -z)
+## Burned recipe: timbers down and still to carry clear (a load in hand counts) — where bots take theirs
+func hauling() -> bool:
+	return _hauling()
+
+## Where the debris goes: a tip on the city side of the footing (the outer face is -z), pulled
+## onto the walkable ground — a tip inside a house or past the play area can't be reached, and
+## the bot holding the last timber would stand short of it for good
 func dump_point() -> Vector3:
-	return to_global(Vector3(_center.x, 0.0, _center.z + _size.z * 0.5 + DEBRIS_DUMP_GAP))
+	var at := to_global(Vector3(_center.x, 0.0, _center.z + _size.z * 0.5 + DEBRIS_DUMP_GAP))
+	at.x = clampf(at.x, Player.PLAY_AREA.position.x + 1.0, Player.PLAY_AREA.end.x - 1.0)
+	at.z = clampf(at.z, Player.PLAY_AREA.position.y + 1.0, Player.PLAY_AREA.end.y - 1.0)
+	var map := get_world_3d().navigation_map
+	if NavigationServer3D.map_get_iteration_id(map) != 0:
+		var snap := NavigationServer3D.map_get_closest_point(map, at)
+		at = Vector3(snap.x, at.y, snap.z)
+	return at
 
 ## Charred loads still lying on the footing
 func dump_marker() -> Node3D:
@@ -266,12 +279,22 @@ func dump_marker() -> Node3D:
 	(m.get_child(0) as Node3D).visible = _hauling()
 	return m
 
-## Server: a load of charred timber carried onto the tip is tipped out — no drop to aim
+## `at` lies on this wall's tip while it still takes rubbish
+func at_tip(at: Vector3) -> bool:
+	if not _hauling():
+		return false
+	var tip := dump_marker().global_position
+	return Vector2(at.x - tip.x, at.z - tip.z).length() < DEBRIS_DUMP_RADIUS
+
+## Server: a load of charred timber carried onto the tip is tipped out — no drop to aim.
+## One dropped there instead (a drop pressed between polls) goes the same way.
 func _tip_debris() -> void:
-	var at := dump_point()
 	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.carried_kind == "debris" and Vector2(p.global_position.x - at.x, p.global_position.z - at.z).length() < DEBRIS_DUMP_RADIUS:
+		if p.carried_kind == "debris" and at_tip(p.global_position):
 			p._set_carried.rpc("")
+	for it: Node3D in get_tree().get_nodes_in_group("dropped_items"):
+		if it.kind == "debris" and at_tip(it.global_position):
+			it.queue_free()
 
 ## A timber lifted off the pad but not yet set down elsewhere still counts as rubbish
 func _debris_in_hand() -> bool:
@@ -941,7 +964,10 @@ func _update_label() -> void:
 	var lines: PackedStringArray = []
 	var next := stage + 1
 	if _hauling():
-		lines.append("Carry the timbers to the dark patch  %d left" % debris_on_pad().size())
+		# Hidden at 0: the last loads are in hand, the pad itself is bare
+		var on_pad := debris_on_pad().size()
+		if on_pad > 0:
+			lines.append("Carry the timbers to the dark patch  %d left" % on_pad)
 	elif _clearing():
 		lines.append("Pull down the charred timbers  [%s]" % InputMode.key("interact"))
 	var face_label := face_name()

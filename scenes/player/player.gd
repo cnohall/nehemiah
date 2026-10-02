@@ -58,7 +58,7 @@ const CLIMB_HEIGHT    := 2.6
 const CLIMB_TIME      := 0.55
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 # Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
-const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
+const PLAY_AREA       := Rect2(-44.0, -25.0, 88.0, 49.7)   # = Terrain.FLAT_FOE … FLAT_CITY: the valley and the hill start past it
 const CARRY_FRONT_SCALE := 0.8   # a load hugged at the chest reads a little smaller than overhead
 const CARRY_HEIGHT    := 2.4      # just above the head of the ~2.2 m chibi figure
 const CARRY_SCALE     := 1.35     # loads read bigger overhead than on the ground (Overcooked)
@@ -874,12 +874,21 @@ func _server_drop(at: Vector3) -> void:
 		return
 	if helping_id != 0:
 		_set_helping.rpc(0)
+	elif carried_kind == "debris" and _at_tip(at):
+		_set_carried.rpc("")   # set down on the tip: tipped out, not passed or left lying
+		_sfx.rpc("drop")
 	elif not carried_kind.is_empty():
 		var mate := _free_hands_near(at)
 		if mate != null:
 			_hand_over(mate)
 		else:
 			_drop_carried(at)
+
+func _at_tip(at: Vector3) -> bool:
+	for s in get_tree().get_nodes_in_group("build_sites"):
+		if s.has_method("at_tip") and s.at_tip(at):
+			return true
+	return false
 
 # Server: the nearest teammate who could take our load straight from our hands
 func _free_hands_near(at: Vector3) -> Node3D:
