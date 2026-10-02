@@ -9,7 +9,7 @@ var _rig: CharacterRig
 var _camera: Camera3D
 var _frame := 0
 var _view := 0
-const VIEWS := ["front", "three_quarter", "profile", "back", "full", "gameplay", "build", "hit_flash"]
+const VIEWS := ["front", "three_quarter", "profile", "back", "full", "gameplay", "build", "hit_flash", "actual_gameplay"]
 
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
@@ -71,7 +71,7 @@ func _initialize() -> void:
 	_set_view()
 
 func _set_view() -> void:
-	var yaw: float = [0.0, -0.60, -PI * 0.5, PI, -0.45, -0.45, -0.45, -0.60][_view]
+	var yaw: float = [0.0, -0.60, -PI * 0.5, PI, -0.45, -0.45, -0.45, -0.60, -0.45][_view]
 	_rig.rotation.y = yaw
 	var target := Vector3(0, 1.70, 0)
 	_camera.size = 1.30
@@ -84,6 +84,12 @@ func _set_view() -> void:
 		target = Vector3(0, 1.08, 0)
 		_camera.size = 2.75 if _view == 4 else 3.20
 		offset = Vector3(0, 1.6 if _view == 4 else 4.5, 5)
+	if _view == 8:
+		# Main scene CAM_SIZE: 18.0, with its 35-degree isometric pitch.
+		_rig._set_flash(0.0)
+		target = Vector3(0, 1.08, 0)
+		_camera.size = 18.0
+		offset = Vector3(0, 3.5355, 5)
 	if _view == 6:
 		_rig.play("build_down")
 		_rig._t = 0.3
