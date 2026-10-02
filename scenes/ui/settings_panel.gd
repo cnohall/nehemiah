@@ -49,6 +49,7 @@ var _window_size: OptionButton
 var _window_sizes: Array[Vector2i] = []
 var _quality_btns: Array[Button] = []
 var _scale_btns: Array[Button] = []
+var _style_btns: Array[Button] = []
 var _listening := ""        # action waiting for a key press, or ""
 
 func _ready() -> void:
@@ -67,8 +68,20 @@ func _ready() -> void:
 	_sfx.drag_ended.connect(func(_changed): Settings.save())
 	_done.pressed.connect(close)
 	_build_extra_rows()
+	_even_rows()
 	_build_keys_page()
 	resized.connect(func(): if visible: _fit_modal.call_deferred())
+
+# Every control spans the same width (the widest row's), and a row's choices share it
+# evenly — rows of their own natural widths made a ragged right edge
+func _even_rows() -> void:
+	for i in range(1, _grid.get_child_count(), _grid.columns):
+		var c := _grid.get_child(i) as Control
+		c.size_flags_horizontal = Control.SIZE_FILL
+		if c is HBoxContainer:
+			for k in c.get_children():
+				if k is Button or k is Slider:
+					(k as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 # The sheet is about 1070 px tall and the UI is boosted in small windows (Settings._fit_ui),
 # so a 1280×720 window would clip it: shrink it around its centre until it fits.
@@ -250,6 +263,12 @@ func _select_window_size() -> void:
 	_window_size.disabled = Settings.fullscreen
 
 func _build_graphics_rows() -> void:
+	# Trying out drawn looks with playtesters; switches live under the open panel
+	_style_btns = _choice_row("Art style", Settings.ART_STYLES, 110)
+	for i in _style_btns.size():
+		_style_btns[i].pressed.connect(func():
+			Settings.art_style = i
+			Settings.save())
 	_quality_btns = _choice_row("Graphics", Settings.QUALITIES.map(func(q): return q["name"]), 110)
 	for i in _quality_btns.size():
 		_quality_btns[i].pressed.connect(func():
@@ -258,7 +277,7 @@ func _build_graphics_rows() -> void:
 	if not Settings.can_scale_3d():
 		return   # web: the browser's renderer can't scale the 3D view
 	_scale_btns = _choice_row("3D resolution",
-		Settings.RENDER_SCALES.map(func(s): return "%d%%" % roundi(s * 100.0)), 110)
+		Settings.RENDER_SCALES.map(func(s): return "%d%%" % roundi(s * 100.0)), 90)
 	for i in _scale_btns.size():
 		_scale_btns[i].pressed.connect(func():
 			Settings.render_scale = Settings.RENDER_SCALES[i]
@@ -270,6 +289,8 @@ func _save_graphics() -> void:
 	Settings.save()
 
 func _select_graphics() -> void:
+	for i in _style_btns.size():
+		_style_btns[i].button_pressed = i == Settings.art_style
 	for i in _quality_btns.size():
 		_quality_btns[i].button_pressed = i == Settings.quality
 	# The nearest preset: an auto step-down or an old cfg can leave an in-between value

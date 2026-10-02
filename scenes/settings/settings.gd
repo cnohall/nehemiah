@@ -21,6 +21,14 @@ var volume := 0.8   # master bus, linear 0..1
 var music_volume := 0.6   # Music bus (created here), linear 0..1
 var sfx_volume := 0.8     # SFX bus (created here) — effects + jingles, linear 0..1
 var screen_shake := true
+# Drawn look over the world, on trial with playtesters: index into ART_STYLES (LookPass)
+signal art_style_changed
+const ART_STYLES := ["Standard", "Lithograph", "Cel"]
+var art_style := 0:
+	set(v):
+		if v != art_style:
+			art_style = v
+			art_style_changed.emit()
 # Day, progress and threats told by the world (sun, scribe, watchmen) — false brings
 # back the day plaque and the threat plaque
 var diegetic_hud := true
@@ -100,6 +108,7 @@ func _ready() -> void:
 		music_volume = cfg.get_value("audio", "music_volume", music_volume)
 		sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 		screen_shake = cfg.get_value("display", "screen_shake", screen_shake)
+		art_style = clampi(cfg.get_value("display", "art_style", art_style), 0, ART_STYLES.size() - 1)
 		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
 		fixed_camera = cfg.get_value("display", "fixed_camera", fixed_camera)
 		turn_to_map = cfg.get_value("display", "turn_to_map", turn_to_map)
@@ -263,6 +272,7 @@ func save() -> void:
 	cfg.set_value("display", "window_w", window_size.x)
 	cfg.set_value("display", "window_h", window_size.y)
 	cfg.set_value("display", "screen_shake", screen_shake)
+	cfg.set_value("display", "art_style", art_style)
 	cfg.set_value("display", "diegetic_hud", diegetic_hud)
 	cfg.set_value("display", "fixed_camera", fixed_camera)
 	cfg.set_value("display", "turn_to_map", turn_to_map)

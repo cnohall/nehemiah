@@ -69,6 +69,19 @@ var _carvings: Array[Label3D] = []   # names on their tablets
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	# Drawn looks over the world and its tags (under the HUD), on trial: Settings'
+	# art style; `-- --look=litho|cel` overrides, F10 cycles, F9 over the HUD too (debug)
+	var look := LookPass.new(($WorldEnvironment as WorldEnvironment).environment)
+	look.cycle_key = true
+	look.keep_film = true
+	look.grain = 0.3    # in motion the crayon grain shimmers; keep it faint
+	if GameState.attract:
+		look.base_layer = -1     # the title menu draws on layer 0, over the world
+	look.whole_screen = "--look-world" not in OS.get_cmdline_user_args()
+	add_child(look)
+	var forced := LookPass.from_args()
+	look.look = forced if forced != LookPass.PLAIN else LookPass.STYLES[Settings.art_style]
+	Settings.art_style_changed.connect(func(): look.look = LookPass.STYLES[Settings.art_style])
 	# The stretch's own arc: the enemy answers the work at half and at the last unit
 	var beats := SectionBeats.new()
 	beats.name = "SectionBeats"

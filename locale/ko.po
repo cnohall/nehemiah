@@ -2487,3 +2487,12 @@ msgstr "창 크기"
 
 msgid "Default"
 msgstr "기본값"
+
+msgid "Art style"
+msgstr "아트 스타일"
+
+msgid "Lithograph"
+msgstr "석판화"
+
+msgid "Cel"
+msgstr "셀 셰이딩"

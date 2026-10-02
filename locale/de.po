@@ -2500,3 +2500,12 @@ msgstr "Fenstergröße"
 
 msgid "Default"
 msgstr "Standard"
+
+msgid "Art style"
+msgstr "Grafikstil"
+
+msgid "Lithograph"
+msgstr "Lithografie"
+
+msgid "Cel"
+msgstr "Cel-Shading"

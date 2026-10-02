@@ -2500,3 +2500,12 @@ msgstr "Tamaño de ventana"
 
 msgid "Default"
 msgstr "Predeterminado"
+
+msgid "Art style"
+msgstr "Estilo artístico"
+
+msgid "Lithograph"
+msgstr "Litografía"
+
+msgid "Cel"
+msgstr "Cel"

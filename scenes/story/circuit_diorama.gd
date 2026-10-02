@@ -114,7 +114,7 @@ var _focus_goal := Vector3.ZERO
 var _time := 0.0
 var _night := false
 var _look := 0
-var _look_quad: MeshInstance3D
+var _look_pass: LookPass
 
 func _ready() -> void:
 	_noise.seed = 445
@@ -172,28 +172,16 @@ func set_torch(t: float) -> void:
 		_torch.position = p + Vector3(0, 0.6, 0)
 		_flame.position = p
 
-## 0 the plain model; 1 lithograph, 2 mosaic, 3 the scribe's plan from above (map_look.gdshader)
+## LookPass look: 0 the plain model, 1 lithograph, 2 mosaic, 3 the scribe's plan from above
 func set_look(n: int) -> void:
 	_look = n
-	_look_quad.visible = n > 0
-	(_look_quad.material_override as ShaderMaterial).set_shader_parameter("look", n)
-	_env.tonemap_mode = Environment.TONE_MAPPER_LINEAR if n > 0 else Environment.TONE_MAPPER_FILMIC
+	_look_pass.look = n
 	camera.attributes.dof_blur_far_enabled = n == 0
 	camera.attributes.dof_blur_near_enabled = n == 0
 
 func _build_look() -> void:
-	_look_quad = MeshInstance3D.new()
-	var q := QuadMesh.new()
-	q.size = Vector2(2, 2)
-	_look_quad.mesh = q
-	_look_quad.custom_aabb = AABB(Vector3.ONE * -1e5, Vector3.ONE * 2e5)
-	_look_quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var mat := ShaderMaterial.new()
-	mat.shader = load("res://scenes/story/map_look.gdshader")
-	mat.render_priority = 100
-	_look_quad.material_override = mat
-	_look_quad.visible = false
-	add_child(_look_quad)
+	_look_pass = LookPass.new(_env)
+	add_child(_look_pass)
 
 ## Ease the camera toward a point on the ring (fractional gate index), or back to centre
 func focus_on(t: float) -> void:
