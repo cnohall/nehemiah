@@ -728,7 +728,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 # ── Progress ───────────────────────────────────────────────
 
 func _on_stage_changed() -> void:
-	if not multiplayer.is_server():
+	# Explore Jerusalem raises and ruins whole stretches as you walk round: no day to end
+	if not multiplayer.is_server() or GameState.festival:
 		return
 	_request_nav_rebake()
 	_update_progress()

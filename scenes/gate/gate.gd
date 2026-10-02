@@ -84,7 +84,7 @@ func _process(delta: float) -> void:
 		return
 	_label_poll = LABEL_POLL
 	var near := _local_player_near()
-	_label.visible = _open_for_work() and _work.progress <= 0.0 and (is_target or near)
+	_label.visible = not GameState.festival and _open_for_work() and _work.progress <= 0.0 and (is_target or near)
 	var focus := SiteFocus.site() == self
 	_label.pulse = focus
 	_label.modulate.a = 1.0 if focus or near else WorldTag.DIM

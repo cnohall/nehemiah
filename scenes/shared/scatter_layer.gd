@@ -62,6 +62,8 @@ var _built_for := -1
 var roof_spots: Array[Vector3] = []
 ## Every house door as [flat position (x, z), outward z (±1)] (Passersby comes and goes by them)
 var door_spots: Array = []
+## Every bush and dry scrub as a flat position (x, z) (Flock keeps the sheep out of them)
+var bush_spots: Array[Vector2] = []
 # House details added after the layout was fixed draw from here, so nothing shifts
 var _deco := RandomNumberGenerator.new()
 # Instances collected by kind, flushed into one MultiMesh each at the end
@@ -89,6 +91,7 @@ func _regenerate() -> void:
 	_lamp_spots.clear()
 	roof_spots.clear()
 	door_spots.clear()
+	bush_spots.clear()
 	_generate()
 
 func _generate() -> void:
@@ -304,6 +307,7 @@ func _build_bushes() -> void:
 			_bush(Vector3(p.x, 0.0, p.y))
 
 func _bush(at: Vector3) -> void:
+	bush_spots.append(Vector2(at.x, at.z))
 	_myrtle(at, false)
 
 # Branching stems stay visible below the small, glossy leaf clusters. A few white
@@ -335,6 +339,7 @@ func _myrtle(at: Vector3, tree := false) -> void:
 				_add("blossom", Transform3D(Basis.from_scale(Vector3.ONE * (1.0 if tree else 0.8)), flower), Color(0.96, 0.92, 0.79))
 
 func _dry_scrub(at: Vector3) -> void:
+	bush_spots.append(Vector2(at.x, at.z))
 	var rng := _plant_rng(at, 419)
 	for stem in 7:
 		var a := TAU * stem / 7.0 + rng.randf_range(-0.3, 0.3)
@@ -1290,14 +1295,52 @@ func _canopy(at: Vector3, w: float, d: float, face: float, cloth: Color) -> void
 # ── Work camp ─────────────────────────────────────────────────
 # The builders' camp at the edges of the yard (Neh. 4:22 "let each man lodge inside
 # Jerusalem"): a shaded cistern, a stone cart, the carpenters' bench, the standards.
-# Visual only, kept to the yard's margins.
+# Visual only, kept to the yard's margins. The same in every section, so SectionTerrain
+# keeps its landmarks off work_camp_footprints().
+const CISTERN_AT := Vector3(-20.5, 0, 10.5)
+const CART_AT := Vector3(-21.0, 0, 5.5)
+const CART_YAW := 0.5
+const BENCH_AT := Vector3(19.5, 0, 9.0)
+# Outboard of the watchmen's lookouts (Watchmen.STAND_X), clear of their legs and ladder
+const BANNER_X := [-23.6, 23.4]
+## Camp pieces left out where a section's landmark needs their ground (by terrain)
+const CAMP_GIVES_WAY := { "garden": ["cart"] }   # the Pool of Shelah
+
 func _build_work_camp() -> void:
-	_cistern(Vector3(-20.5, 0, 10.5))
-	_cart(Vector3(-21.0, 0, 5.5), 0.5)
-	_bench(Vector3(19.5, 0, 9.0))
-	# Outboard of the watchmen's lookouts (Watchmen.STAND_X), clear of their legs and ladder
-	for x: float in [-23.6, 23.4]:
+	var gives_way: Array = CAMP_GIVES_WAY.get(GameState.SECTIONS[_built_for].get("terrain", ""), [])
+	_cistern(CISTERN_AT)
+	# Built either way, so the layout RNG draws the same; left out, it goes nowhere
+	var batches := _batches
+	if "cart" in gives_way:
+		_batches = {}
+	_cart(CART_AT, CART_YAW)
+	_batches = batches
+	_bench(BENCH_AT)
+	for x: float in BANNER_X:
 		_banner(Vector3(x, 0, 1.6))
+
+## Ground (x, z) the work camp and the watchmen's lookouts stand on in section `index`
+static func work_camp_footprints(index: int) -> Array[Rect2]:
+	var gives_way: Array = CAMP_GIVES_WAY.get(GameState.SECTIONS[index].get("terrain", ""), [])
+	var out: Array[Rect2] = []
+	# Cistern: canopy posts ±1.5 × ±1.35, the jars out to +2.7 on x
+	out.append(Rect2(CISTERN_AT.x - 1.7, CISTERN_AT.z - 1.6, 4.4, 3.2))
+	if "cart" not in gives_way:
+		# Bed and wheels -0.95…+0.95 × ±0.86, the shafts out to +2.35, yawed
+		var b := Basis(Vector3.UP, CART_YAW)
+		var cart := Rect2(Vector2(CART_AT.x, CART_AT.z), Vector2.ZERO)
+		for corner: Vector3 in [Vector3(-0.95, 0, -0.86), Vector3(-0.95, 0, 0.86), Vector3(2.35, 0, -0.86), Vector3(2.35, 0, 0.86)]:
+			var p := CART_AT + b * corner
+			cart = cart.expand(Vector2(p.x, p.z))
+		out.append(cart)
+	# Bench, shavings and the boards stacked off its end
+	out.append(Rect2(BENCH_AT.x - 1.2, BENCH_AT.z - 0.9, 3.1, 2.2))
+	for x: float in BANNER_X:
+		out.append(Rect2(x - 0.2, 1.4, 0.4, 1.5))
+	for side: float in [-1.0, 1.0]:
+		# Legs ±0.55, the ladder down the city side
+		out.append(Rect2(Watchmen.STAND_X * side - 0.8, Watchmen.STAND_Z - 0.8, 1.6, 2.4))
+	return out
 
 # Stone-lined basin of water under an indigo canopy, jars waiting beside it
 func _cistern(c: Vector3) -> void:

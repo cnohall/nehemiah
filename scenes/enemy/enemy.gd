@@ -408,6 +408,10 @@ func _strike(victim: Node3D) -> void:
 func _breaks_tell(amount: float) -> bool:
 	return _tell > 0.0 and amount >= STEADY.get(type, 0.0)
 
+## Server: drawing back to strike (a sword cut now turns the blow — Player, GDD §5.16)
+func drawing() -> bool:
+	return _tell > 0.0
+
 # ── Animation ──────────────────────────────────────────────
 
 func _update_anim() -> void:

@@ -39,6 +39,12 @@ const SWORD_COOLDOWN  := 0.45
 const SWORD_KNOCKBACK := 1.3      # metres a scout is shoved (brutes feel ~a third)
 const SWORD_HIT_FRAME := 2        # frame of the "sword" anim where the blade lands
 const POT_REACH       := 1.0      # a jar or basket this close (no foe about) takes the cut instead
+# Turn the blow (GDD §5.16, `--no-riposte`): a cut that lands while a foe draws back to strike
+# strikes ×RIPOSTE_MULT and knocks him off his feet, brute or not — the sword's true shot
+const RIPOSTE_MULT    := 1.5
+const RIPOSTE_KNOCK   := 1.4      # m a scout is thrown back as he goes down
+const BLADE_COLOR     := Color(1.0, 0.98, 0.94, 0.75)   # the cut's sweep
+const BLADE_TRUE      := Color(1.0, 0.76, 0.3, 0.9)      # …gold when it turns a blow
 const AIM_ASSIST_DEG   := 18.0   # enemies inside this cone of the aim get homed on
 const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
@@ -143,6 +149,7 @@ var _held := 0.0                # owner: seconds the sling has been whirling thi
 var _approach: MeshInstance3D   # owner: the ring that closes on the aim ring before a glint
 var _arc_dots: Array[MeshInstance3D] = []
 static var _true_told := false  # the "let go as it glints" hint, once a session
+static var _riposte_told := false   # the "cut as he draws back" hint, once a session
 var _hp_bar: HealthBar
 var _dash_time := 0.0
 var _dash_cd := 0.0
@@ -967,6 +974,7 @@ func _sfx(event: String) -> void:
 # ── Attack ─────────────────────────────────────────────────
 
 func _handle_attack(delta: float) -> void:
+	_riposte_hint()
 	if not _charging:
 		# A click on HUD buttons / the Esc menu isn't a throw
 		if _throw_just_pressed() and _sling_cd <= 0.0 and (brain != null or get_viewport().gui_get_hovered_control() == null):
@@ -1084,27 +1092,96 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 		return
 	var fwd := Vector2(sin(yaw), cos(yaw))
 	var hit := false
+	var turned := PackedVector3Array()   # where a blow was turned (for the look)
 	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
 		var to := Vector2(enemy.global_position.x - at.x, enemy.global_position.z - at.z)
 		# A little slack on reach: the foe kept walking during the wind-up
 		if to.length() > SWORD_REACH + 0.4 or absf(fwd.angle_to(to)) > deg_to_rad(SWORD_ARC_DEG):
 			continue
-		enemy.take_damage(SWORD_DAMAGE * Trade.hit_mult(trade) * _rally(&"rally_damage", at), worker_id())
-		enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
+		# Asked before the damage: a hit in the draw ends it
+		var turn: bool = GameState.riposte and enemy.has_method("drawing") and enemy.drawing()
+		var damage := SWORD_DAMAGE * Trade.hit_mult(trade) * _rally(&"rally_damage", at)
+		enemy.take_damage(damage * (RIPOSTE_MULT if turn else 1.0), worker_id())
+		if turn:
+			enemy.knock_down(Vector3(to.x, 0.0, to.y), RIPOSTE_KNOCK)
+			turned.append(enemy.global_position)
+		else:
+			enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
 		hit = true
 	var pots := get_tree().get_first_node_in_group("breakable_set")
 	if pots and pots.smash_arc(at, fwd, SWORD_REACH + 0.4, SWORD_ARC_DEG):
 		hit = true
-	_sword_fx.rpc(hit)
+	_sword_fx.rpc(hit, yaw, turned)
 
-# Server → everyone: the swish, and a jolt for whoever landed it
+# Server → everyone: the swish and the sweep of the blade; a turned blow rings, flashes and
+# throws dust; a jolt for whoever landed it
 @rpc("any_peer", "call_local", "reliable")
-func _sword_fx(hit: bool) -> void:
+func _sword_fx(hit: bool, yaw: float, turned: PackedVector3Array) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	Sfx.play("sword", global_position)
-	if hit and is_multiplayer_authority():
+	_blade_sweep(yaw, not turned.is_empty())
+	var scene := get_tree().current_scene
+	for at in turned:
+		var chest := at + Vector3.UP * 0.9
+		Sfx.play("riposte", chest)
+		SlingStone.flash(scene, chest, 1.2, 0.2)
+		DustFx.puff(scene, at + Vector3.UP * 0.2, 12, 0.9)
+	if not turned.is_empty():
+		_sprite.hitstop(0.14)   # the blade bites: a held beat on the swing
+	if not is_multiplayer_authority():
+		return
+	if not turned.is_empty():
+		_jolt(0.32, 0.6, 0.8, 0.16)
+	elif hit:
 		_jolt(0.25, 0.3, 0.45, 0.1)
+
+# Every peer: a thin crescent swept round in front of the worker, gone in a breath
+func _blade_sweep(yaw: float, gold: bool) -> void:
+	var half := deg_to_rad(SWORD_ARC_DEG)
+	var outer := SWORD_REACH * 0.8
+	var thick := 0.38 if gold else 0.26   # m deep at the blade's end of the sweep
+	var steps := 12
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in steps:
+		var a0 := -half + 2.0 * half * float(i) / steps
+		var a1 := -half + 2.0 * half * float(i + 1) / steps
+		# Thickest where the blade is now (the far end of the sweep), thin at its start
+		var w0 := lerpf(0.1, 1.0, float(i) / steps)
+		var w1 := lerpf(0.1, 1.0, float(i + 1) / steps)
+		var p := [
+			Vector3(sin(a0), 0, cos(a0)) * outer, Vector3(sin(a1), 0, cos(a1)) * outer,
+			Vector3(sin(a1), 0, cos(a1)) * (outer - thick * w1), Vector3(sin(a0), 0, cos(a0)) * (outer - thick * w0)]
+		for v in [p[0], p[1], p[2], p[0], p[2], p[3]]:
+			st.add_vertex(v)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.no_depth_test = true
+	mat.albedo_color = BLADE_TRUE if gold else BLADE_COLOR
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(mi)
+	mi.global_position = global_position + Vector3.UP * 0.75
+	mi.rotation.y = yaw
+	var tw := mi.create_tween()
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.22 if gold else 0.14).set_ease(Tween.EASE_IN)
+	tw.tween_callback(mi.queue_free)
+
+# Owner: the first time this session a foe draws back within sword reach, say what a cut does
+func _riposte_hint() -> void:
+	if _riposte_told or self != local or brain != null or not (GameState.riposte and GameState.tell):
+		return
+	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
+		if String(enemy.anim).begins_with("brace") and Vector2(enemy.global_position.x - global_position.x,
+				enemy.global_position.z - global_position.z).length() < SWORD_REACH:
+			_riposte_told = true
+			_toast("Cut as he draws back — turn the blow")
+			return
 
 # Turn toward a ground point: exact yaw for the rig, nearest 4-way facing for the rest
 func _face_aim(at: Vector3) -> void:

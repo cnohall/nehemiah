@@ -86,6 +86,8 @@ func _ready() -> void:
 	var walk := join_btn.duplicate() as Button
 	walk.name = "FestivalButton"
 	walk.text = "Explore Jerusalem"
+	var built := GameState.built_sections()
+	walk.tooltip_text = tr("The wall is finished: the Festival of Booths.") if not built.has(false) 		else tr("Walk the city as far as your wall stands — %d of %d stretches. The Festival of Booths waits for the whole wall.") % [built.count(true), built.size()]
 	menu.add_child(walk)
 	menu.move_child(walk, learn.get_index() + 1)
 	walk.pressed.connect(_on_festival)

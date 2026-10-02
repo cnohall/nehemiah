@@ -327,7 +327,7 @@ func _process(delta: float) -> void:
 	var working := _work != null and _work.progress > 0.0   # the bar and rising stones say it all
 	var near := _local_player_near()
 	var failing := repairing() and health < MAX_HEALTH * REPAIR_ALERT_BELOW   # about to fall — seen from afar
-	_label.visible = not working and (failing or (is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and near))
+	_label.visible = not working and not GameState.festival and (failing or (is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and near))
 	# One site at a time says "here next"; the others step back
 	var focus := SiteFocus.site() == self
 	_label.pulse = focus

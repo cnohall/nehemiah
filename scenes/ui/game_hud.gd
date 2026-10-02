@@ -1436,8 +1436,8 @@ func set_player_carry(slot: int, kind: String) -> void:
 		return
 	var icon: TagIcon = _cards[slot].load
 	var k := kind.trim_suffix("s") if kind == "beams" else kind
-	icon.visible = not k.is_empty()
-	if icon.visible and icon.kind != k:
+	icon.modulate.a = 0.0 if k.is_empty() else 1.0
+	if not k.is_empty() and icon.kind != k:
 		icon.kind = k
 		icon.queue_redraw()
 
@@ -1542,10 +1542,23 @@ func _build_player_cards() -> void:
 		vb.alignment = BoxContainer.ALIGNMENT_CENTER
 		vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(vb)
+		# "Downed" sits on the eyebrow line and the load icon always keeps its slot
+		# (faded when empty), so the card never changes width mid-play
+		var who_row := HBoxContainer.new()
+		who_row.add_theme_constant_override("separation", 8)
+		vb.add_child(who_row)
 		var who := Label.new()
 		who.theme_type_variation = &"Eyebrow"
 		who.add_theme_font_size_override("font_size", 12)
-		vb.add_child(who)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who_row.add_child(who)
+		var carry := Label.new()
+		carry.theme_type_variation = &"Caption"
+		carry.add_theme_font_size_override("font_size", 12)
+		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
+		carry.text = "Downed"
+		carry.visible = false
+		who_row.add_child(carry)
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		vb.add_child(top)
@@ -1555,16 +1568,9 @@ func _build_player_cards() -> void:
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(name_lbl)
 		var load_icon := TagIcon.make("stone", 24)
-		load_icon.visible = false
+		load_icon.modulate.a = 0.0
 		load_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		top.add_child(load_icon)
-		var carry := Label.new()
-		carry.theme_type_variation = &"Caption"
-		carry.add_theme_font_size_override("font_size", 14)
-		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
-		carry.text = "Downed"
-		carry.visible = false
-		top.add_child(carry)
 		var bar := ProgressBar.new()
 		bar.theme_type_variation = &"Meter"
 		bar.custom_minimum_size = Vector2(0, 9)

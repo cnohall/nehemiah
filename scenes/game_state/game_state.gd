@@ -134,6 +134,8 @@ var saboteur: bool = "--no-saboteur" not in OS.get_cmdline_user_args()
 # wind-up to read, nothing to knock aside). `-- --no-true-shot`: no glint, every throw alike
 var tell: bool = "--no-tell" not in OS.get_cmdline_user_args()
 var true_shot: bool = "--no-true-shot" not in OS.get_cmdline_user_args()
+# `-- --no-riposte`: a sword cut in a foe's draw only knocks the strike aside, like any hit
+var riposte: bool = "--no-riposte" not in OS.get_cmdline_user_args()
 signal rules_changed
 
 # Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
@@ -218,9 +220,9 @@ var attract := false
 # Tutorial — no waves, no story, no bots but the one that falls; nothing it does is saved.
 # Set by the menu, cleared when the menu opens again (outlives reset() like replay_section).
 var tutorial := false
-# "Explore Jerusalem" from the title: the Festival of Booths (Neh. 8) after the wall is done —
-# a solo sandbox at the Water Gate, the whole wall standing, no enemy, no clock. Festival
-# runs it. Set by the menu like `tutorial`; nothing it does is saved.
+# "Explore Jerusalem" from the title: a solo sandbox, no enemy, no clock — the city as far
+# as this player's wall stands (built_sections), and once it all does, the Festival of
+# Booths (Neh. 8). Festival runs it. Set by the menu like `tutorial`; nothing it does is saved.
 var festival := false
 const FESTIVAL_SECTION := 8   # the Water Gate: "the broad place before the water gate" (Neh. 8:1)
 var _met := {}             # Friends and Foes: key → true, loaded on first use
@@ -418,6 +420,27 @@ func is_unlocked(section_index: int) -> bool:
 		return true
 	return OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args()
 
+## Explore Jerusalem: each stretch this player has built — finished in any run (a best
+## mark), or behind the saved campaign's stretch. Debug builds: `-- --unlock-all` = all,
+## `-- --built=N` = just the first N (the saved progress ignored).
+func built_sections() -> Array[bool]:
+	var past: int = campaign_save().get("section", 0)
+	var only := -1
+	if OS.is_debug_build():
+		for arg in OS.get_cmdline_user_args():
+			if arg == "--unlock-all":
+				only = SECTIONS.size()
+			elif arg.begins_with("--built="):
+				only = arg.trim_prefix("--built=").to_int()
+	var out: Array[bool] = []
+	for i in SECTIONS.size():
+		out.append(i < only if only >= 0 else (i < past or best_marks(i) >= 0))
+	return out
+
+## The whole wall stands: Explore Jerusalem keeps the Festival of Booths
+func wall_finished() -> bool:
+	return not built_sections().has(false)
+
 ## A practice or the festival: no waves, no story, nothing saved
 func free_play() -> bool:
 	return tutorial or festival
@@ -601,7 +624,7 @@ func apply_attract_start() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
-	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot)
+	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot, riposte)
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size)
@@ -642,7 +665,7 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool) -> void:
+func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool, rp: bool) -> void:
 	waves = w
 	sun = s
 	posts = p
@@ -650,6 +673,7 @@ func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bo
 	saboteur = sab
 	tell = tl
 	true_shot = ts
+	riposte = rp
 	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")

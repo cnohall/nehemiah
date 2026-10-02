@@ -2,7 +2,8 @@ extends SceneTree
 
 # Explore Jerusalem at the Sheep Gate: shots of the house of God from the lane, the gate and
 # the court, in the turned view.
-#   Godot --path . --script res://tools/temple_shot.gd -- <out_dir>
+#   Godot --path . --script res://tools/temple_shot.gd -- <out_dir> --unlock-all
+# (the feast only shows once the whole wall is built: --unlock-all)
 # Not headless — needs the GPU.
 
 const SPOTS := [Vector3(33.0, 0.1, 11.4), Vector3(38.0, 0.1, 14.0), Vector3(24.0, 0.1, 9.0)]

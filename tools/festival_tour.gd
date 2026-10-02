@@ -2,7 +2,7 @@ extends SceneTree
 
 # Explore Jerusalem, round the whole wall: from the Water Gate, walk off the west end again
 # and again; a shot of each stretch's middle, and of the arrival end.
-#   Godot --path . --script res://tools/festival_tour.gd -- <out_dir>
+#   Godot --path . --script res://tools/festival_tour.gd -- <out_dir> [--unlock-all | --built=N]
 # Not headless — needs the GPU.
 
 const STEP := 3.0   # seconds per stretch
