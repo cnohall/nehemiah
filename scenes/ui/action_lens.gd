@@ -90,7 +90,7 @@ func _entries(me: Player) -> Array:
 	else:
 		add.call(here, tr("[%s] Sling · up close it's the sword") % InputMode.key("throw"))
 	if GameState.has_twist("horn"):
-		add.call(here + Vector3.UP * 0.7, tr("[%s] Sound the horn — the crew gathers to you") % InputMode.key("horn"))
+		add.call(here + Vector3.UP * 0.7, tr("[%s] Sound the horn — whoever stands in its ring strikes harder") % InputMode.key("horn"))
 	for p: Player in get_tree().get_nodes_in_group("players"):
 		if p == me:
 			continue

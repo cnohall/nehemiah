@@ -49,6 +49,7 @@ Tally marks are enough. Note the run letter and the time.
 - [ ] Wave bell heard and reacted to (they turned to face it)
 - [ ] Watch post raised — in which minute?
 - [ ] Watch post fed after it ran dry — or left empty?
+- [ ] Noticed the pennant / cover ring — did it make anyone feed a post? Did a covered wall visibly hold longer?
 - [ ] Everyone builds during a wave and lets the posts defend (they skip the fighting)
 
 **The world tells it (§5.8)**

@@ -28,7 +28,11 @@ const CROSS_Z     := Vector2(22.0, 25.5)            # cross street z-range
 const WELL_POS    := Vector3(1.6, 0.0, 23.75)
 
 const ROCK_COLOR   := Color(0.66, 0.63, 0.57)
-const BUSH_COLOR   := Color(0.40, 0.50, 0.22)
+const BUSH_COLOR   := Color(0.36, 0.45, 0.26)
+const MYRTLE_LEAF  := Color(0.37, 0.49, 0.25)
+const SCRUB_LEAF   := Color(0.49, 0.52, 0.35)
+const PALM_LEAF    := Color(0.43, 0.47, 0.28)
+const DATE_COLOR   := Color(0.72, 0.36, 0.12)
 const TUFT_COLOR   := Color(0.58, 0.60, 0.32)   # dusty sage — late summer, half dry
 const STRAW_COLOR  := Color(0.80, 0.70, 0.42)
 const MEADOW_GREEN := Color(0.52, 0.58, 0.28)
@@ -136,7 +140,7 @@ func _build_meadows() -> void:
 			if m < 0.62 or WORK_RECT.grow(1.5).has_point(p) or _blocked(p) or _on_street(p, 1.0):
 				continue
 			_tuft(Vector3(p.x, 0.1, p.y), true, clampf(remap(m, 0.62, 1.1, 0.0, 1.0), 0.0, 1.0))
-			if m > 0.85 and _rng.randf() < 0.12:
+			if m > 0.85 and _rng.randf() < 0.12 and not _on_track(p, 1.2):
 				_bush(Vector3(p.x, 0.0, p.y))
 		z += 1.1
 
@@ -253,17 +257,75 @@ func _build_stone_clusters() -> void:
 			if shown:
 				_add("chip", Transform3D(tilt.scaled(s), Vector3(p.x, 0.0, p.y) + off), col)
 
+## Centre line of the dirt track north of the gate — keep in step with ground.gdshader track_x
+static func track_x(z: float) -> float:
+	return GATE_X - 3.0 * sin(z * 0.09) - (z + 1.5) * 0.12 if z < -1.5 else GATE_X
+
+## True if (x,z) `p` sits on the dirt track, or within `margin` of it
+static func _on_track(p: Vector2, margin := 0.0) -> bool:
+	return p.y < 15.0 and absf(p.x - track_x(p.y)) < 2.0 + margin
+
 func _build_bushes() -> void:
-	# Each bush = 3 overlapping blobs so the silhouette isn't a single ball
+	# Low myrtle in sheltered spots, silver dry scrub on the exposed slopes.
 	for p in _free_points(46, true, false):
-		_bush(Vector3(p.x, 0.0, p.y))
+		var scrub := p.y < -10.0 and _rng.randf() < 0.65   # draw kept so the layout elsewhere holds
+		if _on_track(p, 1.2):   # nothing grows in the road
+			continue
+		if scrub:
+			_dry_scrub(Vector3(p.x, 0.0, p.y))
+		else:
+			_bush(Vector3(p.x, 0.0, p.y))
 
 func _bush(at: Vector3) -> void:
-	var base := _vary(BUSH_COLOR, 0.05)
-	for i in 3:
-		var off := Vector3(_rng.randf_range(-0.35, 0.35), 0.2, _rng.randf_range(-0.35, 0.35))
-		var s := Vector3.ONE * _rng.randf_range(0.6, 1.1)
-		_add("bush", Transform3D(_yaw().scaled(s), at + off), base.lightened(0.06 * i))
+	_myrtle(at, false)
+
+# Branching stems stay visible below the small, glossy leaf clusters. A few white
+# blossoms identify myrtle without turning every patch of ground into a flower bed.
+func _myrtle(at: Vector3, tree := false) -> void:
+	var rng := _plant_rng(at, 91)
+	var height := 1.75 if tree else 0.84
+	var spread := 1.1 if tree else 0.78
+	var wood := OLIVE_TRUNK.lightened(0.08)
+	var stems := 7 if tree else 6
+	for stem in stems:
+		var a := TAU * stem / float(stems) + rng.randf_range(-0.25, 0.25)
+		var foot := at + Vector3(cos(a) * 0.12, 0.05, sin(a) * 0.12)
+		var tip := at + Vector3(cos(a) * spread * rng.randf_range(0.55, 1.0), height * rng.randf_range(0.75, 1.1), sin(a) * spread * rng.randf_range(0.55, 1.0))
+		_wood_between(foot, tip, 0.15 if tree else 0.075, wood)
+		# Rounded overlapping crowns establish the dense silhouette in the reference.
+		# Uneven lobes and a dusty sage cast break up the uniform green cabbage look
+		var lobe := rng.randf_range(0.65, 1.3)
+		var crown_size := (Vector3(0.95, 0.65, 0.84) if tree else Vector3(0.82, 0.54, 0.73)) * lobe
+		var dusty := MYRTLE_LEAF.lerp(SCRUB_LEAF, rng.randf_range(0.25, 0.55))
+		_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(crown_size), tip + Vector3(0, 0.05, 0)), dusty.darkened(rng.randf_range(0.02, 0.12)))
+		for j in 4:
+			var pos := tip + Vector3(rng.randf_range(-0.26, 0.26), rng.randf_range(-0.15, 0.2), rng.randf_range(-0.26, 0.26))
+			var scale := Vector3(0.62, 0.4, 0.54) * (1.15 if tree else 0.8)
+			_add("myrtle_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(scale), pos + Vector3(0, 0.17, 0)), dusty.lightened(rng.randf_range(0.08, 0.26)))
+		if stem % 2 == 0:
+			for petal in 3:
+				var flower := tip + Vector3(rng.randf_range(-0.3, 0.3), 0.22, rng.randf_range(-0.3, 0.3))
+				_add("blossom", Transform3D(Basis.from_scale(Vector3.ONE * (1.0 if tree else 0.8)), flower), Color(0.96, 0.92, 0.79))
+
+func _dry_scrub(at: Vector3) -> void:
+	var rng := _plant_rng(at, 419)
+	for stem in 7:
+		var a := TAU * stem / 7.0 + rng.randf_range(-0.3, 0.3)
+		var tip := at + Vector3(cos(a) * rng.randf_range(0.3, 0.7), rng.randf_range(0.55, 1.05), sin(a) * rng.randf_range(0.3, 0.7))
+		_wood_between(at + Vector3(0, 0.06, 0), tip, 0.055, OLIVE_TRUNK.lightened(0.1))
+		if stem % 3 != 0:
+			_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(0.32, 0.26, 0.3)), tip), SCRUB_LEAF.darkened(0.1))
+			_add("myrtle_sprig", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(0.32, 0.24, 0.3)), tip), SCRUB_LEAF.lightened(rng.randf_range(-0.08, 0.06)))
+
+static func _plant_rng(at: Vector3, salt: int) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(absf(at.x * 7919.0 + at.z * 104729.0)) + salt
+	return rng
+
+func _wood_between(a: Vector3, b: Vector3, width: float, color: Color) -> void:
+	var delta := b - a
+	var basis := Basis(Quaternion(Vector3.UP, delta.normalized()))
+	_add("timber", Transform3D(basis.scaled(Vector3(width, delta.length(), width)), (a + b) * 0.5), color)
 
 # ── Outside ───────────────────────────────────────────────────
 
@@ -286,20 +348,56 @@ func _build_groves() -> void:
 				_olive(Vector3(g.x + c * 4.0 + _rng.randf_range(-0.6, 0.6), 0.0, rz + _rng.randf_range(-0.5, 0.5)))
 
 func _olive(at: Vector3) -> void:
-	var h := _rng.randf_range(1.2, 1.8)
-	var lean := Basis.from_euler(Vector3(_rng.randf_range(-0.2, 0.2), 0, _rng.randf_range(-0.2, 0.2)))
-	_add("trunk", Transform3D(lean.scaled(Vector3(1.3, h, 1.3)), at + Vector3(0, h * 0.5, 0)), _vary(OLIVE_TRUNK, 0.04))
-	var top := at + lean * Vector3(0, h * 0.5, 0) + Vector3(0, h * 0.5, 0)
-	# Chunky canopy: a ring of big faceted clumps and one on top, lighter where the sun hits
-	var leaf := _vary(OLIVE_LEAF, 0.04)
-	for i in 4:
-		var a := i * TAU / 4.0 + _rng.randf_range(-0.4, 0.4)
-		var off := Vector3(cos(a) * 0.75, _rng.randf_range(0.0, 0.3), sin(a) * 0.75)
-		var s := Vector3(_rng.randf_range(1.2, 1.5), _rng.randf_range(0.85, 1.05), _rng.randf_range(1.2, 1.5))
-		_add("leaf", Transform3D(_yaw().scaled(s), top + off + Vector3(0, 0.45, 0)), leaf.darkened(0.06))
-		# A smaller lump bulging out of each clump, so the crown reads lumpy
-		_add("leaf", Transform3D(Basis.from_scale(s * 0.55), top + off * 1.45 + Vector3(0, 0.75, 0)), leaf.lightened(0.02))
-	_add("leaf", Transform3D(_yaw().scaled(Vector3(1.5, 1.1, 1.5)), top + Vector3(0, 1.05, 0)), leaf.lightened(0.05))
+	var rng := _plant_rng(at, 211)
+	var old := rng.randf() < 0.4
+	var h := rng.randf_range(1.4, 1.8) if old else rng.randf_range(1.55, 2.0)
+	var crown := 1.3 if old else 1.0
+	var base := at + Vector3(0, 0.06, 0)
+	var fork := at + Vector3(rng.randf_range(-0.12, 0.12), h, rng.randf_range(-0.12, 0.12))
+	var wood := OLIVE_TRUNK.lightened(0.08)
+	# Split, twisting trunks make the old trees distinct from the younger single stems.
+	if old:
+		for i in 2:
+			var side := -1.0 if i == 0 else 1.0
+			var bend := at + Vector3(side * 0.23, h * 0.55, side * 0.11)
+			_wood_between(base + Vector3(side * 0.12, 0, 0), bend, 0.4, wood.darkened(0.07 * i))
+			_wood_between(bend, fork + Vector3(side * 0.16, 0, 0), 0.29, wood.lightened(0.07))
+	else:
+		_wood_between(base, fork, 0.34, wood)
+	for i in 9:
+		var a := TAU * i / 9.0 + rng.randf_range(-0.23, 0.23)
+		var reach := rng.randf_range(0.9, 1.5) * crown
+		var end := fork + Vector3(cos(a) * reach, rng.randf_range(0.36, 1.1), sin(a) * reach)
+		_wood_between(fork + Vector3(0, 0.05, 0), end, 0.17 if old else 0.12, wood)
+		var foliage := OLIVE_LEAF.lerp(Color(0.68, 0.69, 0.52), rng.randf_range(0.45, 0.75))
+		_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(1.12, 0.58, 0.88)), end + Vector3(0, 0.18, 0)), foliage.darkened(0.11))
+		for j in 6:
+			var pos := end + Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(-0.16, 0.24), rng.randf_range(-0.3, 0.3))
+			var s := Vector3(rng.randf_range(0.55, 0.75), rng.randf_range(0.28, 0.4), rng.randf_range(0.5, 0.7))
+			_add("olive_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(s), pos + Vector3(0, 0.34, 0)), foliage.lightened(rng.randf_range(0.05, 0.2)))
+
+func _date_palm(at: Vector3) -> void:
+	var rng := _plant_rng(at, 617)
+	var h := rng.randf_range(3.8, 4.5)
+	var trunk := Color(0.52, 0.31, 0.17)
+	_wood_between(at + Vector3(0, 0.1, 0), at + Vector3(0, h, 0), 0.42, trunk)
+	# Staggered diamond-like leaf bases give the date palm its armored trunk.
+	for row in 15:
+		var y := 0.3 + row * (h - 0.5) / 15.0
+		for side in 4:
+			var a := TAU * (side + 0.5 * (row % 2)) / 4.0
+			var p := at + Vector3(cos(a) * 0.23, y, sin(a) * 0.23)
+			_add("palm_scale", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(0.34, 0.28, 0.13)), p), trunk.lightened(rng.randf_range(-0.08, 0.16)))
+	var crown := at + Vector3(0, h + 0.1, 0)
+	for i in 16:
+		var a := TAU * i / 16.0 + rng.randf_range(-0.12, 0.12)
+		var size := rng.randf_range(0.88, 1.18)
+		_add("palm_frond", Transform3D(Basis(Vector3.UP, a).scaled(Vector3.ONE * size), crown), PALM_LEAF.lightened(rng.randf_range(-0.11, 0.09)))
+	for bunch in 3:
+		var a := TAU * bunch / 3.0 + 0.3
+		for fruit in 5:
+			var p := crown + Vector3(cos(a) * (0.4 + fruit * 0.05), -0.48 - fruit * 0.12, sin(a) * (0.4 + fruit * 0.05))
+			_add("date", Transform3D(Basis.from_scale(Vector3(0.12, 0.17, 0.12)), p), DATE_COLOR.lightened(rng.randf_range(-0.07, 0.13)))
 
 # Limestone breaking through the soil, well clear of the enemy approach
 func _build_outcrops() -> void:
@@ -355,9 +453,9 @@ func _arab_camp(c: Vector3) -> void:
 	_hair_tent(c + Vector3(-2.6, 0, -1.8), 0.08)
 	_hair_tent(c + Vector3(3.4, 0, -2.6), -0.1)
 	_campfire(c + Vector3(0.6, 0, 1.4))
-	_camel(c + Vector3(-3.6, 0, 2.8), 0.4)
-	_camel(c + Vector3(-5.2, 0, 4.5), PI + 0.2)
-	_camel(c + Vector3(7.4, 0, 2.6), 3.7)
+	_camel(c + Vector3(-3.6, 0, 2.8), 0.4, "pack")
+	_camel(c + Vector3(-5.2, 0, 4.5), PI + 0.2, "kneel")
+	_camel(c + Vector3(7.4, 0, 2.6), 3.7, "stand")
 	for i in 3:
 		_sack(c + Vector3(2.4 + i * 0.55, 0, 0.6 + (i % 2) * 0.3))
 	_jar(c + Vector3(-0.8, 0, 2.8), 1.0)
@@ -434,22 +532,32 @@ func _hair_tent(c: Vector3, yaw: float) -> void:
 # short lofted body with the hump behind the middle and a blanket over the flanks, a
 # thick neck tapering up out of the chest, and a big round head with heavy brows and a
 # drooping lip, turned a little to look about. Pale belly, throat and muzzle
-func _camel(c: Vector3, yaw: float) -> void:
+func _camel(c: Vector3, yaw: float, pose := "kneel") -> void:
 	var b := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * 1.25)
-	var col := _vary(CAMEL, 0.04)
+	var col := _vary(Color(0.69, 0.46, 0.26), 0.035)
 	var pale := col.lightened(0.2)
 	var dark := col.darkened(0.2)
-	var cloth: Color = [Palette.MADDER, Palette.INDIGO, Palette.MUREX][_rng.randi() % 3]
+	var cloth := Color(0.59, 0.28, 0.18)
+	var ground := c
+	if pose != "kneel":
+		c += Vector3.UP * 0.76
 	_add("camel_body", Transform3D(b, c), col)
 	_add("camel_belly", Transform3D(b, c), pale)
-	_add("camel_cloth", Transform3D(b, c), cloth)
-	_add("camel_band", Transform3D(b, c), Palette.UNDYED)
+	if pose == "pack":
+		_add("camel_cloth", Transform3D(b, c), cloth)
+		_add("camel_band", Transform3D(b, c), Palette.UNDYED)
 	# Legs folded under: the fore knees just showing at the chest, the hind legs along
 	# the flanks with the feet tucked forward
 	for sz: float in [-1.0, 1.0]:
-		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.36, 0.16, 0.18)), c + b * Vector3(0.6, 0.09, sz * 0.2)), pale.darkened(0.06))
-		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.66, 0.32, 0.2)), c + b * Vector3(-0.4, 0.2, sz * 0.4)), col)
-		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.3, 0.1, 0.14)), c + b * Vector3(-0.02, 0.05, sz * 0.46)), pale.darkened(0.06))
+		if pose == "kneel":
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.36, 0.16, 0.18)), c + b * Vector3(0.6, 0.09, sz * 0.2)), pale.darkened(0.06))
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.66, 0.32, 0.2)), c + b * Vector3(-0.4, 0.2, sz * 0.4)), col)
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.3, 0.1, 0.14)), c + b * Vector3(-0.02, 0.05, sz * 0.46)), pale.darkened(0.06))
+		else:
+			for x: float in [-0.57, 0.46]:
+				_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.25, 0.64, 0.2)), c + b * Vector3(x, -0.42, sz * 0.31)), col.darkened(0.07))
+				_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.19, 0.52, 0.17)), ground + b * Vector3(x + 0.06, 0.27, sz * 0.31)), pale.darkened(0.06))
+				_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.3, 0.13, 0.22)), ground + b * Vector3(x + 0.16, 0.07, sz * 0.31)), dark)
 	# Tail kept flat down the rump, a dark tuft at the end
 	_add("blob", Transform3D(b * Basis(Vector3.BACK, 0.15) * Basis.from_scale(Vector3(0.07, 0.3, 0.07)), c + b * Vector3(-0.84, 0.42, 0)), col.darkened(0.08))
 	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.1, 0.12, 0.08)), c + b * Vector3(-0.87, 0.27, 0)), dark)
@@ -464,7 +572,8 @@ func _camel(c: Vector3, yaw: float) -> void:
 	part.call("camel_muzzle", Vector3.ONE, Vector3.ZERO, col.lightened(0.1))
 	# The drooping lower lip, nostrils, halter
 	part.call("blob", Vector3(0.2, 0.1, 0.17), Vector3(1.55, 1.23, 0), pale.darkened(0.05))
-	part.call("block", Vector3(0.05, 0.31, 0.32), Vector3(1.4, 1.41, 0), cloth)
+	if pose == "pack":
+		part.call("block", Vector3(0.05, 0.31, 0.32), Vector3(1.4, 1.41, 0), cloth)
 	for sz: float in [-1.0, 1.0]:
 		part.call("blob", Vector3(0.04, 0.03, 0.05), Vector3(1.63, 1.42, sz * 0.055), dark.darkened(0.3))
 		# Big dark eyes under heavy brows, small round ears laid back
@@ -472,6 +581,15 @@ func _camel(c: Vector3, yaw: float) -> void:
 		part.call("blob", Vector3(0.03, 0.03, 0.02), Vector3(1.26, 1.54, sz * 0.2), Color(0.95, 0.92, 0.85))
 		part.call("blob", Vector3(0.16, 0.05, 0.08), Vector3(1.23, 1.58, sz * 0.17), dark)
 		_add("blob", Transform3D(b * neck * Basis(Vector3.BACK, 0.5) * Basis.from_scale(Vector3(0.07, 0.15, 0.06)), c + b * (root + neck * (Vector3(1.04, 1.62, sz * 0.13) - root))), dark)
+	# Short shaggy ridges along the hump and throat catch the warm highlights.
+	for i in 8:
+		var x := -0.58 + i * 0.15
+		var y := 0.42 + (0.78 * exp(-pow((x + 0.16) / 0.38, 2.0)))
+		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.19, 0.13, 0.21)), c + b * Vector3(x, y, 0)), col.lightened(0.08 + 0.015 * (i % 3)))
+	if pose == "pack":
+		for side: float in [-1.0, 1.0]:
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.37, 0.39, 0.22)), c + b * Vector3(-0.46, 0.54, side * 0.57)), Color(0.68, 0.45, 0.23))
+			_add("block", Transform3D(b * Basis.from_scale(Vector3(0.55, 0.08, 0.06)), c + b * Vector3(-0.46, 0.78, side * 0.62)), Palette.UNDYED)
 
 # Camel lofts, rings along a spine in the XY plane: [centre, above, below, side]
 # (half-extents toward the spine's upper normal, away from it, and across in Z)
@@ -1135,7 +1253,7 @@ func _flush() -> void:
 	for kind: String in _batches:
 		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
 		# Ground-hugging bits: shadows cost more than they add
-		if kind in ["pebble", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash"]:
+		if kind in ["pebble", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash", "sheep_wool"]:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
 	_build_lamps()
@@ -1229,7 +1347,7 @@ func _material_for(kind: String) -> Material:
 		"chip":             return Chunky.material(0.03, false, 0.3)
 		"timber":           return Chunky.wood_material(0.025)
 		"slab":             return Chunky.material(0.1, false, 0.28)
-		"bush", "leaf":     return Chunky.foliage_material()
+		"bush", "leaf", "olive_sprig", "myrtle_sprig", "palm_frond": return Chunky.foliage_material()
 		"tuft", "tuft_b":   return _grass_material()
 		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
 	return Chunky.material(0.0, false, 0.0)
@@ -1242,6 +1360,12 @@ func _mesh_for(kind: String) -> Mesh:
 		"tuft_b":  return _tuft_mesh(31)
 		"bush":    return _sphere(0.42, 0.62, 12, 6)
 		"leaf":    return _sphere(0.6, 1.0, 14, 7)
+		"olive_sprig": return _sprig_mesh(9)
+		"myrtle_sprig": return _sprig_mesh(7)
+		"blossom": return _sphere(0.085, 0.05, 6, 2)
+		"palm_frond": return _palm_frond_mesh()
+		"palm_scale": return Chunky.unit_block()
+		"date": return _sphere(0.5, 1.0, 8, 4)
 		"boulder": return _sphere(0.6, 0.9, 6, 3)
 		"jar":     return _sphere(0.22, 0.5, 8, 4)
 		"blob":    return _sphere(0.5, 1.0, 12, 6)
@@ -1285,6 +1409,54 @@ func _blocked(p: Vector2) -> bool:
 		if r.has_point(p):
 			return true
 	return false
+# Small pointed leaves on fine twigs. One mesh instance is a complete sprig, so the
+# crowns stay detailed without creating a node or draw call for every leaf.
+static func _sprig_mesh(count: int) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in count:
+		var a := TAU * i / count
+		var d := Vector3(cos(a), 0, sin(a))
+		var side := Vector3(-sin(a), 0, cos(a))
+		var root := d * 0.13 + Vector3(0, 0.03 * (i % 3), 0)
+		var mid := d * 0.45 + Vector3(0, 0.07 + 0.04 * (i % 2), 0)
+		var tip := d * 0.72 + Vector3(0, 0.03, 0)
+		var left := mid - side * 0.12
+		var right := mid + side * 0.12
+		for p in [root, left, tip, root, tip, right, tip, left, root, right, tip, root]:
+			st.add_vertex(p)
+	st.generate_normals()
+	return st.commit()
+
+# A curved midrib with paired, narrow leaflets. The downward outer arc makes the
+# crown legible from the game's elevated camera as well as at character height.
+static func _palm_frond_mesh() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in 14:
+		var t := i / 14.0
+		var next := (i + 1) / 14.0
+		var a := Vector3(0.1 + 2.65 * t, 0.15 + 0.42 * sin(t * PI) - 0.95 * t * t, 0)
+		var b := Vector3(0.1 + 2.65 * next, 0.15 + 0.42 * sin(next * PI) - 0.95 * next * next, 0)
+		var width := 0.025 * (1.0 - t * 0.7)
+		for p in [a + Vector3(0, 0, width), b + Vector3(0, 0, width), b - Vector3(0, 0, width), a + Vector3(0, 0, width), b - Vector3(0, 0, width), a - Vector3(0, 0, width), b - Vector3(0, 0, width), b + Vector3(0, 0, width), a + Vector3(0, 0, width), a - Vector3(0, 0, width), b - Vector3(0, 0, width), a - Vector3(0, 0, width)]:
+			st.add_vertex(p)
+	for i in 23:
+		var t := 0.07 + i * 0.039
+		var x := 0.1 + 2.65 * t
+		var y := 0.15 + 0.42 * sin(t * PI) - 0.95 * t * t
+		var length := 0.85 * sin(t * PI) + 0.1
+		for side in [-1.0, 1.0]:
+			var root := Vector3(x, y, 0)
+			var shoulder := root + Vector3(0.11, 0.015, side * length * 0.48)
+			var tip := root + Vector3(0.24, -0.13, side * length)
+			var left := shoulder + Vector3(-0.045, 0, 0)
+			var right := shoulder + Vector3(0.045, 0, 0)
+			for p in [root, left, tip, root, tip, right, tip, left, root, right, tip, root]:
+				st.add_vertex(p)
+	st.generate_normals()
+	return st.commit()
+
 
 func _yaw() -> Basis:
 	return Basis.from_euler(Vector3(0.0, _rng.randf() * TAU, 0.0))

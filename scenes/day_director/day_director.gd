@@ -8,6 +8,38 @@ extends Node
 #   DUSK  — enemies flee, the crew cheers, the day's tally shows; then the next day begins
 # Moving into a new circuit section (Nehemiah 3) resets the wall to bare foundations.
 
+# Setbacks (GDD §5.15): one verse each, warned or seen in the world, felt in the loop,
+# answered by what comes next. Table keys are section indices.
+# The ambush (Neh. 4:11), Tower of Ovens: on the stretch's 3rd day (RAID) the watch calls
+# that they'll come in the night; at the next dawn, unless a watch post stands stocked
+# (4:9 — "we set a watch"), they pull one finished piece down two stages and strew the yard.
+# Never on the last day, never without a piece to lose.
+const RAID := { 4: 2 }
+const RAID_STAGES := 2
+const RAID_STREWN := 2   # supply piles left in rubble
+# The open letter (Neh. 6:5-9), East Gate: on the stretch's 2nd day a rumour weakens every
+# hand until the fifth messenger — the one with the letter — is turned away
+const LETTER := { 10: 1 }
+# Shemaiah (Neh. 6:10-13), Miphkad Gate: on the first day he offers a worker the temple
+const SHEMAIAH := { 11: 0 }
+# Tobiah's fox (Neh. 4:3), Broad Wall: trots over the unfinished wall on the 2nd day — the
+# seed; it runs again over a stretch the raid pulled down
+const FOX := { 3: 1 }
+const SHEMAIAH_AT := 40.0   # seconds into the day
+# What the watchman says, the verse (WEB), its reference, and the scribe's margin note
+const SETBACK_LINES := {
+	"fox":     ["A fox! Tobiah said one would break our wall down…", "What they are building, if a fox climbed up it, he would break down their stone wall.", "Neh. 4:3", ""],
+	"warn":    ["They'll slip in tonight — a watch on the wall!", "But we made our prayer to our God, and set a watch against them day and night, because of them.", "Neh. 4:9", ""],
+	"held":    ["The watch held — they crept off in the dark.", "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work.", "Neh. 4:15", "The watch held in the night"],
+	"hit":     ["In the night they came — a stretch pulled down, the yard in rubble!", "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall.", "Neh. 4:10", "Pulled down in the night"],
+	"hungry":  ["The hungry went back to their fields — we're short of hands.", "Yet now our flesh is as the flesh of our brothers, our children as their children.", "Neh. 5:5", "Short of hands: the hungry were not fed"],
+	"letter":  ["A letter in the yard: they say you mean to be king!", "You would be their king, according to these words.", "Neh. 6:6", "A rumour weakens every hand"],
+	"answer":  ["“No such things are done” — the letter is turned away.", "There are no such things done as you say, but you imagine them out of your own heart.", "Neh. 6:8", "The letter answered"],
+	"lifted":  ["The rumour dies down — strengthen our hands!", "But now, strengthen my hands.", "Neh. 6:9", ""],
+	"shem":    ["A man of the temple is asking for you — it's a trap!", "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple.", "Neh. 6:10", ""],
+	"shem_no": ["He turned away. He was hired to frighten us.", "Should a man like me flee? Who is there that, being such as I, would go into the temple to save his life? I will not go in.", "Neh. 6:11", "Would not hide in the temple"],
+	"shem_go": ["Someone has gone to hide in the temple!", "He hired so that I would be afraid, do so, and sin.", "Neh. 6:13", "One hid in the temple"],
+}
 const DAWN_TIME        := 5.0
 const DUSK_TIME        := 9.0   # long enough to read the tally (title screen: nobody to wait for)
 const DUSK_MIN         := 4.0   # the cheer plays out even if everyone is ready at once
@@ -48,6 +80,8 @@ var _votes := {}   # server: end-screen picks, peer_id → "again" | "next"
 # Server: today's numbers. "crew" is peer_id → { loads, foes }
 var _stats := {}
 var _breaches_at_dawn := 0
+var _raid_pending := false   # server: the watch has called it; it strikes at the next dawn
+var _setbacks: bool = "--no-setbacks" not in OS.get_cmdline_user_args()
 # Server: this section so far, for its rating
 var _section_time := 0.0
 var _section_breaches := 0   # GameState.breaches when the section began
@@ -66,6 +100,7 @@ var _sun_resync := 0.0
 
 func _ready() -> void:
 	add_to_group("day_director")
+	add_child(Fox.new())   # Tobiah's fox (cosmetic, every peer)
 	_reset_stats()
 	GameState.phase_changed.connect(_on_phase_changed)
 	for unit_name: String in UNIT_ORDER:
@@ -106,11 +141,13 @@ func _process(delta: float) -> void:
 			_timer -= delta
 			if _timer <= 0.0:
 				GameState.set_phase(GameState.Phase.WORK)
+				_setback_at_dawn()
 				_waves.start(GameState.current_day)
 		GameState.Phase.WORK:
 			_stats["time"] += delta
 			_section_time += delta
 			_tick_sun(delta)
+			_tick_shemaiah(delta)
 		GameState.Phase.DUSK:
 			_timer -= delta
 			if _timer <= 0.0 and _waiting.is_empty():
@@ -131,6 +168,122 @@ func _process(delta: float) -> void:
 				elif GameState.advance_day():
 					_begin_day()
 
+# ── Setbacks ───────────────────────────────────────────────
+
+var _letter_open := false    # server: the rumour is out and not yet answered
+var _shem_t := 0.0           # server: seconds of work today (Shemaiah)
+var _shem_sent := false
+
+## Server, as the work begins: the day's setback, if it has one
+func _setback_at_dawn() -> void:
+	_shem_t = 0.0
+	_shem_sent = false
+	var i := GameState.current_section_index
+	if not _setbacks or GameState.attract or GameState.free_play() or GameState.is_replay():
+		return
+	var pos := GameState.day_in_section(GameState.current_day)
+	if _letter_open:   # a rumour that outlived its day dies down by morning
+		_letter_open = false
+		_setback_report.rpc("lifted", 0.0, 0)
+	if pos.x == 0 and GameState.hungry_left > 0:
+		_setback_report.rpc("hungry", 0.0, GameState.hungry_left)
+	if LETTER.get(i, -1) == pos.x and pos.x < pos.y - 1:
+		_letter_open = true
+		_setback_report.rpc("letter", 0.0, 0)
+	if FOX.get(i, -1) == pos.x:
+		_setback_report.rpc("fox", 0.0, 0)
+	if RAID.has(i):
+		if _raid_pending:
+			_raid_pending = false
+			_night_raid()
+		elif pos.x == RAID[i] and pos.x < pos.y - 1 and _raid_piece() != null:
+			_raid_pending = true
+			_setback_report.rpc("warn", 0.0, 0)
+
+## Server, every frame of work: Shemaiah comes to a worker, once, on his day
+func _tick_shemaiah(delta: float) -> void:
+	if _shem_sent or not _setbacks or not SHEMAIAH.has(GameState.current_section_index) \
+			or GameState.attract or GameState.free_play() or GameState.is_replay():
+		return
+	if GameState.day_in_section(GameState.current_day).x != SHEMAIAH[GameState.current_section_index]:
+		return
+	_shem_t += delta
+	var visitors := get_parent().get_node("Visitors")
+	if _shem_t < SHEMAIAH_AT or visitors.get_child_count() > 0:
+		return
+	_shem_sent = true
+	var m: Node3D = _waves.MESSENGER_SCENE.instantiate()
+	m.name = "Shemaiah"
+	m.position = Vector3(26.0 if randf() < 0.5 else -26.0, 0.1, randf_range(7.0, 12.0))
+	NetworkManager.gate_sync(m.get_node("MultiplayerSynchronizer"))
+	visitors.add_child(m, true)
+	_setback_report.rpc("shem", m.position.x, 0)
+
+## Server: a visitor was turned away (he gave up waiting). Answers the letter; refuses Shemaiah.
+func note_refused(visitor_name: String) -> void:
+	if visitor_name == "Letter" and _letter_open:
+		_letter_open = false
+		_setback_report.rpc("answer", 0.0, 0)
+	elif visitor_name == "Shemaiah":
+		_setback_report.rpc("shem_no", 0.0, 0)
+
+## Server: a worker followed Shemaiah toward the temple
+func note_shemaiah() -> void:
+	_setback_report.rpc("shem_go", 0.0, 0)
+
+## The finished single piece nearest the front of the work (the last built), or null
+func _raid_piece() -> Node3D:
+	for k in range(_units.size() - 1, -1, -1):
+		var unit: Array = _units[k]
+		if unit.size() == 1 and unit[0].is_complete() and not unit[0].decorative:
+			return unit[0]
+	return null
+
+func _night_raid() -> void:
+	for post: Node in get_tree().get_nodes_in_group("watch_posts"):
+		if post.built and post.ammo > 0:
+			_setback_report.rpc("held", 0.0, 0)   # a stocked watch turned them back
+			return
+	var piece := _raid_piece()
+	if piece == null:
+		return
+	for n in RAID_STAGES:
+		piece._degrade()
+	# "Much rubble": the yard's loads are strewn too, tidied like a saboteur's (§5.9)
+	var strewn := 0
+	for pile: Node in get_tree().get_nodes_in_group("supply_piles"):
+		if strewn < RAID_STREWN and pile.kind in ["stone", "wood"] and pile.scatter():
+			strewn += 1
+	print("DayDirector: night raid pulled down %s, strewed %d piles" % [piece.name, strewn])
+	_setback_report.rpc("hit", piece.global_position.x, 0)
+
+# Every peer: the nearest watchman calls it with its verse, the scribe writes it in the
+# margin, and the state it sets (hunger, rumour) is the same everywhere
+@rpc("authority", "call_local", "reliable")
+func _setback_report(kind: String, x: float, n: int) -> void:
+	var lines: Array = SETBACK_LINES[kind]
+	match kind:
+		"hungry": GameState.hungry_left = n
+		"letter": GameState.rumour = true
+		"answer", "lifted": GameState.rumour = false
+	var line := "%s\n“%s” (%s)" % [tr(lines[0]), tr(lines[1]), GameState.short_ref(lines[2])]
+	var urgent := kind in ["warn", "hit", "hungry", "letter", "shem", "shem_go"]
+	for w in get_tree().get_nodes_in_group("watchmen"):
+		var man: Dictionary = w._nearest_man(x)
+		w._call(man, tr(lines[0]), urgent)
+		man["shout"].say(line, 6.5, urgent)
+	if not lines[3].is_empty():
+		GameState.add_journal("%s · %s" % [tr(lines[3]), GameState.short_ref(lines[2])])
+	match kind:
+		"fox":
+			get_tree().call_group("setback_fx", "fox_over", 0.0)
+		"warn", "letter", "shem":
+			Sfx.play("alert")
+		"hit":
+			Sfx.play("breach")
+			get_tree().call_group("camera_rig", "shake", 0.4)
+			get_tree().call_group("setback_fx", "fox_over", x)
+
 # ── Day flow ───────────────────────────────────────────────
 
 func _begin_day() -> void:
@@ -145,6 +298,8 @@ func _begin_day() -> void:
 		_section_time = 0.0
 		_section_breaches = GameState.breaches
 		_section_ono = 0
+		_raid_pending = false
+		_letter_open = false
 		_section_stats = { "loads": 0, "foes": 0, "crew": {} }
 		_credit.clear()
 		for item in _items.get_children():
@@ -249,21 +404,27 @@ func _end_day(nightfall := false) -> void:
 func _rate_section() -> void:
 	var i := GameState.current_section_index
 	var par := GameState.par_time()
+	var pos := GameState.day_in_section(GameState.current_day)
+	var spare := pos.y - 1 - pos.x
 	var health := _wall_health()
 	var mask := 0
-	if _section_time <= par:
+	if spare >= GameState.pace_spare_needed(i):
 		mask |= GameState.Mark.PACE
 	if GameState.breaches == _section_breaches:
 		mask |= GameState.Mark.CLEAN
 	if health >= GameState.SOUND_WALL:
 		mask |= GameState.Mark.SOUND
-	print("DayDirector: %s rated %d/3 — time %.0f s (par %.0f), breaches %d, wall %d%%" % [
-		GameState.SECTIONS[i]["name"], GameState.mark_count(mask), _section_time, par,
+	print("DayDirector: %s rated %d/3 — day %d of %d (%d to spare, needs %d; %.0f s, par %.0f), breaches %d, wall %d%%" % [
+		GameState.SECTIONS[i]["name"], GameState.mark_count(mask), pos.x + 1, pos.y, spare,
+		GameState.pace_spare_needed(i), _section_time, par,
 		GameState.breaches - _section_breaches, roundi(health * 100.0)])
 	GameState.rate_section(i, mask)
 	_stats["marks"] = mask
 	_stats["section_time"] = _section_time
 	_stats["par"] = par
+	_stats["section_day"] = pos.x + 1
+	_stats["section_days"] = pos.y
+	_stats["pace_needed"] = GameState.pace_spare_needed(i)
 	_stats["section_breaches"] = GameState.breaches - _section_breaches
 	_stats["section_loads"] = _section_stats["loads"]
 	_stats["section_foes"] = _section_stats["foes"]

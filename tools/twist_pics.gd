@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stages a twist in the real game and saves the pictures TwistCard shows, one per panel:
 #   Godot --path . --script res://tools/twist_pics.gd -- --nostory --day=<a day of the twist> <twist>
-# Day per twist: doors 1, beams 5, salvage 9, thick 13, mixing 18, horn 24, haul 30,
+# Day per twist: doors 1, ruins 9, beams 5, salvage 9, thick 13, mixing 18, horn 24, haul 30,
 # spring 34, night 37, cramped 42, schemes 48 (tools/twist_pics.ps1 runs them all).
 # Writes res://art/twist/<twist>_<n>.png, cropped to the plate's picture (440:238). Then
 # `Godot --path . --headless --import`, so the card picks the new files up.
@@ -246,6 +246,29 @@ func _stage(twist: String, i: int) -> Dictionary:
 			return { "look": _o(h.global_position, 0, 1.0), "size": 10.0,
 				"crew": [[_o(h.global_position, -2.0, 2.0), "right", "stone"]],
 				"foes": [[E.SCOUT, _o(h.global_position, 4.5, -2.0)]] }
+		# Jeshanah Gate: a stretch still standing wants only mortar, a burned one is cleared first
+		"ruins0":
+			var s := _section("Section1")
+			var at: Vector3 = s.global_position
+			return { "look": at + Vector3(0, 0.5, 0.8), "size": 10.0,
+				"crew": [[_o(at, -1.0, 3.0), "up", "mortar"]],
+				"setup": func(): _wall(s, 2, 0) }
+		"ruins1":
+			var s := _section("Section3")
+			var at: Vector3 = s.global_position
+			return { "look": at + Vector3(0, 0.5, 0.8), "size": 10.0,
+				"crew": [[_o(at, -1.0, 2.6), "up", ""]],
+				"setup": func():
+					_wall(s, 0, 0)
+					s.cleared = false }
+		"ruins2":
+			var s := _section("Section3")
+			var at: Vector3 = s.global_position
+			return { "look": at + Vector3(0, 0.5, 0.8), "size": 10.0,
+				"crew": [[_o(at, -1.0, 2.6), "up", "stone"]],
+				"setup": func():
+					s.cleared = true
+					_wall(s, 1, 0) }
 		# Broad Wall: double thick, four hands, it stands up to the brutes
 		"thick0":
 			var s := _section("Section3")
@@ -281,16 +304,20 @@ func _stage(twist: String, i: int) -> Dictionary:
 				"hold": func(): t.mix_left = 3.0 }
 		"mixing2":
 			var t := _sup("Trough")
-			return { "look": _o(t.global_position, -1.5, 1.0), "size": 9.0,
-				"crew": [[_o(t.global_position, -3.0, 1.8), "down", "mortar"]],
-				"setup": func(): _trough(t, false, false, true) }
+			var s := _section("Section3")
+			var at: Vector3 = s.global_position
+			return { "look": at + Vector3(0, 0.5, 0.8), "size": 10.0,
+				"crew": [[_o(at, -1.0, 2.6), "up", "mortar"]],
+				"setup": func():
+					_trough(t, false, false, true)
+					_wall(s, 2, 0) }
 		# Valley Gate: surges, the horn, the gathering
 		"horn0":
-			return { "look": Vector3(1, 0, -3), "size": 15.0,
-				"crew": [[Vector3(-5, 0.1, 3.5), "up", ""]],
-				"foes": [[E.SCOUT, Vector3(-6, 0.1, -6.5)], [E.SCOUT, Vector3(-2, 0.1, -8)],
-					[E.SCOUT, Vector3(3, 0.1, -6.8)], [E.SCOUT, Vector3(8, 0.1, -8.5)],
-					[E.BRUTE, Vector3(1, 0.1, -10)]] }
+			return { "look": Vector3(0, 0, -3), "size": 9.0,
+				"crew": [[Vector3(-3, 0.1, 1.0), "up", ""]],
+				"foes": [[E.SCOUT, Vector3(-4, 0.1, -3.5)], [E.SCOUT, Vector3(-1.5, 0.1, -5)],
+					[E.SCOUT, Vector3(1.5, 0.1, -4)], [E.SCOUT, Vector3(4, 0.1, -5.5)],
+					[E.BRUTE, Vector3(0.5, 0.1, -7)]] }
 		"horn1":
 			return { "look": Vector3(0, 0, 4), "size": 9.0,
 				"crew": [[Vector3(0, 0.1, 4), "down", ""]],
@@ -338,9 +365,9 @@ func _stage(twist: String, i: int) -> Dictionary:
 			return { "look": Vector3(0, 0.6, 4), "size": 7.5, "night": true,
 				"crew": [[Vector3(0, 0.1, 4), "down", ""]] }
 		"night2":
-			return { "look": Vector3(0, 0.6, 1), "size": 11.0, "night": true,
+			return { "look": Vector3(0.3, 0.6, 2.4), "size": 9.0, "night": true,
 				"crew": [[Vector3(-1, 0.1, 3.6), "up", ""]],
-				"foes": [[E.SCOUT, Vector3(2.5, 0.1, -3.4)]] }
+				"foes": [[E.SCOUT, Vector3(1.6, 0.1, 1.0)]] }
 		# Horse Gate: priests' houses between the yard and the wall, narrow lanes, hand loads over
 		"cramped0":
 			return { "look": Vector3(8, 0, 5), "size": 18.0,
@@ -359,15 +386,15 @@ func _stage(twist: String, i: int) -> Dictionary:
 				"messenger": [_o(at, 1.7, 0.3), 1, "left"] }
 		"schemes1":
 			var at := Vector3(14, 0.1, 9)
-			return { "look": _o(at, 0, 0), "size": 11.0,
-				"crew": [[_o(at, -1.8, 0), "right", ""]],
-				"messenger": [_o(at, 0.4, 0), 2, "right"] }
+			return { "look": _o(at, 0.6, 0), "size": 9.0,
+				"crew": [[_o(at, -1.4, 0), "right", ""]],
+				"messenger": [_o(at, 1.8, 0), 2, "right"] }
 		"schemes2":
 			var s := _section("Section3")
 			var at: Vector3 = s.global_position
-			return { "look": _o(at, 1.0, 1.4), "size": 10.0,
+			return { "look": _o(at, 1.8, 1.4), "size": 10.0,
 				"crew": [[_o(at, -1.0, 2.6), "up", "stone"]],
-				"messenger": [_o(at, 5.2, 2.6), 3, "right"] }
+				"messenger": [_o(at, 3.6, 2.6), 3, "right"] }
 	return { "look": Vector3(0, 0, 4) }
 
 ## A spot on the Fish Gate yard along the screen's horizontal

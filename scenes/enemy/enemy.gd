@@ -22,6 +22,15 @@ const STAGGER_TIME      := 0.3    # a sling hit knocks the wind out briefly
 const HITSTOP_TIME      := 0.09   # sprite holds its frame on a hit
 const KNOCK_DECEL       := 40.0   # m/s² a sword shove bleeds off at
 const KNOCK_TAKE        := { Type.SCOUT: 1.0, Type.BRUTE: 0.35, Type.RAIDER: 0.8, Type.SABOTEUR: 1.2 }   # share of a shove felt
+# The tell (GDD §5.16, `--no-tell`): a foe draws the spear back before it strikes, and the
+# blow lands at the end only if the worker is still in reach. A hit in the draw knocks the
+# strike aside — any hit, except that a brute shrugs off anything lighter than STEADY
+const TELL              := { Type.SCOUT: 0.45, Type.BRUTE: 0.8, Type.RAIDER: 0.35, Type.SABOTEUR: 0.0 }
+const TELL_SLACK        := 0.4    # m past ATTACK_RANGE the blow still finds a worker
+const STEADY            := { Type.BRUTE: 18.0 }   # least blow that breaks a brute's draw
+const REEL_TIME         := 0.45   # knocked aside: stumbling, no strike
+# A true shot (Player, GDD §5.16) knocks a foe off his feet for this long
+const DOWN_TIME         := { Type.SCOUT: 2.2, Type.BRUTE: 1.5, Type.RAIDER: 1.9, Type.SABOTEUR: 2.4 }   # the clip runs ~2 s (char_anim "knocked")
 const REPATH_INTERVAL   := 0.3
 const SCAN_INTERVAL     := 0.2    # how often to look around for a new worker / wall
 const STUCK_WINDOW      := 0.6    # seconds of no progress before bashing a wall
@@ -31,6 +40,10 @@ const GOAL_Z            := 23.0   # the stockpiles, so the crew can still run a 
 const GOAL_X_SPREAD     := 12.0
 const WRECKER_CHANCE    := 0.5    # share of scouts/raiders that go for the wall; brutes always do
 const WALL_STANDOFF     := 0.6    # where a wrecker stands, measured out from the wall face
+const SEP_RADIUS        := 1.0    # enemies closer than this (× body scale) push each other apart
+const SEP_WEIGHT        := 1.3    # push strength vs. the heading (1 = equal pull)
+const SEP_INTERVAL      := 0.12   # neighbour sweep period; the push is reused between sweeps
+const SEP_SETTLE_SPEED  := 1.2    # m/s slide that spreads attackers out round their target
 
 # Distinct silhouette per type (CharacterRig.enemy_look), one dark colour family
 const _LOOKS := { Type.SCOUT: "scout", Type.BRUTE: "brute", Type.RAIDER: "raider", Type.SABOTEUR: "saboteur" }
@@ -63,6 +76,13 @@ var anim := "idle_down":
 		if _sprite != null and _sprite.animation != value:
 			if value.begins_with("thrust"):
 				Sfx.play("enemy_swing", global_position)
+			elif value.begins_with("brace"):
+				Sfx.play("enemy_tell", global_position)
+				_sprite.squash(Vector2(0.9, 1.1))   # gathering himself — reads at a glance
+			elif value.begins_with("reel"):
+				Sfx.play("interrupt", global_position)
+			elif value.begins_with("knocked"):
+				_sprite.squash(Vector2(1.2, 0.82))
 			elif value == "collapse":
 				Sfx.play("enemy_die", global_position)
 		anim = value
@@ -77,6 +97,7 @@ var hits := 0:
 			_sprite.hit_flash()
 			_sprite.hitstop(HITSTOP_TIME)
 			_sprite.squash(Vector2(1.12, 0.9))
+			_sprite.recoil(0.32)
 			Sfx.play("enemy_hit", global_position)
 
 # Replicated so clients can draw the health bar
@@ -101,6 +122,9 @@ var _facing := "down"
 var _busy := false
 var _stagger := 0.0
 var _knock := Vector3.ZERO   # shove velocity, spent over the stagger (sword hits)
+var _tell := 0.0             # server: seconds left drawing back before the blow lands
+var _tell_victim: Node3D
+var _tell_at := Vector3.ZERO
 var _last_hitter := 0     # server: peer whose stone hit last (credited in the tally)
 var _fleeing := false
 # Saboteur (server)
@@ -111,6 +135,9 @@ var _escaping := false
 var _climb_wall: Node3D
 var _climb_t := 0.0
 var _no_headway := 0.0
+var _sep := Vector3.ZERO   # cached push away from crowding neighbours
+var _sep_t := randf() * SEP_INTERVAL
+var _pace := randf_range(0.93, 1.07)   # a wave doesn't march in lockstep
 
 @onready var nav: NavigationAgent3D = $NavigationAgent3D
 @onready var _sprite: CharacterRig = $Figure
@@ -153,10 +180,13 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 			_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECEL * delta)
 		return
+	if _tell > 0.0:
+		_drawing(delta)
+		return
 	if _busy:
 		return
 	_pick_target(delta)
-	if _try_attack_player() or _try_attack_wall():
+	if _try_attack_player(delta) or _try_attack_wall(delta):
 		return
 	_move(delta)
 	_check_stuck(delta)
@@ -235,10 +265,47 @@ func _move_to(dest: Vector3, delta: float) -> void:
 		step = dest - global_position
 		step.y = 0.0
 	if step.length_squared() > 0.01:
-		velocity = step.normalized() * SPEED[type]
+		var dir := step.normalized()
+		_refresh_separation(delta)
+		var steer := dir + _sep * SEP_WEIGHT
+		if steer.length_squared() > 0.0001:
+			dir = steer.normalized()
+		velocity = dir * SPEED[type] * _pace
 		move_and_slide()
 	else:
 		velocity = Vector3.ZERO
+
+# Soft push away from nearby enemies, stronger the closer they are. Swept on a timer
+# and cached so a full wave isn't an O(n²) every physics tick.
+func _refresh_separation(delta: float) -> void:
+	_sep_t -= delta
+	if _sep_t > 0.0:
+		return
+	_sep_t = SEP_INTERVAL
+	_sep = Vector3.ZERO
+	var mine: float = SEP_RADIUS * SCALE[type]
+	for o in get_tree().get_nodes_in_group("enemies"):
+		if o == self or not (o is Node3D):
+			continue
+		var off: Vector3 = global_position - o.global_position
+		off.y = 0.0
+		var reach: float = mine + (SEP_RADIUS * SCALE[o.type] - mine) * 0.5
+		var d := off.length()
+		if d >= reach:
+			continue
+		if d < 0.02:   # exactly stacked: any direction beats none
+			off = Vector3.RIGHT.rotated(Vector3.UP, randf() * TAU)
+			d = 0.02
+		_sep += off / d * (1.0 - d / reach)
+
+# Standing attackers slide apart so they ring their target instead of piling on one spot
+func _settle(delta: float) -> void:
+	_refresh_separation(delta)
+	if _sep.length_squared() < 0.0025:
+		return
+	velocity = _sep.limit_length(1.0) * SEP_SETTLE_SPEED
+	move_and_slide()
+	velocity = Vector3.ZERO
 
 # No progress for a while → something built is in the way; batter it
 func _check_stuck(delta: float) -> void:
@@ -268,17 +335,23 @@ func _nearest_wall() -> Node3D:
 
 # ── Attack ─────────────────────────────────────────────────
 
-func _try_attack_player() -> bool:
+func _try_attack_player(delta: float) -> bool:
 	if _target_player == null or _dist_flat(_target_player) > ATTACK_RANGE:
 		return false
 	velocity = Vector3.ZERO
 	if _attack_timer <= 0.0:
 		_attack(_target_player, _target_player.global_position)
 	else:
+		_settle(delta)
 		anim = "idle_" + _facing
 	return true
 
-func _try_attack_wall() -> bool:
+## At a wall and working on it (watch posts shoot these first)
+func is_battering() -> bool:
+	return _target_player == null and _target_wall != null \
+		and _target_wall.distance_to_point(global_position) <= WALL_REACH
+
+func _try_attack_wall(delta: float) -> bool:
 	if _target_player != null or _target_wall == null \
 			or _target_wall.distance_to_point(global_position) > WALL_REACH:
 		return false
@@ -287,18 +360,53 @@ func _try_attack_wall() -> bool:
 	if _attack_timer <= 0.0:
 		_attack(_target_wall, at)
 	else:
+		_settle(delta)
 		anim = "idle_" + _facing
 	return true
 
 func _attack(victim: Node3D, at: Vector3) -> void:
 	_attack_timer = ATTACK_CD
 	_facing = CharAnim.dir_from_velocity(at - global_position, _facing)
+	if GameState.tell and TELL[type] > 0.0:
+		_tell = TELL[type]
+		_tell_victim = victim
+		_tell_at = at
+		anim = "brace_" + _facing
+		return
+	_strike(victim)
+
+# Drawing back: rooted, turning to follow a worker, then the blow
+func _drawing(delta: float) -> void:
+	velocity = Vector3.ZERO
+	if is_instance_valid(_tell_victim) and _tell_victim.is_in_group("players"):
+		_facing = CharAnim.dir_from_velocity(_tell_victim.global_position - global_position, _facing)
+	_tell -= delta
+	if _tell > 0.0:
+		return
+	var victim := _tell_victim
+	_tell_victim = null
+	if not is_instance_valid(victim):
+		_update_anim()
+		return
+	if victim.is_in_group("players"):
+		# Stepped or dashed out of reach, or already down: the spear finds air
+		if victim.downed or _dist_flat(victim) > ATTACK_RANGE + TELL_SLACK:
+			_strike(null)
+			return
+	_strike(victim)
+
+func _strike(victim: Node3D) -> void:
 	_busy = true
 	anim = "thrust_" + _facing
-	victim.take_damage(DAMAGE[type] * Settings.diff()["harm"])
+	if victim != null:
+		victim.take_damage(DAMAGE[type] * Settings.diff()["harm"])
 	await _sprite.animation_finished
 	if is_instance_valid(self):
 		_busy = false
+
+## Mid-draw: a blow this heavy knocks the strike aside (a brute only for a solid one)
+func _breaks_tell(amount: float) -> bool:
+	return _tell > 0.0 and amount >= STEADY.get(type, 0.0)
 
 # ── Animation ──────────────────────────────────────────────
 
@@ -321,10 +429,32 @@ func take_damage(amount: float, by := 0) -> void:
 	_scatter_t = 0.0
 	health = maxf(health - amount, 0.0)
 	hits += 1
+	if health == 0.0:
+		_tell = 0.0
+		_die()
+		return
+	if _tell > 0.0:
+		if not _breaks_tell(amount):
+			return   # a brute set to strike doesn't flinch at a pebble
+		_tell = 0.0
+		_tell_victim = null
+		_stagger = REEL_TIME
+		_knock = Vector3.ZERO
+		anim = "reel_" + _facing
+		return
 	_stagger = STAGGER_TIME
 	_knock = Vector3.ZERO
-	if health == 0.0:
-		_die()
+
+## Server: a true shot — off his feet for a moment, whatever he was about (a draw, a climb,
+## battering the wall). Shoved back along `dir` by about `dist` metres as he goes down
+func knock_down(dir: Vector3, dist: float) -> void:
+	if health <= 0.0 or _fleeing:
+		return
+	_tell = 0.0
+	_tell_victim = null
+	_stagger = DOWN_TIME[type]
+	anim = "knocked_" + _facing
+	knock_back(dir, dist)
 
 ## Server: shove back along `dir` by about `dist` metres over the stagger. Call after
 ## take_damage (which starts the stagger); brutes barely budge.

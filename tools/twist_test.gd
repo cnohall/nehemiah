@@ -80,6 +80,9 @@ func _process(delta: float) -> bool:
 				var horn: Node3D = _main.get_node("Horn")
 				_check(horn.get_child_count() == 1, "horn raised a standard")
 				_check(_pings("Horn") == 1, "horn pointer registered")
+				_check(is_equal_approx(horn.rally_damage(_player.global_position), 1.5), "blows ×1.5 inside the ring")
+				_check(is_equal_approx(horn.rally_damage(_player.global_position + Vector3(6, 0, 0)), 1.0), "normal blows outside the ring")
+				_check(horn.rally_sword_cd(_player.global_position) < 1.0, "quicker cuts inside the ring")
 				_press("horn")   # again at once: cooldown
 				_state = "horn_cooldown"
 				_mark = _t
