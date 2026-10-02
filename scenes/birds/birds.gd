@@ -1,6 +1,6 @@
 extends Node3D
 
-# Sparrows and rock doves about the site (Bird). Flocks land on open ground each side of
+# Sparrows, doves, pigeons and a raven about the site (Bird). Flocks land on open ground each side of
 # the wall, laid out per section from the section index, and live on each peer alone:
 # nothing crosses the network, as everything that puts them up already runs everywhere.
 #   put up by:  a worker walking into them, a foe coming on (so the flocks outside
@@ -65,15 +65,21 @@ func _lay_out(count: int, side: float, rng: RandomNumberGenerator) -> void:
 		if not _free(c) or _flocks.any(func(f: Dictionary) -> bool: return _flat(f.spot).distance_to(c) < FLOCK_GAP):
 			continue
 		made += 1
-		# Doves keep to the city side; sparrows are everywhere
-		var kind := "dove" if side > 0.0 and rng.randf() < 0.4 else "sparrow"
+		# The city flock mixes warm doves and grey pigeons; sparrows and one
+		# larger raven gather outside the wall.
+		var kind := "dove" if side > 0.0 else "sparrow"
 		var flock := { "spot": Vector3(c.x, FLOOR_Y, c.y), "kind": kind, "birds": [],
 			"away": false, "quiet": 0.0, "call": rng.randf_range(1.0, 6.0) }
 		var n := rng.randi_range(2, 3) if kind == "dove" else rng.randi_range(3, 5)
 		for i in n:
 			var at := c + Vector2.RIGHT.rotated(rng.randf() * TAU) * rng.randf_range(0.0, FLOCK_R)
 			var bird := BIRD.new() as Bird
-			bird.setup(kind, Vector3(at.x, FLOOR_Y, at.y))
+			var look := kind
+			if kind == "dove" and i % 2 == 0:
+				look = "pigeon"
+			elif kind == "sparrow" and i == 0:
+				look = "raven"
+			bird.setup(look, Vector3(at.x, FLOOR_Y, at.y))
 			add_child(bird)
 			flock.birds.append(bird)
 		_flocks.append(flock)

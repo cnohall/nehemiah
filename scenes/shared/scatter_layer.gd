@@ -439,9 +439,9 @@ func _arab_camp(c: Vector3) -> void:
 	_hair_tent(c + Vector3(-2.6, 0, -1.8), 0.08)
 	_hair_tent(c + Vector3(3.4, 0, -2.6), -0.1)
 	_campfire(c + Vector3(0.6, 0, 1.4))
-	_camel(c + Vector3(-3.6, 0, 2.8), 0.4)
-	_camel(c + Vector3(-5.2, 0, 4.5), PI + 0.2)
-	_camel(c + Vector3(7.4, 0, 2.6), 3.7)
+	_camel(c + Vector3(-3.6, 0, 2.8), 0.4, "pack")
+	_camel(c + Vector3(-5.2, 0, 4.5), PI + 0.2, "kneel")
+	_camel(c + Vector3(7.4, 0, 2.6), 3.7, "stand")
 	for i in 3:
 		_sack(c + Vector3(2.4 + i * 0.55, 0, 0.6 + (i % 2) * 0.3))
 	_jar(c + Vector3(-0.8, 0, 2.8), 1.0)
@@ -518,22 +518,32 @@ func _hair_tent(c: Vector3, yaw: float) -> void:
 # short lofted body with the hump behind the middle and a blanket over the flanks, a
 # thick neck tapering up out of the chest, and a big round head with heavy brows and a
 # drooping lip, turned a little to look about. Pale belly, throat and muzzle
-func _camel(c: Vector3, yaw: float) -> void:
+func _camel(c: Vector3, yaw: float, pose := "kneel") -> void:
 	var b := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * 1.25)
-	var col := _vary(CAMEL, 0.04)
+	var col := _vary(Color(0.69, 0.46, 0.26), 0.035)
 	var pale := col.lightened(0.2)
 	var dark := col.darkened(0.2)
-	var cloth: Color = [Palette.MADDER, Palette.INDIGO, Palette.MUREX][_rng.randi() % 3]
+	var cloth := Color(0.59, 0.28, 0.18)
+	var ground := c
+	if pose != "kneel":
+		c += Vector3.UP * 0.76
 	_add("camel_body", Transform3D(b, c), col)
 	_add("camel_belly", Transform3D(b, c), pale)
-	_add("camel_cloth", Transform3D(b, c), cloth)
-	_add("camel_band", Transform3D(b, c), Palette.UNDYED)
+	if pose == "pack":
+		_add("camel_cloth", Transform3D(b, c), cloth)
+		_add("camel_band", Transform3D(b, c), Palette.UNDYED)
 	# Legs folded under: the fore knees just showing at the chest, the hind legs along
 	# the flanks with the feet tucked forward
 	for sz: float in [-1.0, 1.0]:
-		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.36, 0.16, 0.18)), c + b * Vector3(0.6, 0.09, sz * 0.2)), pale.darkened(0.06))
-		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.66, 0.32, 0.2)), c + b * Vector3(-0.4, 0.2, sz * 0.4)), col)
-		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.3, 0.1, 0.14)), c + b * Vector3(-0.02, 0.05, sz * 0.46)), pale.darkened(0.06))
+		if pose == "kneel":
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.36, 0.16, 0.18)), c + b * Vector3(0.6, 0.09, sz * 0.2)), pale.darkened(0.06))
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.66, 0.32, 0.2)), c + b * Vector3(-0.4, 0.2, sz * 0.4)), col)
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.3, 0.1, 0.14)), c + b * Vector3(-0.02, 0.05, sz * 0.46)), pale.darkened(0.06))
+		else:
+			for x: float in [-0.57, 0.46]:
+				_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.25, 0.64, 0.2)), c + b * Vector3(x, -0.42, sz * 0.31)), col.darkened(0.07))
+				_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.19, 0.52, 0.17)), ground + b * Vector3(x + 0.06, 0.27, sz * 0.31)), pale.darkened(0.06))
+				_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.3, 0.13, 0.22)), ground + b * Vector3(x + 0.16, 0.07, sz * 0.31)), dark)
 	# Tail kept flat down the rump, a dark tuft at the end
 	_add("blob", Transform3D(b * Basis(Vector3.BACK, 0.15) * Basis.from_scale(Vector3(0.07, 0.3, 0.07)), c + b * Vector3(-0.84, 0.42, 0)), col.darkened(0.08))
 	_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.1, 0.12, 0.08)), c + b * Vector3(-0.87, 0.27, 0)), dark)
@@ -548,7 +558,8 @@ func _camel(c: Vector3, yaw: float) -> void:
 	part.call("camel_muzzle", Vector3.ONE, Vector3.ZERO, col.lightened(0.1))
 	# The drooping lower lip, nostrils, halter
 	part.call("blob", Vector3(0.2, 0.1, 0.17), Vector3(1.55, 1.23, 0), pale.darkened(0.05))
-	part.call("block", Vector3(0.05, 0.31, 0.32), Vector3(1.4, 1.41, 0), cloth)
+	if pose == "pack":
+		part.call("block", Vector3(0.05, 0.31, 0.32), Vector3(1.4, 1.41, 0), cloth)
 	for sz: float in [-1.0, 1.0]:
 		part.call("blob", Vector3(0.04, 0.03, 0.05), Vector3(1.63, 1.42, sz * 0.055), dark.darkened(0.3))
 		# Big dark eyes under heavy brows, small round ears laid back
@@ -556,6 +567,15 @@ func _camel(c: Vector3, yaw: float) -> void:
 		part.call("blob", Vector3(0.03, 0.03, 0.02), Vector3(1.26, 1.54, sz * 0.2), Color(0.95, 0.92, 0.85))
 		part.call("blob", Vector3(0.16, 0.05, 0.08), Vector3(1.23, 1.58, sz * 0.17), dark)
 		_add("blob", Transform3D(b * neck * Basis(Vector3.BACK, 0.5) * Basis.from_scale(Vector3(0.07, 0.15, 0.06)), c + b * (root + neck * (Vector3(1.04, 1.62, sz * 0.13) - root))), dark)
+	# Short shaggy ridges along the hump and throat catch the warm highlights.
+	for i in 8:
+		var x := -0.58 + i * 0.15
+		var y := 0.42 + (0.78 * exp(-pow((x + 0.16) / 0.38, 2.0)))
+		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.19, 0.13, 0.21)), c + b * Vector3(x, y, 0)), col.lightened(0.08 + 0.015 * (i % 3)))
+	if pose == "pack":
+		for side: float in [-1.0, 1.0]:
+			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.37, 0.39, 0.22)), c + b * Vector3(-0.46, 0.54, side * 0.57)), Color(0.68, 0.45, 0.23))
+			_add("block", Transform3D(b * Basis.from_scale(Vector3(0.55, 0.08, 0.06)), c + b * Vector3(-0.46, 0.78, side * 0.62)), Palette.UNDYED)
 
 # Camel lofts, rings along a spine in the XY plane: [centre, above, below, side]
 # (half-extents toward the spine's upper normal, away from it, and across in Z)
