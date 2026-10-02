@@ -30,7 +30,7 @@ const TELL_SLACK        := 0.4    # m past ATTACK_RANGE the blow still finds a w
 const STEADY            := { Type.BRUTE: 18.0 }   # least blow that breaks a brute's draw
 const REEL_TIME         := 0.45   # knocked aside: stumbling, no strike
 # A true shot (Player, GDD §5.16) knocks a foe off his feet for this long
-const DOWN_TIME         := { Type.SCOUT: 1.1, Type.BRUTE: 0.7, Type.RAIDER: 0.9, Type.SABOTEUR: 1.3 }
+const DOWN_TIME         := { Type.SCOUT: 2.2, Type.BRUTE: 1.5, Type.RAIDER: 1.9, Type.SABOTEUR: 2.4 }   # the clip runs ~2 s (char_anim "knocked")
 const REPATH_INTERVAL   := 0.3
 const SCAN_INTERVAL     := 0.2    # how often to look around for a new worker / wall
 const STUCK_WINDOW      := 0.6    # seconds of no progress before bashing a wall

@@ -50,6 +50,7 @@ const CLEAR_WORK_TIME      := 5.0
 const DEBRIS_BASE          := 2      # charred loads left by the pulling down: this + crew size (max 3)
 const DEBRIS_ON_PAD        := 2.4    # a load closer than this to the footing still fouls it
 const DEBRIS_DUMP_GAP      := 5.0    # the tip, this far past the inner face
+const DEBRIS_DUMP_RADIUS   := 1.8    # a worker this close to the tip, load in hand, tips it out by himself
 const DEBRIS_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const CHAR_COLOR           := Color(0.17, 0.14, 0.12)
 const MAX_HEALTH           := 150.0
@@ -247,7 +248,30 @@ func dump_marker() -> Node3D:
 		m.name = "DebrisDump"
 		add_child(m)
 		m.global_position = dump_point()
+		# A scorched patch so the tip can be seen, only while there is rubbish to carry to it
+		var disc := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = DEBRIS_DUMP_RADIUS
+		mesh.bottom_radius = DEBRIS_DUMP_RADIUS
+		mesh.height = 0.03
+		disc.mesh = mesh
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.17, 0.14, 0.12, 0.55)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.roughness = 1.0
+		disc.material_override = mat
+		disc.position.y = 0.04
+		disc.visible = false
+		m.add_child(disc)
+	(m.get_child(0) as Node3D).visible = _hauling()
 	return m
+
+## Server: a load of charred timber carried onto the tip is tipped out — no drop to aim
+func _tip_debris() -> void:
+	var at := dump_point()
+	for p: Node3D in get_tree().get_nodes_in_group("players"):
+		if p.carried_kind == "debris" and Vector2(p.global_position.x - at.x, p.global_position.z - at.z).length() < DEBRIS_DUMP_RADIUS:
+			p._set_carried.rpc("")
 
 ## A timber lifted off the pad but not yet set down elsewhere still counts as rubbish
 func _debris_in_hand() -> bool:
@@ -265,12 +289,17 @@ func _process(delta: float) -> void:
 	if _label_poll > 0.0:
 		return
 	_label_poll = LABEL_POLL
-	if multiplayer.is_server() and _hauling() and debris_on_pad().is_empty() and not _debris_in_hand():
-		cleared = true   # the pad is bare; the usual stages follow
-		_dust_puff()
-		_prime_work()
+	if multiplayer.is_server() and _hauling():
+		_tip_debris()
+		if debris_on_pad().is_empty() and not _debris_in_hand():
+			cleared = true   # the pad is bare; the usual stages follow
+			_dust_puff()
+			_prime_work()
 	if _hauling():
+		dump_marker()   # shows the tip on every peer once the framing is down
 		_update_label()   # the count of timbers left ticks down as they are carried clear
+	elif has_node("DebrisDump"):
+		(get_node("DebrisDump").get_child(0) as Node3D).visible = false
 	var damaged := is_built() and health < MAX_HEALTH
 	var working := _work != null and _work.progress > 0.0   # the bar and rising stones say it all
 	var near := _local_player_near()
@@ -912,7 +941,7 @@ func _update_label() -> void:
 	var lines: PackedStringArray = []
 	var next := stage + 1
 	if _hauling():
-		lines.append("Carry the timbers off the footing  %d left" % debris_on_pad().size())
+		lines.append("Carry the timbers to the dark patch  %d left" % debris_on_pad().size())
 	elif _clearing():
 		lines.append("Pull down the charred timbers  [%s]" % InputMode.key("interact"))
 	var face_label := face_name()

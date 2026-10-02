@@ -22,7 +22,7 @@ const ANIM_CFG: Dictionary = {
 	# Strike knocked aside mid-draw: a stumble back, spear thrown up
 	"reel":      { "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 13.0 },
 	# A true shot: flat on his back, then up again
-	"knocked":   { "cycle": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "loop": false, "fps": 10.0 },
+	"knocked":   { "cycle": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "loop": false, "fps": 5.0 },
 	# Sword cut at an enemy in close: wind back, sweep across, the blade lands on frame 2
 	"sword":     { "cycle": [0, 1, 2, 3, 4, 5],       "loop": false, "fps": 18.0 },
 	# Working at the wall: overhand mallet swing on a loop, strike on frame 4
