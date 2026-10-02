@@ -404,21 +404,27 @@ func _end_day(nightfall := false) -> void:
 func _rate_section() -> void:
 	var i := GameState.current_section_index
 	var par := GameState.par_time()
+	var pos := GameState.day_in_section(GameState.current_day)
+	var spare := pos.y - 1 - pos.x
 	var health := _wall_health()
 	var mask := 0
-	if _section_time <= par:
+	if spare >= GameState.pace_spare_needed(i):
 		mask |= GameState.Mark.PACE
 	if GameState.breaches == _section_breaches:
 		mask |= GameState.Mark.CLEAN
 	if health >= GameState.SOUND_WALL:
 		mask |= GameState.Mark.SOUND
-	print("DayDirector: %s rated %d/3 — time %.0f s (par %.0f), breaches %d, wall %d%%" % [
-		GameState.SECTIONS[i]["name"], GameState.mark_count(mask), _section_time, par,
+	print("DayDirector: %s rated %d/3 — day %d of %d (%d to spare, needs %d; %.0f s, par %.0f), breaches %d, wall %d%%" % [
+		GameState.SECTIONS[i]["name"], GameState.mark_count(mask), pos.x + 1, pos.y, spare,
+		GameState.pace_spare_needed(i), _section_time, par,
 		GameState.breaches - _section_breaches, roundi(health * 100.0)])
 	GameState.rate_section(i, mask)
 	_stats["marks"] = mask
 	_stats["section_time"] = _section_time
 	_stats["par"] = par
+	_stats["section_day"] = pos.x + 1
+	_stats["section_days"] = pos.y
+	_stats["pace_needed"] = GameState.pace_spare_needed(i)
 	_stats["section_breaches"] = GameState.breaches - _section_breaches
 	_stats["section_loads"] = _section_stats["loads"]
 	_stats["section_foes"] = _section_stats["foes"]

@@ -85,8 +85,8 @@ const TWIST_INTRO := {
 	"ruins": "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built",
 	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
 	"horn": "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder",
-	"haul": "A long haul from the yard — stack loads on the relay mat halfway, or drop one beside a friend",
-	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets, and they come back to the work",
+	"haul": "A long haul from the yard — leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
+	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
 	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
 	"schemes": "Messengers will call you down to Ono — do not go with them",
@@ -160,7 +160,8 @@ enum Mark { PACE = 1, CLEAN = 2, SOUND = 4 }
 const MARKS := [Mark.PACE, Mark.CLEAN, Mark.SOUND]
 const MARK_NAMES := { Mark.PACE: "In good time", Mark.CLEAN: "None got through", Mark.SOUND: "The wall holds" }
 # Par: seconds of work (WORK phase only) for a whole section, plus extra for the twists
-# that slow the work down. A section may set its own "par". TODO: tune from playtests
+# that slow the work down. A section may set its own "par". Now it only sizes the sun clock;
+# the "In good time" mark counts days (pace_spare_needed). TODO: tune from playtests
 # (DayDirector prints each section's time against par).
 const PAR_TIME := 420.0
 const PAR_TWIST := { "beams": 60.0, "salvage": 60.0, "mixing": 60.0, "haul": 120.0, "thick": 60.0 }
@@ -231,6 +232,11 @@ func get_section_for_day(day: int) -> Dictionary:
 
 func get_current_section() -> Dictionary:
 	return get_section_for_day(current_day)
+
+## "In good time": days a stretch must have left over when its last unit stands — one for
+## a short stretch, two from five days up (the sun clock already spreads par over the days)
+func pace_spare_needed(section_index := current_section_index) -> int:
+	return 2 if SECTIONS[section_index]["days"].size() >= 5 else 1
 
 ## 0-based index of `day` within its section, and that section's day count
 func day_in_section(day: int) -> Vector2i:
@@ -680,7 +686,7 @@ func chronicle_day(stats: Dictionary) -> void:
 		c["nightfalls"] += 1
 	if stats.has("marks"):
 		c["done"] = true
-		c["late"] = stats.get("section_time", 0.0) > stats.get("par", INF)
+		c["late"] = stats.get("spare", 0) < stats.get("pace_needed", 0)
 		c["spare"] = stats.get("spare", 0)
 
 func _no_marks() -> Array:

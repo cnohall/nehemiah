@@ -21,11 +21,14 @@ const SLING_STONE    := preload("res://scenes/sling_stone/sling_stone.tscn")
 const WOOD_COST_BY_CREW := [1, 2, 2]   # loads for crews of 1, 2, 3+
 const WORK_TIME       := 2.5
 const SOLO_WORK_MULT  := 0.75
-const SHOTS_PER_LOAD  := 6
-const MAX_AMMO        := 18            # three loads' worth
+const SHOTS_PER_LOAD  := 8
+const MAX_AMMO        := 24            # three loads' worth
 const RANGE           := 12.0
-const FIRE_CD         := 1.7
-const DAMAGE          := 9.0           # a scout takes five, a brute a dozen
+const FIRE_CD         := 1.0
+const DAMAGE          := 20.0          # a scout takes two, a brute five or six
+const COVER_RANGE     := 8.0           # a fed post shields the wall within this reach
+const COVER_HARM      := 0.6           # blows that wall takes, ×
+const BATTER_BIAS     := 6.0           # metres a wall-batterer counts nearer when picking a target
 const FOOT            := Vector3(1.5, 0.0, 1.5)
 const DECK_Y          := 1.75
 const LABEL_RANGE     := 6.0
@@ -36,6 +39,7 @@ const STONE_COLOR     := Color(0.72, 0.70, 0.65)
 const TARGET_COLOR    := Color(0.62, 0.50, 0.34)
 const LINE_COLOR      := Color(0.93, 0.90, 0.82)   # lime and cord marking out the plot
 const SLINGER_COLOR   := Color(0.44, 0.55, 0.24)
+const TERRACOTTA      := Color(0.76, 0.38, 0.24)
 const STONE_SLOTS     := 9
 
 signal stage_changed(new_stage: int)
@@ -67,6 +71,8 @@ var ammo := 0:
 var _frame: Node3D
 var _footing: Node3D
 var _stones: MultiMeshInstance3D
+var _pennant: MultiMeshInstance3D
+var _ring: MeshInstance3D
 var _slinger: CharacterRig
 var _label: WorldTag
 var _label_poll := 0.0
@@ -128,6 +134,7 @@ func _process(delta: float) -> void:
 		_label.visible = visible and not working and (near or empty)
 		_label.pulse = empty
 		_label.modulate.a = 1.0 if near or empty else WorldTag.DIM
+		_ring.visible = visible and built and ammo > 0 and near
 	if multiplayer.is_server():
 		_tick_fire(delta)
 
@@ -149,10 +156,20 @@ func _pick_target() -> Node3D:
 	var best_d := RANGE
 	for e: Node3D in get_tree().get_nodes_in_group("enemies"):
 		var d := Vector2(e.global_position.x - global_position.x, e.global_position.z - global_position.z).length()
-		if d < best_d:
-			best_d = d
+		if d >= RANGE:
+			continue
+		# Foes at the wall first: that is what the post is there to stop
+		var score: float = d - (BATTER_BIAS if e.is_battering() else 0.0)
+		if score < best_d:
+			best_d = score
 			best = e
 	return best
+
+## Fed and standing: the wall near it takes fewer blows (WallSection.take_damage)
+func covers(point: Vector3) -> bool:
+	if not built or ammo <= 0 or not _enabled():
+		return false
+	return Vector2(point.x - global_position.x, point.z - global_position.z).length() <= COVER_RANGE
 
 # Every peer: the slinger swings and the stone flies; the server's copy deals damage
 @rpc("authority", "call_local", "reliable")
@@ -326,6 +343,30 @@ func _build_frame() -> void:
 			Vector3(0.36 + (i % 3) * 0.09, DECK_Y + 0.37 + (i / 3) * 0.07, 0.28 + (i % 2) * 0.12), STONE_COLOR)
 	_stones = stones.build(Chunky.material(0.05))
 	_frame.add_child(_stones)
+	# A pennant on the rail while the post is fed: the wall around it is covered
+	var flag := _Parts.new()
+	flag.add(Vector3(0.05, 0.9, 0.05), Vector3(-leg, DECK_Y + 0.95, leg), WOOD_COLOR.darkened(0.15))
+	flag.add(Vector3(0.5, 0.28, 0.03), Vector3(-leg + 0.27, DECK_Y + 1.25, leg), TERRACOTTA)
+	_pennant = flag.build(Chunky.material(0.02))
+	_frame.add_child(_pennant)
+	# Cover reach, drawn on the ground when you come near
+	_ring = MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = COVER_RANGE - 0.08
+	torus.outer_radius = COVER_RANGE
+	torus.rings = 48
+	torus.ring_segments = 4
+	_ring.mesh = torus
+	var ring_mat := StandardMaterial3D.new()
+	ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring_mat.albedo_color = Color(TERRACOTTA, 0.5)
+	_ring.material_override = ring_mat
+	_ring.scale = Vector3(1, 0.02, 1)
+	_ring.position = Vector3(0, 0.12, 0)
+	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_ring.visible = false
+	add_child(_ring)
 	# The slinger: a townsman at his family's post (Neh. 4:13)
 	_slinger = SLINGER_SCRIPT.new()
 	_frame.add_child(_slinger)
@@ -337,6 +378,8 @@ func _build_frame() -> void:
 	_slinger.play("idle_up")
 
 func _show_ammo() -> void:
+	if _pennant != null:
+		_pennant.visible = ammo > 0
 	if _stones != null:
 		_stones.multimesh.visible_instance_count = ceili(float(ammo) / MAX_AMMO * STONE_SLOTS)
 

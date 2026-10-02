@@ -94,6 +94,7 @@ var _knocked_until := 0   # ticks (ms): "Next:" line says a finished piece fell
 var _last_done := 0
 var _last_total := 0
 var _sun_row: HBoxContainer  # day plaque: the sun clock (GameState.sun)
+var _households_line: Label  # day plaque: households fed, Fountain Gate stretch
 var _sun_dial: SunDial
 var _sun_time: Label
 var _sun_warned := false     # "the sun is low" said once a day
@@ -117,6 +118,7 @@ func _ready() -> void:
 	_build_next_caption()
 	_build_compass()
 	_build_sun_row()
+	_build_households_line()
 	_build_joining_plaque()
 	# The practice has no day to count or waves to warn of; its own plaque says the step
 	_style_world = not Settings.diegetic_hud   # forces the first _apply_style
@@ -353,6 +355,25 @@ func _build_next_line() -> void:
 	vb.add_child(_next_line)
 	vb.move_child(_next_line, work_row.get_index() + 1)
 
+# Fountain Gate stretch: how many hungry households are fed (each adds to the work, Neh. 5)
+func _build_households_line() -> void:
+	_households_line = Label.new()
+	_households_line.theme_type_variation = &"Caption"
+	_households_line.add_theme_color_override("font_color", UiStyle.INK)
+	_households_line.visible = false
+	var vb := $Root/DayPlaque/VBox
+	vb.add_child(_households_line)
+	vb.move_child(_households_line, work_row.get_index() + 1)
+
+func _refresh_households() -> void:
+	if _households_line == null:
+		return
+	var total := get_tree().get_nodes_in_group("households").size()
+	var on := total > 0 and GameState.phase in [GameState.Phase.DAWN, GameState.Phase.WORK]
+	_households_line.visible = on
+	if on:
+		_households_line.text = tr("Households fed: %d of %d") % [GameState.households_fed, total]
+
 # Sun clock under today's work: "Daylight", the arc, minutes left
 func _build_sun_row() -> void:
 	_sun_row = HBoxContainer.new()
@@ -403,6 +424,7 @@ func _process(delta: float) -> void:
 	_place_compass()
 	if _sun_row != null:
 		_refresh_sun()
+	_refresh_households()
 	_next_poll -= delta
 	if _next_poll > 0.0 or _next_line == null:
 		return
@@ -971,10 +993,8 @@ func _marks_line(stats: Dictionary, big := false) -> Control:
 	var line := HBoxContainer.new()
 	line.alignment = BoxContainer.ALIGNMENT_CENTER
 	line.add_theme_constant_override("separation", 24 if big else 44)
-	var secs := int(stats["section_time"])
-	var par := int(stats["par"])
 	var details := {
-		GameState.Mark.PACE: tr("%d:%02d of %d:%02d") % [secs / 60, secs % 60, par / 60, par % 60],
+		GameState.Mark.PACE: tr("day %d of %d") % [stats["section_day"], stats["section_days"]],
 		GameState.Mark.CLEAN: tr("all through the section") if mask & GameState.Mark.CLEAN 			else tr_n("%d got through", "%d got through", stats["section_breaches"]) % stats["section_breaches"],
 		GameState.Mark.SOUND: tr("%d%% sound") % roundi(stats["wall"] * 100.0),
 	}

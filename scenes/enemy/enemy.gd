@@ -346,6 +346,11 @@ func _try_attack_player(delta: float) -> bool:
 		anim = "idle_" + _facing
 	return true
 
+## At a wall and working on it (watch posts shoot these first)
+func is_battering() -> bool:
+	return _target_player == null and _target_wall != null \
+		and _target_wall.distance_to_point(global_position) <= WALL_REACH
+
 func _try_attack_wall(delta: float) -> bool:
 	if _target_player != null or _target_wall == null \
 			or _target_wall.distance_to_point(global_position) > WALL_REACH:

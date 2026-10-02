@@ -140,6 +140,16 @@ func _decide() -> void:
 	if fallen != null:
 		_set_job(Job.REVIVE, fallen)
 		return
+	if _p.carried_kind == "debris":
+		# Charred timbers go to the tip past the wall's inner face, not to any wall
+		# (the load in hand is off the pad, so the last one must still find the tip: key on "pulled")
+		var foul := _nearest_site(func(s): return s.has_method("debris_on_pad") and s.pulled and not s.is_complete())
+		if foul != null:
+			_set_job(Job.RELAY, foul.dump_marker())
+		else:
+			_press("drop")
+			_set_job(Job.IDLE, null)
+		return
 	if not _p.carried_kind.is_empty():
 		# The wall comes first — except a watch post that has run dry, which gets the
 		# next stone. Otherwise a post takes what no wall wants.
@@ -203,6 +213,12 @@ func _decide() -> void:
 	var mess := _mess_to_tidy()
 	if mess != null:
 		_set_job(Job.TIDY, mess)
+		return
+	# A burned footing with its timbers pulled down: one bot to a length, carried to the tip
+	var rubbish := _debris_to_haul()
+	if rubbish != null:
+		_set_job(Job.FETCH, rubbish)
+		_fetch_kind = "debris"
 		return
 	# Trades (Trade): the overseer is the first to stand guard when foes close on the work
 	var foes := _foes_near_work()
@@ -380,6 +396,8 @@ func _missing(site: Node3D) -> Dictionary:
 			if site.needs(kind):
 				want[kind] = 1
 		return want
+	if site.has_method("repairing") and site.repairing():
+		return { "mortar": 1 } if site.needs("mortar") else {}
 	if site.has_method("cost_for") and site.get("pending") is Dictionary:
 		var out := {}
 		var cost: Dictionary = site.cost_for(site.stage + 1)
@@ -442,6 +460,24 @@ func _empty_post() -> Node3D:
 			if w != _p and w.brain != null and w.brain._job == Job.DELIVER and w.brain._target == s:
 				return false
 		return true)
+
+# A charred length lying on a footing, that no other bot is already fetching
+func _debris_to_haul() -> Node3D:
+	var best: Node3D = null
+	var best_d := INF
+	for s in _p.get_tree().get_nodes_in_group("build_sites"):
+		if not s.has_method("debris_on_pad"):
+			continue
+		for it: Node3D in s.debris_on_pad():
+			var taken := false
+			for w in _p.get_tree().get_nodes_in_group("players"):
+				if w != _p and w.brain != null and w.brain._job == Job.FETCH and w.brain._target == it:
+					taken = true
+			var d := _dist(it)
+			if not taken and d < best_d:
+				best_d = d
+				best = it
+	return best
 
 # A load of `kind`: lying on the ground, or a pile (the trough counts once it's mixed)
 func _nearest_source(kind: String) -> Node3D:

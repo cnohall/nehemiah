@@ -8,6 +8,7 @@ extends CharacterBody3D
 const MAX_HEALTH      := 100.0
 const RUN_SPEED       := 8.0
 const CARRY_SPEED     := 5.5
+const DEBRIS_SLOW     := 0.7   # charred timbers off a burned footing are awkward and heavy
 const INTERACT_REACH  := 2.5
 const REVIVE_REACH    := 1.8
 # Sling: hold to charge, release to throw at the cursor. Charge scales range + damage.
@@ -417,7 +418,7 @@ func _handle_movement(delta: float) -> void:
 		_dash_time -= delta
 		velocity = _dash_dir * DASH_SPEED
 	else:
-		var target := dir * (CARRY_SPEED * Trade.carry_mult(trade) * GameState.mod("carry") if not carried_kind.is_empty() else RUN_SPEED)
+		var target := dir * (CARRY_SPEED * Trade.carry_mult(trade) * GameState.mod("carry") * (DEBRIS_SLOW if carried_kind == "debris" else 1.0) if not carried_kind.is_empty() else RUN_SPEED)
 		if on_beam:
 			target = dir * (BEAM_PAIR_SPEED if _beam_partner() != null else minf(BEAM_SOLO_SPEED * GameState.mod("beam_solo"), BEAM_PAIR_SPEED))
 		if _charging:
@@ -850,6 +851,8 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 # Server: explain a refused delivery (the carried material isn't wanted here).
 # [message, material for its {need}]
 func _why_not_needed(at: Vector3) -> PackedStringArray:
+	if carried_kind == "debris":
+		return ["Rubbish — carry it clear of the footing, then {drop}", ""]
 	var wall := _nearest_in_reach("build_sites", at, func(_s): return true)
 	if wall == null:
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
@@ -916,6 +919,9 @@ func _drop_carried(at: Vector3) -> void:
 			var slot: Vector3 = mat.free_slot()
 			if slot != Vector3.INF:
 				item.position = Vector3(slot.x, GROUND_Y, slot.z)
+				if not RelayMat.told:
+					RelayMat.told = true
+					_tell("Left on the relay mat — the porter carries it to the wall")
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
 	items.add_child(item, true)

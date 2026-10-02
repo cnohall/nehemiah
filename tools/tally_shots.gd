@@ -27,7 +27,7 @@ func _process(_delta: float) -> bool:
 			return false
 		_hud.show_tally({
 			"breaches": 0, "marks": mask, "section_breaches": 0 if mask & 2 else 2,
-			"section_time": 155.0, "par": 540.0, "wall": 0.68 if not mask & 4 else 0.95,
+			"section_time": 155.0, "par": 540.0, "section_day": 2, "section_days": 5, "pace_needed": 2, "wall": 0.68 if not mask & 4 else 0.95,
 			"section_time_": 155, "section_loads": 63, "section_foes": 47, "section_crew": [
 				[1, 24, 5], [2, 16, 9], [3, 10, 17], [4, 13, 16]],
 			"time": 155, "loads": 20, "foes": 10, "crew": [], "spare": 3, "unfinished": 0,
