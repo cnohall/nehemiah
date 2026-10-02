@@ -9,6 +9,7 @@ const COLORS := {
 	"wood":   Color(0.50, 0.33, 0.17),
 	"mortar": Color(0.52, 0.38, 0.22),   # the reed basket; the mortar itself is MORTAR_FILL
 	"beam":   Color(0.46, 0.31, 0.17),
+	"debris": Color(0.17, 0.14, 0.12),   # charred framing pulled off a burned footing
 	"lime":   Color(0.90, 0.88, 0.82),
 	"water":  Color(0.66, 0.40, 0.26),   # the clay jar it's carried in
 	# Festival of Booths (Festival): cut olive boughs, and food sent to those with none
@@ -18,7 +19,7 @@ const COLORS := {
 const MORTAR_FILL := Color(0.66, 0.64, 0.60)
 const MARKER_SHADER := preload("res://assets/shaders/ground_marker.gdshader")
 # Lift so each prop rests on the floor instead of sinking into it
-const REST_Y := { "stone": 0.14, "wood": 0.08, "mortar": 0.13, "beam": 0.11, "lime": 0.14, "water": 0.2,
+const REST_Y := { "stone": 0.14, "wood": 0.08, "mortar": 0.13, "beam": 0.11, "debris": 0.14, "lime": 0.14, "water": 0.2,
 	"branch": 0.1, "portion": 0.14 }
 
 @export var kind: String = "stone"
@@ -84,6 +85,12 @@ static func build_prop(material_kind: String) -> Node3D:
 				var end := BoxMesh.new()
 				end.size = Vector3(0.04, 0.23, 0.25)
 				_add_mesh(root, end, mat.duplicate(), Vector3(x * 1.29, 0, 0), Vector3.ZERO)
+		"debris":
+			# A bundle of burned timber lengths, lashed and still crooked
+			for i in 3:
+				var length := BoxMesh.new()
+				length.size = Vector3(1.0 - i * 0.12, 0.13, 0.15)
+				_add_mesh(root, length, mat, Vector3(0, i * 0.1, (i - 1) * 0.14), Vector3(0, (i - 1) * 0.22, 0))
 		"lime":
 			# Sack of burnt lime, tied at the neck
 			var sack := SphereMesh.new()

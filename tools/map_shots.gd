@@ -1,11 +1,10 @@
 extends SceneTree
 
-# Circuit map screenshots: the night ride, then a few section cards.
+# Circuit map screenshots: a few section cards.
 #   Godot --path . --write-movie <dir>/f.png --fixed-fps 10 --quit-after 200 --script res://tools/map_shots.gd
 # Every 40 frames the next card shows; the rise animation plays in the first ~25.
 
 const CARDS := [
-	{ "day": 1, "inspect": true },
 	{ "day": 1 },
 	{ "day": 5 },
 	{ "day": 24 },
@@ -32,9 +31,7 @@ func _process(_delta: float) -> bool:
 			return true
 		var card: Dictionary = CARDS[i]
 		var slides: Array = load("res://scenes/story/story_data.gd").slides_for_day(card["day"])
-		var slide: Dictionary = slides.back()
-		if card.get("inspect", false):
-			slide = slides.filter(func(s): return s.get("inspect", false))[0]
+		var slide: Dictionary = slides.filter(func(s): return s.has("map"))[0]
 		_story.play([slide])
 	_frame += 1
 	return false

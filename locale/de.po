@@ -1141,8 +1141,8 @@ msgstr "Entwicklung"
 msgid "Game design"
 msgstr "Spieldesign"
 
-msgid "Emotional support & spirit animal"
-msgstr "Emotionale Unterstützung & Krafttier"
+msgid "Art director"
+msgstr "Art Direction"
 
 msgid "Scripture"
 msgstr "Bibeltext"
@@ -2413,12 +2413,6 @@ msgstr "%d%% mehr Feinde"
 msgid "%d%% fewer foes"
 msgstr "%d%% weniger Feinde"
 
-msgid "Warning time is %d%% longer"
-msgstr "Die Vorwarnzeit ist %d%% länger"
-
-msgid "Warning time is %d%% shorter"
-msgstr "Die Vorwarnzeit ist %d%% kürzer"
-
 msgid "A beam dragged alone goes %d%% faster"
 msgstr "Ein allein gezogener Balken geht %d%% schneller"
 
@@ -2445,3 +2439,123 @@ msgstr "Mörtel braucht %d%% weniger Zeit zum Mischen"
 
 msgid "The watch posts stand from dawn, stocked with stone"
 msgstr "Die Wachposten stehen von Anfang an, mit Steinen bestückt"
+
+msgid "Sound the horn [horn] — a ring marks the spot"
+msgstr "Blas das Horn [horn] — ein Ring markiert die Stelle"
+
+msgid "Sound the horn [%s] — a ring marks the spot"
+msgstr "Blas das Horn [%s] — ein Ring markiert die Stelle"
+
+msgid "Gather in the ring: blows land harder there"
+msgstr "Sammelt euch im Ring: dort treffen die Schläge härter"
+
+msgid "Horn — rally the crew (stronger blows in its ring)"
+msgstr "Horn — ruf die Truppe zusammen (stärkere Schläge im Ring)"
+
+msgid "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder"
+msgstr "Sie kommen in Wellen das Tal herauf — {horn} bläst das Horn: sammelt euch im Ring, dort treffen eure Schläge härter"
+
+msgid "[%s] Sound the horn — whoever stands in its ring strikes harder"
+msgstr "[%s] Horn blasen — wer im Ring steht, schlägt härter zu"
+
+msgid "RALLY — stronger blows here"
+msgstr "SAMMELN — hier schlagen alle härter"
+
+msgid "Rallied — your blows land harder here"
+msgstr "Gesammelt — hier treffen deine Schläge härter"
+
+msgid "They'll slip in tonight — a watch on the wall!"
+msgstr "Heute Nacht schleichen sie sich ein — eine Wache auf die Mauer!"
+
+msgid "But we made our prayer to our God, and set a watch against them day and night, because of them."
+msgstr "Aber wir beteten zu unserem Gott und stellten ihretwegen Tag und Nacht eine Wache gegen sie auf."
+
+msgid "The watch held — they crept off in the dark."
+msgstr "Die Wache hielt — sie schlichen im Dunkeln davon."
+
+msgid "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work."
+msgstr "Als unsere Feinde hörten, dass wir es wussten und Gott ihren Plan zunichtegemacht hatte, kehrten wir alle zur Mauer zurück, jeder an sein Werk."
+
+msgid "The watch held in the night"
+msgstr "Die Wache hielt in der Nacht"
+
+msgid "In the night they came — a stretch pulled down, the yard in rubble!"
+msgstr "In der Nacht kamen sie — ein Abschnitt eingerissen, der Hof voller Schutt!"
+
+msgid "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall."
+msgstr "Die Kraft der Lastträger schwindet, und es gibt viel Schutt; wir können die Mauer nicht bauen."
+
+msgid "Pulled down in the night"
+msgstr "In der Nacht eingerissen"
+
+msgid "A fox! Tobiah said one would break our wall down…"
+msgstr "Ein Fuchs! Tobija sagte, einer werde unsere Mauer einreißen …"
+
+msgid "The hungry went back to their fields — we're short of hands."
+msgstr "Die Hungernden sind auf ihre Felder zurück — uns fehlen Hände."
+
+msgid "Yet now our flesh is as the flesh of our brothers, our children as their children."
+msgstr "Doch nun ist unser Fleisch wie das Fleisch unserer Brüder, unsere Kinder wie ihre Kinder."
+
+msgid "Short of hands: the hungry were not fed"
+msgstr "Zu wenig Hände: die Hungernden wurden nicht gespeist"
+
+msgid "A letter in the yard: they say you mean to be king!"
+msgstr "Ein Brief im Hof: Man sagt, du wollest König werden!"
+
+msgid "You would be their king, according to these words."
+msgstr "Du wollest ihr König sein, nach diesen Worten."
+
+msgid "A rumour weakens every hand"
+msgstr "Ein Gerücht schwächt jede Hand"
+
+msgid "“No such things are done” — the letter is turned away."
+msgstr "„Nichts dergleichen geschieht“ — der Brief wird abgewiesen."
+
+msgid "There are no such things done as you say, but you imagine them out of your own heart."
+msgstr "Nichts von dem, was du sagst, ist geschehen; du erdichtest es aus deinem eigenen Herzen."
+
+msgid "The letter answered"
+msgstr "Der Brief ist beantwortet"
+
+msgid "The rumour dies down — strengthen our hands!"
+msgstr "Das Gerücht verebbt — stärke unsere Hände!"
+
+msgid "An open letter: “You would be their king”"
+msgstr "Ein offener Brief: „Du wolltest ihr König sein“"
+
+msgid "Reading the letter…"
+msgstr "Liest den Brief …"
+
+msgid "A man of the temple is asking for you — it's a trap!"
+msgstr "Ein Mann vom Tempel will dich sprechen — es ist eine Falle!"
+
+msgid "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple."
+msgstr "Lasst uns im Haus Gottes zusammenkommen, im Tempel, und die Türen des Tempels verschließen."
+
+msgid "He turned away. He was hired to frighten us."
+msgstr "Er zog ab. Er war gedungen, uns zu erschrecken."
+
+msgid "Should a man like me flee? Who is there that, being such as I, would go into the temple to save his life? I will not go in."
+msgstr "Sollte ein Mann wie ich fliehen? Wer wie ich ginge in den Tempel, um sein Leben zu retten? Ich gehe nicht hinein."
+
+msgid "Would not hide in the temple"
+msgstr "Versteckte sich nicht im Tempel"
+
+msgid "Someone has gone to hide in the temple!"
+msgstr "Jemand hat sich im Tempel versteckt!"
+
+msgid "He hired so that I would be afraid, do so, and sin."
+msgstr "Er wurde gedungen, damit ich mich fürchte, so handle und sündige."
+
+msgid "One hid in the temple"
+msgstr "Einer versteckte sich im Tempel"
+
+msgid "Hide in the temple — they come tonight to kill you"
+msgstr "Versteck dich im Tempel — heute Nacht kommen sie, dich zu töten"
+
+msgid "Going to hide in the temple…"
+msgstr "Geht, sich im Tempel zu verstecken …"
+
+msgid "Should a man like me flee? Back to the wall!"
+msgstr "Sollte ein Mann wie ich fliehen? Zurück zur Mauer!"

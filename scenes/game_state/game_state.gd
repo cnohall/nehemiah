@@ -21,7 +21,7 @@ const SECTIONS: Array = [
 	{ "name": "Tower of Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
 	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
 	{ "name": "Dung Gate",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
-	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55,
+	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55, "choices": ["table", "fields"],
 		"piles": { "StockWater": Vector2(-11.5, 4.5) } },
 	{ "name": "Water Gate",     "ref": "Neh. 3:26", "days": [37,38,39,40,41],    "twists": ["doors", "night"],            "yard": Vector2(6, 11),  "terrain": "ophel" },
 	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped"],          "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1 },
@@ -35,8 +35,8 @@ const SECTIONS: Array = [
 # pick breaks a tie, no votes = the first), in play for that stretch only and written on
 # the scribe's map. The card text is worked out from "mods", so it is always the truth.
 #   mods (1 = unchanged):  work    — hands-on building speed       harm  — blows the wall takes
-#     pressure — foes' pace and numbers     warn — warning time before a wave or surge
-#     beam_solo — a beam dragged alone     carry — walking speed with a load
+#     pressure — foes' pace and numbers     beam_solo — a beam dragged alone
+#     carry — walking speed with a load
 #     clear — burned timbers coming down   mix — mortar mixing time
 #   posts: true — the watch posts stand from dawn, stocked
 # Every stretch without its own pair offers the build / guard one: pace (the "In good
@@ -45,17 +45,19 @@ const BOONS := {
 	"build": { "title": "Press the work", "ref": "Neh. 4:6", "mods": { "work": 1.2, "harm": 1.25 } },
 	"guard": { "title": "Hold the line", "ref": "Neh. 4:13", "mods": { "work": 0.9, "harm": 0.75 }, "posts": true },
 	"porters": { "title": "Practised porters", "ref": "Neh. 3:3", "mods": { "beam_solo": 1.9, "pressure": 1.15 } },
-	"market": { "title": "Watch the market side", "ref": "Neh. 4:9", "mods": { "work": 0.9, "warn": 1.5 }, "posts": true },
+	"market": { "title": "Watch the market side", "ref": "Neh. 4:9", "mods": { "work": 0.9, "pressure": 0.8 }, "posts": true },
 	"dig": { "title": "Dig out the rubble", "ref": "Neh. 4:2", "mods": { "clear": 2.0, "work": 1.1, "pressure": 1.2 } },
 	"shore": { "title": "Shore up the old courses", "ref": "Neh. 3:6", "mods": { "harm": 0.7, "clear": 0.6 } },
 	"rush": { "title": "Rush the faces", "ref": "Neh. 3:8", "mods": { "work": 1.3, "harm": 1.4 } },
 	"pack": { "title": "Pack the core", "ref": "Neh. 4:6", "mods": { "harm": 0.6, "work": 0.85 } },
 	"hot": { "title": "Fire the ovens high", "ref": "Neh. 3:11", "mods": { "mix": 0.5, "pressure": 1.2 } },
-	"bank": { "title": "Bank the ovens", "ref": "Neh. 3:11", "mods": { "mix": 1.5, "warn": 1.5 }, "posts": true },
-	"terraces": { "title": "Work the terraces", "ref": "Neh. 3:13", "mods": { "work": 1.2, "warn": 0.5 } },
-	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "warn": 2.2, "work": 0.9 }, "posts": true },
+	"bank": { "title": "Bank the ovens", "ref": "Neh. 3:11", "mods": { "mix": 1.5, "pressure": 0.8 }, "posts": true },
+	"terraces": { "title": "Work the terraces", "ref": "Neh. 3:13", "mods": { "work": 1.2, "harm": 1.3 } },
+	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "pressure": 0.75, "work": 0.9 }, "posts": true },
 	"bundles": { "title": "Carry in bundles", "ref": "Neh. 3:14", "mods": { "carry": 1.25, "harm": 1.25 } },
 	"road": { "title": "Hold the road", "ref": "Neh. 3:14", "mods": { "harm": 0.8, "carry": 0.85 }, "posts": true },
+	"table": { "title": "Open Nehemiah's table", "ref": "Neh. 5:17", "mods": { "work": 1.2, "carry": 0.8 } },
+	"fields": { "title": "Give back their fields", "ref": "Neh. 5:11", "mods": { "harm": 0.8, "work": 0.85 }, "posts": true },
 }
 const DEFAULT_CHOICES := ["build", "guard"]
 # What a modifier means to the crew: [higher is better?, text for more, text for less]. Each
@@ -64,7 +66,6 @@ const MOD_TEXT := {
 	"work": [true, "Building is %d%% quicker", "Building is %d%% slower"],
 	"harm": [false, "The wall takes %d%% more harm from blows", "The wall takes %d%% less harm from blows"],
 	"pressure": [false, "%d%% more foes", "%d%% fewer foes"],
-	"warn": [true, "Warning time is %d%% longer", "Warning time is %d%% shorter"],
 	"beam_solo": [true, "A beam dragged alone goes %d%% faster", "A beam dragged alone goes %d%% slower"],
 	"carry": [true, "Loaded workers walk %d%% faster", "Loaded workers walk %d%% slower"],
 	"clear": [true, "Burned timbers come down %d%% faster", "Burned timbers come down %d%% slower"],
@@ -83,9 +84,9 @@ const TWIST_INTRO := {
 	"mixing": "Make the mortar: lime and water into the trough, then to the wall",
 	"ruins": "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built",
 	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
-	"horn": "They come up the valley in surges — {horn} sounds the horn: gather there",
-	"haul": "A long haul from the yard — stack loads on the relay mat halfway, or drop one beside a friend",
-	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand",
+	"horn": "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder",
+	"haul": "A long haul from the yard — leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
+	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
 	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
 	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
 	"schemes": "Messengers will call you down to Ono — do not go with them",
@@ -129,6 +130,10 @@ var trades: bool = "--no-trades" not in OS.get_cmdline_user_args()
 # Saboteur (GDD §5.9): from day 6 one slips in now and then to strew the yard's piles.
 # `-- --no-saboteur` to play without him
 var saboteur: bool = "--no-saboteur" not in OS.get_cmdline_user_args()
+# The sling pass (GDD §5.16). `-- --no-tell`: foes strike without drawing back first (no
+# wind-up to read, nothing to knock aside). `-- --no-true-shot`: no glint, every throw alike
+var tell: bool = "--no-tell" not in OS.get_cmdline_user_args()
+var true_shot: bool = "--no-true-shot" not in OS.get_cmdline_user_args()
 signal rules_changed
 
 # Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
@@ -155,7 +160,8 @@ enum Mark { PACE = 1, CLEAN = 2, SOUND = 4 }
 const MARKS := [Mark.PACE, Mark.CLEAN, Mark.SOUND]
 const MARK_NAMES := { Mark.PACE: "In good time", Mark.CLEAN: "None got through", Mark.SOUND: "The wall holds" }
 # Par: seconds of work (WORK phase only) for a whole section, plus extra for the twists
-# that slow the work down. A section may set its own "par". TODO: tune from playtests
+# that slow the work down. A section may set its own "par". Now it only sizes the sun clock;
+# the "In good time" mark counts days (pace_spare_needed). TODO: tune from playtests
 # (DayDirector prints each section's time against par).
 const PAR_TIME := 420.0
 const PAR_TWIST := { "beams": 60.0, "salvage": 60.0, "mixing": 60.0, "haul": 120.0, "thick": 60.0 }
@@ -227,6 +233,11 @@ func get_section_for_day(day: int) -> Dictionary:
 func get_current_section() -> Dictionary:
 	return get_section_for_day(current_day)
 
+## "In good time": days a stretch must have left over when its last unit stands — one for
+## a short stretch, two from five days up (the sun clock already spreads par over the days)
+func pace_spare_needed(section_index := current_section_index) -> int:
+	return 2 if SECTIONS[section_index]["days"].size() >= 5 else 1
+
 ## 0-based index of `day` within its section, and that section's day count
 func day_in_section(day: int) -> Vector2i:
 	var days: Array = get_section_for_day(day)["days"]
@@ -248,7 +259,36 @@ func pressure() -> float:
 
 ## The boon's modifier `key` for this stretch (1 = none)
 func mod(key: String) -> float:
-	return BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	if key == "work":
+		v *= 1.0 + HOUSEHOLD_WORK * households_fed
+		v *= 1.0 - HUNGRY_WORK * hungry_left
+		if rumour:
+			v *= RUMOUR_WORK
+	return v
+
+## Households fed this stretch (Neh. 5, Households): each family back at the wall adds to
+## the work. Every peer counts its own; reset when the stretch changes.
+const HOUSEHOLD_WORK := 0.06
+var households_fed := 0
+
+## Setbacks (GDD §5.15). Households left hungry when the Fountain Gate ends are missing from
+## the next stretch's work (5:3-5); an open letter's rumour weakens everyone's hands until
+## it is answered (6:5-9). Set on every peer by DayDirector / Households; cleared per stretch.
+const HUNGRY_WORK := 0.06
+const RUMOUR_WORK := 0.9
+var hungry_left := 0
+var rumour := false
+
+## The scribe's margin notes for this stretch (what went wrong, with its verse), newest last
+signal journal_changed
+var journal: Array[String] = []
+
+func add_journal(text: String) -> void:
+	journal.append(text)
+	if journal.size() > 2:
+		journal.pop_front()
+	journal_changed.emit()
 
 ## The watch posts stand from dawn (the boon says so)
 func boon_posts() -> bool:
@@ -561,7 +601,7 @@ func apply_attract_start() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
-	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur)
+	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot)
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size)
@@ -602,12 +642,14 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool) -> void:
+func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool) -> void:
 	waves = w
 	sun = s
 	posts = p
 	trades = t
 	saboteur = sab
+	tell = tl
+	true_shot = ts
 	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")
@@ -644,7 +686,7 @@ func chronicle_day(stats: Dictionary) -> void:
 		c["nightfalls"] += 1
 	if stats.has("marks"):
 		c["done"] = true
-		c["late"] = stats.get("section_time", 0.0) > stats.get("par", INF)
+		c["late"] = stats.get("spare", 0) < stats.get("pace_needed", 0)
 		c["spare"] = stats.get("spare", 0)
 
 func _no_marks() -> Array:
@@ -705,6 +747,9 @@ func _set_state(day: int, section: int, p: Phase, b: int, done: int, total: int)
 		# A new stretch's dawn (not the first: a fresh run must not wipe a saved one)
 		if p == Phase.DAWN and section > 0 and _saveable():
 			_save_campaign(day)
+		journal.clear()
+		rumour = false
+		journal_changed.emit()
 		section_changed.emit(section)
 	if day_new:
 		day_changed.emit(day)

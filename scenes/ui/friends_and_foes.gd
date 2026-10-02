@@ -329,7 +329,7 @@ static func _look(e: Dictionary) -> Dictionary:
 	var foe := { "outline": Color(0.36, 0.07, 0.05), "brows": true, "tool": false, "bare_arms": false }
 	match e["key"]:
 		"nehemiah":
-			return { "skin": CharacterRig.SKIN[1], "hair": CharacterRig.HAIR_DARK, "beard": "full",
+			return { "skin": CharacterRig.SKIN[1], "hair": CharacterRig.HAIR_BROWN, "beard": "full",
 				"hat": "wrap", "hat_color": Color(0.96, 0.94, 0.89), "band": Color(0.80, 0.62, 0.26),
 				"robe": Color(0.93, 0.90, 0.83), "vest": Color(0.20, 0.30, 0.52), "long_robe": true,
 				"trim": Color(0.80, 0.62, 0.26), "sash": Color(0.80, 0.62, 0.26),

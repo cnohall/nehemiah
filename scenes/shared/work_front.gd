@@ -47,6 +47,8 @@ static func _refresh(tree: SceneTree) -> void:
 		if node.has_method("try_build"):
 			parts.append(node)
 		if parts.all(func(p): return p.is_complete()):
+			# Standing, but battered: mending is on the front too, and takes no share of it
+			_open.append_array(parts.filter(func(p): return p.has_method("repairing") and p.repairing()))
 			continue
 		_open.append_array(parts)
 		width -= 1

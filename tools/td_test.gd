@@ -74,7 +74,7 @@ func _process(delta: float) -> bool:
 				n += 1
 			_check(_post.can_build() and _post.try_build() and _post.built, "post raised with %d timber" % n)
 			_check(_post.needs("stone") and _post.deposit("stone", 1) and _post.deposit("stone", 1), "post takes stone")
-			_check(_post.ammo == 12, "two loads = 12 throws (%d)" % _post.ammo)
+			_check(_post.ammo == _post.SHOTS_PER_LOAD * 2, "two loads = %d throws (%d)" % [_post.SHOTS_PER_LOAD * 2, _post.ammo])
 			_enemy = load("res://scenes/enemy/enemy.tscn").instantiate()
 			_enemy.type = 1   # brute: survives a few stones
 			_enemy.position = _post.global_position + Vector3(1.5, 0.1, -7.0)
@@ -90,7 +90,7 @@ func _process(delta: float) -> bool:
 				_shot("post")
 				_shot("hud", 22.0)
 			if _t - _mark > 5.5:
-				_check(_post.ammo < 12, "slinger threw (%d left)" % _post.ammo)
+				_check(_post.ammo < _post.SHOTS_PER_LOAD * 2, "slinger threw (%d left)" % _post.ammo)
 				_check(_hits > 0, "enemy hit %d times" % _hits)
 				if alive:
 					_enemy.queue_free()

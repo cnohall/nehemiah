@@ -77,7 +77,10 @@ func _ready() -> void:
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
 	add_child(Taunts.new())
-	add_child(RelayMat.new())   # the long haul's halfway stack (Dung Gate)
+	var relay := RelayMat.new()   # the long haul's halfway stack + porter (Dung Gate)
+	relay.name = "RelayMat"       # same node path on every peer, for its trip RPC
+	add_child(relay)
+	add_child(Households.new())   # the hungry families of Neh. 5 (Fountain Gate)
 	add_child(Leaders.new())    # Sanballat, Tobiah, Geshem watching from the rise at the peaks
 	if GameState.attract:
 		_start_attract()

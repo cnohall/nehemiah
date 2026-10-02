@@ -1,7 +1,7 @@
 class_name Bird
 extends Node3D
 
-# One bird about the site — a house sparrow or a rock dove (Matt. 10:29; Lev. 1:14) —
+# One bird about the site — a sparrow, dove, pigeon or raven —
 # pecking and hopping on the ground until something comes too close, then off and up
 # and away out of sight; a while later it flies back in and lands near where it was.
 # Purely cosmetic and local to each peer: Birds decides when a flock goes and returns.
@@ -17,7 +17,9 @@ const FLAP_RATE := 34.0    # rad/s of wing phase in the air
 const LOOKS := {
 	#            body                        head                        wing                        tail                        scale
 	"sparrow": [Color(0.55, 0.40, 0.27), Color(0.47, 0.42, 0.38), Color(0.40, 0.28, 0.18), Color(0.36, 0.27, 0.20), 1.0],
-	"dove":    [Color(0.64, 0.65, 0.69), Color(0.46, 0.49, 0.56), Color(0.72, 0.73, 0.76), Color(0.40, 0.42, 0.48), 1.35],
+	"dove":    [Color(0.77, 0.60, 0.44), Color(0.68, 0.48, 0.34), Color(0.62, 0.42, 0.31), Color(0.49, 0.32, 0.26), 1.25],
+	"pigeon":  [Color(0.65, 0.64, 0.66), Color(0.48, 0.49, 0.55), Color(0.73, 0.71, 0.72), Color(0.36, 0.35, 0.42), 1.35],
+	"raven":   [Color(0.16, 0.17, 0.22), Color(0.12, 0.13, 0.18), Color(0.22, 0.23, 0.29), Color(0.11, 0.12, 0.17), 1.6],
 }
 const BEAK := Color(0.24, 0.20, 0.18)
 
@@ -50,20 +52,39 @@ func _ready() -> void:
 	var look: Array = LOOKS[kind]
 	_body = Node3D.new()
 	add_child(_body)
-	_part(_sphere(0.1, 0.2), look[0], Vector3(0, 0.1, 0), Vector3.ZERO, Vector3(1.0, 0.95, 1.35)) 		.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON   # the shadow tells how high it flies
-	_part(_sphere(0.065, 0.13), look[1], Vector3(0, 0.19, -0.11))
-	_part(_cyl(0.0, 0.02, 0.05), BEAK, Vector3(0, 0.185, -0.185), Vector3(-PI * 0.5, 0, 0))
-	_part(_box(Vector3(0.08, 0.02, 0.13)), look[3], Vector3(0, 0.12, 0.17), Vector3(0.35, 0, 0))
+	_part(_sphere(0.1, 0.2), look[0], Vector3(0, 0.13, 0), Vector3.ZERO, Vector3(1.1, 1.0, 1.65)).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	_part(_sphere(0.075, 0.15), look[1], Vector3(0, 0.235, -0.115))
+	_part(_sphere(0.069, 0.08), look[0].lightened(0.13), Vector3(0, 0.12, -0.105), Vector3.ZERO, Vector3(1.0, 0.75, 0.9))
+	if kind == "pigeon":
+		_part(_sphere(0.077, 0.09), Color(0.36, 0.48, 0.43), Vector3(0, 0.205, -0.075), Vector3.ZERO, Vector3(1.08, 0.85, 1.0))
+		_part(_sphere(0.078, 0.07), Color(0.49, 0.36, 0.48), Vector3(0, 0.19, -0.04), Vector3.ZERO, Vector3(1.08, 0.7, 1.0))
+	_part(_cyl(0.0, 0.023, 0.075 if kind == "raven" else 0.05), BEAK, Vector3(0, 0.218, -0.208), Vector3(-PI * 0.5, 0, 0))
+	for side: float in [-1.0, 1.0]:
+		_part(_sphere(0.014, 0.025), Color(0.92, 0.58, 0.19) if kind == "raven" else Color(0.14, 0.1, 0.09), Vector3(side * 0.069, 0.253, -0.155))
+		_part(_sphere(0.005, 0.009), Color(0.95, 0.9, 0.79), Vector3(side * 0.079, 0.26, -0.16))
+		_part(_box(Vector3(0.013, 0.075, 0.012)), Color(0.54, 0.29, 0.25) if kind != "raven" else BEAK, Vector3(side * 0.05, 0.055, 0.06))
+		for toe in 3:
+			_part(_box(Vector3(0.009, 0.01, 0.045)), Color(0.54, 0.29, 0.25) if kind != "raven" else BEAK, Vector3(side * 0.05 + (toe - 1) * 0.014, 0.018, 0.024))
+	for i in 5:
+		_part(_sphere(0.024, 0.035), look[3], Vector3((i - 2) * 0.022, 0.115, 0.19 + absf(i - 2) * 0.008), Vector3(0.3, 0, 0), Vector3(0.8, 0.65, 2.6))
 	for s: float in [-1.0, 1.0]:
 		var pivot := Node3D.new()
 		pivot.position = Vector3(s * 0.07, 0.15, 0.0)
 		_body.add_child(pivot)
 		var wing := MeshInstance3D.new()
-		wing.mesh = _box(Vector3(0.2, 0.025, 0.16))
+		wing.mesh = _sphere(0.14, 0.28)
 		wing.material_override = _mat(look[2])
-		wing.position = Vector3(s * 0.1, 0, 0.02)
+		wing.position = Vector3(s * 0.1, 0, 0.025)
+		wing.scale = Vector3(1.0, 0.11, 0.64)
 		wing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		pivot.add_child(wing)
+		for feather in 5:
+			var f := MeshInstance3D.new()
+			f.mesh = _sphere(0.028, 0.056)
+			f.material_override = _mat(look[2].darkened(0.06 + 0.055 * (feather % 2)))
+			f.position = Vector3(s * (0.12 + feather * 0.018), 0.004, 0.08 - feather * 0.027)
+			f.scale = Vector3(0.9, 1.0, 2.2)
+			pivot.add_child(f)
 		_wings.append(pivot)
 	_fold(1.0)
 
