@@ -96,6 +96,11 @@ func _fit_modal() -> void:
 func open() -> void:
 	_windowed.button_pressed   = not Settings.fullscreen
 	_fullscreen.button_pressed = Settings.fullscreen
+	# Run inside the editor's Game tab, the editor owns the window
+	var fixed := not Settings.can_change_window()
+	for b: Button in [_windowed, _fullscreen]:
+		b.disabled = fixed
+		b.tooltip_text = "Embedded in the editor: run the game floating to change the window" if fixed else ""
 	_vsync_on.button_pressed   = Settings.vsync
 	_vsync_off.button_pressed  = not Settings.vsync
 	_shake_on.button_pressed   = Settings.screen_shake
@@ -260,7 +265,7 @@ func _select_window_size() -> void:
 		_window_size.add_item("%d × %d" % [cur.x, cur.y] if cur != Vector2i.ZERO else "Default")
 		sel = _window_sizes.size() - 1
 	_window_size.select(sel)
-	_window_size.disabled = Settings.fullscreen
+	_window_size.disabled = Settings.fullscreen or not Settings.can_change_window()
 
 func _build_graphics_rows() -> void:
 	# Trying out drawn looks with playtesters; switches live under the open panel

@@ -148,7 +148,8 @@ func apply() -> void:
 	TranslationServer.set_locale(language if not language.is_empty() else OS.get_locale())
 	# Embedded/headless runs have no real window to resize
 	if DisplayServer.get_name() != "headless":
-		_apply_window()
+		if can_change_window():
+			_apply_window()
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync
 			else DisplayServer.VSYNC_DISABLED)
 	_apply_graphics()
@@ -166,6 +167,11 @@ func apply() -> void:
 func _is_fullscreen() -> bool:
 	var m := DisplayServer.window_get_mode()
 	return m == DisplayServer.WINDOW_MODE_FULLSCREEN or m == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+
+## False while the game runs inside the editor's Game tab: the editor owns that window,
+## so size and fullscreen requests go nowhere (the settings picker greys them out)
+func can_change_window() -> bool:
+	return not Engine.is_embedded_in_editor()
 
 ## Window sizes that fit the screen the window is on (a picker for windowed play)
 func available_window_sizes() -> Array[Vector2i]:
@@ -203,7 +209,7 @@ func _verify_window() -> void:
 
 ## Something else changed the mode (OS shortcut, driver): follow it so the picker never lies
 func _sync_mode() -> void:
-	if _mode_pending or DisplayServer.get_name() == "headless":
+	if _mode_pending or DisplayServer.get_name() == "headless" or not can_change_window():
 		return
 	if _is_fullscreen() != fullscreen:
 		fullscreen = _is_fullscreen()
