@@ -58,6 +58,8 @@ var _cam_base := Vector3.ZERO
 var _lead := Vector3.ZERO
 var _zoom := 1.0             # the mood's camera size over CAM_SIZE (dusk leans in)
 var _was_fixed := false
+const MODE_BLEND := 0.8       # s, the glide between camera settings (Follow/Fixed, View)
+var _mode_tween: Tween
 var _trauma := 0.0
 var _shake_t := 0.0
 var _hud_timer := 0.0
@@ -229,7 +231,8 @@ func _frame_crew(delta: float) -> void:
 
 func _follow_local_player(delta: float) -> void:
 	var local_player := Player.local
-	if local_player == null or (_wall_cam != null and _wall_cam.is_running()):
+	if local_player == null or (_wall_cam != null and _wall_cam.is_running()) \
+			or (_mode_tween != null and _mode_tween.is_running()):
 		return
 	var fixed := _fixed_cam()
 	if fixed != _was_fixed:
@@ -314,6 +317,45 @@ func _turn_to_map() -> void:
 	var yaw := RingCompass.north_up_yaw(GameState.current_section_index) if Settings.turn_to_map else 0.0
 	if not is_equal_approx(yaw, view_yaw):
 		set_view_yaw(yaw)
+
+## Settings panel: a camera setting changed (maybe while paused) — ease into it at once
+func refresh_camera() -> void:
+	if GameState.attract:
+		return
+	if Player.local == null or (_wall_cam != null and _wall_cam.is_running()):
+		_turn_to_map()
+		return
+	var from_xf := camera.global_transform
+	var from_size := camera.size
+	var from_yaw := view_yaw
+	var from_focus := from_xf.origin - _cam_offset()
+	from_focus.y = 0.0
+	if _mode_tween != null:
+		_mode_tween.kill()
+	# Land the camera on the new mode, read where it sits, then put it back and glide there
+	_turn_to_map()
+	_was_fixed = _fixed_cam()
+	if not _was_fixed:
+		camera.size = CAM_SIZE * _zoom
+	_cam_snapped = false
+	_follow_local_player(0.0)
+	var to_focus := _cam_base - _cam_offset()
+	to_focus.y = 0.0
+	var to_size := camera.size
+	camera.global_transform = from_xf
+	camera.size = from_size
+	# Runs while paused, too — the pause menu is where the setting changes
+	_mode_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_mode_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_mode_tween.tween_method(_blend_camera.bind(from_focus, to_focus, from_yaw, view_yaw, from_size, to_size),
+		0.0, 1.0, MODE_BLEND)
+
+func _blend_camera(t: float, from_focus: Vector3, to_focus: Vector3, from_yaw: float, to_yaw: float,
+		from_size: float, to_size: float) -> void:
+	var focus := from_focus.lerp(to_focus, t)
+	camera.global_position = focus + CAM_OFFSET.rotated(Vector3.UP, lerp_angle(from_yaw, to_yaw, t))
+	camera.look_at(focus, Vector3.UP)
+	camera.size = lerpf(from_size, to_size, t)
 
 func _cam_offset() -> Vector3:
 	return CAM_OFFSET.rotated(Vector3.UP, view_yaw)

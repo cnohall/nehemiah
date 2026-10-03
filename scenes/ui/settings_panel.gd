@@ -177,6 +177,11 @@ func _toggle(key: String, value: bool) -> void:
 	Settings.save()
 	if key == "fullscreen" and _window_size != null:
 		_window_size.disabled = value
+	# The camera moves in Main._process, which stops while paused: show the change now
+	if key in ["fixed_camera", "turn_to_map"]:
+		var scene := get_tree().current_scene
+		if scene != null and scene.has_method("refresh_camera"):
+			scene.refresh_camera()
 
 func _on_volume(v: float) -> void:
 	Settings.volume = v / 100.0
