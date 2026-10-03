@@ -181,6 +181,7 @@ func set_look(n: int) -> void:
 
 func _build_look() -> void:
 	_look_pass = LookPass.new(_env)
+	_look_pass.grain = 0.45    # full crayon grain read as noise on the map; keep the paper, calm the speckle
 	add_child(_look_pass)
 
 ## Ease the camera toward a point on the ring (fractional gate index), or back to centre
