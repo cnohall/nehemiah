@@ -291,7 +291,7 @@ func _stage(twist: String, i: int) -> Dictionary:
 				"crew": [[_o(at, -2.5, 3.2), "down", ""]],
 				"foes": [[E.BRUTE, _o(at, 0.5, -3.0)], [E.BRUTE, _o(at, 3.2, -3.4)]],
 				"setup": func(): _wall(s, 3, 2) }
-		# Tower of Ovens: lime and water to the trough, it mixes, the mortar goes to the wall
+		# Tower of the Ovens: lime and water to the trough, it mixes, the mortar goes to the wall
 		"mixing0":
 			var t := _sup("Trough")
 			return { "look": _o(t.global_position, 0, 1.5), "size": 10.0,
@@ -329,7 +329,7 @@ func _stage(twist: String, i: int) -> Dictionary:
 				"crew": [[Vector3(0, 0.1, 4), "down", ""], [Vector3(-2.6, 0.1, 5.4), "right", ""],
 					[Vector3(3.0, 0.1, 5.6), "left", ""], [Vector3(1.8, 0.1, 2.0), "down", ""]],
 				"setup": func(): _horn(Vector3(0, 0, 4)) }
-		# Dung Gate: a long haul — the relay mat halfway, or a load handed to a friend
+		# Gate of the Ash Heaps: a long haul — the relay mat halfway, or a load handed to a friend
 		"haul0":
 			var st := _sup("StockStone")
 			return { "look": Vector3(21, 0, 5), "size": 24.0,

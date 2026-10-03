@@ -506,14 +506,14 @@ msgstr "Jeschana-Tor"
 msgid "Broad Wall"
 msgstr "Breite Mauer"
 
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr "Ofenturm"
 
 msgid "Valley Gate"
 msgstr "Taltor"
 
-msgid "Dung Gate"
-msgstr "Misttor"
+msgid "Gate of the Ash Heaps"
+msgstr "Tor der Aschenhaufen"
 
 msgid "Fountain Gate"
 msgstr "Quelltor"
@@ -786,8 +786,8 @@ msgstr "Malkija und Haschub bessern ein weiteres Stück aus und den Ofenturm."
 msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
 msgstr "Hanun und die Bewohner von Sanoach bauen das Taltor und tausend Ellen Mauer wieder auf."
 
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
-msgstr "Malkija, der Sohn Rechabs, bessert das Misttor aus, weit weg vom Steinlager."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
+msgstr "Malkija, der Sohn Rechabs, bessert das Tor der Aschenhaufen aus, weit weg vom Steinlager."
 
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr "Schallun bessert das Quelltor aus, unten am Teich beim Königsgarten."

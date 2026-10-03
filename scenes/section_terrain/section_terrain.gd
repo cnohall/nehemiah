@@ -4,7 +4,7 @@ extends ScatterLayer
 # the sheepfold at the Sheep Gate, fish stalls, burned ruins, the Pool of Shelah, the
 # priests' houses at the Horse Gate… Solid pieces block workers and enemies alike and
 # shape how each stretch plays (the valley terraces funnel the enemy, the refuse heaps
-# at the Dung Gate break the long haul into lanes, the houses at the Horse Gate cramp
+# at the Gate of the Ash Heaps break the long haul into lanes, the houses at the Horse Gate cramp
 # it). Also sets the ground's look for the section. Rebuilt on every peer from the
 # section index alone (fixed seed per section); the DayDirector rebakes navigation at
 # dawn, after this has run.
@@ -583,7 +583,7 @@ func _workshops(g: Dictionary) -> void:
 	_stall(Vector3(17.5, 0, 6.5), 3.0, 2.2, "jars")
 	_stall(Vector3(-14.5, 0, 11.0), 2.8, 2.0, "metal")
 
-# Tower of Ovens (3:11): domed clay bread ovens and firewood, smoke going up
+# Tower of the Ovens (3:11): domed clay bread ovens and firewood, smoke going up
 func _ovens(g: Dictionary) -> void:
 	g["tint"] = Color(0.66, 0.42, 0.30)
 	g["tint_amount"] = 0.08
@@ -609,7 +609,7 @@ func _valley(g: Dictionary) -> void:
 	for x: float in [-22.0, -17.0, -12.0, 3.0, 7.0, 18.0, 23.0]:
 		_olive(Vector3(x + _rng.randf_range(-0.8, 0.8), 0, -10.5 + _rng.randf_range(-0.4, 0.4)))
 
-# Dung Gate (3:14): the site is far from the yard; refuse heaps along the way split the
+# Gate of the Ash Heaps (3:14): the site is far from the yard; refuse heaps along the way split the
 # haul into lanes. The Hinnom valley smoulders outside.
 func _refuse(g: Dictionary) -> void:
 	g["tint"] = Color(0.45, 0.40, 0.35)

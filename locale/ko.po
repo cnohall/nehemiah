@@ -506,14 +506,14 @@ msgstr "여사나 문"
 msgid "Broad Wall"
 msgstr "넓은 성벽"
 
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr "화덕 망대"
 
 msgid "Valley Gate"
 msgstr "골짜기 문"
 
-msgid "Dung Gate"
-msgstr "분문"
+msgid "Gate of the Ash Heaps"
+msgstr "잿더미 문"
 
 msgid "Fountain Gate"
 msgstr "샘문"
@@ -785,8 +785,8 @@ msgstr "말기야와 핫숩이 다른 구간과 화덕 망대를 보수합니다
 msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
 msgstr "하눈과 사노아 주민들이 골짜기 문과 성벽 천 규빗을 다시 쌓습니다."
 
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
-msgstr "레갑의 아들 말기야가 분문을 보수합니다. 돌을 쌓아 둔 곳에서 멀리 떨어진 곳입니다."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
+msgstr "레갑의 아들 말기야가 잿더미 문을 보수합니다. 돌을 쌓아 둔 곳에서 멀리 떨어진 곳입니다."
 
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr "살룬이 왕의 동산 곁 못가에 있는 샘문을 보수합니다."

@@ -506,14 +506,14 @@ msgstr "Portão de Jesaná"
 msgid "Broad Wall"
 msgstr "Muralha Larga"
 
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr "Torre dos Fornos"
 
 msgid "Valley Gate"
 msgstr "Portão do Vale"
 
-msgid "Dung Gate"
-msgstr "Portão do Monturo"
+msgid "Gate of the Ash Heaps"
+msgstr "Portão dos Montes de Cinzas"
 
 msgid "Fountain Gate"
 msgstr "Portão da Fonte"
@@ -786,8 +786,8 @@ msgstr "Malquias e Hassube reparam outro trecho e a Torre dos Fornos."
 msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
 msgstr "Hanum e os moradores de Zanoa reconstroem o Portão do Vale e mil côvados de muralha."
 
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
-msgstr "Malquias, filho de Recabe, repara o Portão do Monturo, longe de onde as pedras estão empilhadas."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
+msgstr "Malquias, filho de Recabe, repara o Portão dos Montes de Cinzas, longe de onde as pedras estão empilhadas."
 
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr "Salum repara o Portão da Fonte, junto ao tanque do Jardim do Rei."

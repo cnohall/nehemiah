@@ -23,16 +23,16 @@ const WADI_DRAG := 0.72
 const SIDE_FLAT := 56.0   # the outer wall stretches end at |x| = 52
 
 ## Per section (GameState.SECTIONS order): city climb, drop outside, far slope above that.
-## Valley Gate / Dung Gate / East Gate look into real ravines; the north gates face a
+## Valley Gate / Gate of the Ash Heaps / East Gate look into real ravines; the north gates face a
 ## gentle fall under the temple mount; the Ophel gates sit above the Kidron.
 const PROFILES := [
 	{ "climb": 8.8, "fall": 3.0,  "far": 6.0 },    # Sheep Gate — temple mount rising behind
 	{ "climb": 6.9, "fall": 3.5,  "far": 5.0 },    # Fish Gate — Tyropoeon
 	{ "climb": 6.9, "fall": 3.5,  "far": 5.0 },    # Jeshanah Gate
 	{ "climb": 8.1, "fall": 4.5,  "far": 6.0 },    # Broad Wall — the Mishneh
-	{ "climb": 8.1, "fall": 5.5,  "far": 6.5 },    # Tower of Ovens
+	{ "climb": 8.1, "fall": 5.5,  "far": 6.5 },    # Tower of the Ovens
 	{ "climb": 10.0, "fall": 10.0, "far": 9.0, "wadi": true },    # Valley Gate — Hinnom below, Mount Zion above
-	{ "climb": 6.2, "fall": 9.0,  "far": 7.0 },    # Dung Gate — the refuse valley
+	{ "climb": 6.2, "fall": 9.0,  "far": 7.0 },    # Gate of the Ash Heaps — the refuse valley
 	{ "climb": 5.0, "fall": 5.5,  "far": 6.0 },    # Fountain Gate — Siloam, low
 	{ "climb": 6.9, "fall": 7.5,  "far": 8.0 },    # Water Gate — Gihon
 	{ "climb": 6.9, "fall": 8.5,  "far": 9.0 },    # Horse Gate — Ophel over the Kidron

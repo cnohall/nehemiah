@@ -17,9 +17,9 @@ const GATES := [
 	Vector2(0.50, 0.10),   # Fish Gate — north
 	Vector2(0.30, 0.16),   # Jeshanah (Old City) Gate — north-west
 	Vector2(0.18, 0.33),   # Broad Wall — west
-	Vector2(0.21, 0.52),   # Tower of Ovens
+	Vector2(0.21, 0.52),   # Tower of the Ovens
 	Vector2(0.36, 0.70),   # Valley Gate — south-west, on the Tyropoeon
-	Vector2(0.52, 0.93),   # Dung Gate — the southern tip
+	Vector2(0.52, 0.93),   # Gate of the Ash Heaps — the southern tip
 	Vector2(0.62, 0.80),   # Fountain Gate — by the Pool of Shelah
 	Vector2(0.68, 0.58),   # Water Gate — Ophel
 	Vector2(0.76, 0.42),   # Horse Gate

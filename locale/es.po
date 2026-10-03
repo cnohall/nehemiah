@@ -506,14 +506,14 @@ msgstr "Puerta de Jesaná"
 msgid "Broad Wall"
 msgstr "Muro Ancho"
 
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr "Torre de los Hornos"
 
 msgid "Valley Gate"
 msgstr "Puerta del Valle"
 
-msgid "Dung Gate"
-msgstr "Puerta del Muladar"
+msgid "Gate of the Ash Heaps"
+msgstr "Puerta de los Montones de Cenizas"
 
 msgid "Fountain Gate"
 msgstr "Puerta de la Fuente"
@@ -786,8 +786,8 @@ msgstr "Malquías y Hasub reparan otro tramo y la Torre de los Hornos."
 msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
 msgstr "Hanún y los habitantes de Zanoa reconstruyen la Puerta del Valle y mil codos de muralla."
 
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
-msgstr "Malquías hijo de Recab repara la Puerta del Muladar, lejos de donde se apila la piedra."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
+msgstr "Malquías hijo de Recab repara la Puerta de los Montones de Cenizas, lejos de donde se apila la piedra."
 
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr "Salum repara la Puerta de la Fuente, junto al estanque del Jardín del Rey."

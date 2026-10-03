@@ -66,6 +66,10 @@ var _day_sun_energy: float
 var _mood_tween: Tween
 var _wall_cam: Tween
 var _carvings: Array[Label3D] = []   # names on their tablets
+var _look: LookPass
+
+func _on_art_style_changed() -> void:
+	_look.look = LookPass.STYLES[Settings.art_style]
 
 func _ready() -> void:
 	add_to_group("camera_rig")
@@ -80,8 +84,14 @@ func _ready() -> void:
 	look.whole_screen = "--look-world" not in OS.get_cmdline_user_args()
 	add_child(look)
 	var forced := LookPass.from_args()
-	look.look = forced if forced != LookPass.PLAIN else LookPass.STYLES[Settings.art_style]
-	Settings.art_style_changed.connect(func(): look.look = LookPass.STYLES[Settings.art_style])
+	_look = look
+	if forced != LookPass.PLAIN:
+		look.look = forced
+	else:
+		# A bound method, not a lambda holding `look`: the connection to the autoload
+		# drops with this scene when a new day reloads it
+		_on_art_style_changed()
+		Settings.art_style_changed.connect(_on_art_style_changed)
 	# The stretch's own arc: the enemy answers the work at half and at the last unit
 	var beats := SectionBeats.new()
 	beats.name = "SectionBeats"
@@ -90,7 +100,7 @@ func _ready() -> void:
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
 	add_child(Taunts.new())
-	var relay := RelayMat.new()   # the long haul's halfway stack + porter (Dung Gate)
+	var relay := RelayMat.new()   # the long haul's halfway stack + porter (Gate of the Ash Heaps)
 	relay.name = "RelayMat"       # same node path on every peer, for its trip RPC
 	add_child(relay)
 	add_child(Households.new())   # the hungry families of Neh. 5 (Fountain Gate)
@@ -256,7 +266,7 @@ func _fixed_cam() -> bool:
 	return Settings.fixed_camera and not GameState.festival and not GameState.attract
 
 ## The ground (x/z) the fixed camera keeps in view: FIXED_FRAME plus every stockpile
-## and heap standing this section (the yard moves — the Dung Gate's sits far east)
+## and heap standing this section (the yard moves — the Gate of the Ash Heaps's sits far east)
 func _fixed_frame() -> Rect2:
 	var frame := FIXED_FRAME
 	for group: Node in [$Supplies, $Rubble]:

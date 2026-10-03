@@ -16,7 +16,7 @@ uniform float gate_x = -4.0;
 uniform vec3 col_scrub       : source_color = vec3(0.460, 0.520, 0.260);  // dry olive scrub
 uniform vec3 col_scrub_lit   : source_color = vec3(0.560, 0.610, 0.310);
 // Per-section look (SectionTerrain): where the supply yard is trodden, how much scrub
-// grows (+ = greener, e.g. the King's Garden), an overall cast (ash at the Dung Gate)
+// grows (+ = greener, e.g. the King's Garden), an overall cast (ash at the Gate of the Ash Heaps)
 // and how far the ground outside falls away into shade (the valleys)
 uniform vec2 yard_center = vec2(0.0, 10.0);
 uniform float scrub_bias = 0.0;

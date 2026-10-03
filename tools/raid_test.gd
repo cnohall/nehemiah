@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Checks the Tower of Ovens night raid (GDD §5.15, Neh. 4:11) offline:
+# Checks the Tower of the Ovens night raid (GDD §5.15, Neh. 4:11) offline:
 #   Godot --headless --path . --script res://tools/raid_test.gd -- --nostory --day=20
 # - with a finished piece standing the watch calls it (warn) on the stretch's 3rd day
 # - the next dawn pulls that piece down two stages

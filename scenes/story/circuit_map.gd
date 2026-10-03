@@ -6,7 +6,7 @@ extends Control
 # Finished sections stand, the current one glows, the rest lie in rubble. When shown,
 # the section just finished raises itself along the ring as the reward.
 # `inspect` mode is the night ride of Neh. 2:13-15: every stretch broken, a torch goes
-# out by the Valley Gate, round past the Dung Gate to the Fountain Gate, and back.
+# out by the Valley Gate, round past the Gate of the Ash Heaps to the Fountain Gate, and back.
 # `finale` mode is the ending: the last stretch rises, then a gold line runs the whole
 # ring from the Sheep Gate back to itself, each stretch lighting as it passes.
 # `picker` mode is the replay map (SectionPicker): every section this player has ever

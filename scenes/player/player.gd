@@ -106,7 +106,7 @@ const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const MAX_DROPPED  := 40      # oldest ground item vanishes past this
 const DROP_JITTER  := 0.25    # so repeated drops don't stack on one spot
 # Dropping a load beside an empty-handed teammate puts it in their hands instead (the
-# long haul at the Dung Gate is a chain of these)
+# long haul at the Gate of the Ash Heaps is a chain of these)
 const HANDOFF_REACH := 2.2
 # Led off by an Ono messenger ("schemes" twist): walk behind him, no control
 const LED_FOLLOW    := 1.3

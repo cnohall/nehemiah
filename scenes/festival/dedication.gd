@@ -6,8 +6,8 @@ extends Node
 # way round the ring and Nehemiah's the other; talk to either leader and the walk begins.
 # Both choirs go round on the inside, a stretch at a time, and meet in the house of God at the
 # Sheep Gate (12:40), where they rejoice: "the joy of Jerusalem was heard even far away".
-#   Ezra's company goes toward -x (Dung, Fountain, Water, Horse, East, Miphkad Gates)
-#   Nehemiah's goes toward +x (Tower of Ovens, Broad Wall, Jeshanah, Fish Gate)
+#   Ezra's company goes toward -x (Ash Heaps, Fountain, Water, Horse, East, Miphkad Gates)
+#   Nehemiah's goes toward +x (Tower of the Ovens, Broad Wall, Jeshanah, Fish Gate)
 # The text has them walk ON the wall; here they walk beside it — the wall is not climbable.
 # You walk with them: the company waits when you fall behind, and stops at the end of each
 # stretch until you go on round. Nothing here is timed. Festival owns the districts and calls
@@ -34,7 +34,7 @@ const CLOSE      := 22.0    # the finale holds this long before the walk is over
 const LEADERS := [
 	["Ezra, with the first company", "scribe", Palette.MUREX,
 		[["Come, the wall is finished. We go round it giving thanks, on the right hand, to the house of God.", "see Neh. 12:31"],
-		 ["Follow us round — the Dung Gate, the Fountain Gate, the Water Gate, and on to the temple.", "see Neh. 12:37"]]],
+		 ["Follow us round — the Gate of the Ash Heaps, the Fountain Gate, the Water Gate, and on to the temple.", "see Neh. 12:37"]]],
 	["Nehemiah, with the second company", "governor", Palette.SAFFRON,
 		[["Two great companies, to give thanks and go in procession. Walk with us, the other way round.", "see Neh. 12:31"],
 		 ["Over the Tower of the Ovens, the Broad Wall, the Old Gate, the Fish Gate — and so to the house of God.", "see Neh. 12:38-39"]]],

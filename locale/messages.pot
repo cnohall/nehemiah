@@ -766,7 +766,7 @@ msgid "Drop loads here — a porter carries them to the wall"
 msgstr ""
 
 #: scenes\game_state\game_state.gd:23
-msgid "Dung Gate"
+msgid "Gate of the Ash Heaps"
 msgstr ""
 
 #: scenes\story\story_player.gd:63
@@ -1418,7 +1418,7 @@ msgid "Malchijah son of Rechab"
 msgstr ""
 
 #: scenes\story\story_data.gd:39
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
 msgstr ""
 
 #: scenes\festival\festival.gd:56
@@ -2707,7 +2707,7 @@ msgid "Toughness"
 msgstr ""
 
 #: scenes\game_state\game_state.gd:21
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr ""
 
 msgid "Trough"

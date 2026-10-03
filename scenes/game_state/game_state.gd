@@ -3,7 +3,7 @@ extends Node
 # Campaign state. The server mutates it (via DayDirector) and broadcasts every change;
 # clients only mirror it. Everything else reads from here and listens to the signals.
 
-# 12 sections clockwise from Sheep Gate (Nehemiah 3)
+# 12 sections from the Sheep Gate in Nehemiah 3 order (counterclockwise on a north-up map)
 # Each section's "twists" are the extra ingredients it plays with (GDD §6), and its
 # layout: where the supply yard sits ("yard", x/z centre) and whether the opening in the
 # wall is a gate ("gate": true) or just a gap to seal with stone. Every peer derives all
@@ -18,9 +18,9 @@ const SECTIONS: Array = [
 	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams", "salvage", "ruins"], "yard": Vector2(0, 11),  "terrain": "ruins", "choices": ["dig", "shore"],
 		"recipes": { "Section1": "old", "Section3": "burned" } },
 	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "choices": ["rush", "pack"], "gate": false },
-	{ "name": "Tower of Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
+	{ "name": "Tower of the Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
 	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
-	{ "name": "Dung Gate",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
+	{ "name": "Gate of the Ash Heaps",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
 	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55, "choices": ["table", "fields"],
 		"piles": { "StockWater": Vector2(-11.5, 4.5) } },
 	{ "name": "Water Gate",     "ref": "Neh. 3:26", "days": [37,38,39,40,41],    "twists": ["doors", "night"],            "yard": Vector2(6, 11),  "terrain": "ophel" },
