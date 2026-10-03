@@ -10,7 +10,7 @@ extends Node
 
 # Setbacks (GDD §5.15): one verse each, warned or seen in the world, felt in the loop,
 # answered by what comes next. Table keys are section indices.
-# The ambush (Neh. 4:11), Tower of Ovens: on the stretch's 3rd day (RAID) the watch calls
+# The ambush (Neh. 4:11), Tower of the Ovens: on the stretch's 3rd day (RAID) the watch calls
 # that they'll come in the night; at the next dawn, unless a watch post stands stocked
 # (4:9 — "we set a watch"), they pull one finished piece down two stages and strew the yard.
 # Never on the last day, never without a piece to lose.
@@ -728,7 +728,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 # ── Progress ───────────────────────────────────────────────
 
 func _on_stage_changed() -> void:
-	if not multiplayer.is_server():
+	# Explore Jerusalem raises and ruins whole stretches as you walk round: no day to end
+	if not multiplayer.is_server() or GameState.festival:
 		return
 	_request_nav_rebake()
 	_update_progress()

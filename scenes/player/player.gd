@@ -39,6 +39,12 @@ const SWORD_COOLDOWN  := 0.45
 const SWORD_KNOCKBACK := 1.3      # metres a scout is shoved (brutes feel ~a third)
 const SWORD_HIT_FRAME := 2        # frame of the "sword" anim where the blade lands
 const POT_REACH       := 1.0      # a jar or basket this close (no foe about) takes the cut instead
+# Turn the blow (GDD §5.16, `--no-riposte`): a cut that lands while a foe draws back to strike
+# strikes ×RIPOSTE_MULT and knocks him off his feet, brute or not — the sword's true shot
+const RIPOSTE_MULT    := 1.5
+const RIPOSTE_KNOCK   := 1.4      # m a scout is thrown back as he goes down
+const BLADE_COLOR     := Color(1.0, 0.98, 0.94, 0.75)   # the cut's sweep
+const BLADE_TRUE      := Color(1.0, 0.76, 0.3, 0.9)      # …gold when it turns a blow
 const AIM_ASSIST_DEG   := 18.0   # enemies inside this cone of the aim get homed on
 const CHARGE_MOVE_MULT := 0.55    # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
@@ -58,7 +64,7 @@ const CLIMB_HEIGHT    := 2.6
 const CLIMB_TIME      := 0.55
 const RESPAWN_POS     := Vector3(0, 0.1, 8)   # y = floor top (no gravity — the world is flat)
 # Walkable rectangle in x/z — inside the 100 × 80 floor, clear of its edge
-const PLAY_AREA       := Rect2(-44.0, -30.0, 88.0, 64.0)
+const PLAY_AREA       := Rect2(-44.0, -25.0, 88.0, 49.7)   # = Terrain.FLAT_FOE … FLAT_CITY: the valley and the hill start past it
 const CARRY_FRONT_SCALE := 0.8   # a load hugged at the chest reads a little smaller than overhead
 const CARRY_HEIGHT    := 2.4      # just above the head of the ~2.2 m chibi figure
 const CARRY_SCALE     := 1.35     # loads read bigger overhead than on the ground (Overcooked)
@@ -100,7 +106,7 @@ const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
 const MAX_DROPPED  := 40      # oldest ground item vanishes past this
 const DROP_JITTER  := 0.25    # so repeated drops don't stack on one spot
 # Dropping a load beside an empty-handed teammate puts it in their hands instead (the
-# long haul at the Dung Gate is a chain of these)
+# long haul at the Gate of the Ash Heaps is a chain of these)
 const HANDOFF_REACH := 2.2
 # Led off by an Ono messenger ("schemes" twist): walk behind him, no control
 const LED_FOLLOW    := 1.3
@@ -143,6 +149,7 @@ var _held := 0.0                # owner: seconds the sling has been whirling thi
 var _approach: MeshInstance3D   # owner: the ring that closes on the aim ring before a glint
 var _arc_dots: Array[MeshInstance3D] = []
 static var _true_told := false  # the "let go as it glints" hint, once a session
+static var _riposte_told := false   # the "cut as he draws back" hint, once a session
 var _hp_bar: HealthBar
 var _dash_time := 0.0
 var _dash_cd := 0.0
@@ -341,6 +348,11 @@ func _physics_process(delta: float) -> void:
 		return
 	if _led_by != null:
 		_follow_leader(delta)
+		return
+	if _hold_time > 0.0:   # answering a visitor: stand and say it
+		_hold_time -= delta
+		velocity = Vector3.ZERO
+		_update_anim()
 		return
 	if _work_site != null:
 		if _wants_to_stop_work():
@@ -624,10 +636,13 @@ func _interact_choice(at: Vector3) -> Array:
 	var site := _nearest_in_reach("build_sites", at, func(s): return s.can_build())
 	var item := _nearest_in_reach("dropped_items", at, func(_i): return true)
 	var pile := _nearest_in_reach("supply_piles", at, func(_p): return true)
-	# An Ono messenger standing closer than anything else goes first. He waits right
-	# beside you, so a careless press goes with him — that's the trap.
+	# A visitor talking at our elbow (GDD §6.7) takes [E] — answer him, hear him — even over
+	# the wall he caught us at. Old rules (`--old-messenger`): only when nearer than anything
+	# else, and the press goes with him — a careless press was the trap.
 	var messenger := _nearest_in_reach("messengers", at, func(_m): return true)
 	if messenger != null:
+		if not Messenger.old_rules and messenger.at_elbow(self):
+			return [Act.MESSENGER, messenger]
 		var d := _reach_dist(messenger, at)
 		if [site, item, pile].all(func(o): return o == null or _reach_dist(o, at) >= d):
 			return [Act.MESSENGER, messenger]
@@ -769,6 +784,8 @@ func _server_interact(at: Vector3) -> void:
 		Act.REVIVE:
 			target._set_downed.rpc(false)
 			_action.rpc("halfslash")
+			if brain == null:
+				target.bark("Thank you, friend!", true)   # a bot helped up by a person
 		Act.LET_GO:
 			_set_helping.rpc(0)
 			_tell("Let go of the beam")
@@ -781,8 +798,7 @@ func _server_interact(at: Vector3) -> void:
 		Act.TALK:
 			target.talk(self)
 		Act.MESSENGER:
-			target.accept(self)
-			get_tree().call_group("day_director", "note_shemaiah" if target.name == &"Shemaiah" else "note_ono")
+			target.answer(self)
 		Act.WORK:
 			if GameState.active_build:
 				_start_work(target)
@@ -874,12 +890,21 @@ func _server_drop(at: Vector3) -> void:
 		return
 	if helping_id != 0:
 		_set_helping.rpc(0)
+	elif carried_kind == "debris" and _at_tip(at):
+		_set_carried.rpc("")   # set down on the tip: tipped out, not passed or left lying
+		_sfx.rpc("drop")
 	elif not carried_kind.is_empty():
 		var mate := _free_hands_near(at)
 		if mate != null:
 			_hand_over(mate)
 		else:
 			_drop_carried(at)
+
+func _at_tip(at: Vector3) -> bool:
+	for s in get_tree().get_nodes_in_group("build_sites"):
+		if s.has_method("at_tip") and s.at_tip(at):
+			return true
+	return false
 
 # Server: the nearest teammate who could take our load straight from our hands
 func _free_hands_near(at: Vector3) -> Node3D:
@@ -958,6 +983,7 @@ func _sfx(event: String) -> void:
 # ── Attack ─────────────────────────────────────────────────
 
 func _handle_attack(delta: float) -> void:
+	_riposte_hint()
 	if not _charging:
 		# A click on HUD buttons / the Esc menu isn't a throw
 		if _throw_just_pressed() and _sling_cd <= 0.0 and (brain != null or get_viewport().gui_get_hovered_control() == null):
@@ -1075,27 +1101,96 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 		return
 	var fwd := Vector2(sin(yaw), cos(yaw))
 	var hit := false
+	var turned := PackedVector3Array()   # where a blow was turned (for the look)
 	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
 		var to := Vector2(enemy.global_position.x - at.x, enemy.global_position.z - at.z)
 		# A little slack on reach: the foe kept walking during the wind-up
 		if to.length() > SWORD_REACH + 0.4 or absf(fwd.angle_to(to)) > deg_to_rad(SWORD_ARC_DEG):
 			continue
-		enemy.take_damage(SWORD_DAMAGE * Trade.hit_mult(trade) * _rally(&"rally_damage", at), worker_id())
-		enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
+		# Asked before the damage: a hit in the draw ends it
+		var turn: bool = GameState.riposte and enemy.has_method("drawing") and enemy.drawing()
+		var damage := SWORD_DAMAGE * Trade.hit_mult(trade) * _rally(&"rally_damage", at)
+		enemy.take_damage(damage * (RIPOSTE_MULT if turn else 1.0), worker_id())
+		if turn:
+			enemy.knock_down(Vector3(to.x, 0.0, to.y), RIPOSTE_KNOCK)
+			turned.append(enemy.global_position)
+		else:
+			enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
 		hit = true
 	var pots := get_tree().get_first_node_in_group("breakable_set")
 	if pots and pots.smash_arc(at, fwd, SWORD_REACH + 0.4, SWORD_ARC_DEG):
 		hit = true
-	_sword_fx.rpc(hit)
+	_sword_fx.rpc(hit, yaw, turned)
 
-# Server → everyone: the swish, and a jolt for whoever landed it
+# Server → everyone: the swish and the sweep of the blade; a turned blow rings, flashes and
+# throws dust; a jolt for whoever landed it
 @rpc("any_peer", "call_local", "reliable")
-func _sword_fx(hit: bool) -> void:
+func _sword_fx(hit: bool, yaw: float, turned: PackedVector3Array) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	Sfx.play("sword", global_position)
-	if hit and is_multiplayer_authority():
+	_blade_sweep(yaw, not turned.is_empty())
+	var scene := get_tree().current_scene
+	for at in turned:
+		var chest := at + Vector3.UP * 0.9
+		Sfx.play("riposte", chest)
+		SlingStone.flash(scene, chest, 1.2, 0.2)
+		DustFx.puff(scene, at + Vector3.UP * 0.2, 12, 0.9)
+	if not turned.is_empty():
+		_sprite.hitstop(0.14)   # the blade bites: a held beat on the swing
+	if not is_multiplayer_authority():
+		return
+	if not turned.is_empty():
+		_jolt(0.32, 0.6, 0.8, 0.16)
+	elif hit:
 		_jolt(0.25, 0.3, 0.45, 0.1)
+
+# Every peer: a thin crescent swept round in front of the worker, gone in a breath
+func _blade_sweep(yaw: float, gold: bool) -> void:
+	var half := deg_to_rad(SWORD_ARC_DEG)
+	var outer := SWORD_REACH * 0.8
+	var thick := 0.38 if gold else 0.26   # m deep at the blade's end of the sweep
+	var steps := 12
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in steps:
+		var a0 := -half + 2.0 * half * float(i) / steps
+		var a1 := -half + 2.0 * half * float(i + 1) / steps
+		# Thickest where the blade is now (the far end of the sweep), thin at its start
+		var w0 := lerpf(0.1, 1.0, float(i) / steps)
+		var w1 := lerpf(0.1, 1.0, float(i + 1) / steps)
+		var p := [
+			Vector3(sin(a0), 0, cos(a0)) * outer, Vector3(sin(a1), 0, cos(a1)) * outer,
+			Vector3(sin(a1), 0, cos(a1)) * (outer - thick * w1), Vector3(sin(a0), 0, cos(a0)) * (outer - thick * w0)]
+		for v in [p[0], p[1], p[2], p[0], p[2], p[3]]:
+			st.add_vertex(v)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.no_depth_test = true
+	mat.albedo_color = BLADE_TRUE if gold else BLADE_COLOR
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(mi)
+	mi.global_position = global_position + Vector3.UP * 0.75
+	mi.rotation.y = yaw
+	var tw := mi.create_tween()
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.22 if gold else 0.14).set_ease(Tween.EASE_IN)
+	tw.tween_callback(mi.queue_free)
+
+# Owner: the first time this session a foe draws back within sword reach, say what a cut does
+func _riposte_hint() -> void:
+	if _riposte_told or self != local or brain != null or not (GameState.riposte and GameState.tell):
+		return
+	for enemy: Node3D in get_tree().get_nodes_in_group("enemies"):
+		if String(enemy.anim).begins_with("brace") and Vector2(enemy.global_position.x - global_position.x,
+				enemy.global_position.z - global_position.z).length() < SWORD_REACH:
+			_riposte_told = true
+			_toast("Cut as he draws back — turn the blow")
+			return
 
 # Turn toward a ground point: exact yaw for the rig, nearest 4-way facing for the rest
 func _face_aim(at: Vector3) -> void:
@@ -1346,12 +1441,48 @@ func _set_downed(value: bool) -> void:
 		_down_timer = DOWNED_TIME
 		if is_multiplayer_authority():
 			_jolt(0.6, 0.3, 0.8, 0.35)
+		if multiplayer.is_server() and not _nobody_to_raise():
+			bark("I've fallen — help me up!", true)
 	else:
 		health = MAX_HEALTH * REVIVE_HEALTH
 	if is_multiplayer_authority():
 		_is_busy = value
 		_sprite.speed_scale = 1.0
 		anim = "collapse" if value else "idle_" + _facing
+
+# ── Bot calls ──────────────────────────────────────────────
+
+# A bot says what it's doing when it matters to the people nearby (BotBrain._bark_for):
+# a Shout over its head, so a crew of bots reads as people. Kept rare: one bot at most
+# every BARK_GAP, the whole crew every BARK_CREW_GAP. Not on the title or in the tutorial.
+const BARK_Y        := PIP_Y + 1.1   # over the pip and the "Help up" tag
+const BARK_GAP      := 9.0
+const BARK_CREW_GAP := 3.5
+static var _crew_barked_at := -INF
+var _barked_at := -INF
+var _bark_shout: Shout
+
+## Server: a bot says `line` (English; each peer translates). `urgent` (down, helped up)
+## skips the wait and makes it breathe.
+func bark(line: String, urgent := false) -> void:
+	if brain == null or GameState.attract or GameState.tutorial:
+		return
+	var now := Time.get_ticks_msec() * 0.001
+	if not urgent and (now < _barked_at + BARK_GAP or now < _crew_barked_at + BARK_CREW_GAP):
+		return
+	_barked_at = now
+	_crew_barked_at = now
+	_say.rpc(line, urgent)
+
+@rpc("any_peer", "call_local", "reliable")
+func _say(line: String, urgent: bool) -> void:
+	if multiplayer.get_remote_sender_id() != 1:
+		return
+	if _bark_shout == null:
+		_bark_shout = Shout.make_shout()
+		_bark_shout.position.y = BARK_Y
+		add_child(_bark_shout)
+	_bark_shout.say(tr(line), Shout.HOLD, urgent)
 
 # ── Working at the wall ────────────────────────────────────
 
@@ -1401,6 +1532,9 @@ func _set_working(site_path: NodePath) -> void:
 
 # Owner: walking off, dashing, dropping or reaching for the sling ends the work
 func _wants_to_stop_work() -> bool:
+	# A visitor at our elbow: the press is for him (kept, so _handle_interact sends it)
+	if _buffered.has("interact") and _visitor_at_elbow():
+		return true
 	_consume("interact")   # already working — a repeat press does nothing
 	return _move_input().length() > 0.35 or _buffered.has("dash") or _buffered.has("drop") \
 		or _throw_just_pressed() or _is_busy
@@ -1441,6 +1575,35 @@ func _server_horn(at: Vector3) -> void:
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 
 var _led_release_toast := "Why should the work stop? Back to the wall!"
+var _hold_time := 0.0   # owner: standing to answer / hear a visitor (GDD §6.7)
+
+## Every peer: a visitor stands talking at our elbow (his [E] is ours)
+func _visitor_at_elbow() -> bool:
+	return not Messenger.old_rules and get_tree().get_nodes_in_group("messengers").any(
+		func(m): return m.at_elbow(self))
+
+## Server: work pace while one of Sanballat's men talks at us (BuildWork)
+func pester_mult() -> float:
+	for m in get_tree().get_nodes_in_group("messengers"):
+		if m.pesters(self):
+			return Messenger.PESTER_MULT
+	return 1.0
+
+## Server: stop `seconds` to answer or hear a visitor, saying `line`
+func answer_pause(seconds: float, line: String) -> void:
+	if building_site != null:
+		building_site.work().remove_builder(self)
+		stop_building_from_server()
+	_set_hold.rpc_id(get_multiplayer_authority(), seconds, line)
+
+@rpc("any_peer", "call_local", "reliable")
+func _set_hold(seconds: float, line: String) -> void:
+	if multiplayer.get_remote_sender_id() != 1 or not is_multiplayer_authority():
+		return
+	_hold_time = seconds
+	_cancel_charge()
+	_dash_time = 0.0
+	_toast(line)
 
 func is_led() -> bool:
 	return _led_server

@@ -236,9 +236,22 @@ func _clearing() -> bool:
 func _hauling() -> bool:
 	return _clearing() and pulled
 
-## Where the debris goes: a tip on the city side of the footing (the outer face is -z)
+## Burned recipe: timbers down and still to carry clear (a load in hand counts) — where bots take theirs
+func hauling() -> bool:
+	return _hauling()
+
+## Where the debris goes: a tip on the city side of the footing (the outer face is -z), pulled
+## onto the walkable ground — a tip inside a house or past the play area can't be reached, and
+## the bot holding the last timber would stand short of it for good
 func dump_point() -> Vector3:
-	return to_global(Vector3(_center.x, 0.0, _center.z + _size.z * 0.5 + DEBRIS_DUMP_GAP))
+	var at := to_global(Vector3(_center.x, 0.0, _center.z + _size.z * 0.5 + DEBRIS_DUMP_GAP))
+	at.x = clampf(at.x, Player.PLAY_AREA.position.x + 1.0, Player.PLAY_AREA.end.x - 1.0)
+	at.z = clampf(at.z, Player.PLAY_AREA.position.y + 1.0, Player.PLAY_AREA.end.y - 1.0)
+	var map := get_world_3d().navigation_map
+	if NavigationServer3D.map_get_iteration_id(map) != 0:
+		var snap := NavigationServer3D.map_get_closest_point(map, at)
+		at = Vector3(snap.x, at.y, snap.z)
+	return at
 
 ## Charred loads still lying on the footing
 func dump_marker() -> Node3D:
@@ -266,12 +279,22 @@ func dump_marker() -> Node3D:
 	(m.get_child(0) as Node3D).visible = _hauling()
 	return m
 
-## Server: a load of charred timber carried onto the tip is tipped out — no drop to aim
+## `at` lies on this wall's tip while it still takes rubbish
+func at_tip(at: Vector3) -> bool:
+	if not _hauling():
+		return false
+	var tip := dump_marker().global_position
+	return Vector2(at.x - tip.x, at.z - tip.z).length() < DEBRIS_DUMP_RADIUS
+
+## Server: a load of charred timber carried onto the tip is tipped out — no drop to aim.
+## One dropped there instead (a drop pressed between polls) goes the same way.
 func _tip_debris() -> void:
-	var at := dump_point()
 	for p: Node3D in get_tree().get_nodes_in_group("players"):
-		if p.carried_kind == "debris" and Vector2(p.global_position.x - at.x, p.global_position.z - at.z).length() < DEBRIS_DUMP_RADIUS:
+		if p.carried_kind == "debris" and at_tip(p.global_position):
 			p._set_carried.rpc("")
+	for it: Node3D in get_tree().get_nodes_in_group("dropped_items"):
+		if it.kind == "debris" and at_tip(it.global_position):
+			it.queue_free()
 
 ## A timber lifted off the pad but not yet set down elsewhere still counts as rubbish
 func _debris_in_hand() -> bool:
@@ -304,7 +327,7 @@ func _process(delta: float) -> void:
 	var working := _work != null and _work.progress > 0.0   # the bar and rising stones say it all
 	var near := _local_player_near()
 	var failing := repairing() and health < MAX_HEALTH * REPAIR_ALERT_BELOW   # about to fall — seen from afar
-	_label.visible = not working and (failing or (is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and near))
+	_label.visible = not working and not GameState.festival and (failing or (is_target and not is_complete()) 		or ((stage != Stage.MORTARED or damaged) and near))
 	# One site at a time says "here next"; the others step back
 	var focus := SiteFocus.site() == self
 	_label.pulse = focus
@@ -340,7 +363,7 @@ func repairing() -> bool:
 	return is_complete() and not decorative and health < MAX_HEALTH * REPAIR_BELOW
 
 func cost_for(target_stage: int) -> Dictionary:
-	var tier := clampi(GameState.crew_size, 1, MATERIAL_COST_BY_CREW.size()) - 1
+	var tier := clampi(GameState.cost_crew(), 1, MATERIAL_COST_BY_CREW.size()) - 1
 	if target_stage == Stage.FRAMED and GameState.has_twist("beams"):
 		return { "beam": BEAM_COST_BY_CREW[tier] }
 	var cost: Dictionary = MATERIAL_COST_BY_CREW[tier][target_stage].duplicate()
@@ -427,7 +450,7 @@ func _strew_debris() -> void:
 	var items := get_tree().current_scene.get_node_or_null("Items")
 	if items == null:
 		return
-	var n := DEBRIS_BASE + mini(GameState.crew_size, 3)
+	var n := DEBRIS_BASE + mini(GameState.cost_crew(), 3)
 	for i in n:
 		var item: DroppedItem = DEBRIS_ITEM.instantiate()
 		item.kind = "debris"
@@ -448,17 +471,17 @@ func _prime_work() -> void:
 	if _work == null:
 		return
 	if _clearing():
-		_work.work_time = CLEAR_WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) / GameState.mod("clear")
+		_work.work_time = CLEAR_WORK_TIME * GameState.solo_mult(SOLO_WORK_MULT) / GameState.mod("clear")
 		return
 	if repairing():
-		_work.work_time = REPAIR_WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0)
+		_work.work_time = REPAIR_WORK_TIME * GameState.solo_mult(SOLO_WORK_MULT)
 		return
 	var next := stage + 1
 	if next <= Stage.MORTARED:
 		var thick_mult := 1.0
 		if is_thick():
 			thick_mult = THICK_WORK_MULT * (THICK_FACE_WORK if next == Stage.STACKED else 1.0)
-		_work.work_time = WORK_TIME[next] * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0) * thick_mult
+		_work.work_time = WORK_TIME[next] * GameState.solo_mult(SOLO_WORK_MULT) * thick_mult
 
 # Returns how much of the next stage's required material is pending (0.0–1.0)
 func get_build_progress() -> float:
@@ -941,7 +964,10 @@ func _update_label() -> void:
 	var lines: PackedStringArray = []
 	var next := stage + 1
 	if _hauling():
-		lines.append("Carry the timbers to the dark patch  %d left" % debris_on_pad().size())
+		# Hidden at 0: the last loads are in hand, the pad itself is bare
+		var on_pad := debris_on_pad().size()
+		if on_pad > 0:
+			lines.append("Carry the timbers to the dark patch  %d left" % on_pad)
 	elif _clearing():
 		lines.append("Pull down the charred timbers  [%s]" % InputMode.key("interact"))
 	var face_label := face_name()

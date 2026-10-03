@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Headless check of the relay mat's porter (Dung Gate, "haul"):
+# Headless check of the relay mat's porter (Gate of the Ash Heaps, "haul"):
 #   Godot --headless --path . --script res://tools/relay_porter_test.gd -- --nostory --day=30
 # Lays loads on the mat, waits for the porter's trip, prints what the wall received.
 

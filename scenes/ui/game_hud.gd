@@ -28,7 +28,8 @@ const MARKS_BIG_H   := 172.0  # (a finished stretch: big gems, captions beneath)
 const STRIP_H       := 32.0    # (an ordinary day: the campaign strip above its counts)
 const TALLY_SMALL_H := 84.0   # (and then its counts, smaller)
 const READY_H       := 56.0    # …plus who's ready to go on
-const SUB_LINE_H    := 28.0    # …plus each extra line under the title (days to spare, the campaign)
+const BUILDERS_H    := 58.0   # (a finished stretch: the "next to him…" names, one or two lines)
+const SUB_LINE_H    := 28.0   # …plus each extra line under the title (days to spare, the campaign)
 const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
@@ -911,6 +912,7 @@ func show_tally(stats: Dictionary) -> void:
 	# A finished stretch leads with its marks (the payoff); an ordinary day with the
 	# campaign strip, today's cell filling. Counts beneath either way, smaller.
 	var marks_line: Control = null
+	var builders_shown := false
 	var strip: CircuitStrip = null
 	if stats.has("marks") and unfinished == 0:
 		var gap := Control.new()
@@ -918,6 +920,10 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(gap)
 		marks_line = _marks_line(stats, true)
 		_tally.add_child(marks_line)
+		var builders := _builders_line()
+		if builders:
+			builders_shown = true
+			_tally.add_child(builders)
 		var after := Control.new()  # air between the marks and the counts
 		after.custom_minimum_size.y = 8
 		_tally.add_child(after)
@@ -967,7 +973,7 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(_ready_row)
 		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
+	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (BUILDERS_H if marks_line and builders_shown else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
 ") * SUB_LINE_H
 	_tally.show()
 	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
@@ -1084,6 +1090,23 @@ func _crew_num(text: String, best: bool, color := UiStyle.INK_SOFT) -> Label:
 	l.add_theme_font_size_override("font_size", 15)
 	if best:
 		l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
+	return l
+
+# Who built this stretch, from Neh 3's "next to him…" chain (StoryData.BUILDERS)
+func _builders_line() -> Control:
+	var i := GameState.SECTIONS.find(GameState.get_current_section())  # as the title above
+	if i < 0 or i >= StoryData.BUILDERS.size():
+		return null
+	var l := Label.new()
+	l.text = tr(StoryData.BUILDERS[i])
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size.x = 640
+	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	return l
 
 # A hairline between the tally's counts
@@ -1438,8 +1461,8 @@ func set_player_carry(slot: int, kind: String) -> void:
 		return
 	var icon: TagIcon = _cards[slot].load
 	var k := kind.trim_suffix("s") if kind == "beams" else kind
-	icon.visible = not k.is_empty()
-	if icon.visible and icon.kind != k:
+	icon.modulate.a = 0.0 if k.is_empty() else 1.0
+	if not k.is_empty() and icon.kind != k:
 		icon.kind = k
 		icon.queue_redraw()
 
@@ -1544,10 +1567,23 @@ func _build_player_cards() -> void:
 		vb.alignment = BoxContainer.ALIGNMENT_CENTER
 		vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(vb)
+		# "Downed" sits on the eyebrow line and the load icon always keeps its slot
+		# (faded when empty), so the card never changes width mid-play
+		var who_row := HBoxContainer.new()
+		who_row.add_theme_constant_override("separation", 8)
+		vb.add_child(who_row)
 		var who := Label.new()
 		who.theme_type_variation = &"Eyebrow"
 		who.add_theme_font_size_override("font_size", 12)
-		vb.add_child(who)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who_row.add_child(who)
+		var carry := Label.new()
+		carry.theme_type_variation = &"Caption"
+		carry.add_theme_font_size_override("font_size", 12)
+		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
+		carry.text = "Downed"
+		carry.visible = false
+		who_row.add_child(carry)
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		vb.add_child(top)
@@ -1557,16 +1593,9 @@ func _build_player_cards() -> void:
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(name_lbl)
 		var load_icon := TagIcon.make("stone", 24)
-		load_icon.visible = false
+		load_icon.modulate.a = 0.0
 		load_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		top.add_child(load_icon)
-		var carry := Label.new()
-		carry.theme_type_variation = &"Caption"
-		carry.add_theme_font_size_override("font_size", 14)
-		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
-		carry.text = "Downed"
-		carry.visible = false
-		top.add_child(carry)
 		var bar := ProgressBar.new()
 		bar.theme_type_variation = &"Meter"
 		bar.custom_minimum_size = Vector2(0, 9)

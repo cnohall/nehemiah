@@ -4,7 +4,7 @@ extends ScatterLayer
 # the sheepfold at the Sheep Gate, fish stalls, burned ruins, the Pool of Shelah, the
 # priests' houses at the Horse Gate… Solid pieces block workers and enemies alike and
 # shape how each stretch plays (the valley terraces funnel the enemy, the refuse heaps
-# at the Dung Gate break the long haul into lanes, the houses at the Horse Gate cramp
+# at the Gate of the Ash Heaps break the long haul into lanes, the houses at the Horse Gate cramp
 # it). Also sets the ground's look for the section. Rebuilt on every peer from the
 # section index alone (fixed seed per section); the DayDirector rebakes navigation at
 # dawn, after this has run.
@@ -17,19 +17,27 @@ const WATER      := Color(0.20, 0.42, 0.46)
 const FLAME      := Color(1.0, 0.62, 0.22)
 const FLOWERS    := [Color(0.86, 0.30, 0.24), Color(0.95, 0.78, 0.30), Color(0.62, 0.36, 0.62)]
 # Ground looks: scrub_bias (+ greener), tint + tint_amount, outside_shade (valley fall)
-const GROUND_DEFAULT := { "scrub_bias": 0.0, "tint": Color(0.5, 0.5, 0.5), "tint_amount": 0.0, "outside_shade": 0.0 }
+const GROUND_DEFAULT := { "scrub_bias": 0.0, "tint": Color(0.5, 0.5, 0.5), "tint_amount": 0.0, "outside_shade": 0.0, "feature": 0 }
+## The ground shader's painted feature (ground.gdshader `feature`) for each landmark set
+const GROUND_FEATURE := { "sheepfold": 7, "fish_market": 5, "ruins": 3, "workshops": 6, "ovens": 3, "valley": 1,
+	"refuse": 3, "garden": 2, "ophel": 4, "priests": 4, "kidron": 1 }
 
 # Solid pieces must leave these clear: the wall line and its working strip, and the
 # enemy spawn line outside (WaveManager.SPAWN_Z)
 const WALL_STRIP := Rect2(-23.0, -2.8, 46.0, 5.6)
 const SPAWN_STRIP := Rect2(-20.0, -16.0, 40.0, 4.0)
 const CLEARANCE := 1.2   # around piles, the trough, rubble heaps and the respawn point
+const YARD_BACK := 13.5  # the lower city's first houses stand from z 14 (ScatterLayer.CITY)
 
 signal rebuilt
 
 var _body: StaticBody3D
 var _built := -1
 var _keep_clear: Array[Vector2] = []
+var _camp: Array[Rect2] = []
+## Debug builds: every landmark this section set down on the wall line, the spawn line,
+## a worker spot or the work camp (tools/layout_test.gd reads it)
+var crowded: Array[String] = []
 ## Where this section's landmarks set out breakable jars and baskets: [kind, position].
 ## Read by Breakables after `rebuilt`.
 var props: Array = []
@@ -44,17 +52,21 @@ func _rebuild() -> void:
 		return
 	_built = index
 	props.clear()
+	crowded.clear()
 	for c in get_children():
 		remove_child(c)
 		c.queue_free()
 	_batches.clear()
+	_flock = null
 	_rng.seed = 1000 + index
 	_deco.seed = 2000 + index
 	_body = StaticBody3D.new()
 	_body.collision_mask = 0
 	add_child(_body)
 	_collect_keep_clear()
+	_camp = work_camp_footprints(index)
 	var ground := GROUND_DEFAULT.duplicate()
+	ground["feature"] = GROUND_FEATURE.get(GameState.SECTIONS[index].get("terrain", ""), 0)
 	match GameState.SECTIONS[index].get("terrain", ""):
 		"sheepfold":
 			_sheepfold(Vector3(-15.0, 0.0, -7.2))
@@ -78,8 +90,11 @@ func _rebuild() -> void:
 func keep_clear() -> Array[Vector2]:
 	return _keep_clear
 
-## True if (x,z) `p` lies within `pad` of a solid landmark
+## True if (x,z) `p` lies within `pad` of a solid landmark or the work camp
 func blocks(p: Vector2, pad: float) -> bool:
+	for r: Rect2 in _camp:
+		if r.grow(pad).has_point(p):
+			return true
 	if _body == null:
 		return false
 	for shape: CollisionShape3D in _body.get_children():
@@ -96,6 +111,7 @@ func _prop(kind: String, at: Vector3) -> void:
 func _collect_keep_clear() -> void:
 	_keep_clear.clear()
 	_keep_clear.append(Vector2(0.0, 8.0))   # Player.RESPAWN_POS
+	_keep_clear.append(GameState.yard_center() + Scribe.OFFSET)   # the scribe's desk
 	for group: String in ["supply_piles", "build_sites"]:
 		for n: Node3D in get_tree().get_nodes_in_group(group):
 			if n.is_visible_in_tree() and absf(n.global_position.z) > 2.0:
@@ -114,6 +130,7 @@ func _apply_ground(g: Dictionary) -> void:
 	for key: String in ["scrub_bias", "tint_amount", "outside_shade"]:
 		mat.set_shader_parameter(key, g[key])
 	mat.set_shader_parameter("section_tint", g["tint"])
+	mat.set_shader_parameter("feature", g["feature"])
 
 # ── Pieces ────────────────────────────────────────────────────
 
@@ -138,17 +155,27 @@ static func _footprint_half(size: Vector3, yaw: float) -> Vector2:
 	var s := absf(sin(yaw))
 	return Vector2(size.x * c + size.z * s, size.x * s + size.z * c) * 0.5
 
-# Debug aid: a solid piece that crowds the wall, the spawn line or something workers use
+# Debug aid: a piece that crowds the wall, the spawn line, something workers use or
+# the work camp
 func _check(p: Vector2, half: Vector2) -> void:
 	if not OS.is_debug_build():
 		return
-	var sec_name: String = GameState.get_current_section()["name"]
 	var box := Rect2(p - half, half * 2.0)
 	if box.intersects(WALL_STRIP) or box.intersects(SPAWN_STRIP):
-		push_warning("SectionTerrain (%s): piece at %s crowds the wall / spawn line" % [sec_name, p])
+		_crowd(p, "the wall / spawn line")
+	if box.end.y > YARD_BACK:
+		_crowd(p, "the city's first houses")
 	for k: Vector2 in _keep_clear:
 		if box.grow(CLEARANCE).has_point(k):
-			push_warning("SectionTerrain (%s): piece at %s crowds %s" % [sec_name, p, k])
+			_crowd(p, str(k))
+	for r: Rect2 in _camp:
+		if box.intersects(r):
+			_crowd(p, "the work camp at %s" % r.get_center())
+
+func _crowd(p: Vector2, what: String) -> void:
+	var line := "SectionTerrain (%s): piece at %s crowds %s" % [GameState.SECTIONS[_built]["name"], p, what]
+	crowded.append(line)
+	push_warning(line)
 
 # Low dry-stone wall from a to b (sheepfolds, terraces), solid
 func _drystone(a: Vector2, b: Vector2, height := 0.8, color := STONE_COLOR) -> void:
@@ -172,7 +199,10 @@ func _stall(c: Vector3, w: float, d: float, goods: String) -> void:
 		for sz: float in [-1.0, 1.0]:
 			_add("trunk", Transform3D(Basis.from_scale(Vector3(0.5, 2.2, 0.5)), c + Vector3(sx * w * 0.45, 1.1, sz * d * 0.45)), _vary(WOOD, 0.04))
 	_add("block", Transform3D(Basis(Vector3.RIGHT, 0.12) * Basis.from_scale(Vector3(w + 0.3, 0.06, d + 0.3)), c + Vector3(0, 2.25, 0)), cloth)
-	_solid(c, Vector3(w * 0.85, 0.8, d * 0.6), _vary(WOOD, 0.03).lightened(0.05))
+	_check(Vector2(c.x, c.z), Vector2(w + 0.3, d + 0.3) * 0.5)
+	var table := Vector3(w * 0.85, 0.8, d * 0.6)
+	_add("block", Transform3D(Basis.from_scale(table), c + Vector3(0, table.y * 0.5, 0)), _vary(WOOD, 0.03).lightened(0.05))
+	_collider(c, table, 0.0, false)
 	var top := c + Vector3(0, 0.83, 0)
 	for i in 6:
 		var at := top + Vector3(_rng.randf_range(-w * 0.35, w * 0.35), 0.05, _rng.randf_range(-d * 0.22, d * 0.22))
@@ -266,8 +296,10 @@ func _sheepfold(c: Vector3) -> void:
 		[Vector3(0.75, 0, 1.4), 2.85, "lamb"],
 		[Vector3(1.9, 0, 1.15), -1.1, "lamb"],
 	]
+	# The flock keeps its rump and nose this far from the centre: inside the stone
+	var pen_r := r - 0.3 - Flock.RADIUS - 0.05
 	for i in flock.size():
-		_sheep(c + flock[i][0], flock[i][1], flock[i][2], i + 1)
+		_sheep(c + flock[i][0], flock[i][1], flock[i][2], i + 1, true, c, pen_r)
 	# A few strays grazing on the slope
 	var strays := [Vector3(-8.5, 0, -9.5), Vector3(-5.5, 0, -10.4), Vector3(6.5, 0, -9.0)]
 	for i in strays.size():
@@ -275,43 +307,101 @@ func _sheepfold(c: Vector3) -> void:
 
 # The blockout is deliberately complete without any small wool forms. +X faces forward.
 # `detail = false` is used by the visual review tool to check the naked silhouette.
-func _sheep(c: Vector3, yaw: float, pose: String, style := 0, detail := true) -> void:
-	var b := Basis(Vector3.UP, yaw)
+# Each sheep moves on its own (Flock): its body parts are merged into one mesh and its
+# head parts into another (pivoting at the neck); legs and ears are posed by the Flock.
+# `pen_r` > 0 keeps it inside the fold (centre `pen_c`); otherwise it strays near `c`.
+func _sheep(c: Vector3, yaw: float, pose: String, style := 0, detail := true, pen_c := Vector3.ZERO, pen_r := 0.0) -> void:
 	var size := (0.72 if pose == "lamb" else 1.0) * (1.0 + 0.025 * sin(style * 2.7))
 	var coat := Color(0.88, 0.82, 0.71).lerp(Color(0.83, 0.75, 0.64), 0.1 + 0.08 * sin(style * 3.1))
 	var face := Color(0.44, 0.29, 0.21).lerp(Color(0.51, 0.35, 0.25), 0.5 + 0.2 * sin(style * 1.7))
-	var hoof := Color(0.19, 0.14, 0.12)
 	var sheep_scale := Vector3(size, size * 1.32, size)
+	var body: Array = []
+	var head: Array = []
 	var put := func(kind: String, at: Vector3, sc: Vector3, tint: Color, turn := Basis.IDENTITY) -> void:
-		_add(kind, Transform3D(b * turn * Basis.from_scale(sc * sheep_scale), c + b * (at * sheep_scale)), tint)
+		body.append([kind, Transform3D(turn * Basis.from_scale(sc * sheep_scale), at * sheep_scale), tint])
 	put.call("sheep_torso", Vector3.ZERO, Vector3.ONE, coat)
-	# Leg sockets lie well inside the coat; each shaped shank is distinct below it.
-	for x: float in [-0.55, 0.42]:
-		for side: float in [-1.0, 1.0]:
-			var p := Vector3(x, 0, side * 0.31)
-			put.call("sheep_leg_hind" if x < 0.0 else "sheep_leg_front", p, Vector3.ONE, face.darkened(0.09))
-			for split: float in [-1.0, 1.0]:
-				put.call("blob", p + Vector3(0.07, 0.055, split * 0.063), Vector3(0.24, 0.105, 0.11), hoof)
 	# Broad short tail belongs to the rump, rather than hanging below it.
 	put.call("blob", Vector3(-0.79, 0.92, 0), Vector3(0.32, 0.28, 0.37), coat.darkened(0.015))
-	var head_turn := 0.08 * sin(style * 2.0)
-	var head_basis := Basis(Vector3.UP, head_turn)
-	if pose == "graze":
-		head_basis = Basis(Vector3.BACK, -0.52) * head_basis
-	var head_root := Vector3(0.52, 0.78, 0)
+	var head_root := Flock.HEAD_ROOT
 	var head_put := func(kind: String, at: Vector3, sc: Vector3, tint: Color, turn := Basis.IDENTITY) -> void:
-		var p := head_root + head_basis * (at - head_root)
-		_add(kind, Transform3D(b * head_basis * turn * Basis.from_scale(sc * sheep_scale), c + b * (p * sheep_scale)), tint)
+		head.append([kind, Transform3D(turn * Basis.from_scale(sc * sheep_scale), (at - head_root) * sheep_scale), tint])
 	head_put.call("sheep_neck", Vector3.ZERO, Vector3.ONE, coat)
 	head_put.call("sheep_head", Vector3.ZERO, Vector3.ONE, face)
 	for side: float in [-1.0, 1.0]:
-		head_put.call("sheep_ear", Vector3(0.83, 1.2, side * 0.17), Vector3.ONE, face.darkened(0.045), Basis(Vector3.UP, 0.0 if side > 0.0 else PI))
 		head_put.call("blob", Vector3(1.05, 1.17, side * 0.185), Vector3(0.055, 0.055, 0.03), Color(0.105, 0.07, 0.055))
 		head_put.call("blob", Vector3(1.06, 1.185, side * 0.21), Vector3(0.016, 0.016, 0.012), Color(0.89, 0.76, 0.57))
 	for side: float in [-1.0, 1.0]:
 		head_put.call("blob", Vector3(1.45, 1.01, side * 0.087), Vector3(0.05, 0.032, 0.043), face.darkened(0.42))
 	if detail:
 		_sheep_fleece(put, head_put, coat, style)
+	c.y = 0.0
+	_sheep_flock().add_sheep(c, yaw, sheep_scale, _merge(body), _merge(head), face.darkened(0.09), face.darkened(0.045),
+		0.08 * sin(style * 2.0), pose == "graze", pen_c, pen_r)
+
+static var _part_meshes := {}
+static var _flock_meshes: Array[Mesh] = []   # front leg, hind leg, ear
+var _flock: Flock
+
+# The section's Flock, made with its first sheep; added to the tree on _flush
+func _sheep_flock() -> Flock:
+	if _flock:
+		return _flock
+	if _flock_meshes.is_empty():
+		# Leg and hooves in one: the leg takes the instance colour, the hooves keep near-black
+		for kind: String in ["sheep_leg_front", "sheep_leg_hind"]:
+			var parts := [[kind, Transform3D.IDENTITY, Color.WHITE]]
+			for split: float in [-1.0, 1.0]:
+				parts.append(["blob", Transform3D(Basis.from_scale(Vector3(0.24, 0.105, 0.11)), Vector3(0.07, 0.055, split * 0.063)), HOOF_ON_LEG])
+			_flock_meshes.append(_merge(parts))
+		_flock_meshes.append(_merge([["sheep_ear", Transform3D.IDENTITY, Color.WHITE]]))
+	_flock = Flock.new()
+	_flock.name = "Flock"
+	_flock.setup(self, WALL_STRIP, _material_for("sheep_torso"), _flock_meshes[0], _flock_meshes[1], _flock_meshes[2], 3000 + maxi(_built, 0))
+	return _flock
+
+# Hoof colour as a share of the leg's (instance colours multiply the vertex colour)
+const HOOF_ON_LEG := Color(0.45, 0.49, 0.58)
+
+func _flush() -> void:
+	super._flush()
+	if _flock and _flock.get_parent() == null:
+		add_child(_flock)
+
+# Parts ([kind, transform, colour]) baked into one mesh with vertex colours: one draw
+# call for a piece that moves on its own
+func _merge(parts: Array) -> ArrayMesh:
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	for part: Array in parts:
+		if not _part_meshes.has(part[0]):
+			_part_meshes[part[0]] = _mesh_for(part[0])
+		var arrays: Array = (_part_meshes[part[0]] as Mesh).surface_get_arrays(0)
+		var xf: Transform3D = part[1]
+		var nb := xf.basis.inverse().transposed()
+		var base := verts.size()
+		var pv: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var pn: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		for i in pv.size():
+			verts.append(xf * pv[i])
+			normals.append((nb * pn[i]).normalized())
+			colors.append(part[2])
+		if arrays[Mesh.ARRAY_INDEX] == null:
+			for i in pv.size():
+				indices.append(base + i)
+		else:
+			for i: int in arrays[Mesh.ARRAY_INDEX]:
+				indices.append(base + i)
+	var out := []
+	out.resize(Mesh.ARRAY_MAX)
+	out[Mesh.ARRAY_VERTEX] = verts
+	out[Mesh.ARRAY_NORMAL] = normals
+	out[Mesh.ARRAY_COLOR] = colors
+	out[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, out)
+	return mesh
 
 # A single coat carries the silhouette. Broad rises are sculpted into its surface,
 # so the wool stays connected without rows or seams between separate tufts.
@@ -459,7 +549,7 @@ func _fish_market() -> void:
 	_stall(Vector3(10.5, 0, 5.8), 3.0, 2.2, "fish")
 	_stall(Vector3(15.5, 0, 6.2), 3.0, 2.2, "fish")
 	_stall(Vector3(13.0, 0, 10.2), 3.2, 2.2, "jars")
-	for p: Vector3 in [Vector3(8.4, 0, 8.2), Vector3(17.8, 0, 8.8)]:
+	for p: Vector3 in [Vector3(8.4, 0, 8.2), Vector3(17.0, 0, 11.6)]:
 		_prop("basket", p)
 		_prop("basket", p + Vector3(0.7, 0, 0.35))
 
@@ -469,7 +559,7 @@ const REED_COLOR := Color(0.58, 0.47, 0.28)
 func _ruins(g: Dictionary) -> void:
 	g["tint"] = Color(0.42, 0.37, 0.33)
 	g["tint_amount"] = 0.16
-	for c: Vector3 in [Vector3(-20.0, 0, 8.5), Vector3(19.5, 0, 9.5), Vector3(4.0, 0, 6.2), Vector3(-18.0, 0, -7.5)]:
+	for c: Vector3 in [Vector3(-9.5, 0, 9.0), Vector3(15.5, 0, 10.0), Vector3(4.0, 0, 6.2), Vector3(-18.0, 0, -7.5)]:
 		var w := _rng.randf_range(3.2, 4.2)
 		var d := _rng.randf_range(2.6, 3.2)
 		var tint := _vary(HOUSE_COLORS[0], 0.03).lerp(SOOT, 0.35)
@@ -492,19 +582,20 @@ func _workshops(g: Dictionary) -> void:
 	_solid(forge + Vector3(1.8, 0, 0.4), Vector3(0.6, 0.6, 0.4), Color(0.30, 0.28, 0.27))   # anvil stone
 	_smoke(forge + Vector3(0, 1.2, 0), true)
 	_stall(Vector3(17.5, 0, 6.5), 3.0, 2.2, "jars")
-	_stall(Vector3(-19.5, 0, 10.5), 2.8, 2.0, "metal")
+	_stall(Vector3(-14.5, 0, 11.0), 2.8, 2.0, "metal")
 
-# Tower of Ovens (3:11): domed clay bread ovens and firewood, smoke going up
+# Tower of the Ovens (3:11): domed clay bread ovens and firewood, smoke going up
 func _ovens(g: Dictionary) -> void:
 	g["tint"] = Color(0.66, 0.42, 0.30)
 	g["tint_amount"] = 0.08
-	for c: Vector3 in [Vector3(-9.5, 0, 6.0), Vector3(-14.5, 0, 8.8), Vector3(-19.5, 0, 5.5)]:
+	for c: Vector3 in [Vector3(-9.5, 0, 6.0), Vector3(-14.5, 0, 8.8), Vector3(-17.0, 0, 4.6)]:
 		_add("leaf", Transform3D(Basis.from_scale(Vector3(1.8, 1.7, 1.8)), c + Vector3(0, 0.4, 0)), _vary(CLAY_COLOR, 0.04).lightened(0.1))
 		_add("opening", Transform3D(Basis.from_scale(Vector3(0.5, 0.45, 0.06)), c + Vector3(0, 0.35, 0.86)), Color(0.9, 0.42, 0.14))
 		_collider(c, Vector3(1.8, 1.4, 1.8))
 		_smoke(c + Vector3(0, 1.3, 0))
 		_prop("basket", c + Vector3(-1.5, 0, 0.9))   # figs set out beside the baking
 		var wood := c + Vector3(1.8, 0, 0.6)
+		_check(Vector2(wood.x, wood.z), Vector2(0.4, 0.6))
 		for i in 5:
 			_add("trunk", Transform3D(Basis(Vector3.RIGHT, PI / 2) * Basis.from_scale(Vector3(0.7, 1.1, 0.7)), wood + Vector3(0, 0.1 + (i % 2) * 0.16, (i - 2) * 0.17)), _vary(WOOD, 0.05))
 
@@ -519,13 +610,13 @@ func _valley(g: Dictionary) -> void:
 	for x: float in [-22.0, -17.0, -12.0, 3.0, 7.0, 18.0, 23.0]:
 		_olive(Vector3(x + _rng.randf_range(-0.8, 0.8), 0, -10.5 + _rng.randf_range(-0.4, 0.4)))
 
-# Dung Gate (3:14): the site is far from the yard; refuse heaps along the way split the
+# Gate of the Ash Heaps (3:14): the site is far from the yard; refuse heaps along the way split the
 # haul into lanes. The Hinnom valley smoulders outside.
 func _refuse(g: Dictionary) -> void:
 	g["tint"] = Color(0.45, 0.40, 0.35)
 	g["tint_amount"] = 0.12
 	g["outside_shade"] = 0.4
-	for c: Vector3 in [Vector3(10.0, 0, 6.5), Vector3(14.5, 0, 10.5), Vector3(18.5, 0, 5.0), Vector3(21.5, 0, 10.5)]:
+	for c: Vector3 in [Vector3(10.0, 0, 6.5), Vector3(14.5, 0, 10.5), Vector3(18.5, 0, 5.0), Vector3(25.0, 0, 12.0)]:
 		var s := Vector3(_rng.randf_range(2.6, 3.2), _rng.randf_range(0.9, 1.2), _rng.randf_range(2.2, 2.8))
 		_add("boulder", Transform3D(_yaw().scaled(s * Vector3(0.95, 1.0, 0.95)), c + Vector3(0, 0.1, 0)), _vary(Color(0.42, 0.36, 0.30), 0.04))
 		for i in 6:   # potsherds
@@ -539,9 +630,9 @@ func _garden(g: Dictionary) -> void:
 	g["scrub_bias"] = 0.12
 	g["tint"] = Color(0.46, 0.58, 0.30)
 	g["tint_amount"] = 0.1
-	var pool := Vector3(-18.0, 0, 6.5)
+	var pool := Vector3(-18.0, 0, 6.5)   # on the work camp cart's ground (CAMP_GIVES_WAY)
 	var pw := 7.0
-	var pd := 4.6
+	var pd := 4.0   # between the watchmen's lookout and the cistern
 	# Stone rim around dark water
 	_solid(pool + Vector3(0, 0, -pd * 0.5), Vector3(pw, 0.45, 0.5), STONE_COLOR)
 	_solid(pool + Vector3(0, 0, pd * 0.5), Vector3(pw, 0.45, 0.5), STONE_COLOR)
@@ -552,11 +643,7 @@ func _garden(g: Dictionary) -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(pw - 0.5, pd - 0.5)
 	water.mesh = plane
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = WATER
-	mat.roughness = 0.15
-	mat.metallic_specular = 0.8
-	water.material_override = mat
+	water.material_override = water_material()
 	water.position = pool + Vector3(0, 0.3, 0)
 	add_child(water)
 	# Water jars left by the pool steps, and by the far rim
@@ -569,10 +656,10 @@ func _garden(g: Dictionary) -> void:
 	# The King's Garden: olives and flowering myrtle, with palms near the water.
 	for xi in 4:
 		for zi in 2:
-			var x := 9.0 + xi * 4.0
+			var x := 7.5 + xi * 3.3   # the last column clear of the carpenters' bench
 			var z := 6.0 + zi * 4.0
 			_tree(Vector3(x + _rng.randf_range(-0.4, 0.4), 0, z + _rng.randf_range(-0.3, 0.3)), (xi + zi) % 2 == 0)
-	for p: Vector3 in [Vector3(-9.5, 0, 10.0), Vector3(5.0, 0, 10.5)]:
+	for p: Vector3 in [Vector3(-23.0, 0, 8.0), Vector3(5.0, 0, 10.5)]:
 		_date_palm(p)
 		_collider(p, Vector3(0.55, 3.8, 0.55))
 	for p: Vector3 in [Vector3(6.5, 0, 5.0), Vector3(12.0, 0, 13.0), Vector3(19.5, 0, 13.0)]:
@@ -588,7 +675,7 @@ func _ophel(g: Dictionary) -> void:
 	g["outside_shade"] = 0.45
 	for x: float in [-17.0, -10.5, -0.5, 10.0, 16.5]:
 		_torch(Vector3(x, 0, 3.6))
-	for p: Vector3 in [Vector3(-11.0, 0, 9.5), Vector3(18.5, 0, 9.0), Vector3(-10.0, 0, -4.2), Vector3(4.0, 0, -4.2), Vector3(14.0, 0, -4.2)]:
+	for p: Vector3 in [Vector3(-11.0, 0, 9.5), Vector3(16.5, 0, 9.5), Vector3(-10.0, 0, -4.2), Vector3(4.0, 0, -4.2), Vector3(14.0, 0, -4.2)]:
 		_torch(p)
 	for c: Vector3 in [Vector3(-16.0, 0, -8.0), Vector3(9.0, 0, -9.0), Vector3(21.0, 0, -7.0)]:
 		for i in 3:
@@ -599,9 +686,10 @@ func _ophel(g: Dictionary) -> void:
 # Horse Gate (3:28): "each one in front of his own house" — a row of priests' houses
 # between the wall and the yard, narrow lanes between them
 func _priests() -> void:
-	# x spans; the lane at the gate (x ≈ -4) and the one at the respawn point stay open
-	var spans := [Vector2(-22.5, -18.3), Vector2(-16.4, -12.0), Vector2(-10.2, -6.4),
-		Vector2(1.6, 5.6), Vector2(7.4, 11.6), Vector2(13.4, 17.6), Vector2(19.4, 23.0)]
+	# x spans; the lane at the gate (x ≈ -4) and the one at the respawn point stay open,
+	# and the ends are left to the work camp's cart and the watchmen's lookouts
+	var spans := [Vector2(-16.4, -12.0), Vector2(-10.2, -6.4),
+		Vector2(1.6, 5.6), Vector2(7.4, 11.6), Vector2(13.4, 17.6)]
 	for span: Vector2 in spans:
 		var w := span.y - span.x
 		var d := _rng.randf_range(3.2, 3.6)
@@ -643,7 +731,7 @@ func _kidron(g: Dictionary) -> void:
 # Inspection Gate (3:31-32): the goldsmiths and traders by the Sheep Gate; the circuit
 # closes where it began, so the sheepfold is back outside
 func _market() -> void:
-	_stall(Vector3(-20.0, 0, 7.5), 3.0, 2.2, "metal")
+	_stall(Vector3(-14.5, 0, 9.0), 3.0, 2.2, "metal")
 	_stall(Vector3(-8.2, 0, 5.4), 2.6, 2.0, "cloth")
-	_stall(Vector3(18.5, 0, 8.5), 3.0, 2.2, "jars")
+	_stall(Vector3(15.0, 0, 8.5), 3.0, 2.2, "jars")
 	_sheepfold(Vector3(-17.0, 0.0, -7.4))

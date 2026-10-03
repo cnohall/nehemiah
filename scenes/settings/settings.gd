@@ -7,10 +7,28 @@ const PATH := "user://settings.cfg"
 
 var fullscreen := false
 var vsync := true
+# 3D render resolution as a fraction of the window (the UI stays at full resolution), and
+# a graphics preset: index into QUALITIES. Defaults are lower on web / mobile.
+var render_scale := 1.0
+var quality := 2
+# True until the player picks a scale: a sustained low frame rate then steps it down
+var auto_scale := true
+# Windowed size picked by the player (WINDOW_SIZES), or ZERO to leave the window as the game opens it
+var window_size := Vector2i.ZERO
+var _sized := Vector2i.ZERO        # the size last applied, so a hand-dragged window is left alone
+var _mode_pending := false         # a fullscreen / windowed change is still being confirmed
 var volume := 0.8   # master bus, linear 0..1
 var music_volume := 0.6   # Music bus (created here), linear 0..1
 var sfx_volume := 0.8     # SFX bus (created here) — effects + jingles, linear 0..1
 var screen_shake := true
+# Drawn look over the world, on trial with playtesters: index into ART_STYLES (LookPass)
+signal art_style_changed
+const ART_STYLES := ["Standard", "Lithograph", "Cel"]
+var art_style := 0:
+	set(v):
+		if v != art_style:
+			art_style = v
+			art_style_changed.emit()
 # Day, progress and threats told by the world (sun, scribe, watchmen) — false brings
 # back the day plaque and the threat plaque
 var diegetic_hud := true
@@ -43,6 +61,24 @@ const DIFFICULTIES := [
 	{ "name": "Hard",     "pace": 1.3, "harm": 1.25, "about": "More enemies, heavier blows" },
 ]
 
+const RENDER_SCALES := [0.5, 0.67, 0.75, 1.0]
+const WINDOW_SIZES := [Vector2i(1024, 768), Vector2i(1280, 720), Vector2i(1600, 900),
+	Vector2i(1920, 1080), Vector2i(2560, 1440)]
+
+# Bundled costs: shadow atlas, soft-shadow filter, SSAO, MSAA. Index 2 is the look the
+# game is tuned on (project.godot values).
+const QUALITIES := [
+	{ "name": "Low",    "shadow": 2048, "soft": 1, "ssao": 0, "msaa": Viewport.MSAA_DISABLED },
+	{ "name": "Medium", "shadow": 4096, "soft": 2, "ssao": 1, "msaa": Viewport.MSAA_2X },
+	{ "name": "High",   "shadow": 8192, "soft": 3, "ssao": 2, "msaa": Viewport.MSAA_2X },
+]
+
+# Auto step-down: this many seconds under LOW_FPS before the scale drops one notch
+const LOW_FPS := 40.0
+const LOW_FPS_SECS := 10.0
+var _low_time := 0.0
+var _gfx_applied := []
+
 # Shipped translations (locale/*.po; the English text is the key), in picker order.
 # Names are written in their own language so anyone can find theirs.
 const LANGUAGES := [
@@ -58,14 +94,22 @@ const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
 	"interact", "drop", "dash", "throw_charge", "horn", "reveal"]
 
 func _ready() -> void:
+	if OS.has_feature("web") or OS.has_feature("mobile"):
+		render_scale = 0.75
+		quality = 1
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) == OK:
 		fullscreen = cfg.get_value("display", "fullscreen", fullscreen)
 		vsync      = cfg.get_value("display", "vsync", vsync)
-		volume     = cfg.get_value("audio", "volume", volume)
+		render_scale = clampf(cfg.get_value("display", "render_scale", render_scale), RENDER_SCALES[0], 1.0)
+		quality    = clampi(cfg.get_value("display", "quality", quality), 0, QUALITIES.size() - 1)
+		auto_scale = cfg.get_value("display", "auto_scale", auto_scale)
+		window_size = Vector2i(cfg.get_value("display", "window_w", 0), cfg.get_value("display", "window_h", 0))
+		volume    = cfg.get_value("audio", "volume", volume)
 		music_volume = cfg.get_value("audio", "music_volume", music_volume)
 		sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 		screen_shake = cfg.get_value("display", "screen_shake", screen_shake)
+		art_style = clampi(cfg.get_value("display", "art_style", art_style), 0, ART_STYLES.size() - 1)
 		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
 		fixed_camera = cfg.get_value("display", "fixed_camera", fixed_camera)
 		turn_to_map = cfg.get_value("display", "turn_to_map", turn_to_map)
@@ -88,6 +132,7 @@ func _ready() -> void:
 	apply()
 	_booted = true
 	get_tree().root.size_changed.connect(_fit_ui)
+	get_tree().root.size_changed.connect(_sync_mode)
 	_fit_ui()
 
 # canvas_items stretch shrinks the UI with the window: at 1280×800 (Steam Deck) body
@@ -105,12 +150,12 @@ func apply() -> void:
 	TranslationServer.set_locale(language if not language.is_empty() else OS.get_locale())
 	# Embedded/headless runs have no real window to resize
 	if DisplayServer.get_name() != "headless":
-		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 		# Browsers only allow fullscreen from a click, so never touch it at boot there
-		if DisplayServer.window_get_mode() != mode and not (OS.has_feature("web") and fullscreen and not _booted):
-			DisplayServer.window_set_mode(mode)
+		if can_change_window() and not (OS.has_feature("web") and fullscreen and not _booted):
+			_apply_window()
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync
 			else DisplayServer.VSYNC_DISABLED)
+	_apply_graphics()
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(volume, 0.0001)))
 	AudioServer.set_bus_mute(0, volume <= 0.0)
 	var music := AudioServer.get_bus_index("Music")
@@ -120,11 +165,123 @@ func apply() -> void:
 	AudioServer.set_bus_volume_db(sfx, linear_to_db(maxf(sfx_volume, 0.0001)))
 	AudioServer.set_bus_mute(sfx, sfx_volume <= 0.0)
 
+# ── Window ─────────────────────────────────────────────────
+
+func _is_fullscreen() -> bool:
+	var m := DisplayServer.window_get_mode()
+	return m == DisplayServer.WINDOW_MODE_FULLSCREEN or m == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+
+## False while the game runs inside the editor's Game tab: the editor owns that window,
+## so size and fullscreen requests go nowhere (the settings picker greys them out)
+func can_change_window() -> bool:
+	return not Engine.is_embedded_in_editor()
+
+## Window sizes that fit the screen the window is on (a picker for windowed play)
+func available_window_sizes() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var room := DisplayServer.screen_get_usable_rect(DisplayServer.window_get_current_screen()).size
+	for s: Vector2i in WINDOW_SIZES:
+		if s.x <= room.x and s.y <= room.y:
+			out.append(s)
+	return out
+
+# Touches the window only where it differs from what was asked: apply() runs on every
+# slider tick and language change, and re-sending WINDOWED would un-maximize the window.
+func _apply_window() -> void:
+	if _is_fullscreen() != fullscreen:
+		_mode_pending = true   # before the call: size_changed may fire inside it
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
+			else DisplayServer.WINDOW_MODE_WINDOWED)
+		_verify_window()
+	elif not fullscreen and not OS.has_feature("web") and window_size != Vector2i.ZERO and window_size != _sized:
+		_resize_window()
+
+# The OS applies a mode change a moment later and can drop one that lands mid-click or
+# while focus moves (overlay, alt-tab): look again shortly and ask once more.
+func _verify_window() -> void:
+	_mode_pending = true
+	await get_tree().create_timer(0.35).timeout
+	if _is_fullscreen() != fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen
+			else DisplayServer.WINDOW_MODE_WINDOWED)
+		await get_tree().create_timer(0.35).timeout
+	_mode_pending = false
+	if not fullscreen and window_size != Vector2i.ZERO and window_size != _sized:
+		_resize_window()
+	_sync_mode()
+
+## Something else changed the mode (OS shortcut, driver): follow it so the picker never lies
+func _sync_mode() -> void:
+	if _mode_pending or DisplayServer.get_name() == "headless" or not can_change_window():
+		return
+	if _is_fullscreen() != fullscreen:
+		fullscreen = _is_fullscreen()
+
+func _resize_window() -> void:
+	if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	var screen := DisplayServer.window_get_current_screen()
+	var room := DisplayServer.screen_get_usable_rect(screen)
+	var size := Vector2i(mini(window_size.x, room.size.x), mini(window_size.y, room.size.y))
+	DisplayServer.window_set_size(size)
+	DisplayServer.window_set_position(room.position + (room.size - size) / 2)
+	_sized = window_size
+
+## The Compatibility renderer (web) ignores 3D scaling, so the picker is hidden there
+func can_scale_3d() -> bool:
+	return RenderingServer.get_current_rendering_method() != "gl_compatibility"
+
+func _apply_graphics() -> void:
+	# apply() runs on every slider tick; resizing the shadow atlas each time would hitch
+	var sig := [quality, render_scale]
+	if sig == _gfx_applied:
+		return
+	_gfx_applied = sig
+	var q: Dictionary = QUALITIES[clampi(quality, 0, QUALITIES.size() - 1)]
+	var root := get_tree().root
+	root.msaa_3d = q["msaa"]
+	if can_scale_3d():
+		root.scaling_3d_scale = render_scale
+		# FSR1 sharpens an upscale; at full scale plain bilinear costs nothing
+		root.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR if render_scale >= 1.0 \
+			else Viewport.SCALING_3D_MODE_FSR
+		root.texture_mipmap_bias = log(render_scale) / log(2.0)
+	RenderingServer.directional_shadow_atlas_set_size(q["shadow"], true)
+	RenderingServer.directional_soft_shadow_filter_set_quality(q["soft"])
+	RenderingServer.environment_set_ssao_quality(q["ssao"], true, 0.5, 2, 50.0, 300.0)
+
+func _process(delta: float) -> void:
+	# Only while playing on a real window that has focus, and only until the player chooses
+	if not auto_scale or not can_scale_3d() or DisplayServer.get_name() == "headless" \
+			or not get_window().has_focus() or get_tree().paused:
+		_low_time = 0.0
+		return
+	if Engine.get_frames_per_second() >= LOW_FPS:
+		_low_time = 0.0
+		return
+	_low_time += delta
+	if _low_time < LOW_FPS_SECS:
+		return
+	_low_time = 0.0
+	for i in range(RENDER_SCALES.size() - 1, -1, -1):
+		if RENDER_SCALES[i] < render_scale - 0.01:
+			render_scale = RENDER_SCALES[i]
+			apply()
+			save()
+			return
+	auto_scale = false   # already at the floor
+
 func save() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "fullscreen", fullscreen)
 	cfg.set_value("display", "vsync", vsync)
+	cfg.set_value("display", "render_scale", render_scale)
+	cfg.set_value("display", "quality", quality)
+	cfg.set_value("display", "auto_scale", auto_scale)
+	cfg.set_value("display", "window_w", window_size.x)
+	cfg.set_value("display", "window_h", window_size.y)
 	cfg.set_value("display", "screen_shake", screen_shake)
+	cfg.set_value("display", "art_style", art_style)
 	cfg.set_value("display", "diegetic_hud", diegetic_hud)
 	cfg.set_value("display", "fixed_camera", fixed_camera)
 	cfg.set_value("display", "turn_to_map", turn_to_map)

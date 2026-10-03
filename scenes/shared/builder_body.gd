@@ -41,7 +41,7 @@ func build(rig: Node3D, look: Dictionary) -> Array[Node3D]:
 		var leg: Node3D = _rig._pivot(_rig._body, Vector3(side * 0.163, HIP, 0))
 		_leg(leg, side)
 		legs.append(leg)
-		var arm: Node3D = _rig._pivot(_rig._torso, Vector3(side * 0.365, 0.50, 0))
+		var arm: Node3D = _rig._pivot(_rig._torso, Vector3(side * 0.38, 0.50, 0))
 		arms.append(arm)
 		hands.append(_arm(arm, side, sleeve_cloth))
 	_rig._leg_l = legs[0]
@@ -69,8 +69,10 @@ func _tunic() -> void:
 	_oval(torso, Vector3(0.25, 0.25, 0.22), _skin, Vector3(0, 0.555, 0.006))
 	_part(torso, _surface("tunic", 20, 40, func(u: float, v: float) -> Vector3:
 		var a := u * TAU
-		var width := 0.28 + sin(v * PI) * 0.035 - pow(v, 5) * 0.08
-		var depth := 0.197 + sin(v * PI) * 0.02 - pow(v, 5) * 0.045
+		# Broad upper chest and shoulder shelf, then a clean taper into the belt.
+		# The final inward turn leaves the existing neck and head proportions intact.
+		var width := 0.300 + 0.054 * smoothstep(0.18, 0.72, v) - 0.140 * smoothstep(0.78, 1.0, v)
+		var depth := 0.210 + 0.027 * smoothstep(0.20, 0.65, v) - 0.063 * smoothstep(0.80, 1.0, v)
 		var y := 0.20 + v * 0.38
 		# The front neck edge drops into a V, back edge stays at the nape.
 		if sin(a) > 0:
@@ -81,14 +83,14 @@ func _tunic() -> void:
 	), _linen, Vector3.ZERO, 1.0)
 	_part(torso, _surface("skirt_long" if _long else "skirt", 16, 40, func(u: float, v: float) -> Vector3:
 		var a := u * TAU
-		var radius := lerpf(0.37 if _long else 0.354, 0.285, v)
+		var radius := lerpf(0.385 if _long else 0.370, 0.300, v)
 		var folds := (sin(a * 9.0 + 0.4) * 0.012 + sin(a * 5.0 - 0.8) * 0.006) * pow(1.0 - v, 0.7)
 		var y := (-0.30 if _long else -0.123) + v * (0.517 if _long else 0.34) + pow(1.0 - v, 4) * (sin(a * 3.0 + 0.5) * 0.010 + cos(a * 9.0) * 0.006)
 		return Vector3(cos(a) * (radius + folds), y, sin(a) * (radius * 0.72 + folds))
 	), _linen, Vector3.ZERO, 1.0)
 	# Folded linen lapels cross over the chest; their edges sit on the cloth surface.
-	_ribbon(torso, "collar_left", [Vector3(-0.16, 0.571, 0.11), Vector3(-0.13, 0.53, 0.18), Vector3(0.015, 0.43, 0.219), Vector3(0.115, 0.32, 0.216)], 0.046, 0.008, _linen.lightened(0.06), 1.0)
-	_ribbon(torso, "collar_right", [Vector3(0.16, 0.571, 0.11), Vector3(0.12, 0.53, 0.19), Vector3(-0.045, 0.42, 0.225), Vector3(-0.14, 0.27, 0.206)], 0.047, 0.009, _linen.lightened(0.08), 1.0)
+	_ribbon(torso, "collar_left", [Vector3(-0.16, 0.571, 0.11), Vector3(-0.13, 0.53, 0.18), Vector3(0.015, 0.43, 0.239), Vector3(0.115, 0.32, 0.225)], 0.046, 0.008, _linen.lightened(0.06), 1.0)
+	_ribbon(torso, "collar_right", [Vector3(0.16, 0.571, 0.11), Vector3(0.12, 0.53, 0.19), Vector3(-0.045, 0.42, 0.245), Vector3(-0.14, 0.27, 0.214)], 0.047, 0.009, _linen.lightened(0.08), 1.0)
 	_ribbon(torso, "wrap_seam", [Vector3(-0.13, 0.29, 0.216), Vector3(-0.16, 0.16, 0.224), Vector3(-0.17, 0.035, 0.242), Vector3(-0.15, -0.113, 0.239)], 0.011, 0.004, _linen.darkened(0.12), 1.0)
 	# Raised hem follows the same irregular folds as the skirt.
 	var hem: Array[Vector3] = []
@@ -96,7 +98,7 @@ func _tunic() -> void:
 	for i in 65:
 		var a := TAU * i / 64.0
 		var f := sin(a * 9.0 + 0.4) * 0.012 + sin(a * 5.0 - 0.8) * 0.006
-		hem.append(Vector3(cos(a) * ((0.37 if _long else 0.354) + f), hem_y + sin(a * 3.0 + 0.5) * 0.010 + cos(a * 9.0) * 0.006, sin(a) * (0.255 + f)))
+		hem.append(Vector3(cos(a) * ((0.385 if _long else 0.370) + f), hem_y + sin(a * 3.0 + 0.5) * 0.010 + cos(a * 9.0) * 0.006, sin(a) * ((0.385 if _long else 0.370) * 0.72 + f)))
 	_part(torso, _tube("hem_long" if _long else "hem", hem, 0.005, 6), _linen.darkened(0.06), Vector3.ZERO, 1.0)
 
 func _leatherwork() -> void:
@@ -112,10 +114,10 @@ func _leatherwork() -> void:
 			points.append(Vector3(cos(a) * 0.320, 0.191 + edge * 0.044 + 0.008 * cos(a + 0.5), sin(a) * 0.235))
 		_part(torso, _tube("belt_edge%s" % edge, points, 0.0035, 6), EDGE.darkened(0.1), Vector3.ZERO, 2.0)
 	if _gear:
-		_ribbon(torso, "cross_strap", [Vector3(0.215, 0.562, 0.075), Vector3(0.14, 0.525, 0.245), Vector3(-0.105, 0.36, 0.26), Vector3(-0.22, 0.245, 0.179)], 0.074, 0.013, LEATHER, 2.0)
+		_ribbon(torso, "cross_strap", [Vector3(0.26, 0.562, 0.16), Vector3(0.20, 0.52, 0.31), Vector3(-0.105, 0.36, 0.31), Vector3(-0.22, 0.245, 0.205)], 0.074, 0.013, LEATHER, 2.0)
 	for edge: float in ([-1.0, 1.0] if _gear else []):
 		var offset := Vector3(edge * 0.022, edge * 0.019, 0.009)
-		_ribbon(torso, "strap_piping%s" % edge, [Vector3(0.215, 0.562, 0.075) + offset, Vector3(0.14, 0.525, 0.245) + offset, Vector3(-0.105, 0.36, 0.26) + offset, Vector3(-0.22, 0.245, 0.179) + offset], 0.004, 0.003, EDGE, 2.0)
+		_ribbon(torso, "strap_piping%s" % edge, [Vector3(0.26, 0.562, 0.16) + offset, Vector3(0.20, 0.52, 0.31) + offset, Vector3(-0.105, 0.36, 0.31) + offset, Vector3(-0.22, 0.245, 0.205) + offset], 0.004, 0.003, EDGE, 2.0)
 	# A rectangular buckle with a real open centre and a separate tongue.
 	_soft(torso, Vector3(0.086, 0.080, 0.020), LEATHER.darkened(0.15), Vector3(0.053, 0.235, 0.241))
 	for side: float in [-1.0, 1.0]:

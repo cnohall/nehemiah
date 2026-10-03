@@ -6,7 +6,7 @@ extends Control
 # Finished sections stand, the current one glows, the rest lie in rubble. When shown,
 # the section just finished raises itself along the ring as the reward.
 # `inspect` mode is the night ride of Neh. 2:13-15: every stretch broken, a torch goes
-# out by the Valley Gate, round past the Dung Gate to the Fountain Gate, and back.
+# out by the Valley Gate, round past the Gate of the Ash Heaps to the Fountain Gate, and back.
 # `finale` mode is the ending: the last stretch rises, then a gold line runs the whole
 # ring from the Sheep Gate back to itself, each stretch lighting as it passes.
 # `picker` mode is the replay map (SectionPicker): every section this player has ever
@@ -17,6 +17,10 @@ extends Control
 # their time, and a note in the scribe's hand beside each stretch reached.
 
 const RISE_TIME    := 1.6
+# Drawn looks: the sheet's paper and inks (match map_look.gdshader)
+const MAP_PAPER := Color(0.93, 0.86, 0.71)
+const MAP_INK   := Color(0.22, 0.14, 0.09)
+const MAP_RED   := Color(0.60, 0.16, 0.10)
 const RIDE_TIME    := 7.0
 const CLOSE_TIME   := 4.5
 const PULSE_SPEED  := 2.4
@@ -45,6 +49,12 @@ var picker := false
 var aged := false
 ## A parchment wash under the text column instead of the dark one (end screen)
 var paper := false
+## How the land is drawn (CircuitDiorama.set_look): the tinted lithograph by default
+var look := 1:
+	set(v):
+		look = v
+		if _diorama:
+			_diorama.set_look(v)
 ## Picker mode, per section: best marks (-1 = never finished) and whether it may be picked
 var best: Array = []
 var unlocked: Array = []
@@ -77,6 +87,7 @@ func _ready() -> void:
 	_container.add_child(_viewport)
 	_diorama = CircuitDiorama.new()
 	_viewport.add_child(_diorama)
+	_diorama.set_look(look)
 	_diorama.focus_on(section + 0.5)
 
 	_overlay = Control.new()
@@ -276,9 +287,14 @@ func _draw_overlay() -> void:
 		for k in steps + 1:
 			line.append(_project(_diorama.ring_world(from + span * k / steps, CircuitDiorama.WALL_H + 0.3)))
 		# Dark underlay so it reads on the sand, then a bright core
-		o.draw_polyline(line, Color(UiStyle.DUSK, 0.35), unit * 0.02, true)
-		o.draw_polyline(line, Color(UiStyle.GOLD, 0.35 + 0.3 * pulse), unit * 0.012, true)
-		o.draw_polyline(line, Color(1.0, 0.93, 0.72, 0.8 + 0.2 * pulse), unit * 0.005, true)
+		if look > 0:
+			# A red-ink stroke laid along the stretch, on a paper halo
+			o.draw_polyline(line, Color(MAP_PAPER, 0.55), unit * 0.016, true)
+			o.draw_polyline(line, Color(MAP_RED, 0.7 + 0.3 * pulse), unit * 0.007, true)
+		else:
+			o.draw_polyline(line, Color(UiStyle.DUSK, 0.35), unit * 0.02, true)
+			o.draw_polyline(line, Color(UiStyle.GOLD, 0.35 + 0.3 * pulse), unit * 0.012, true)
+			o.draw_polyline(line, Color(1.0, 0.93, 0.72, 0.8 + 0.2 * pulse), unit * 0.005, true)
 
 	_plaque_rects.clear()
 	if quiet:
@@ -291,7 +307,7 @@ func _draw_overlay() -> void:
 		var here := not inspect and not finale and i == section
 		var locked: bool = picker and not unlocked[i]
 		var label: String = tr(GameState.SECTIONS[i]["name"])
-		var fs := int(unit * (0.03 if here else 0.021))
+		var fs := int(unit * (0.03 if here else 0.021) * (1.3 if look > 0 else 1.0))
 		var mask := _marks(i)
 		var gems := done and mask >= 0
 		# A small parchment plaque: the name, and the marks earned there beside it
@@ -309,13 +325,26 @@ func _draw_overlay() -> void:
 		else:
 			tl = Vector2(anchor.x if out.x >= 0 else anchor.x - box.x, anchor.y - box.y * 0.5)
 		var alpha := 0.62 if locked else 0.94
-		o.draw_line(p, anchor, Color(WorldTag.BG, alpha * 0.8), 2.0, true)
-		o.draw_circle(p, 3.5, UiStyle.GOLD if here else Color(WorldTag.BG, alpha))
-		var sb := _plaque_here if here else _plaque
-		sb.bg_color = Color(WorldTag.BG, alpha)
-		o.draw_style_box(sb, Rect2(tl, box))
+		var text_col: Color
+		if look > 0:
+			# Lettered on the sheet itself: ink on a paper halo, the current one in red
+			# ink and underscored, as a scribe marks the place
+			o.draw_line(p, anchor, Color(MAP_INK, alpha * 0.7), 1.5, true)
+			o.draw_circle(p, 3.0, MAP_RED if here else Color(MAP_INK, alpha))
+			text_col = MAP_RED if here else (MAP_INK if done else MAP_INK.lightened(0.25))
+			var t0 := tl + Vector2(pad.x + lw, pad.y + fs * 0.8)
+			o.draw_string_outline(font, t0, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, maxi(6, fs / 2), Color(MAP_PAPER, 0.35))
+			o.draw_string_outline(font, t0, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, maxi(3, fs / 5), Color(MAP_PAPER, 0.9))
+			if here:
+				o.draw_line(t0 + Vector2(0, fs * 0.25), t0 + Vector2(tw, fs * 0.25), MAP_RED, maxf(1.5, fs * 0.07), true)
+		else:
+			o.draw_line(p, anchor, Color(WorldTag.BG, alpha * 0.8), 2.0, true)
+			o.draw_circle(p, 3.5, UiStyle.GOLD if here else Color(WorldTag.BG, alpha))
+			var sb := _plaque_here if here else _plaque
+			sb.bg_color = Color(WorldTag.BG, alpha)
+			o.draw_style_box(sb, Rect2(tl, box))
+			text_col = Color(1.0, 0.86, 0.55) if here else (WorldTag.TEXT if done else (Color(WorldTag.TEXT_DIM, 0.6) if locked else WorldTag.TEXT_DIM))
 		_plaque_rects.append(Rect2(tl, box))
-		var text_col: Color = Color(1.0, 0.86, 0.55) if here else (WorldTag.TEXT if done else (Color(WorldTag.TEXT_DIM, 0.6) if locked else WorldTag.TEXT_DIM))
 		if locked:
 			_draw_lock(o, tl + Vector2(pad.x + fs * 0.3, box.y * 0.5 + fs * 0.08), fs * 0.3, text_col)
 		o.draw_string(font, tl + Vector2(pad.x + lw, pad.y + fs * 0.8), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, text_col)
@@ -358,7 +387,14 @@ func _draw_overlay() -> void:
 		var pad := Vector2(small * 0.5, small * 0.3)
 		var box := Vector2(flag + nw + lw + small * 0.5 + pad.x * 2.0, small + pad.y * 2.0)
 		var tl := fp - box * 0.5
-		o.draw_style_box(_foe_plaque, Rect2(tl, box))
+		if look > 0:
+			ink = Color(MAP_RED, fa)
+			dim = Color(MAP_RED, 0.8 * fa)
+			var halo := Color(MAP_PAPER, 0.75 * fa)
+			o.draw_string_outline(nf, Vector2(tl.x + pad.x + flag, tl.y + pad.y + small * 0.8), who, HORIZONTAL_ALIGNMENT_LEFT, -1, small, 5, halo)
+			o.draw_string_outline(lf, Vector2(tl.x + pad.x + flag + nw + small * 0.4, tl.y + pad.y + small * 0.8), land, HORIZONTAL_ALIGNMENT_LEFT, -1, tiny, 5, halo)
+		else:
+			o.draw_style_box(_foe_plaque, Rect2(tl, box))
 		# Pennant: a pole and a swallow-tailed flag
 		var fx := tl + Vector2(pad.x, pad.y)
 		o.draw_line(fx + Vector2(flag * 0.15, 0), fx + Vector2(flag * 0.15, small), dim, 1.5, true)

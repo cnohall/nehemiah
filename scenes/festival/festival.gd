@@ -16,6 +16,9 @@ extends CanvasLayer
 # people; go up to the house of God. A journal ticks them off; progress holds from
 # stretch to stretch. Nothing is timed and nothing is saved. Solo, offline (like the
 # Tutorial): the game scene is its own server.
+# Until this player has built the whole wall (GameState.built_sections) there is no feast:
+# the stretches built stand with their builders, the rest lie broken (Neh. 2:17), and the
+# walk opens at the first stretch still to build. The journal counts what stands.
 
 const START := 8   # the Water Gate
 const PLATFORM := Vector3(1.0, 0.1, 9.0)   # well in from the wall: the crowd gathers on its camera side
@@ -88,6 +91,18 @@ const TOWNSFOLK := [
 	["Not since the days of Joshua has it been kept like this.", "see Neh. 8:17"],
 	["Walk the whole wall round — every gate stands.", ""],
 ]
+# Before the wall is finished: on a stretch that stands, and on one still in ruins
+const BUILT_TALK := [
+	["The God of heaven will prosper us.", "Neh. 2:20"],
+	["The people had a mind to work.", "see Neh. 4:6"],
+	["Half of us worked, and half held the spears.", "see Neh. 4:16"],
+	["This stretch stands. Now the gaps further round.", ""],
+]
+const RUIN_TALK := [
+	["The wall of Jerusalem is broken down, and its gates are burned with fire.", "see Neh. 1:3"],
+	["Come, let's build up the wall of Jerusalem, that we won't be disgraced.", "Neh. 2:17"],
+	["There is so much rubble — how can we build the wall?", "see Neh. 4:10"],
+]
 
 var _main: Node
 var _root: Node3D
@@ -96,6 +111,8 @@ var _traveling := false
 var _cooldown := 0.0
 var _poll := 0.0
 var _saved := {}
+var _built: Array[bool] = []   # stretch → standing (this player's campaign)
+var _feast := false            # the whole wall stands: the Festival of Booths
 # Progress kept across districts
 var _heard := false
 var _visited := false
@@ -106,6 +123,7 @@ var _met := {}             # who → true
 var _seen := {}            # district → true
 var _fade: ColorRect
 var _compass: RingCompass
+var _dedication: Dedication
 
 var _panel: PanelContainer
 var _rows := {}   # task → [Tick, Label]
@@ -123,11 +141,15 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_main.director.begin()
 	get_tree().call_group("watch_posts", "_refresh")   # GameState.posts is off: no posts, no footings
-	_raise_the_wall()
+	_built = GameState.built_sections()
+	_feast = not _built.has(false)
 	_clear_the_yard()
 	_build_fade()
+	_dedication = Dedication.new(self)
+	add_child(_dedication)
+	_dedication.finished.connect(_refresh)
 	_build_journal()
-	_enter(START)
+	_enter(START if _feast else maxi(_built.find(false), 0))
 
 func _exit_tree() -> void:
 	Player.view_yaw = 0.0   # a static: the game's own view again
@@ -144,7 +166,7 @@ func _process(delta: float) -> void:
 	if me == null or not is_instance_valid(me):
 		return
 	var at := me.global_position
-	if not _visited and FEASTS.get(_district, {}).get("temple", false) and Temple.in_court(at):
+	if _feast and not _visited and FEASTS.get(_district, {}).get("temple", false) and Temple.in_court(at):
 		_visited = true
 		Sfx.play("tally_land")
 		_main.hud._show_banner(tr("The house of God"),
@@ -191,8 +213,13 @@ func _enter(district: int) -> void:
 	_clear_district()   # before the new ground is laid, which keeps clear of what's standing
 	GameState.festival_district(district)
 	_clear_the_yard()   # a new stretch sets its piles out again
-	_raise_the_wall()   # this stretch's gate (or infill) standing
+	if _built[district]:
+		_raise_the_wall()   # this stretch's gate (or infill) standing
+	else:
+		_ruin_the_wall()
 	_build_district()
+	if _feast:
+		_dedication.district_ready(district, _root)
 	var sec: Dictionary = GameState.SECTIONS[district]
 	var first := not _seen.has(district)
 	_seen[district] = true
@@ -201,9 +228,18 @@ func _enter(district: int) -> void:
 	_main.set_view_yaw(_north_up_yaw(district))
 	_refresh()
 	var sub := GameState.short_ref(sec["ref"])
+	if not _built[district]:
+		sub = tr("%s  ·  not yet built") % sub
 	if first:
 		sub = tr("%s  ·  walk off either end of the wall to go on round") % sub
 	_main.hud._show_banner(tr(sec["name"]), sub, 2.6 if first else 1.6)
+
+## A banner for the dedication's walk (Dedication)
+func announce(title: String, sub: String, hold := 3.0) -> void:
+	_main.hud._show_banner(title, sub, hold)
+
+func refresh_journal() -> void:
+	_refresh()
 
 func _build_fade() -> void:
 	_fade = ColorRect.new()
@@ -222,6 +258,14 @@ func _raise_the_wall() -> void:
 				part.stage = 3
 			elif "finished" in part:
 				part.finished = true
+
+# Not yet built: the stretch as the campaign finds it — bare footings, old courses, burned
+# heaps (WallSection.reset_slot)
+func _ruin_the_wall() -> void:
+	for unit: Array in _main.director._units:
+		for part in unit:
+			part.reset_slot()
+			part.is_target = false
 
 # The builders' yard is packed away: its piles, heaps and trough
 func _clear_the_yard() -> void:
@@ -248,8 +292,13 @@ func _build_district() -> void:
 	var d := _district
 	var feast: Dictionary = FEASTS.get(d, {})
 	if feast.get("temple", false):
-		_root.add_child(Temple.new())
-		_add_temple_people(_root)
+		_root.add_child(Temple.new())   # rebuilt in Zerubbabel's day: it stands either way
+		if _feast:
+			_add_temple_people(_root)
+	if not _feast:
+		_build_walk(_root, d)
+		_add_signs(_root)
+		return
 	if feast.get("platform", false):
 		_build_platform(_root)
 		_add_water_gate_people(_root)
@@ -280,8 +329,19 @@ func _build_district() -> void:
 		_folk(_root, row[0], row[1], Palette.DYES[(d + i) % Palette.DYES.size()], BUILDER_AT[i % BUILDER_AT.size()],
 			[[row[2], row[3]]]).wander = 1.2
 	if not feast.get("platform", false):
-		_add_townsfolk(_root, d)
+		_add_townsfolk(_root, d, TOWNSFOLK, 6)
 	_add_signs(_root)
+
+# Before the feast: the builders by a stretch that stands; people about either way, talking
+# of the work done or still to do
+func _build_walk(root: Node3D, d: int) -> void:
+	if _built[d]:
+		var builders: Array = BUILDERS.get(d, [])
+		for i in builders.size():
+			var row: Array = builders[i]
+			_folk(root, row[0], row[1], Palette.DYES[(d + i) % Palette.DYES.size()], BUILDER_AT[i % BUILDER_AT.size()],
+				[[row[2], row[3]]]).wander = 1.2
+	_add_townsfolk(root, d, BUILT_TALK if _built[d] else RUIN_TALK, 4)
 
 func _pile(scene: PackedScene, kind: String, at: Vector3) -> Node3D:
 	var p := scene.instantiate()
@@ -412,14 +472,14 @@ func _add_temple_people(root: Node3D) -> void:
 	]).wander = 2.0
 
 # A few people about the stretch, glad of the day
-func _add_townsfolk(root: Node3D, d: int) -> void:
+func _add_townsfolk(root: Node3D, d: int, talk: Array, count: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7700 + d
-	for i in 6:
+	for i in count:
 		var at := Vector3(rng.randf_range(-16.0, 16.0), 0.1, rng.randf_range(9.0, 13.0))
 		var kind: String = ["man", "woman", "elder", "child", "woman", "man"][i]
 		var f := _folk(root, "", kind, Palette.DYES[rng.randi() % Palette.DYES.size()], at,
-			[TOWNSFOLK[(d + i) % TOWNSFOLK.size()]])
+			[talk[(d + i) % talk.size()]])
 		f.facing = ["down", "left", "right", "up"][rng.randi() % 4]
 		f.wander = 3.0
 		if kind == "child":
@@ -465,21 +525,25 @@ func _build_journal() -> void:
 	_panel.add_child(vb)
 	var eyebrow := Label.new()
 	eyebrow.theme_type_variation = &"Eyebrow"
-	eyebrow.text = tr("Neh. 8  ·  The seventh month")
+	eyebrow.text = tr("Neh. 8  ·  The seventh month") if _feast else GameState.short_ref("Neh. 2:17")
 	eyebrow.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
 	vb.add_child(eyebrow)
 	var title := Label.new()
 	title.theme_type_variation = &"Heading"
-	title.text = "The Festival of Booths"
+	title.text = "The Festival of Booths" if _feast else "Jerusalem"
 	title.add_theme_color_override("font_color", UiStyle.INK)
 	vb.add_child(title)
 	var sub := Label.new()
 	sub.theme_type_variation = &"Caption"
-	sub.text = "The wall is finished. No clock, no enemy — walk the city."
+	sub.text = "The wall is finished. No clock, no enemy — walk the city." if _feast 		else "The wall is not yet finished. The Festival of Booths waits for the last stone."
+	if not _feast:
+		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sub.custom_minimum_size.x = 330
 	sub.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	vb.add_child(sub)
 	vb.add_child(HSeparator.new())
-	for task: String in ["hear", "booths", "portions", "people", "temple", "circuit"]:
+	var tasks := ["hear", "booths", "portions", "people", "temple", "dedication", "circuit"] if _feast else ["built", "circuit"]
+	for task: String in tasks:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		var tick := Tick.new()
@@ -521,6 +585,11 @@ func _refresh() -> void:
 		hungry += f.get("hungry", []).size()
 	var met := _met.size()
 	var gates := GameState.SECTIONS.size()
+	_set_row("circuit", _seen.size() >= gates, tr("Walk the wall round — %d of %d gates") % [_seen.size(), gates])
+	if not _feast:
+		var standing := _built.count(true)
+		_set_row("built", false, tr("Stretches of wall standing — %d of %d") % [standing, gates])
+		return
 	_set_row("hear", _heard, tr("Hear Ezra read the Law at the Water Gate"))
 	_set_row("booths", booths >= BOOTH_GOAL,
 		tr("Build booths with branches from the mount — %d of %d") % [mini(booths, BOOTH_GOAL), BOOTH_GOAL])
@@ -528,7 +597,9 @@ func _refresh() -> void:
 		tr("Send portions to those with nothing prepared — %d of %d") % [fed, hungry])
 	_set_row("people", met >= PEOPLE_GOAL, tr("Meet the people who built the wall — %d of %d") % [mini(met, PEOPLE_GOAL), PEOPLE_GOAL])
 	_set_row("temple", _visited, tr("Go up to the house of God, by the Sheep Gate"))
-	_set_row("circuit", _seen.size() >= gates, tr("Walk the wall round — %d of %d gates") % [_seen.size(), gates])
+	var walked := _dedication != null and _dedication.done
+	_set_row("dedication", walked, tr("Walk the wall with a choir, from the Valley Gate to the temple") if _dedication == null or not _dedication.active
+		else tr("Follow the company round the wall to the house of God"))
 	var all := _heard and _visited and booths >= BOOTH_GOAL and fed >= hungry and met >= PEOPLE_GOAL
 	if all and not _done_shown:
 		_done_shown = true

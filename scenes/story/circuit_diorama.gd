@@ -17,9 +17,9 @@ const GATES := [
 	Vector2(0.50, 0.10),   # Fish Gate — north
 	Vector2(0.30, 0.16),   # Jeshanah (Old City) Gate — north-west
 	Vector2(0.18, 0.33),   # Broad Wall — west
-	Vector2(0.21, 0.52),   # Tower of Ovens
+	Vector2(0.21, 0.52),   # Tower of the Ovens
 	Vector2(0.36, 0.70),   # Valley Gate — south-west, on the Tyropoeon
-	Vector2(0.52, 0.93),   # Dung Gate — the southern tip
+	Vector2(0.52, 0.93),   # Gate of the Ash Heaps — the southern tip
 	Vector2(0.62, 0.80),   # Fountain Gate — by the Pool of Shelah
 	Vector2(0.68, 0.58),   # Water Gate — Ophel
 	Vector2(0.76, 0.42),   # Horse Gate
@@ -113,6 +113,8 @@ var _focus := Vector3.ZERO
 var _focus_goal := Vector3.ZERO
 var _time := 0.0
 var _night := false
+var _look := 0
+var _look_pass: LookPass
 
 func _ready() -> void:
 	_noise.seed = 445
@@ -123,6 +125,7 @@ func _ready() -> void:
 	_build_trees()
 	for i in GATES.size():
 		_build_section(i)
+	_build_look()
 	_focus = unit_to_world(CENTER, 0.0) * Vector3(1, 0, 1)
 	_focus_goal = _focus
 	_place_camera(0.0)
@@ -168,6 +171,17 @@ func set_torch(t: float) -> void:
 		var p := ring_world(t, WALL_H + 0.6)
 		_torch.position = p + Vector3(0, 0.6, 0)
 		_flame.position = p
+
+## LookPass look: 0 the plain model, 1 lithograph, 2 mosaic, 3 the scribe's plan from above
+func set_look(n: int) -> void:
+	_look = n
+	_look_pass.look = n
+	camera.attributes.dof_blur_far_enabled = n == 0
+	camera.attributes.dof_blur_near_enabled = n == 0
+
+func _build_look() -> void:
+	_look_pass = LookPass.new(_env)
+	add_child(_look_pass)
 
 ## Ease the camera toward a point on the ring (fractional gate index), or back to centre
 func focus_on(t: float) -> void:
@@ -304,9 +318,12 @@ func _build_light() -> void:
 
 # Seen from the south, a little east, looking down on the ring; drifts slowly
 func _place_camera(t: float) -> void:
-	var yaw := deg_to_rad(8.0 + 4.0 * sin(t * 0.12))
-	var pitch := deg_to_rad(47.0)
+	var plan := _look == 3
+	var yaw := deg_to_rad(8.0 + 4.0 * sin(t * 0.12)) if not plan else 0.0
+	var pitch := deg_to_rad(47.0 if not plan else 89.0)
 	var dist := CAM_DIST
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL if plan else Camera3D.PROJECTION_PERSPECTIVE
+	camera.size = 58.0
 	var dir := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
 	camera.position = _focus + Vector3(0, 1.5, 0) + dir * dist
 	camera.look_at(_focus + Vector3(0, 1.5, 0), Vector3.UP)

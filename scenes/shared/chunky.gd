@@ -29,6 +29,7 @@ static func foliage_material() -> ShaderMaterial:
 		m.set_shader_parameter("top_light", 0.3)
 		m.set_shader_parameter("grain", 0.14)
 		m.set_shader_parameter("ground_ao", 0.0)
+		m.set_shader_parameter("wind_amp", 0.06)
 		_mats["foliage"] = m
 	return _mats["foliage"]
 

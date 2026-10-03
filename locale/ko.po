@@ -506,14 +506,14 @@ msgstr "여사나 문"
 msgid "Broad Wall"
 msgstr "넓은 성벽"
 
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr "화덕 망대"
 
 msgid "Valley Gate"
 msgstr "골짜기 문"
 
-msgid "Dung Gate"
-msgstr "분문"
+msgid "Gate of the Ash Heaps"
+msgstr "잿더미 문"
 
 msgid "Fountain Gate"
 msgstr "샘문"
@@ -785,8 +785,8 @@ msgstr "말기야와 핫숩이 다른 구간과 화덕 망대를 보수합니다
 msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
 msgstr "하눈과 사노아 주민들이 골짜기 문과 성벽 천 규빗을 다시 쌓습니다."
 
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
-msgstr "레갑의 아들 말기야가 분문을 보수합니다. 돌을 쌓아 둔 곳에서 멀리 떨어진 곳입니다."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
+msgstr "레갑의 아들 말기야가 잿더미 문을 보수합니다. 돌을 쌓아 둔 곳에서 멀리 떨어진 곳입니다."
 
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr "살룬이 왕의 동산 곁 못가에 있는 샘문을 보수합니다."
@@ -2008,8 +2008,11 @@ msgstr "옷: %s"
 msgid "%s at %d marks (you have %d)"
 msgstr "%s — 휘장 %d개 필요 (현재 %d개)"
 
-msgid "Continue — %s, day %d"
-msgstr "이어하기 — %s, %d일째"
+msgid "Continue"
+msgstr "이어하기"
+
+msgid "%s · day %d"
+msgstr "%s · %d일째"
 
 msgid "One's slipped in — the yard! He's after the piles"
 msgstr "하나가 숨어들었습니다 — 자재터예요! 더미를 노립니다"
@@ -2529,3 +2532,90 @@ msgstr "성전으로 숨으러 가는 중…"
 
 msgid "Should a man like me flee? Back to the wall!"
 msgstr "나 같은 사람이 도망가겠는가? 성벽으로 돌아가자!"
+
+msgid "Graphics"
+msgstr "그래픽"
+
+msgid "3D resolution"
+msgstr "3D 해상도"
+
+msgid "Low"
+msgstr "낮음"
+
+msgid "Medium"
+msgstr "보통"
+
+msgid "High"
+msgstr "높음"
+
+msgid "Window size"
+msgstr "창 크기"
+
+msgid "Default"
+msgstr "기본값"
+
+msgid "Art style"
+msgstr "아트 스타일"
+
+msgid "Lithograph"
+msgstr "석판화"
+
+msgid "Cel"
+msgstr "셀 셰이딩"
+
+msgid "Hold on — I'm coming!"
+msgstr "버텨요, 지금 가요!"
+
+msgid "I've got your back!"
+msgstr "내가 지켜 줄게요!"
+
+msgid "A thief in the yard!"
+msgstr "마당에 도둑이다!"
+
+msgid "I'll take the other end."
+msgstr "반대쪽은 내가 들게요."
+
+msgid "Foes at the wall!"
+msgstr "적이 성벽에 왔다!"
+
+msgid "I've fallen — help me up!"
+msgstr "쓰러졌어요, 일으켜 줘요!"
+
+msgid "Thank you, friend!"
+msgstr "고마워요, 친구!"
+
+msgid "Answer him"
+msgstr "대답하기"
+
+msgid "Hear him"
+msgstr "들어 보기"
+
+msgid "Go with him"
+msgstr "따라가기"
+
+msgid "From the villages: “Wherever you turn, they will attack us”"
+msgstr "마을에서 온 사람: “어디로 돌아서든 그들이 우리를 칠 것이오”"
+
+msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
+msgstr "집에 틀어박힌 스마야: “하나님의 집에서 함께 만납시다”"
+
+msgid "I am doing a great work — I can't come down!"
+msgstr "나는 큰 일을 하고 있으니 내려갈 수 없소!"
+
+msgid "No such things are done as you say!"
+msgstr "네가 말한 그런 일은 없다!"
+
+msgid "He points to where they'll come — watch there!"
+msgstr "그가 적이 올 곳을 가리킨다. 그곳을 지켜라!"
+
+msgid "All quiet on the road for now"
+msgstr "지금은 길이 조용하다"
+
+msgid "Hide in the temple? {interact} go with him, or walk on"
+msgstr "성전에 숨을까? {interact} 따라가기, 아니면 그냥 지나가기"
+
+msgid "He talks and talks — your work goes slower. {interact} to answer him"
+msgstr "그가 계속 말을 건다. 일이 느려진다. {interact} 대답하기"
+
+msgid "Messengers will call you down to Ono — answer them and keep working"
+msgstr "사자들이 오노로 내려오라 부를 것이다. 대답하고 일을 계속하라"

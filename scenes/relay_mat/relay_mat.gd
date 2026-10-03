@@ -1,14 +1,14 @@
 class_name RelayMat
 extends Node3D
 
-# The long haul ("haul" twist, Dung Gate): a reed mat halfway between the far yard and the
+# The long haul ("haul" twist, Gate of the Ash Heaps): a reed mat halfway between the far yard and the
 # wall. A load dropped on it is stacked in a free place instead of landing loose, so one
 # worker can run the yard end and another the wall end. A porter works the second half: he
 # carries what lies on the mat to the wall that wants it — when the mat is full, or a
 # little after the first load lands. Loads on the mat stay ordinary dropped items until he
 # lifts them: anyone may still take one with [E]. Every peer builds it.
 
-const AT      := Vector3(15.0, 0.0, 7.5)   # between the Dung Gate yard (30, 9) and the gate
+const AT      := Vector3(15.0, 0.0, 7.5)   # between the Gate of the Ash Heaps yard (30, 9) and the gate
 const SLOTS   := 6
 const REACH   := 2.6       # a drop this close lands on the mat
 const SLOT_GAP := 0.7

@@ -270,7 +270,7 @@ func _move_to(dest: Vector3, delta: float) -> void:
 		var steer := dir + _sep * SEP_WEIGHT
 		if steer.length_squared() > 0.0001:
 			dir = steer.normalized()
-		velocity = dir * SPEED[type] * _pace
+		velocity = dir * SPEED[type] * _pace * Terrain.ground_drag(global_position.x, global_position.z)
 		move_and_slide()
 	else:
 		velocity = Vector3.ZERO
@@ -407,6 +407,10 @@ func _strike(victim: Node3D) -> void:
 ## Mid-draw: a blow this heavy knocks the strike aside (a brute only for a solid one)
 func _breaks_tell(amount: float) -> bool:
 	return _tell > 0.0 and amount >= STEADY.get(type, 0.0)
+
+## Server: drawing back to strike (a sword cut now turns the blow — Player, GDD §5.16)
+func drawing() -> bool:
+	return _tell > 0.0
 
 # ── Animation ──────────────────────────────────────────────
 

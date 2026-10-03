@@ -2,7 +2,8 @@ extends SceneTree
 
 # "Explore Jerusalem" screenshots at the Water Gate: hear Ezra, fetch branches, raise a
 # booth, send a portion. The round of every stretch: festival_tour.gd
-#   Godot --path . --script res://tools/festival_shots.gd -- <out_dir> [--lang=ko]
+#   Godot --path . --script res://tools/festival_shots.gd -- <out_dir> --unlock-all [--lang=ko]
+# (the feast only shows once the whole wall is built: --unlock-all)
 # Not headless — needs the GPU.
 
 var _out := ""

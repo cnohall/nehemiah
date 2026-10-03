@@ -192,7 +192,7 @@ func _throw(target_path: NodePath) -> void:
 # ── Build-site interface (server mutates) ──────────────────
 
 func _cost() -> int:
-	return WOOD_COST_BY_CREW[clampi(GameState.crew_size, 1, WOOD_COST_BY_CREW.size()) - 1]
+	return WOOD_COST_BY_CREW[clampi(GameState.cost_crew(), 1, WOOD_COST_BY_CREW.size()) - 1]
 
 func needs(kind: String) -> bool:
 	if not _enabled():
@@ -268,7 +268,7 @@ func repair(_fraction: float) -> void:
 
 func _prime_work() -> void:
 	if _work != null:
-		_work.work_time = WORK_TIME * (SOLO_WORK_MULT if GameState.crew_size == 1 else 1.0)
+		_work.work_time = WORK_TIME * GameState.solo_mult(SOLO_WORK_MULT)
 
 func distance_to_point(p: Vector3) -> float:
 	var local := to_local(p)

@@ -220,7 +220,7 @@ Screenshots: `store/steam/screenshots/01–09` (upload in that order).
 
 ### Screenshot shot list (render via `tools/*_shots.gd`)
 1. 4-player crew at Sheep Gate wall, raider inbound (hero shot)
-2. Carry chain — builders passing loads at Dung Gate
+2. Carry chain — builders passing loads at Gate of the Ash Heaps
 3. Two builders hauling a beam at Fish Gate
 4. Brute battering a half-built wall, guard slinging
 5. Night work by torchlight at Water Gate

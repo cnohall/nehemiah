@@ -45,20 +45,13 @@ var _world_tween: Tween
 
 func _ready() -> void:
 	Sfx.play_music("calm")  # back from a finished game, the music may be off
-	# Credits sit over bright sand — give them a soft parchment backing
-	$Credits.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.PARCHMENT, 0.82), Vector2(12, 6), 3))
-	# Hug the text: a right-aligned label keeps its box, so size it to one line
-	$Credits.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	$Credits.size = $Credits.get_combined_minimum_size()
-	$Credits.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 32)
 	host_btn.pressed.connect(_on_host)
 	_build_continue()
-	# Replay map: an entry under Host, and the picker over everything
+	# Replay map: first of the second tier, under Join; the picker over everything
 	_sections_btn = join_btn.duplicate()
 	_sections_btn.name = "SectionsButton"
 	_sections_btn.text = "Choose a Section"
 	menu.add_child(_sections_btn)
-	menu.move_child(_sections_btn, host_btn.get_index() + 1)
 	_sections_btn.pressed.connect(_open_picker)
 	_picker = SectionPicker.new()
 	add_child(_picker)
@@ -82,15 +75,16 @@ func _ready() -> void:
 	learn.name = "LearnButton"
 	learn.text = "Learn the Basics"
 	menu.add_child(learn)
-	menu.move_child(learn, join_btn.get_index() + 1)
 	learn.pressed.connect(_on_learn)
 	# Explore Jerusalem: the Festival of Booths, a sandbox with no clock and no enemy
 	var walk := join_btn.duplicate() as Button
 	walk.name = "FestivalButton"
 	walk.text = "Explore Jerusalem"
+	var built := GameState.built_sections()
+	walk.tooltip_text = tr("The wall is finished: the Festival of Booths.") if not built.has(false) 		else tr("Walk the city as far as your wall stands — %d of %d stretches. The Festival of Booths waits for the whole wall.") % [built.count(true), built.size()]
 	menu.add_child(walk)
-	menu.move_child(walk, learn.get_index() + 1)
 	walk.pressed.connect(_on_festival)
+	_second_tier([_sections_btn, learn, walk])
 	# Credits: in the small row before Quit; the roll plays over the menu
 	_credits_btn = settings_btn.duplicate()
 	_credits_btn.name = "CreditsButton"
@@ -103,9 +97,12 @@ func _ready() -> void:
 	_credits.finished.connect(_credits_btn.grab_focus)
 	join_btn.pressed.connect(_on_join)
 	settings_btn.pressed.connect(_on_settings)
-	quit_btn.pressed.connect(get_tree().quit)
 	# A browser tab can't quit itself
-	quit_btn.visible = not OS.has_feature("web")
+	if OS.has_feature("web"):
+		more.remove_child(quit_btn)
+		quit_btn.queue_free()
+	else:
+		quit_btn.pressed.connect(get_tree().quit)
 	connect_btn.pressed.connect(_on_connect)
 	back_btn.pressed.connect(_on_back)
 	address_input.text_submitted.connect(func(_t): _on_connect())
@@ -181,6 +178,18 @@ func _style_more() -> void:
 			dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			more.add_child(dot)
 			more.move_child(dot, b.get_index())
+
+# Side ways in (replay map, practice, festival) sit a step down from the ways to start
+# a game: smaller, softer, after a breath of space
+func _second_tier(btns: Array) -> void:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = 14
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu.add_child(gap)
+	menu.move_child(gap, btns[0].get_index())
+	for b: Button in btns:
+		b.add_theme_font_size_override("font_size", 20)
+		b.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 
 func _intro() -> void:
 	fade.show()
@@ -294,13 +303,13 @@ func _use_steam() -> bool:
 func _show_default_status() -> void:
 	match _net_mode():
 		Net.STEAM:
-			net_status.text = "Signed in to Steam as %s — invite friends once in game" % NetworkManager.steam_name()
+			net_status.text = tr("Signed in to Steam as %s — invite friends once in game") % NetworkManager.steam_name()
 		Net.ONLINE:
 			net_status.text = tr("Host to get a room code — friends join with it or your invite link") if OS.has_feature("web") \
 				else tr("Host to get a room code — friends join with it")
 		_:
 			if NetworkManager.steam_available():
-				net_status.text = "LAN mode — share your IP address to play together"
+				net_status.text = tr("LAN mode — share your IP address to play together")
 			else:
 				net_status.text = tr("Steam unavailable: %s — LAN play only") % tr(NetworkManager.steam_error())
 
@@ -333,11 +342,24 @@ func _build_continue() -> void:
 		return
 	_continue_btn = host_btn.duplicate() as Button
 	_continue_btn.name = "ContinueButton"
-	_continue_btn.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-	_continue_btn.text = tr("Continue — %s, day %d") % [tr(GameState.SECTIONS[saved["section"]]["name"]), saved["day"]]
+	_continue_btn.text = "Continue"
 	_continue_btn.tooltip_text = tr("Resumes at the start of this stretch. Progress is saved at the dawn of each new stretch.")
 	menu.add_child(_continue_btn)
 	menu.move_child(_continue_btn, host_btn.get_index())
+	# Where the save stands, as a caption under the entry — the highlight stays short
+	var where := Label.new()
+	where.name = "ContinueWhere"
+	where.theme_type_variation = &"Caption"
+	where.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	where.text = tr("%s · day %d") % [tr(GameState.SECTIONS[saved["section"]]["name"]), saved["day"]]
+	where.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pad := MarginContainer.new()
+	pad.add_theme_constant_override("margin_left", 25)   # under the entry's text, past the bookmark
+	pad.add_theme_constant_override("margin_bottom", 6)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(where)
+	menu.add_child(pad)
+	menu.move_child(pad, host_btn.get_index())
 	_continue_btn.pressed.connect(func():
 		GameState.replay_section = -1
 		GameState.restart_day = saved["day"]
@@ -377,12 +399,15 @@ func _on_section_chosen(section_index: int) -> void:
 	GameState.picker_return = section_index
 	_host()
 
+# Every way into a game, held while a host is being set up
+func _set_starts_disabled(on: bool) -> void:
+	for b in menu.get_children():
+		if b is Button:
+			b.disabled = on
+
 func _host() -> void:
 	_stop_world()
-	host_btn.disabled = true
-	_sections_btn.disabled = true
-	if _continue_btn:
-		_continue_btn.disabled = true
+	_set_starts_disabled(true)
 	match _net_mode():
 		Net.STEAM:
 			net_status.text = "Creating Steam lobby…"
@@ -400,10 +425,7 @@ func _on_host_failed(reason: String) -> void:
 		await get_tree().create_timer(1.6).timeout
 		get_tree().change_scene_to_file(GAME_SCENE)
 		return
-	host_btn.disabled = false
-	_sections_btn.disabled = false
-	if _continue_btn:
-		_continue_btn.disabled = false
+	_set_starts_disabled(false)
 	net_status.text = reason
 	_resume_world()
 
