@@ -1945,8 +1945,11 @@ msgstr "옷: %s"
 msgid "%s at %d marks (you have %d)"
 msgstr "%s — 휘장 %d개 필요 (현재 %d개)"
 
-msgid "Continue — %s, day %d"
-msgstr "이어하기 — %s, %d일째"
+msgid "Continue"
+msgstr "이어하기"
+
+msgid "%s · day %d"
+msgstr "%s · %d일째"
 
 msgid "One's slipped in — the yard! He's after the piles"
 msgstr "하나가 숨어들었습니다 — 자재터예요! 더미를 노립니다"

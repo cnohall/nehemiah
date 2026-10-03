@@ -1958,8 +1958,11 @@ msgstr "Túnica: %s"
 msgid "%s at %d marks (you have %d)"
 msgstr "%s com %d marcas (você tem %d)"
 
-msgid "Continue — %s, day %d"
-msgstr "Continuar — %s, dia %d"
+msgid "Continue"
+msgstr "Continuar"
+
+msgid "%s · day %d"
+msgstr "%s · dia %d"
 
 msgid "One's slipped in — the yard! He's after the piles"
 msgstr "Um se infiltrou — o pátio! Ele quer as pilhas"

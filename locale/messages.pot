@@ -572,7 +572,10 @@ msgid "Connection failed. Check the address and that the host is running."
 msgstr ""
 
 #: scenes\ui\main_menu.gd:300
-msgid "Continue — %s, day %d"
+msgid "Continue"
+msgstr ""
+
+msgid "%s · day %d"
 msgstr ""
 
 #: scenes\ui\game_hud.gd:179

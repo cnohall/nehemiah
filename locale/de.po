@@ -1958,8 +1958,11 @@ msgstr "Gewand: %s"
 msgid "%s at %d marks (you have %d)"
 msgstr "%s ab %d Abzeichen (du hast %d)"
 
-msgid "Continue — %s, day %d"
-msgstr "Fortsetzen — %s, Tag %d"
+msgid "Continue"
+msgstr "Fortsetzen"
+
+msgid "%s · day %d"
+msgstr "%s · Tag %d"
 
 msgid "One's slipped in — the yard! He's after the piles"
 msgstr "Einer ist eingedrungen — der Lagerplatz! Er will an die Haufen"
