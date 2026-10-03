@@ -271,7 +271,15 @@ func mod(key: String) -> float:
 		v *= 1.0 - HUNGRY_WORK * hungry_left
 		if rumour:
 			v *= RUMOUR_WORK
+		if Time.get_ticks_msec() < spur_until:
+			v *= SPUR_WORK
 	return v
+
+## Experimental call-early (GDD §5.21): a wave called in early spurs the whole crew. Every
+## peer sets its own clock from WaveManager's rpc.
+const SPUR_WORK := 1.15
+const SPUR_SECONDS := 40.0
+var spur_until := 0
 
 ## Households fed this stretch (Neh. 5, Households): each family back at the wall adds to
 ## the work. Every peer counts its own; reset when the stretch changes.

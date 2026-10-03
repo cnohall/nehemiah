@@ -30,6 +30,13 @@ const KEY_ROWS := [
 	["reveal", "What can I do here?"],
 ]
 
+# Settings property → row label (GDD §5.21)
+const EXPERIMENTS := [
+	["exp_forecast", "Wave forecast"],
+	["exp_call_early", "Call waves early"],
+]
+
+var _exp_btns := {}         # Settings property → [Off, On]
 var _rumble_on: Button
 var _world_hud: Button
 var _plaque_hud: Button
@@ -125,6 +132,9 @@ func open() -> void:
 	_map_view.button_pressed     = Settings.turn_to_map
 	_hold.button_pressed         = not Settings.toggle_charge
 	_toggle_mode.button_pressed  = Settings.toggle_charge
+	for key: String in _exp_btns:
+		_exp_btns[key][0].button_pressed = not Settings.get(key)
+		_exp_btns[key][1].button_pressed = Settings.get(key)
 	_show_keys(false)
 	show()
 	_fit_modal.call_deferred()   # after the rows above have laid out
@@ -237,6 +247,20 @@ func _build_extra_rows() -> void:
 	_keys_btn.pressed.connect(_show_keys.bind(true))
 	_grid.add_child(_keys_btn)
 	_build_language_row()
+	_build_experimental_rows()
+
+# Ideas being tried with playtesters (GDD §5.21): off unless switched on, the host's pick rules
+func _build_experimental_rows() -> void:
+	_add_label("Experimental")
+	var note := Label.new()
+	note.theme_type_variation = &"Caption"
+	note.text = "Host's choice. Ideas on trial; off is the game as designed."
+	_grid.add_child(note)
+	for row: Array in EXPERIMENTS:
+		var pair := _segment_row(row[1], "Off", "On")
+		_exp_btns[row[0]] = pair
+		pair[0].pressed.connect(_toggle.bind(row[0], false))
+		pair[1].pressed.connect(_toggle.bind(row[0], true))
 
 func _build_window_row() -> void:
 	_add_label("Window size")

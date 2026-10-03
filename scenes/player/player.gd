@@ -1572,6 +1572,15 @@ func _server_horn(at: Vector3) -> void:
 	else:
 		_tell("The horn was just sounded")
 
+@rpc("any_peer", "call_local", "reliable")
+func _server_call_early() -> void:
+	if not _from_owner() or downed or is_led():
+		return
+	var waves := get_node_or_null("../../WaveManager")
+	if waves != null and waves.call_early():
+		_action.rpc("halfslash")
+		_tell("Wave called in early — the crew is spurred")
+
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 
 var _led_release_toast := "Why should the work stop? Back to the wall!"

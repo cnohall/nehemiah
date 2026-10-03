@@ -128,6 +128,7 @@ func _ready() -> void:
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
 	$Root.move_child(alerts, banner.get_index())
+	$Root.add_child(ForecastChip.new())   # experimental wave forecast (GDD §5.21), hidden unless told
 	# Hold [Tab] / View: a chip over everything near that answers a press
 	var lens := ActionLens.new()
 	$Root.add_child(lens)

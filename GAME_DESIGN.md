@@ -16,6 +16,7 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | Sling tell, true shot, riposte | 5.16 | `--no-tell` `--no-true-shot` `--no-riposte` | pending |
 | Mending | 5.17 | n/a | pending |
 | Solo with bots: crew weight, calls, cover | 5.20 | n/a | pending |
+| Experimental: wave forecast, call early (Thronefall-inspired) | 5.21 | Settings → Experimental (off by default) | pending |
 | Choice before each stretch (boons) | 6.5 | `--boon=<key>` | pending |
 | Section beats | 6.4 | `--no-beats` | pending |
 | Explore Jerusalem, dedication choirs | 5.8, 5.19 | n/a | **frozen** (side mode) |
@@ -484,6 +485,23 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 - **Bot calls** (`Player.bark`, `Shout` over the head): "Hold on — I'm coming!", "I've got your back!", "A thief in the yard!", "I'll take the other end." (to a person), "Foes at the wall!", "I've fallen — help me up!", "Thank you, friend!" (helped up by a person). One bot at most every 9 s, the crew every 3.5 s; down / thanks skip the wait. Not on the title or in the tutorial
 - **Cover** (`BotBrain` Job.COVER, Neh. 4:17): a person working a wall with a foe within 8 m gets the nearest bot not at work (a load in hand is fine, a beam isn't), one bot each; it stands within 2 m and slings at that foe first. Ranked right after reviving. Test `tools/cover_test.gd`
 - **Watch in playtests:** do the calls read as company or noise? Does cover make a solo player stop getting knocked off the work? Is 1 + Apprentice now clearly easier than alone?
+
+### 5.21 Borrowed from Thronefall — ◐ forecast + call early built behind Settings → Experimental (3 Oct 2026), off by default
+**Why Thronefall:** minimalist tower defence where the hero walks, the player always knows where and how big the next night is, and the only decisions are *where to be* and *what to spend on*. We already have the first half of the loop; we were missing the *information* and the *risk dial*. Both ideas below are off by default (Feature freeze, §0: nothing changes for playtest 3 unless a tester turns it on) and live under **Settings → Experimental**; the host's setting rules the crew, like difficulty.
+
+**Checked against the code (3 Oct 2026) before choosing:** difficulty tiers (`Settings.DIFFICULTIES`), marks per stretch (`GameState.MARK_NAMES`: In good time / None got through / The wall holds), a pair of boons before each stretch (§6.5), lamps at dusk and off-screen pointers already exist. Missing: any warning longer than the 5 s bell, any way to bring the enemy on early.
+
+- **Wave forecast** (`exp_forecast`): ~22 s before a wave the crew is told **how many and what** ("Wave in 18 s · 3 scouts, 1 brute") on a parchment chip under the day plaque, and the spot(s) it comes in at get a pulsing ground ring on the northern strip. The pack is rolled at forecast time and spawns exactly as told (the old roll happened at the bell). The neighbour from the villages (§6.7) still matters: he marks the spot far earlier than 22 s. **Why:** the crew has to decide *who* defends and *who* builds; today they find out 5 s ahead. **Kill rule:** testers ignore the chip, or the forecast makes every wave a solved problem (nobody ever caught out). **Later:** show it on Explore's map; hide the type for one-to-two days of the finale ("the enemy was not seen coming").
+- **Call the wave early** (`exp_call_early`): any worker presses **Horn** (the same key as the Valley Gate call, which keeps its rally there) to bring the next wave forward to its 5 s bell. The whole crew is **spurred** for 40 s after: ×1.15 work (`GameState.SPUR_WORK`). **Why:** a crew that is ahead has a way to spend it — risk for speed, which is the Overcooked itch — and the shared decision is a conversation in co-op. **Kill rule:** it's pressed once and never again (no tension), or a crew spams it and the day collapses; then cap it to once per stretch. **Tune:** every number is a guess; the log should print calls per stretch.
+- **Not borrowed:** paying by standing on a spot (our hands-on carry and build *is* the hook), auto-attack, interest on savings (we have no coin).
+
+**Upgrade branches (A/B per structure) — thought through, not built.** Thronefall's version is "spend coin, pick one of two upgrades". We have no coin, and a wall unit is not a building the crew returns to. What *does* fit, in order of fit:
+1. **Finishing a wall unit with a choice of one hands-on extra** — after a unit stands, a second small job appears: *crown it* (a parapet: slings from the wall hit harder, foes hit the wall less) or *bar it* (gate doors: bolts and bars, Neh 3:3, more health, slower to open). The crew chooses by *what they carry there*: two items on the unit's yard, first delivered wins. It keeps the carry-build hook and gives each stretch a second decision. **Needs:** per-unit state in the work front (`WorkFront.UNIT_ORDER`), two new carried items, art for two finishes. Medium cost.
+2. **Watch post branches** (§5.6): the post already has ammo; a branch (more ammo vs. longer reach) is the cheapest place to prove the idea, one choice when the post is built. Low cost.
+3. **Trade-linked branches**: a trade (§5.10) picks one of two perks per stretch. It's a *person* branch, not a structure branch, and the choice before each stretch (§6.5) already does the job.
+**Verdict for now:** not before playtest 3. If testers say "the stretch plays the same every time", build #2 first as a probe, then #1.
+
+**Other ideas parked (checked 3 Oct 2026):** *difficulty marks* — a fourth mark per stretch for an opt-in modifier (burned units, fewer spare days, raiders only) on top of Hard; *dusk grade* — a sharper day/night palette shift on top of the lamps; *readability audit* — silhouettes and damaged-only health bars at 4 players. All three need playtest evidence first.
 
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |

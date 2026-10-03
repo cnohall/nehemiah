@@ -51,6 +51,9 @@ var bot_skill := 1   # index into BotBrain.SKILLS
 var difficulty := 1
 # This player's trade (Trade), or -1 for their place in the crew's own
 var trade := -1
+# Experimental (GDD §5.21), off by default; the host's choice rules the crew like difficulty
+var exp_forecast := false    # wave forecast: how many and what, ~22 s ahead, spot ringed on the ground
+var exp_call_early := false  # [Horn] brings the next wave forward for a short work boost
 
 # pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
 # harm: multiplies every enemy blow, on workers and on the wall
@@ -120,6 +123,8 @@ func _ready() -> void:
 		bot_skill = cfg.get_value("bots", "skill", bot_skill)
 		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
+		exp_forecast = cfg.get_value("experimental", "forecast", exp_forecast)
+		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -293,6 +298,8 @@ func save() -> void:
 	cfg.set_value("bots", "skill", bot_skill)
 	cfg.set_value("general", "difficulty", difficulty)
 	cfg.set_value("general", "trade", trade)
+	cfg.set_value("experimental", "forecast", exp_forecast)
+	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)
 
 ## The chosen difficulty's row of DIFFICULTIES
