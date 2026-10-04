@@ -134,10 +134,14 @@ func _ready() -> void:
 	director.ready_changed.connect(story.set_ready_state)
 	director.ready_changed.connect(hud.set_ready_state)
 	hud.ready_pressed.connect(director.mark_ready)
+	hud.unready_pressed.connect(director.unmark_ready)
 	hud.begin_now_requested.connect(director.force_ready)
 	director.story_ended.connect(story.close)
 	story.finished.connect(_on_story_finished)
 	story.choice_made.connect(director.cast_choice)
+	story.unreadied.connect(director.unmark_ready)
+	story.slide_changed.connect(director.report_slide)
+	director.slides_changed.connect(story.set_slide_progress)
 	story.start_now_requested.connect(director.force_ready)
 	# After the ending story: the credits, then the end screen
 	credits = CreditsRoll.new()
@@ -153,6 +157,8 @@ func _ready() -> void:
 	camera.look_at(Vector3(0, 0, 2), Vector3.UP)
 	camera.make_current()
 
+	if not GameState.attract and "--no-well" not in OS.get_cmdline_user_args():
+		add_child(Well.new())   # the city well: where a hurt worker mends (GDD §5.22)
 	_spawn_player(multiplayer.get_unique_id())
 
 	if multiplayer.is_server():
@@ -573,8 +579,7 @@ func _spawn_player(peer_id: int) -> void:
 	players_root.add_child(player)
 	# A small ring round the spawn point, a place per worker, so the crew doesn't start stacked
 	var slot := players_root.get_child_count() - 1
-	player.global_position = player.RESPAWN_POS \
-		+ (Vector3.ZERO if slot == 0 else Vector3(1.3, 0, 0).rotated(Vector3.UP, slot * TAU / 4.0 - PI / 4.0))
+	player.global_position = Player.start_spot(slot)
 	GameState.register_player(peer_id, "Bot" if bot else "Builder")
 	_assign_colors()
 	if multiplayer.is_server():

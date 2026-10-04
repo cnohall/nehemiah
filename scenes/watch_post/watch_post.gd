@@ -419,6 +419,9 @@ func _build_label() -> void:
 func _update_label() -> void:
 	if _label == null:
 		return
+	# Bare footing is flat on the ground: a short one-line sign low over it. Once the
+	# tower stands the sign rides above the deck.
+	_label.position.y = 0.5 if not built else DECK_Y + 1.9
 	var lines: PackedStringArray = [tr("Watch post") if not built else tr("Slinger")]
 	if not built:
 		lines.append("Build  [%s]" % InputMode.key("interact") if can_build() 			else "Wood %d/%d" % [mini(pending, _cost()), _cost()])
@@ -426,5 +429,7 @@ func _update_label() -> void:
 		if ammo == 0:
 			lines[0] = tr("Out of sling stones")
 		lines.append("Stone %d/%d" % [ceili(float(ammo) / SHOTS_PER_LOAD), MAX_AMMO / SHOTS_PER_LOAD])
+	# A short name stacks to fit the narrow post; a long one would tower, so it stays a line
+	_label.stack_name = built and ammo > 0
 	_label.text = "
 ".join(lines)

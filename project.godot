@@ -19,6 +19,7 @@ config/description="Co-op 2-4 player HD-2D isometric action-strategy, 445 BC Jer
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.png"
+config/name.macos="Nehemiah - The Wall"
 
 [autoload]
 

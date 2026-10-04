@@ -8,6 +8,8 @@ extends CanvasLayer
 signal finished
 signal start_now_requested
 signal choice_made(key: String)   # this reader's pick on the choice card (GameState.BOONS)
+signal unreadied                   # this reader took their "through" back (to reread, or change the pick)
+signal slide_changed(index: int, count: int)   # for the rest of the crew's pager markers
 
 const FADE        := 0.45
 const TYPE_SPEED  := 55.0     # characters per second
@@ -33,13 +35,16 @@ var _text: Label
 var _verse: Label
 var _ref: Label
 var _page: Label
+var _pager: StoryPager
 var _hint: Label
 var _ready_row: ReadyRow
+var _choice_note: Label
 var _choice_box: HBoxContainer
+var _shown := false           # a slide is up (the first one shows without a fade-out)
+var _picked := ""             # this reader's confirmed pick, until they take it back
 var _choice_panels: Array[PanelContainer] = []
 var _choice_keys: Array = []
 var _choice_index := 0
-var _hint_text := ""
 
 var _slide_tween: Tween
 var _type_tween: Tween
@@ -57,11 +62,13 @@ func play(slides: Array) -> void:
 	_slides = slides
 	_index = -1
 	_done = false
+	_shown = false
+	_picked = ""
 	_ready_row.hide()
-	# With company, Esc doesn't skip the day — it says you're through and waits for the rest
-	_hint_text = "E · Click   Next          Esc   I'm ready" if _with_company() \
-		else "E · Click   Continue          Esc   Skip"
-	_hint.text = _hint_text
+	_pager.count = slides.size()
+	_pager.visible = slides.size() > 1
+	_pager.others = []
+	_ready_row.set_slides({})
 	_hint.show()
 	_root.show()
 	UiFx.fade_in(_root, 0.7)
@@ -71,6 +78,20 @@ func play(slides: Array) -> void:
 func set_ready_state(kind: String, waiting: Array) -> void:
 	if kind == "story":
 		_ready_row.set_waiting(waiting)
+
+## Where each reader is (DayDirector.slides_changed): a marker under the pager's dots
+func set_slide_progress(at: Dictionary) -> void:
+	var others := []
+	var crew := get_tree().get_nodes_in_group("players")
+	for id: int in at:
+		if id == multiplayer.get_unique_id():
+			continue
+		for p: Player in crew:
+			if not p.is_bot() and p.worker_id() == id:
+				others.append([(at[id] as Vector2i).x, p.slot_color])
+				break
+	_pager.others = others
+	_ready_row.set_slides(at)
 
 func _with_company() -> bool:
 	return get_tree().get_nodes_in_group("players").any(
@@ -92,16 +113,35 @@ func is_playing() -> bool:
 # _input, not _unhandled_input: the full-screen root eats mouse clicks as GUI events.
 # Once through, clicks pass so the host's "Begin now" button still works.
 func _input(event: InputEvent) -> void:
-	if not _root.visible or _done:
+	if not _root.visible:
+		return
+	if _done:
+		# Through, with company still reading: E, Enter or ← takes it back (E toggles, as on the tally)
+		if (event.is_action_pressed("interact") or event.is_action_pressed("ui_accept") \
+				or event.is_action_pressed("ui_left")) and _can_unready():
+			get_viewport().set_input_as_handled()
+			_unfinish()
+		return
+	var click: bool = event is InputEventMouseButton and event.pressed \
+		and event.button_index == MOUSE_BUTTON_LEFT
+	if click and _pager.visible and _pager.get_global_rect().has_point(event.position):
+		get_viewport().set_input_as_handled()
+		_pager.click(event.position - _pager.get_global_rect().position)
 		return
 	# The choice card: pick with left / right or a click, confirm with E (Esc still skips)
 	if _on_choice_card() and not _typing() and not (_slide_tween and _slide_tween.is_running()) \
 			and _choice_input(event):
 		get_viewport().set_input_as_handled()
 		return
-	var click: bool = event is InputEventMouseButton and event.pressed \
-		and event.button_index == MOUSE_BUTTON_LEFT
-	if click or event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
+	# ← back, → forward (on the choice card they pick, ↑ / Backspace go back)
+	if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_up") \
+			or (event is InputEventKey and event.pressed and event.keycode == KEY_BACKSPACE):
+		get_viewport().set_input_as_handled()
+		_goto(_index - 1)
+	elif event.is_action_pressed("ui_right"):
+		get_viewport().set_input_as_handled()
+		_advance()
+	elif click or event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
 		get_viewport().set_input_as_handled()
 		_advance()
 	elif event.is_action_pressed("pause"):
@@ -143,15 +183,28 @@ func _pick(i: int) -> void:
 	_refresh_choices()
 
 func _confirm_choice() -> void:
-	choice_made.emit(_choice_keys[_choice_index])
+	_picked = _choice_keys[_choice_index]
+	choice_made.emit(_picked)
 	_advance()   # the choice card is the last one: this reader is through
+
+func _can_unready() -> bool:
+	return _with_company() and GameState.phase == GameState.Phase.STORY
+
+## Take "I'm through" back: the slide you stopped on is live again
+func _unfinish() -> void:
+	_done = false
+	_ready_row.hide()
+	_hint.show()
+	_update_hint()
+	_refresh_note()
+	unreadied.emit()
 
 func _fill_choices() -> void:
 	for c in _choice_box.get_children():
 		c.queue_free()
 	_choice_panels.clear()
 	_choice_keys = GameState.choices_for(GameState.current_section_index)
-	_choice_index = 0
+	_choice_index = maxi(0, _choice_keys.find(_picked))
 	for key: String in _choice_keys:
 		var boon: Dictionary = GameState.BOONS[key]
 		var lines := GameState.boon_lines(key)
@@ -169,10 +222,16 @@ func _fill_choices() -> void:
 		ref.text = GameState.long_ref(boon["ref"])
 		box.add_child(ref)
 		# What it gives, what it costs: worked out from the modifiers, so always the truth
-		for line: String in lines["gain"]:
-			box.add_child(_effect_line("+  " + line, UiStyle.GOLD))
-		for line: String in lines["cost"]:
-			box.add_child(_effect_line("−  " + line, Color(UiStyle.TERRACOTTA).lightened(0.25)))
+		var cost_color := Color(UiStyle.TERRACOTTA).lightened(0.25)
+		for part: Array in [["Gain", "gain", UiStyle.GOLD], ["Cost", "cost", cost_color]]:
+			if lines[part[1]].is_empty():
+				continue
+			var head := _label(&"Eyebrow", 12, part[2])
+			head.text = part[0]
+			head.add_theme_constant_override("line_spacing", 0)
+			box.add_child(head)
+			for line: String in lines[part[1]]:
+				box.add_child(_effect_line(line, part[2]))
 		_choice_box.add_child(panel)
 		_choice_panels.append(panel)
 	_refresh_choices()
@@ -203,21 +262,61 @@ func _advance() -> void:
 		_type_tween.kill()
 		_reveal_all()
 		return
+	_goto(_index + 1)
+
+## Turn to slide `i` (past the last one = this reader is through)
+func _goto(i: int) -> void:
 	if _slide_tween and _slide_tween.is_running():
 		return
-	_index += 1
-	if _index >= _slides.size():
+	if i < 0 or i == _index and _shown:
+		return
+	if _type_tween:
+		_type_tween.kill()
+	if i >= _slides.size():
 		_finish()
 		return
-	if _index == 0:
-		_show_slide(_slides[0])
+	_index = i
+	if not _shown:
+		_show_slide(_slides[i])
 		return
 	_slide_tween = create_tween()
 	_slide_tween.tween_property(_content, "modulate:a", 0.0, FADE * 0.6)
 	_slide_tween.parallel().tween_property(_frame, "modulate:a", 0.0, FADE)
 	_slide_tween.tween_callback(_show_slide.bind(_slides[_index]))
 
+# The key hints along the bottom, for the slide on screen
+func _update_hint() -> void:
+	var company := _with_company()
+	var last := _index >= _slides.size() - 1
+	# One scheme throughout: E / click goes on (the last slide: "I'm ready"), E again undoes
+	# it, ← goes back, Esc skips to the end
+	if _done:
+		_hint.text = "E · ←   Not ready yet"
+	elif _on_choice_card():
+		_hint.text = "←  →   Choose          E · Click   Confirm" + ("  (I'm ready)" if company else "") \
+			+ "          ↑   Back"
+	elif last:
+		_hint.text = "←   Back          E · Click   I'm ready" if company \
+			else "←   Back          E · Click   Continue"
+	else:
+		_hint.text = "←  →   Slides          E · Click   Next          Esc   Skip"
+
+# What the choice card is asking, and — once confirmed — what you picked
+func _refresh_note() -> void:
+	if not _on_choice_card():
+		_choice_note.hide()
+		return
+	_choice_note.show()
+	if _done and not _picked.is_empty():
+		_choice_note.text = tr("You picked %s. Press E or ← to change it.") \
+			% tr(GameState.BOONS[_picked]["title"])
+	elif _with_company():
+		_choice_note.text = tr("Your vote for the next stretch. The crew's most-picked blessing applies to everyone; the host breaks a tie.")
+	else:
+		_choice_note.text = tr("Choose one blessing for the next stretch.")
+
 func _show_slide(slide: Dictionary) -> void:
+	_shown = true
 	if slide.has("met"):
 		GameState.mark_met(slide["met"])
 	var art_path: String = slide.get("art", "")
@@ -251,9 +350,8 @@ func _show_slide(slide: Dictionary) -> void:
 	_choice_box.visible = has_choice
 	if has_choice:
 		_fill_choices()
-		_hint.text = "←  →   Choose          E · Click   Confirm"
-	else:
-		_hint.text = _hint_text
+	_update_hint()
+	_refresh_note()
 	_set_label(_eyebrow, slide.get("eyebrow", ""))
 	_set_label(_title, slide.get("title", ""))
 	_set_label(_text, slide.get("text", ""))
@@ -261,6 +359,9 @@ func _show_slide(slide: Dictionary) -> void:
 	var ref: String = slide.get("ref", "")
 	_set_label(_ref, GameState.long_ref(ref) if not ref.is_empty() else "")
 	_page.text = "%d / %d" % [_index + 1, _slides.size()] if _slides.size() > 1 else ""
+	_pager.index = _index
+	if _with_company():
+		slide_changed.emit(_index, _slides.size())
 
 	_drift(not has_map and not has_twist)
 	_content.modulate.a = 1.0
@@ -311,11 +412,13 @@ func _finish() -> void:
 	if _type_tween:
 		_type_tween.kill()
 	_reveal_all()
-	_hint.hide()
+	_hint.visible = _can_unready()
+	_update_hint()
+	_refresh_note()
 	finished.emit()
 	# Who else is still reading — only worth a row with company (the ending's credits
 	# follow straight on, nothing waits there)
-	_ready_row.visible = _with_company() and GameState.phase == GameState.Phase.STORY
+	_ready_row.visible = _can_unready()
 	_ready_row.refresh()
 
 func _kill_tweens() -> void:
@@ -411,6 +514,9 @@ func _build() -> void:
 	content.add_child(_verse)
 	_ref = _label(&"Eyebrow", 14, Color(UiStyle.GOLD, 0.85))
 	content.add_child(_ref)
+	_choice_note = _label(&"Body", 18, Color(UiStyle.CREAM, 0.8))
+	_choice_note.hide()
+	content.add_child(_choice_note)
 	_choice_box = HBoxContainer.new()
 	_choice_box.add_theme_constant_override("separation", 18)
 	_choice_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -421,8 +527,14 @@ func _build() -> void:
 	footer.add_theme_constant_override("separation", 24)
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(footer)
-	_page = _label(&"Eyebrow", 13, Color(UiStyle.CREAM, 0.5), false)
+	_page = _label(&"Heading", 22, Color(UiStyle.CREAM, 0.85), false)
 	footer.add_child(_page)
+	_pager = StoryPager.new()
+	_pager.hide()
+	_pager.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_pager.step.connect(func(d: int): _goto(_index + d) if d < 0 else _advance())
+	_pager.jump.connect(_goto)
+	footer.add_child(_pager)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -430,10 +542,12 @@ func _build() -> void:
 
 	_ready_row = ReadyRow.new(true)
 	_ready_row.hide()
+	_ready_row.cancellable = true
+	_ready_row.unready_pressed.connect(_unfinish)
 	_ready_row.begin_now.connect(start_now_requested.emit)
 	footer.add_child(_ready_row)
 
-	_hint = _label(&"Eyebrow", 13, Color(UiStyle.CREAM, 0.55), false)
+	_hint = _label(&"Eyebrow", 16, Color(UiStyle.CREAM, 0.7), false)
 	footer.add_child(_hint)
 
 func _label(variation: StringName, font_size: int, color: Color, wrapped := true) -> Label:
@@ -471,3 +585,59 @@ func _gradient_rect(radial: bool) -> TextureRect:
 	r.stretch_mode = TextureRect.STRETCH_SCALE
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return r
+
+## Chevrons and a dot per slide, with a coloured marker under the dot of each other reader
+class StoryPager extends Control:
+	signal step(delta: int)
+	signal jump(index: int)
+
+	const DOT := 24.0
+	const ARROW := 34.0
+	const HEIGHT := 36.0
+
+	var count := 0:
+		set(v):
+			count = v
+			custom_minimum_size = Vector2(ARROW * 2 + count * DOT, HEIGHT)
+			queue_redraw()
+	var index := 0:
+		set(v):
+			index = v
+			queue_redraw()
+	var others: Array = []:   # [slide index, colour] per other reader
+		set(v):
+			others = v
+			queue_redraw()
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	## A click at `pos` (local): a chevron steps, a dot jumps
+	func click(pos: Vector2) -> void:
+		if pos.x < ARROW:
+			step.emit(-1)
+		elif pos.x > size.x - ARROW:
+			step.emit(1)
+		else:
+			jump.emit(clampi(int((pos.x - ARROW) / DOT), 0, count - 1))
+
+	func _draw() -> void:
+		var cream := Color(UiStyle.CREAM)
+		var cy := 14.0
+		var back := cream if index > 0 else Color(cream, 0.25)
+		var fwd := cream if index < count - 1 else Color(cream, 0.25)
+		draw_polyline(PackedVector2Array([Vector2(20, cy - 8), Vector2(12, cy), Vector2(20, cy + 8)]), back, 2.5, true)
+		var rx := size.x - 20.0
+		draw_polyline(PackedVector2Array([Vector2(rx - 8, cy - 8), Vector2(rx, cy), Vector2(rx - 8, cy + 8)]), fwd, 2.5, true)
+		var stacked := {}
+		for i in count:
+			var cx := ARROW + i * DOT + DOT * 0.5
+			if i == index:
+				draw_circle(Vector2(cx, cy), 7.0, UiStyle.GOLD)
+			else:
+				draw_circle(Vector2(cx, cy), 4.5, Color(cream, 0.5 if i < index else 0.3))
+		for o: Array in others:
+			var k: int = stacked.get(o[0], 0)
+			stacked[o[0]] = k + 1
+			var cx: float = ARROW + float(o[0]) * DOT + DOT * 0.5 + k * 8.0
+			draw_colored_polygon(PackedVector2Array([Vector2(cx, 25), Vector2(cx - 4.5, 33), Vector2(cx + 4.5, 33)]), o[1])

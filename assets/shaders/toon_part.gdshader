@@ -7,12 +7,15 @@ render_mode diffuse_lambert, specular_disabled;
 
 instance uniform vec4 part_color : source_color = vec4(1.0);
 instance uniform float flash = 0.0;
+instance uniform float ghost : hint_range(0.0, 1.0) = 0.0;   // 0 solid; >0 dithered see-through (Leaders)
 uniform vec4 flash_color : source_color = vec4(1.0, 0.96, 0.88, 1.0);
 uniform vec4 rim_color : source_color = vec4(1.0, 0.93, 0.78, 1.0);
 
 void fragment() {
 	ALBEDO = mix(part_color.rgb, flash_color.rgb, flash * 0.8);
 	ROUGHNESS = 1.0;
+	ALPHA = 1.0 - ghost;
+	ALPHA_HASH_SCALE = 1.0;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	EMISSION = rim_color.rgb * rim * 0.08 + flash_color.rgb * flash * 0.5;
 }

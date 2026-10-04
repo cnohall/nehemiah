@@ -108,6 +108,7 @@ func _ready() -> void:
 			_build_food(rng)
 	_build_sync([^".:scattered", ^"Work:progress"])
 	GameState.section_changed.connect(_refresh_active.unbind(1))
+	GameState.day_changed.connect(_refresh_active.unbind(1))
 	_refresh_active()
 
 # Twist-only piles appear with their section; out of it they're gone entirely
@@ -126,6 +127,8 @@ func _refresh_active() -> void:
 		remove_from_group("scattered_piles")
 
 func _in_section() -> bool:
+	if kind != "stone" and GameState.intro_day():
+		return false   # day 1 is stone only
 	if twist.is_empty():
 		return true
 	if twist.begins_with("!"):
@@ -220,7 +223,7 @@ func _show_scatter() -> void:
 	_strewn.visible = scattered
 	_visual.visible = not scattered
 	if scattered:
-		count_label.text = tr("Scattered — tidy  [%s]") % InputMode.key("interact")
+		count_label.text = tr("Scattered — gather up  [%s]") % InputMode.key("interact")
 		count_label.pulse = true
 	else:
 		count_label.pulse = false

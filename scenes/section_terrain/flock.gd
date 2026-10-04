@@ -124,14 +124,18 @@ func _process(delta: float) -> void:
 	_t += delta
 	var players := get_tree().get_nodes_in_group("players")
 	var foes := get_tree().get_nodes_in_group("enemies")
+	var calm := GameState.intro_day()   # day 1: the flock only grazes where it stands
 	for sh in _sheep:
 		sh.shy = maxf(sh.shy - delta, 0.0)
 		sh.alert = maxf(sh.alert - delta, 0.0)
-		if sh.shy <= 0.0:
-			_sense(sh, players, PLAYER_REACH)
+		if calm:
+			sh.step = move_toward(sh.step, 0.0, delta * 3.0)
+		else:
 			if sh.shy <= 0.0:
-				_sense(sh, foes, FOE_REACH)
-		_move(sh, delta)
+				_sense(sh, players, PLAYER_REACH)
+				if sh.shy <= 0.0:
+					_sense(sh, foes, FOE_REACH)
+			_move(sh, delta)
 		_head(sh, delta)
 	_pose_all()
 
@@ -255,6 +259,8 @@ func _turn_in_place(sh: Dictionary) -> void:
 
 ## Sfx (via group "sheep_flocks"): something loud at `at` (null or reach 0 = heard site-wide)
 func startle(at: Variant, reach: float) -> void:
+	if GameState.intro_day():
+		return
 	for sh in _sheep:
 		if sh.shy > 0.0:
 			continue

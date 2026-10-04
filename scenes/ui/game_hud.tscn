@@ -440,6 +440,7 @@ grow_vertical = 2
 [node name="Modal" type="PanelContainer" parent="Root/PauseMenu/Center"]
 custom_minimum_size = Vector2(440, 0)
 layout_mode = 2
+size_flags_horizontal = 4
 theme_type_variation = &"Modal"
 
 [node name="VBox" type="VBoxContainer" parent="Root/PauseMenu/Center/Modal"]

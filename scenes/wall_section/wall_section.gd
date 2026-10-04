@@ -370,6 +370,11 @@ func cost_for(target_stage: int) -> Dictionary:
 	if GameState.active_build:
 		for kind: String in cost:
 			cost[kind] = maxi(1, cost[kind] - ACTIVE_BUILD_DISCOUNT)
+	if GameState.intro_day():
+		var loads := 0
+		for kind: String in cost:
+			loads += cost[kind]
+		return { "stone": loads }   # day 1: every stage is stone; the wood and mortar piles are put away
 	if is_thick():
 		for kind: String in THICK_EXTRA.get(target_stage, {}):
 			cost[kind] += THICK_EXTRA[target_stage][kind]
@@ -960,7 +965,16 @@ func _build_label() -> void:
 	_label.visible = false
 	add_child(_label)
 
+## The sign hovers just over what stands now, so it rises with the wall instead of
+## hanging at full height above bare footing
+func _label_height() -> float:
+	if stage == Stage.EMPTY:
+		return 0.3
+	# Framed puts up scaffold to full height (+0.35), so the sign rides above it
+	return _size.y + 1.0
+
 func _update_label() -> void:
+	_label.position.y = _label_height()
 	var lines: PackedStringArray = []
 	var next := stage + 1
 	if _hauling():

@@ -64,7 +64,7 @@ const ENTRIES := [
 	{ "key": "saboteur", "group": "foes", "name": "Saboteur", "enemy": "saboteur", "move": "thrust",
 	  "role": "From day 6",
 	  "quote": "“They will not know or see, until we come in the middle of them… and cause the work to cease.”", "ref": "Neh. 4:11",
-	  "text": "Hooded, an empty sack on his back, no weapon. He slips over the wall for the yard and strews the pile the work needs. Two cuts bring him down; a strewn pile must be tidied before it gives anything." },
+	  "text": "Hooded, an empty sack on his back, no weapon. He slips over the wall for the supply yard and scatters a pile. Nobody can take from it until someone gathers it up. Two cuts bring him down." },
 	{ "key": "raider", "group": "foes", "name": "Raider", "enemy": "raider", "move": "slash",
 	  "role": "From day 21",
 	  "quote": "“…and cause the work to cease.”", "ref": "Neh. 4:11",

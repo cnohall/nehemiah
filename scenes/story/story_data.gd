@@ -162,7 +162,7 @@ const ENDING := [
 
 ## Campaign won: the ending plays before the end screen (not after a replay)
 static func plays_ending() -> bool:
-	return not GameState.is_replay() and not disabled()
+	return not GameState.is_replay() and not disabled() and not GameState.is_demo()
 
 ## Slides to play before `day` starts; empty when the day has no story
 static func slides_for_day(day: int) -> Array:

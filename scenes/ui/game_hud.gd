@@ -6,6 +6,7 @@ extends CanvasLayer
 signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDirector)
 signal bots_changed      # host changed Settings.bot_count / bot_skill (Main refits the crew)
 signal ready_pressed         # local player is done with the dusk tally (Main → DayDirector)
+signal unready_pressed       # ...and changed their mind
 signal begin_now_requested   # host: go on without the ones still at the tally
 signal vote_cast(choice: String)   # end screen: "again" | "next" (Main → DayDirector)
 
@@ -178,6 +179,7 @@ func _ready() -> void:
 	_pad_lost_note.theme_type_variation = &"Caption"
 	_pad_lost_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pad_lost_note.text = "Controller disconnected — reconnect it to carry on"
+	_pad_lost_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pad_lost_note.visible = false
 	$Root/PauseMenu/Center/Modal/VBox.add_child(_pad_lost_note)
 	$Root/PauseMenu/Center/Modal/VBox.move_child(_pad_lost_note, 0)
@@ -491,11 +493,11 @@ func _next_text() -> String:
 	if Time.get_ticks_msec() < _knocked_until:
 		return "A finished piece was knocked down — build it back up"
 	var left := GameState.targets_total - GameState.targets_done
-	# A saboteur strewed a pile: nothing comes from it until it's tidied
+	# A saboteur scattered a pile: nothing comes from it until it's gathered up
 	if me.carried_kind.is_empty():
 		var mess := get_tree().get_first_node_in_group("scattered_piles")
 		if mess != null:
-			return tr("The %s pile was strewn — tidy it (%s at the pile)") % [_material_name(mess.kind), InputMode.key("interact")]
+			return tr("The %s pile is scattered — nothing to take until you gather it up (%s at the pile)") % [_material_name(mess.kind), InputMode.key("interact")]
 	var site := SiteFocus.site()
 	if site == null:
 		# Only "done" when it is (playtest 2: players thought the wall stood and waited
@@ -668,14 +670,20 @@ func _show_end(won: bool) -> void:
 	var vb := $Root/EndScreen/Center/VBox
 	vb.get_node("Eyebrow").text = tr("Day %d of %d") % [GameState.current_day, GameState.TOTAL_DAYS]
 	var stars := not won and GameState.loss_reason == "stars"
+	var demo_end := won and GameState.is_demo() and not GameState.is_replay()
 	vb.get_node("Title").text = "The wall is finished" if won else ("The stars appeared" if stars else "The city is overrun")
 	vb.get_node("Message").text = WIN_VERSE if won \
 		else (tr("The %s was not finished by nightfall. Gather the workers and begin again.") % tr(GameState.get_current_section()["name"]) if stars \
 		else tr("Too many enemies reached the inner city. Gather the workers and begin again."))
 	vb.get_node("Ref").text = GameState.long_ref(WIN_VERSE_REF) if won else ""
 	vb.get_node("Ref").visible = won
-	var days_done := GameState.TOTAL_DAYS if won else GameState.current_day - 1
-	var sections_done := GameState.SECTIONS.size() if won else GameState.current_section_index
+	if demo_end:
+		vb.get_node("Title").text = tr("The first brute")
+		vb.get_node("Message").text = tr("Nine days, two stretches of wall, and the enemy has sent a brute. %d days and %d stretches remain, and they will only grow bolder.") \
+			% [GameState.TOTAL_DAYS - GameState.current_day, GameState.SECTIONS.size() - GameState.current_section_index]
+		vb.get_node("Ref").hide()
+	var days_done := GameState.current_day if demo_end else (GameState.TOTAL_DAYS if won else GameState.current_day - 1)
+	var sections_done := GameState.current_section_index if demo_end else (GameState.SECTIONS.size() if won else GameState.current_section_index)
 	var stats: Control = vb.get_node("Stats")
 	for c in stats.get_children():
 		c.queue_free()
@@ -694,6 +702,20 @@ func _show_end(won: bool) -> void:
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
 	var first: Button = vb.get_node("Buttons").get_child(0)
 	first.grab_focus()
+	_fit_end(vb)
+
+# The reel is the only elastic part: shrink it (16:9) until the buttons sit on screen
+func _fit_end(vb: Control) -> void:
+	var pic := vb.find_child("*TextureRect*", true, false) as Control
+	if pic == null:
+		return
+	pic.custom_minimum_size = REEL_SIZE
+	await get_tree().process_frame
+	var over := vb.get_combined_minimum_size().y - (end_screen.size.y - 48.0)
+	if over <= 0.0:
+		return
+	var h := maxf(REEL_SIZE.y - over, 72.0)
+	pic.custom_minimum_size = Vector2(h * REEL_SIZE.x / REEL_SIZE.y, h)
 
 # ── End screen: the scribe's map ───────────────────────────
 
@@ -742,6 +764,7 @@ const REEL_SLIDE := 2.6   # seconds per still
 var _reel_tween: Tween
 var _vote_note: Label
 var _vote_buttons := {}   # choice → Button
+var _wishlist_btn: Button   # demo end card
 
 # The run's stills (Highlights), one after another while the crew decides
 func _build_reel(vb: Control) -> void:
@@ -796,7 +819,7 @@ func _build_vote(won: bool, vb: Control) -> void:
 	if GameState.is_replay():
 		choices.append(["again", "Play it again"])
 		var next := GameState.replay_section + 1
-		if won and next < GameState.SECTIONS.size():
+		if won and next < (GameState.DEMO_SECTIONS if GameState.is_demo() else GameState.SECTIONS.size()):
 			choices.append(["next", "Next stretch"])
 	elif won:
 		choices.append(["again", "Play again"])
@@ -813,6 +836,19 @@ func _build_vote(won: bool, vb: Control) -> void:
 		buttons.move_child(b, i)
 		_vote_buttons[choice] = b
 	(vb.get_node("Buttons/MenuButton") as Button).theme_type_variation = &"GhostButton"
+	if _wishlist_btn:
+		_wishlist_btn.queue_free()
+		_wishlist_btn = null
+	if won and GameState.is_demo() and not GameState.is_replay() and not GameState.DEMO_WISHLIST_URL.is_empty():
+		_wishlist_btn = Button.new()
+		_wishlist_btn.text = "Wishlist on Steam"
+		_wishlist_btn.custom_minimum_size.x = 220
+		_wishlist_btn.theme_type_variation = &"PrimaryButton"
+		_wishlist_btn.pressed.connect(func(): OS.shell_open(GameState.DEMO_WISHLIST_URL))
+		buttons.add_child(_wishlist_btn)
+		buttons.move_child(_wishlist_btn, 0)
+		for b in _vote_buttons.values():
+			b.theme_type_variation = &"GhostButton"
 	if _vote_note == null:
 		_vote_note = Label.new()
 		_vote_note.theme_type_variation = &"Caption"
@@ -967,7 +1003,9 @@ func show_tally(stats: Dictionary) -> void:
 	if waits:
 		_ready_row = ReadyRow.new(false)
 		_ready_row.holdable = true
+		_ready_row.cancellable = true
 		_ready_row.ready_pressed.connect(ready_pressed.emit)
+		_ready_row.unready_pressed.connect(unready_pressed.emit)
 		_ready_row.begin_now.connect(begin_now_requested.emit)
 		_tally.add_child(_ready_row)
 		_ready_row.set_waiting(_tally_waiting)
@@ -1181,13 +1219,14 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	var more := _bot_button("+", in_menu)
 	var skill := _bot_button("", in_menu)
 	var skill_about := _host_caption()
-	var bot_row := _host_row([label, fewer, more, skill])
+	var bot_row := _host_row([label, fewer, more])
+	var skill_row := _host_row([skill])
 	# Gather panel: point a lone builder at the bots (playtest: nobody found them)
 	var nudge := _host_caption()
 	nudge.text = "Short of hands? Add bots to the crew."
 	nudge.add_theme_color_override("font_color", UiStyle.INK)
 	nudge.visible = false
-	for c in [diff_row, diff_about, nudge, bot_row, skill_about]:
+	for c in [diff_row, diff_about, nudge, bot_row, skill_row, skill_about]:
 		vb.add_child(c)
 		vb.move_child(c, at)
 		at += 1
@@ -1276,6 +1315,10 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 		for i in tiles.get_child_count():
 			var tile := tiles.get_child(i) as Button
 			tile.set_pressed_no_signal(i == t)   # no signal, so the group won't clear the rest
+			# One person per trade: someone else's is greyed, tagged with their name
+			var holder := NetworkManager.trade_holder(i, multiplayer.get_unique_id())
+			tile.disabled = holder != 0 and i != t
+			tile.tooltip_text = tr("Taken by %s") % _holder_name(holder) if tile.disabled else tr(Trade.ABOUT[i])
 			tile.get_meta("paint").call()
 		about.text = "%s  ·  %s" % [tr("Your trade: %s") % tr(CharacterRig.TRADES[t]), tr(Trade.ABOUT[t])]
 		var me := _worker(multiplayer.get_unique_id())
@@ -1288,7 +1331,27 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 	if not NetworkManager.crew_info_changed.is_connected(_refresh_rows_later):
 		NetworkManager.crew_info_changed.connect(_refresh_rows_later)
 	_host_refreshers.append(refresh)
+	var about_texts: Array[String] = []
+	for t in CharacterRig.TRADES.size():
+		about_texts.append("%s  ·  %s" % [tr("Your trade: %s") % tr(CharacterRig.TRADES[t]), tr(Trade.ABOUT[t])])
+	_fit_widest(about, about_texts)
+	# Lost the race for a trade: say so for a moment, then the caption returns
+	NetworkManager.trade_refused.connect(func(taken: int):
+		if not is_instance_valid(about):
+			return
+		about.text = tr("%s was just taken. Pick another trade.") % tr(CharacterRig.TRADES[taken])
+		get_tree().create_timer(2.5).timeout.connect(func():
+			if is_instance_valid(about):
+				refresh.call()), CONNECT_REFERENCE_COUNTED)
 	refresh.call()
+
+## Name for a trade's holder: their Steam name, else the colour slot they stand in
+func _holder_name(id: int) -> String:
+	var n := NetworkManager.name_of(id)
+	if not n.is_empty():
+		return n
+	var w := _worker(id)
+	return tr("Player %d") % (w.slot + 1) if w != null and "slot" in w else tr("another player")
 
 # A trade to pick: the worker in its dress, its name under; the chosen one sits pressed
 # into the parchment with a terracotta frame
@@ -1332,8 +1395,9 @@ func _trade_tile(t: int, group: ButtonGroup, focusable: bool) -> Button:
 	col.add_child(name_l)
 	var paint := func():
 		name_l.add_theme_color_override("font_color", UiStyle.TERRACOTTA_DEEP if b.button_pressed \
-			else (UiStyle.TERRACOTTA if b.is_hovered() else UiStyle.INK_SOFT))
-		face.modulate = Color.WHITE if b.button_pressed or b.is_hovered() else Color(1, 1, 1, 0.72)
+			else (UiStyle.TERRACOTTA if b.is_hovered() and not b.disabled else UiStyle.INK_SOFT))
+		face.modulate = Color(1, 1, 1, 0.3) if b.disabled \
+			else (Color.WHITE if b.button_pressed or b.is_hovered() else Color(1, 1, 1, 0.72))
 	b.toggled.connect(func(_on: bool): paint.call())
 	b.mouse_entered.connect(paint)
 	b.mouse_exited.connect(paint)
@@ -1364,19 +1428,34 @@ func _host_caption() -> Label:
 	l.theme_type_variation = &"Caption"
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	# Wraps inside the panel instead of widening it
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
-# Min width of a Button/Label = its widest candidate text (hidden/toggled controls keep their slot width)
+const HOST_WRAP_PX := 400.0   # wrap width the caption height is reserved for (modal 440 less padding)
+
+# Buttons: min width = widest candidate text (hidden/toggled controls keep their slot width).
+# Labels wrap, so they reserve the tallest candidate's height instead and never set the width.
 func _fit_widest(c: Control, texts: Array[String]) -> void:
 	var font := c.get_theme_font("font")
 	var px := c.get_theme_font_size("font_size")
 	if font == null:
+		return
+	if c is Label:
+		var h := 0.0
+		for t in texts:
+			h = maxf(h, font.get_multiline_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, HOST_WRAP_PX, px).y)
+		c.custom_minimum_size.y = ceilf(h)
 		return
 	var w := 0.0
 	for t in texts:
 		w = maxf(w, font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x)
 	if c is Button:
 		w += c.get_theme_stylebox("normal").get_minimum_size().x
+		# Never wider than the panel: a long translation ellipsizes rather than widening it
+		w = minf(w, HOST_WRAP_PX)
+		c.clip_text = true
+		c.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	c.custom_minimum_size.x = ceilf(w)
 
 func _bot_button(text: String, focusable := false) -> Button:

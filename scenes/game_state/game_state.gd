@@ -107,6 +107,17 @@ static func _verse_of(ref: String) -> String:
 const NIGHT_FROM_DAY_IN_SECTION := 1
 
 const TOTAL_DAYS   := 52
+
+# Demo build (GDD §7.1 #2): export feature "demo", or `-- --demo` on the command line.
+# Days 1-9, ending at the dusk of the first day brutes come (WaveManager forces one).
+# Only the first DEMO_SECTIONS stretches open on the map. Wishlist link: fill in the
+# store page once the Steam App ID exists; the end-card button stays hidden while empty.
+const DEMO_LAST_DAY := 9
+const DEMO_SECTIONS := 2
+const DEMO_WISHLIST_URL := ""
+
+static func is_demo() -> bool:
+	return OS.has_feature("demo") or "--demo" in OS.get_cmdline_user_args()
 # Hands-on building (GDD §5.4): delivered materials wait until workers stand at the
 # wall and raise it. Debug builds: `-- --instant-build` for the old deliver-and-done
 # rule, to A/B the two in playtests.
@@ -437,6 +448,8 @@ const ALL_SECTIONS_OPEN := true
 ## Picked on the map: the first section is always open; each next one once the one
 ## before it has been finished (any marks). Debug builds: `-- --unlock-all`.
 func is_unlocked(section_index: int) -> bool:
+	if is_demo() and section_index >= DEMO_SECTIONS:
+		return false
 	if ALL_SECTIONS_OPEN or section_index == 0 or best_marks(section_index) >= 0 or best_marks(section_index - 1) >= 0:
 		return true
 	return OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args()
@@ -461,6 +474,11 @@ func built_sections() -> Array[bool]:
 ## The whole wall stands: Explore Jerusalem keeps the Festival of Booths
 func wall_finished() -> bool:
 	return not built_sections().has(false)
+
+## Day 1 of a real run: the wall is raised from stone alone (dug out of the rubble), so a
+## new player learns one verb before wood and mortar arrive (playtest 2026-10-04)
+func intro_day() -> bool:
+	return current_day == 1 and not attract and not free_play()
 
 ## A practice or the festival: no waves, no story, nothing saved
 func free_play() -> bool:
@@ -594,7 +612,7 @@ func campaign_save() -> Dictionary:
 	if cfg.load(PROGRESS_PATH) != OK or not cfg.has_section("campaign"):
 		return {}
 	var day: int = cfg.get_value("campaign", "day", -1)
-	if day < 1 or day > TOTAL_DAYS:
+	if day < 1 or day > (DEMO_LAST_DAY if is_demo() else TOTAL_DAYS):
 		return {}
 	return { "day": day, "section": _section_index_for_day(day),
 		"marks": cfg.get_value("campaign", "marks", []), "chronicle": cfg.get_value("campaign", "chronicle", []) }

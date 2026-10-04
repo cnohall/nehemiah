@@ -17,6 +17,7 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | Mending | 5.17 | n/a | pending |
 | Solo with bots: crew weight, calls, cover | 5.20 | n/a | pending |
 | Experimental: wave forecast, call early (Thronefall-inspired) | 5.21 | Settings → Experimental (off by default) | pending |
+| The well: drink to mend | 5.22 | `--no-well` | pending |
 | Choice before each stretch (boons) | 6.5 | `--boon=<key>` | pending |
 | Section beats | 6.4 | `--no-beats` | pending |
 | Explore Jerusalem, dedication choirs | 5.8, 5.19 | n/a | **frozen** (side mode) |
@@ -504,6 +505,17 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 
 **Other ideas parked (checked 3 Oct 2026):** *difficulty marks* — a fourth mark per stretch for an opt-in modifier (burned units, fewer spare days, raiders only) on top of Hard; *dusk grade* — a sharper day/night palette shift on top of the lamps; *readability audit* — silhouettes and damaged-only health bars at 4 players. All three need playtest evidence first.
 
+### 5.22 The well — ◐ built 4 Oct 2026 (asked for outright, inside the §0 freeze), needs playtest
+**Problem:** health never came back. Only a revive restored it (to full), so a worker who took two hits carried them to the end of the stretch and every later hit downed them sooner. Medkits (§5.3) and the water jar (§5.18) were both cut for overlapping other things.
+**Rule:** the city well (`scenes/well`, at `ScatterLayer.WELL_POS`, the cross street ~24 m behind the wall) heals. Hands free and hurt, [E] at the lip starts a drink: **40 health/s** (2.5 s from nothing to full), the HP bar climbing is the progress. Walking off, dashing, dropping, reaching for the sling, a blow, full health or dusk ends it; what was drunk is kept. Work and dawn only. Same press-once-then-hold-still loop as working a wall (`_wants_to_stop_work`), no new button. **Why a place, not a pickup:** it costs a trip away from the wall (a real route choice, the Overcooked way) and does not compete with the carried loads for hands.
+**Telling the player (three layers):**
+1. **Hurt cue**: the first time health falls under half, a toast: "Hurt? Drink at the well" (once a session, `Player._well_told`).
+2. **Where**: a `WorldTag` over the well's frame, shown only to a worker under 80% health: "Well" from afar (it slides in from the screen edge when off-screen), breathing under 50%. Healthy workers never see it.
+3. **How**: within reach it reads "Drink [E]"; with a load in hand "Set the load down first", and a press says "Set it down first — {drop}, then {interact} to drink". While drinking no tag; the HP bar fills and a sip splashes (existing `splash` sound).
+**Bots** (`BotBrain` Job.DRINK): under 45% health, hands free, no foe within 5 m, they walk to the well and drink to full; they stay put while drinking. **Switch:** `--no-well`.
+**Not done:** the Tab lens row ("well" when hurt); a drinking pose (the worker just stands, facing the well); the trough is not a second drinking spot; the 24 m trip is a guess (a closer second well per section is the fix if it is too far).
+**Kill rule:** nobody uses it (deaths are fine without it, or the toast was missed), or the trek makes hurt workers sit out most of a wave. **Tune:** `Player.DRINK_RATE`, `Well.SHOW_BELOW`, `BotBrain.DRINK_BELOW`. Tests: `tools/well_test.gd` (tag states, load refusal, drink to full, a blow interrupts, hint once), `tools/bot_well_test.gd`.
+
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |
 |---|---|---|
@@ -511,9 +523,8 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 | Civilians (women, children) inside the city | Raises stakes, fits Neh 4:13 | Adds AI work |
 | Prep days (gather materials, craft weapons) | Rhythm between sections | Slows pacing |
 | Stand on a tile to spawn builders/fighters (mobile-ad style) | Addictive progression hook | Can drift toward an idle game |
-| Medkits / healing | Survivability | Low priority |
 
-Done and removed from the table: wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6), player roles → trades (§5.10).
+Done and removed from the table: healing → the well (§5.22), wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6), player roles → trades (§5.10).
 
 **Suggested order:** playtest 3 first (everything in §0 is first pass) → keep/cut per kill rules → archer or spear rack (§5.18), one at a time → launch scope (§7)
 
@@ -665,7 +676,7 @@ Measured against what §8 promises. New mechanics (marked *mech*) wait for the f
 | # | Gap | Why it matters | Cost / note |
 |---|---|---|---|
 | 1 | **Steam page not live**: `STEAM_APP_ID` still 480 | No wishlists, no Next Fest. Copy + capsules ready (`docs/steam/store_page.md`) | User-only: Steamworks login, App ID, review 3–5 days |
-| 2 | **No demo build** | Next Fest; days 1–9 ending on the first brute is the hook | Flag (e.g. `--demo` / export feature) that ends the run at day 9 + "Wishlist" end card |
+| 2 | **Demo build** (built 4 Oct 2026, uncommitted) | Next Fest; days 1–9 ending on the first brute is the hook | `GameState.is_demo()` = export feature `demo` or `-- --demo`. Ends at dusk of day 9 (a brute is forced), no ending/credits, only 2 stretches on the map, no WALL_DONE achievement. End card "The first brute" + wishlist button (set `DEMO_WISHLIST_URL`). Presets "Windows Demo" / "Web Demo" (local cfg). Test: `tools/demo_test.gd`. Still needs its own Steam demo App ID |
 | 3 | **No couch co-op / Remote Play Together** *(mech)* | Overcooked / PlateUp! sell on one screen, four pads; streamers; families on one PC (§8 audience 2) | Biggest item. Several local players, one shared camera (fixed crew-framing view exists). Decide after playtest 3 |
 | 4 | **No ping / quick-call wheel** *(mech)* | The pitch sells the crew shouting; online without voice has only the horn | "Stone here / Help / Gap" at a spot, reuse `offscreen_alerts` pointers. Kill rule: nobody uses it |
 | 5 | **First minute isn't chaos** | Trailer starts at the wall, game starts on prologue cards | Hauling stone under attack within ~60 s on first play. Story after, or shortened (§5.13 risk a) |

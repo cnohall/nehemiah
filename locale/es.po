@@ -1901,9 +1901,6 @@ msgstr "[%s] Honda · de cerca es la espada"
 msgid "[%s] Sound the horn — the crew gathers to you"
 msgstr "[%s] Toca el cuerno — el equipo se reúne contigo"
 
-msgid "%s Help up"
-msgstr "%s Ayudar a levantarse"
-
 msgid "%s Take the other end"
 msgstr "%s Tomar el otro extremo"
 
@@ -2597,3 +2594,24 @@ msgstr[1] "%d asaltantes"
 msgid "Wave called in early — the crew is spurred"
 msgstr "Ataque anunciado antes de tiempo — la cuadrilla está animada"
 
+
+msgid "Hurt? Drink at the well"
+msgstr "¿Herido? Bebe en el pozo"
+
+msgid "Well"
+msgstr "Pozo"
+
+msgid "Drink"
+msgstr "Beber"
+
+msgid "Set the load down first"
+msgstr "Deja la carga primero"
+
+msgid "Set it down first — {drop}, then {interact} to drink"
+msgstr "Déjala primero — {drop}, luego {interact} para beber"
+
+msgid "%s Drink — hands free, stand still to mend"
+msgstr "%s Beber — manos libres, quieto para sanar"
+
+msgid "Set the load down, then drink at the well to mend"
+msgstr "Deja la carga y bebe en el pozo para sanar"

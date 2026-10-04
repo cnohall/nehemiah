@@ -1901,9 +1901,6 @@ msgstr "[%s] Schleuder · aus der Nähe das Schwert"
 msgid "[%s] Sound the horn — the crew gathers to you"
 msgstr "[%s] Ins Horn stoßen — die Truppe sammelt sich bei dir"
 
-msgid "%s Help up"
-msgstr "%s Aufhelfen"
-
 msgid "%s Take the other end"
 msgstr "%s Anderes Ende nehmen"
 
@@ -2597,3 +2594,24 @@ msgstr[1] "%d Räuber"
 msgid "Wave called in early — the crew is spurred"
 msgstr "Angriff vorzeitig gerufen — die Mannschaft ist angespornt"
 
+
+msgid "Hurt? Drink at the well"
+msgstr "Verletzt? Trink am Brunnen"
+
+msgid "Well"
+msgstr "Brunnen"
+
+msgid "Drink"
+msgstr "Trinken"
+
+msgid "Set the load down first"
+msgstr "Erst die Last abstellen"
+
+msgid "Set it down first — {drop}, then {interact} to drink"
+msgstr "Erst abstellen — {drop}, dann {interact} zum Trinken"
+
+msgid "%s Drink — hands free, stand still to mend"
+msgstr "%s Trinken — Hände frei, stillstehen zum Heilen"
+
+msgid "Set the load down, then drink at the well to mend"
+msgstr "Last abstellen, dann am Brunnen trinken, um zu heilen"

@@ -9,17 +9,25 @@ extends HBoxContainer
 #              a habit from the day's work); the story marks you ready by reading on
 
 signal ready_pressed
+signal unready_pressed
 signal begin_now
 
 const HOLD_TIME := 0.6
+const BAR_SIZE := Vector2(180, 6)
 
 var holdable := false
+var cancellable := false   # ready can be taken back while others are still out
 var _dark := false
 var _waiting: Array = []
+var _slides: Dictionary = {}   # peer id → Vector2i(slide index, slide count), while reading
 var _hold := 0.0
+var _have := 0   # people ready / in the crew, for the bar
+var _total := 0
 var _chips: HBoxContainer
 var _prompt: Button
 var _fill: ColorRect
+var _bar: Control
+var _undo: Button
 var _begin: Button
 
 func _init(dark: bool) -> void:
@@ -49,6 +57,22 @@ func _init(dark: bool) -> void:
 	_fill.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	prompt_box.add_child(_fill)
+	# How many are ready, as a bar of one segment per person
+	_bar = Control.new()
+	_bar.custom_minimum_size = BAR_SIZE
+	_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bar.draw.connect(_draw_bar)
+	prompt_box.add_child(_bar)
+
+	_undo = Button.new()
+	_undo.theme_type_variation = &"GhostButton"
+	_undo.focus_mode = Control.FOCUS_NONE
+	_undo.text = "Not ready yet"
+	_undo.add_theme_color_override("font_color", _text_color())
+	_undo.pressed.connect(unready_pressed.emit)
+	_undo.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	add_child(_undo)
 
 	_begin = Button.new()
 	_begin.theme_type_variation = &"GhostButton"
@@ -63,6 +87,11 @@ func _init(dark: bool) -> void:
 func set_waiting(waiting: Array) -> void:
 	_waiting = waiting
 	_hold = 0.0
+	refresh()
+
+## Story slides each reader is on (DayDirector.slides_changed): a small bar per chip until they're through
+func set_slides(slides: Dictionary) -> void:
+	_slides = slides
 	refresh()
 
 func is_local_ready() -> bool:
@@ -87,7 +116,16 @@ func refresh() -> void:
 		_prompt.text = tr_n("Waiting for %d builder", "Waiting for %d builders", _waiting.size()) % _waiting.size()
 	_prompt.disabled = readied
 	_begin.visible = multiplayer.is_server() and readied and not _waiting.is_empty()
+	_undo.visible = cancellable and readied and not _waiting.is_empty()
+	_undo.text = (key + " · " if holdable else "") + tr("Not ready yet")
 	_fill.visible = holdable and not readied
+	_total = people.size()
+	_have = 0
+	for entry: Array in people:
+		if not entry[0] in _waiting and not NetworkManager.is_loading(entry[0]):
+			_have += 1
+	_bar.visible = people.size() > 1
+	_bar.queue_redraw()
 
 func _process(delta: float) -> void:
 	if not holdable or not is_visible_in_tree() or is_local_ready():
@@ -100,6 +138,23 @@ func _process(delta: float) -> void:
 	else:
 		_hold = maxf(0.0, _hold - delta * 2.0)
 	_fill.custom_minimum_size.x = _prompt.size.x * _hold / HOLD_TIME
+
+## E again takes ready back (the story handles its own keys)
+func _unhandled_input(event: InputEvent) -> void:
+	if holdable and cancellable and is_visible_in_tree() and is_local_ready() \
+			and not _waiting.is_empty() and not InputMode.gameplay_blocked() \
+			and event.is_action_pressed("interact") and not event.is_echo():
+		unready_pressed.emit()
+
+func _draw_bar() -> void:
+	if _total < 1:
+		return
+	var gap := 3.0
+	var w := (BAR_SIZE.x - gap * (_total - 1)) / _total
+	var on := UiStyle.GOLD if _dark else UiStyle.OLIVE
+	var off := Color(UiStyle.CREAM, 0.2) if _dark else Color(UiStyle.INK, 0.15)
+	for i in _total:
+		_bar.draw_rect(Rect2(i * (w + gap), 0, w, BAR_SIZE.y), on if i < _have else off)
 
 func _press() -> void:
 	if is_local_ready():
@@ -152,6 +207,18 @@ func _chip(id: int, color: Color, who: String) -> Control:
 			mark.draw_polyline(PackedVector2Array([Vector2(2, 8.5), Vector2(6.5, 13), Vector2(14, 3.5)]), tick_color, 2.5, true)
 		else:
 			mark.draw_arc(Vector2(8, 8), 5.5, 0.0, TAU, 20, ring_color, 1.5, true))
+	# Still reading: how far through the slides, as a small bar
+	if not readied and _slides.has(id):
+		var at: Vector2i = _slides[id]
+		var frac := float(at.x + 1) / maxf(1.0, at.y)
+		var track := Control.new()
+		track.custom_minimum_size = Vector2(44, 5)
+		track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		track.draw.connect(func():
+			track.draw_rect(Rect2(0, 0, 44, 5), Color(ring_color, 0.3))
+			track.draw_rect(Rect2(0, 0, 44 * frac, 5), tick_color))
+		chip.add_child(track)
 	chip.add_child(mark)
 	chip.modulate.a = 1.0 if readied else 0.7
 	return chip

@@ -26,6 +26,7 @@ signal host_failed(reason: String)
 signal peer_connected(id: int)
 signal peer_disconnected(id: int)
 signal crew_info_changed
+signal trade_refused(trade: int)   # our pick was taken by someone else first
 
 # Peers whose game scene has loaded. Server-owned synchronizers filter on this so
 # nothing replicates to a client still sitting in the menu (its nodes don't exist yet).
@@ -227,10 +228,32 @@ func _ask_trade(trade: int) -> void:
 	if multiplayer.is_server():
 		_set_trade(multiplayer.get_remote_sender_id(), trade)
 
+## Peer id of whoever holds `trade` besides `except`, or 0 (one person per trade)
+func trade_holder(trade: int, except := 0) -> int:
+	if trade < 0:
+		return 0
+	for id: int in crew_info:
+		if id != except and crew_info[id].get("trade", -1) == trade:
+			return id
+	return 0
+
+## Server: first to ask keeps a trade; a later ask for it is refused and told so
 func _set_trade(id: int, trade: int) -> void:
-	if crew_info.has(id):
-		crew_info[id]["trade"] = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
-		_broadcast_crew()
+	if not crew_info.has(id):
+		return
+	trade = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
+	if trade_holder(trade, id) != 0:
+		if id == multiplayer.get_unique_id():
+			trade_refused.emit(trade)
+		else:
+			_trade_refused.rpc_id(id, trade)
+		return
+	crew_info[id]["trade"] = trade
+	_broadcast_crew()
+
+@rpc("authority", "call_remote", "reliable")
+func _trade_refused(trade: int) -> void:
+	trade_refused.emit(trade)
 
 # Client → server, as soon as the connection is up: who we are
 @rpc("any_peer", "reliable")
@@ -238,7 +261,8 @@ func _hello(display_name: String, trade: int) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if multiplayer.is_server() and crew_info.has(id):
 		crew_info[id]["name"] = display_name.left(32)
-		crew_info[id]["trade"] = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
+		trade = clampi(trade, -1, CharacterRig.TRADES.size() - 1)
+		crew_info[id]["trade"] = -1 if trade_holder(trade, id) != 0 else trade   # remembered pick already taken
 		_broadcast_crew()
 
 @rpc("authority", "call_remote", "reliable")

@@ -54,14 +54,28 @@ static func prefers(trade: int, material: String) -> bool:
 static func assign(chosen: Array, is_bot: Array) -> Array:
 	var out := []
 	var held := {}
+	out.resize(chosen.size())
+	out.fill(-1)
+	# Explicit picks first (the server allows one per trade; a clash falls through)
 	for i in chosen.size():
-		var t: int = chosen[i] if not is_bot[i] and chosen[i] >= 0 else i % NAMES.size()
-		out.append(t)
-		if not is_bot[i]:
-			held[t] = true
+		if not is_bot[i] and chosen[i] >= 0 and not held.has(chosen[i]):
+			out[i] = chosen[i]
+			held[chosen[i]] = true
+	# People without a pick: their slot's own trade, or the next free one
+	for i in chosen.size():
+		if is_bot[i] or out[i] >= 0:
+			continue
+		var t := i % NAMES.size()
+		for k in NAMES.size():
+			if not held.has((t + k) % NAMES.size()):
+				t = (t + k) % NAMES.size()
+				break
+		out[i] = t
+		held[t] = true
 	for i in chosen.size():
 		if not is_bot[i]:
 			continue
+		out[i] = i % NAMES.size()
 		for t in NAMES.size():
 			if not held.has(t):
 				out[i] = t

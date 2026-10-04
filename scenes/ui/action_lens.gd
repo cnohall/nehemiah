@@ -95,7 +95,7 @@ func _entries(me: Player) -> Array:
 		if p == me:
 			continue
 		if p.downed:
-			add.call(p.global_position, tr("%s Help up") % e)
+			pass   # the "Help up" world tag over them already says it
 		elif p.carried_kind == "beam" and p._beam_partner() == null and carrying.is_empty():
 			add.call(p.global_position, tr("%s Take the other end") % e)
 		elif not carrying.is_empty() and carrying != "beam" and p.carried_kind.is_empty() and p.helping_id == 0:
@@ -123,10 +123,14 @@ func _entries(me: Player) -> Array:
 			if at.distance_to(here) < 5.0:
 				add.call(at, tr("%s Climb over") % e)
 	for pile: Node3D in get_tree().get_nodes_in_group("scattered_piles"):
-		add.call(pile.global_position, tr("%s Tidy the strewn pile") % e)
+		add.call(pile.global_position, tr("%s Gather up the scattered %s — nothing to take until then") % [e, _mat(pile.kind)])
+	if me.health < Player.MAX_HEALTH and Player.can_drink_now():
+		for well: Node3D in get_tree().get_nodes_in_group("wells"):
+			add.call(well.global_position + Vector3.UP * 0.7, tr("%s Drink — hands free, stand still to mend") % e if carrying.is_empty() \
+				else tr("Set the load down, then drink at the well to mend"))
 	for foe: Node3D in get_tree().get_nodes_in_group("enemies"):
 		if foe.has_method("is_saboteur") and foe.is_saboteur():
-			add.call(foe.global_position, tr("Saboteur — stop him before he strews the yard"))
+			add.call(foe.global_position, tr("Saboteur — stop him before he scatters a pile"))
 	for m: Node3D in get_tree().get_nodes_in_group("messengers"):
 		add.call(m.global_position, tr("Don't go with him — just walk away"))
 	return out

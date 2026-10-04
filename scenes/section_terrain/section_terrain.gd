@@ -110,7 +110,7 @@ func _prop(kind: String, at: Vector3) -> void:
 # Everything a worker has to reach, as the SectionStage laid it out for this section
 func _collect_keep_clear() -> void:
 	_keep_clear.clear()
-	_keep_clear.append(Vector2(0.0, 8.0))   # Player.RESPAWN_POS
+	_keep_clear.append(Vector2(GameState.yard_center().x, 8.0))   # Player.start_spot(0)
 	_keep_clear.append(GameState.yard_center() + Scribe.OFFSET)   # the scribe's desk
 	for group: String in ["supply_piles", "build_sites"]:
 		for n: Node3D in get_tree().get_nodes_in_group(group):

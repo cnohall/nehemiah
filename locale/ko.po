@@ -1888,9 +1888,6 @@ msgstr "[%s] 물매 · 가까이서는 검"
 msgid "[%s] Sound the horn — the crew gathers to you"
 msgstr "[%s] 뿔나팔 불기 — 작업단이 당신에게 모입니다"
 
-msgid "%s Help up"
-msgstr "%s 일으키기"
-
 msgid "%s Take the other end"
 msgstr "%s 반대쪽 끝 잡기"
 
@@ -2581,3 +2578,24 @@ msgstr[0] "%d명의 약탈자"
 msgid "Wave called in early — the crew is spurred"
 msgstr "습격을 앞당겼다 — 일꾼들이 힘을 얻었다"
 
+
+msgid "Hurt? Drink at the well"
+msgstr "다쳤나요? 우물에서 물을 마시세요"
+
+msgid "Well"
+msgstr "우물"
+
+msgid "Drink"
+msgstr "마시기"
+
+msgid "Set the load down first"
+msgstr "먼저 짐을 내려놓으세요"
+
+msgid "Set it down first — {drop}, then {interact} to drink"
+msgstr "먼저 내려놓으세요 — {drop}, 그다음 {interact}로 마시기"
+
+msgid "%s Drink — hands free, stand still to mend"
+msgstr "%s 마시기 — 손을 비우고 가만히 서서 회복"
+
+msgid "Set the load down, then drink at the well to mend"
+msgstr "짐을 내려놓고 우물에서 마시면 회복돼요"
