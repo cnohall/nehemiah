@@ -84,6 +84,7 @@ var _warned_early := false  # a neighbour already told where the next pack comes
 var _sab_timer := 0.0
 var _pack: Array[int] = []   # the forecast pack's types, spawned as told
 var _forecasted := false
+var _demo_brute := false   # demo: the day's first brute has been sent
 
 
 func start(day: int) -> void:
@@ -102,6 +103,7 @@ func start(day: int) -> void:
 	_warned_early = false
 	_pack.clear()
 	_forecasted = false
+	_demo_brute = false
 	_sab_timer = SABOTEUR_FIRST
 
 func stop() -> void:
@@ -151,6 +153,10 @@ func _max_alive() -> int:
 	return mini(MAX_ALIVE_CAP, roundi((MAX_ALIVE_BASE + floori(_day / 3.0)) * _pressure()))
 
 func _pick_type() -> Enemy.Type:
+	# Demo: the last day must show the first brute, not leave it to the 25% roll
+	if GameState.is_demo() and _day == GameState.DEMO_LAST_DAY and not _demo_brute:
+		_demo_brute = true
+		return Enemy.Type.BRUTE
 	if _day <= BRUTE_UNLOCK_DAY:
 		return Enemy.Type.SCOUT
 	if _day <= RAIDER_UNLOCK_DAY:
@@ -173,6 +179,8 @@ func _tick_surges(delta: float) -> void:
 		if _surge_gap <= 0.0:
 			_surge_gap = SURGE_GAP
 			_surge_left -= 1
+			if _surge_left == 0:
+				_pack.clear()   # a pack the cap held back must not leak into the next
 			if _surge_at.is_empty():   # never warned (can't happen in play; be safe)
 				_surge_at.append(Vector3(randf_range(-SPAWN_X_HALF, SPAWN_X_HALF), 0.1, SPAWN_Z))
 			if enemies_root.get_child_count() < MAX_ALIVE_CAP:
@@ -198,7 +206,7 @@ func _tick_surges(delta: float) -> void:
 			_surge_left = roundi((3 + floori(_day / 12.0)) * Settings.diff()["pace"])
 			_surge_timer = SURGE_EVERY / _pressure()
 		else:
-			_surge_left = roundi((WAVE_BASE + floori(_day / WAVE_PER_DAYS) + floori((_crew() - 1.0) / WAVE_PER_CREW)) * _pressure())
+			_surge_left = _pack.size() if not _pack.is_empty() else _wave_size()   # as forecast, even if the crew changed since
 			var t := (_day - 1) / float(GameState.TOTAL_DAYS - 1)
 			_surge_timer = lerpf(WAVE_EVERY_DAY1, WAVE_EVERY_DAY52, t)
 
@@ -246,15 +254,17 @@ func _spur() -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _show_forecast(spots: Array, counts: Array, seconds: float, called: bool) -> void:
-	var names := ["scout", "brute", "raider"]
 	var parts: PackedStringArray = []
-	for i in 3:
-		if counts[i] > 0:
-			parts.append("%d %s%s" % [counts[i], tr(names[i]), "" if counts[i] == 1 else "s"])
+	if counts[0] > 0:
+		parts.append(tr_n("%d scout", "%d scouts", counts[0]) % counts[0])
+	if counts[1] > 0:
+		parts.append(tr_n("%d brute", "%d brutes", counts[1]) % counts[1])
+	if counts[2] > 0:
+		parts.append(tr_n("%d raider", "%d raiders", counts[2]) % counts[2])
 	var what := ", ".join(parts)
 	if called:
 		what += tr(" · the crew is spurred")
-	get_tree().call_group("forecast_chip", "show_forecast", what, seconds + 3.0, called)
+	get_tree().call_group("forecast_chip", "show_forecast", what, seconds, called)
 	for at: Vector3 in spots:
 		_ring_spot(at, seconds + 3.0)
 

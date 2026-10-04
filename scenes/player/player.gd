@@ -369,8 +369,11 @@ func _physics_process(delta: float) -> void:
 	if not _is_busy:
 		_handle_interact()
 		_handle_attack(delta)
-		if _consume("horn") and GameState.has_twist("horn"):
-			_server_horn.rpc_id(1, global_position)
+		if _consume("horn"):
+			if GameState.has_twist("horn"):
+				_server_horn.rpc_id(1, global_position)
+			else:   # experimental call-early (GDD §5.21); the host decides if it counts
+				_server_call_early.rpc_id(1)
 	_update_anim()
 
 # ── Movement ───────────────────────────────────────────────

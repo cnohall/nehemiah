@@ -2556,3 +2556,28 @@ msgstr "그가 계속 말을 건다. 일이 느려진다. {interact} 대답하�
 
 msgid "Messengers will call you down to Ono — answer them and keep working"
 msgstr "사자들이 오노로 내려오라 부를 것이다. 대답하고 일을 계속하라"
+
+msgid "Wave in %d s · %s"
+msgstr "%d초 후 습격 · %s"
+
+msgid "They come! · %s"
+msgstr "적이 온다! · %s"
+
+msgid " · the crew is spurred"
+msgstr " · 일꾼들이 힘을 얻었다"
+
+msgid "%d scout"
+msgid_plural "%d scouts"
+msgstr[0] "%d명의 척후병"
+
+msgid "%d brute"
+msgid_plural "%d brutes"
+msgstr[0] "%d명의 난폭자"
+
+msgid "%d raider"
+msgid_plural "%d raiders"
+msgstr[0] "%d명의 약탈자"
+
+msgid "Wave called in early — the crew is spurred"
+msgstr "습격을 앞당겼다 — 일꾼들이 힘을 얻었다"
+

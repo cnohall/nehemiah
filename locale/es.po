@@ -2569,3 +2569,31 @@ msgstr "Habla y habla: tu trabajo va más lento. {interact} para responderle"
 
 msgid "Messengers will call you down to Ono — answer them and keep working"
 msgstr "Llegarán mensajeros a llamarte a Ono: respóndeles y sigue trabajando"
+
+msgid "Wave in %d s · %s"
+msgstr "Ataque en %d s · %s"
+
+msgid "They come! · %s"
+msgstr "¡Vienen! · %s"
+
+msgid " · the crew is spurred"
+msgstr " · la cuadrilla está animada"
+
+msgid "%d scout"
+msgid_plural "%d scouts"
+msgstr[0] "%d explorador"
+msgstr[1] "%d exploradores"
+
+msgid "%d brute"
+msgid_plural "%d brutes"
+msgstr[0] "%d bruto"
+msgstr[1] "%d brutos"
+
+msgid "%d raider"
+msgid_plural "%d raiders"
+msgstr[0] "%d asaltante"
+msgstr[1] "%d asaltantes"
+
+msgid "Wave called in early — the crew is spurred"
+msgstr "Ataque anunciado antes de tiempo — la cuadrilla está animada"
+
