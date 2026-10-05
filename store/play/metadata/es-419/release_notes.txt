@@ -1,7 +1,7 @@
 Novedades de esta versión:
-• Continuar: retoma tu partida donde la dejaste
-• Tarjetas de giro: cada tramo muestra lo que lo hace distinto
-• Mantén Tab para ver lo que necesita la obra
-• Un saboteador puede colarse entre los constructores
-• Muralla central renovada: elige a tu equipo antes de cada tramo
-• Traducciones actualizadas
+• ¿Herido? Bebe en el pozo de la ciudad para curarte
+• Constructores rediseñados: nuevas caras, pelo y complexión
+• Un nuevo mapa de Jerusalén y una pantalla de título renovada
+• Ajustes gráficos: calidad y resolución 3D
+• A prueba en Ajustes: pronóstico de oleadas y llamar oleadas antes
+• Correcciones de las pruebas de juego

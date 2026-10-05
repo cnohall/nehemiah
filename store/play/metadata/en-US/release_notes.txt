@@ -1,7 +1,7 @@
 New in this build:
-• Continue: pick your run up where you left off
-• Twist cards: each stretch of wall shows what makes it different
-• Hold Tab to see what the site needs
-• A saboteur can slip in among the builders
-• The middle of the wall reworked: choose your crew before each stretch
-• Updated translations
+• Hurt? Drink at the city well to heal
+• Builders redrawn: new faces, hair and build
+• A new map of Jerusalem and a refreshed title screen
+• Graphics settings: quality and 3D resolution
+• On trial in Settings: wave forecast and calling waves early
+• Fixes from playtesting

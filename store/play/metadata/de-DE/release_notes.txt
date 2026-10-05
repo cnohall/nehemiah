@@ -1,7 +1,7 @@
 Neu in diesem Build:
-• Fortsetzen: dort weiterspielen, wo du aufgehört hast
-• Wendungskarten: jeder Mauerabschnitt zeigt, was ihn besonders macht
-• Tab halten, um zu sehen, was die Baustelle braucht
-• Ein Saboteur kann sich unter die Bauleute mischen
-• Mittelmauer überarbeitet: Mannschaft vor jedem Abschnitt wählen
-• Aktualisierte Übersetzungen
+• Verletzt? Am Stadtbrunnen trinken, um zu heilen
+• Bauleute neu gestaltet: Gesichter, Haare und Statur
+• Eine neue Karte von Jerusalem und ein überarbeiteter Titelbildschirm
+• Grafikeinstellungen: Qualität und 3D-Auflösung
+• Zum Ausprobieren in den Einstellungen: Wellenvorschau und Wellen früher rufen
+• Korrekturen aus Spieltests

@@ -256,7 +256,9 @@ func _apply_graphics() -> void:
 		root.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR if render_scale >= 1.0 \
 			else Viewport.SCALING_3D_MODE_FSR
 		root.texture_mipmap_bias = log(render_scale) / log(2.0)
-	RenderingServer.directional_shadow_atlas_set_size(q["shadow"], true)
+	# Phones: half the atlas (Low = 1024, as the mobile build always had)
+	var shadow: int = q["shadow"] / (2 if OS.has_feature("mobile") else 1)
+	RenderingServer.directional_shadow_atlas_set_size(shadow, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(q["soft"])
 	RenderingServer.environment_set_ssao_quality(q["ssao"], true, 0.5, 2, 50.0, 300.0)
 

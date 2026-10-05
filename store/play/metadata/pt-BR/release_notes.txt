@@ -1,7 +1,7 @@
 Novidades desta versão:
-• Continuar: retome sua partida de onde parou
-• Cartas de reviravolta: cada trecho mostra o que o torna diferente
-• Segure Tab para ver do que a obra precisa
-• Um sabotador pode se infiltrar entre os construtores
-• Muralha do meio refeita: escolha sua equipe antes de cada trecho
-• Traduções atualizadas
+• Ferido? Beba no poço da cidade para se curar
+• Construtores redesenhados: rostos, cabelos e porte novos
+• Um novo mapa de Jerusalém e uma tela inicial renovada
+• Configurações gráficas: qualidade e resolução 3D
+• Em teste nas Configurações: previsão de ondas e chamar ondas mais cedo
+• Correções vindas dos testes de jogo
