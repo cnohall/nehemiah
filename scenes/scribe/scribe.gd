@@ -89,7 +89,7 @@ func _on_progress(done: int, total: int) -> void:
 	if working and total == _last_total and done != _last_done:
 		var line := ""
 		if done < _last_done:
-			line = tr("A piece has fallen — raise it again!")
+			line = tr("A piece has fallen. Raise it again!")
 		elif done >= total:
 			line = tr("The stretch stands!")
 		elif total - done == 1:

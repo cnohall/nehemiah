@@ -71,7 +71,7 @@ func _tend_calls() -> void:
 			occupied = true
 			if p.brain == null and p.is_multiplayer_authority() and not c["told"].has(p.worker_id()):
 				c["told"][p.worker_id()] = true
-				p._toast("Rallied — your blows land harder here")
+				p._toast("Rallied: your blows land harder here")
 		c["ring"].material_override.set_shader_parameter("ring_color", Color(c["color"], 1.0 if occupied else 0.7))
 
 ## Server: a worker wants to sound the horn here. False if it was just blown.
@@ -131,7 +131,7 @@ func _raise_standard(at: Vector3, color: Color) -> void:
 	root.add_child(ring)
 	# Says what it's for, in words, over the standard
 	var tag := Label3D.new()
-	tag.text = tr("RALLY — stronger blows here")
+	tag.text = tr("RALLY: stronger blows here")
 	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	tag.no_depth_test = true
 	tag.fixed_size = false

@@ -29,14 +29,14 @@ const SHEMAIAH_AT := 40.0   # seconds into the day
 # What the watchman says, the verse (WEB), its reference, and the scribe's margin note
 const SETBACK_LINES := {
 	"fox":     ["A fox! Tobiah said one would break our wall down…", "What they are building, if a fox climbed up it, he would break down their stone wall.", "Neh. 4:3", ""],
-	"warn":    ["They'll slip in tonight — a watch on the wall!", "But we made our prayer to our God, and set a watch against them day and night, because of them.", "Neh. 4:9", ""],
-	"held":    ["The watch held — they crept off in the dark.", "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work.", "Neh. 4:15", "The watch held in the night"],
-	"hit":     ["In the night they came — a stretch pulled down, the yard in rubble!", "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall.", "Neh. 4:10", "Pulled down in the night"],
-	"hungry":  ["The hungry went back to their fields — we're short of hands.", "Yet now our flesh is as the flesh of our brothers, our children as their children.", "Neh. 5:5", "Short of hands: the hungry were not fed"],
+	"warn":    ["They'll slip in tonight. A watch on the wall!", "But we made our prayer to our God, and set a watch against them day and night, because of them.", "Neh. 4:9", ""],
+	"held":    ["The watch held. They crept off in the dark.", "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work.", "Neh. 4:15", "The watch held in the night"],
+	"hit":     ["In the night they came: a stretch pulled down, the yard in rubble!", "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall.", "Neh. 4:10", "Pulled down in the night"],
+	"hungry":  ["The hungry went back to their fields. We're short of hands.", "Yet now our flesh is as the flesh of our brothers, our children as their children.", "Neh. 5:5", "Short of hands: the hungry were not fed"],
 	"letter":  ["A letter in the yard: they say you mean to be king!", "You would be their king, according to these words.", "Neh. 6:6", "A rumour weakens every hand"],
-	"answer":  ["“No such things are done” — the letter is turned away.", "There are no such things done as you say, but you imagine them out of your own heart.", "Neh. 6:8", "The letter answered"],
-	"lifted":  ["The rumour dies down — strengthen our hands!", "But now, strengthen my hands.", "Neh. 6:9", ""],
-	"shem":    ["A man of the temple is asking for you — it's a trap!", "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple.", "Neh. 6:10", ""],
+	"answer":  ["“No such things are done.” The letter is turned away.", "There are no such things done as you say, but you imagine them out of your own heart.", "Neh. 6:8", "The letter answered"],
+	"lifted":  ["The rumour dies down. Strengthen our hands!", "But now, strengthen my hands.", "Neh. 6:9", ""],
+	"shem":    ["A man of the temple is asking for you. It's a trap!", "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple.", "Neh. 6:10", ""],
 	"shem_no": ["He turned away. He was hired to frighten us.", "Should a man like me flee? Who is there that, being such as I, would go into the temple to save his life? I will not go in.", "Neh. 6:11", "Would not hide in the temple"],
 	"shem_go": ["Someone has gone to hide in the temple!", "He hired so that I would be afraid, do so, and sin.", "Neh. 6:13", "One hid in the temple"],
 }

@@ -56,14 +56,14 @@ msgstr "뒤로"
 msgid "Connect"
 msgstr "연결"
 
-msgid "Signed in to Steam as %s — invite friends once in game"
-msgstr "Steam에 %s(으)로 로그인됨 — 게임 안에서 친구를 초대하세요"
+msgid "Signed in to Steam as %s. Invite friends once in game"
+msgstr "Steam에 %s(으)로 로그인됨. 게임 안에서 친구를 초대하세요"
 
-msgid "LAN mode — share your IP address to play together"
-msgstr "LAN 모드 — 함께 하려면 IP 주소를 공유하세요"
+msgid "LAN mode: share your IP address to play together"
+msgstr "LAN 모드: 함께 하려면 IP 주소를 공유하세요"
 
-msgid "Steam unavailable: %s — LAN play only"
-msgstr "Steam 사용 불가: %s — LAN 플레이만 가능"
+msgid "Steam unavailable: %s. LAN play only"
+msgstr "Steam 사용 불가: %s. LAN 플레이만 가능"
 
 msgid "Steam plugin failed to load"
 msgstr "Steam 플러그인을 불러오지 못했습니다"
@@ -86,8 +86,8 @@ msgstr "먼저 주소나 로비 코드를 입력하세요."
 msgid "Connecting…"
 msgstr "연결 중…"
 
-msgid "That's a Steam lobby code — start Steam first."
-msgstr "Steam 로비 코드입니다 — 먼저 Steam을 실행하세요."
+msgid "That's a Steam lobby code. Start Steam first."
+msgstr "Steam 로비 코드입니다. 먼저 Steam을 실행하세요."
 
 msgid "Connection failed. Check the address and that the host is running."
 msgstr "연결에 실패했습니다. 주소와 호스트가 실행 중인지 확인하세요."
@@ -272,20 +272,20 @@ msgstr "타이틀로 나가기"
 msgid "Move"
 msgstr "이동"
 
-msgid "Sling — charge, then throw"
-msgstr "물매 — 모았다가 던지기"
+msgid "Sling: charge, then throw"
+msgstr "물매: 모았다가 던지기"
 
 msgid "Horn — call the crew"
 msgstr "뿔나팔 — 작업단 부르기"
 
-msgid "Controller disconnected — reconnect it to carry on"
-msgstr "컨트롤러 연결이 끊겼습니다 — 다시 연결하면 계속할 수 있습니다"
+msgid "Controller disconnected. Reconnect it to carry on"
+msgstr "컨트롤러 연결이 끊겼습니다. 다시 연결하면 계속할 수 있습니다"
 
 msgid "Invite friends"
 msgstr "친구 초대"
 
-msgid "Overlay off — use the Crew panel"
-msgstr "오버레이 꺼짐 — 작업단 패널을 사용하세요"
+msgid "Overlay off. Use the Crew panel"
+msgstr "오버레이 꺼짐. 작업단 패널을 사용하세요"
 
 msgid "or press %s to begin"
 msgstr "또는 %s 눌러 시작"
@@ -302,14 +302,14 @@ msgstr "%s → 성문으로 가져가세요"
 msgid "Take the %s to the wall"
 msgstr "%s → 성벽으로 가져가세요"
 
-msgid "Nothing needs %s now — drop it (%s)"
-msgstr "지금은 %s 필요 없음 — 내려놓기 (%s)"
+msgid "Nothing needs %s now. Drop it (%s)"
+msgstr "지금은 %s 필요 없음. 내려놓기 (%s)"
 
-msgid "Build it up — %s at the gate"
-msgstr "건축하기 — 성문에서 %s"
+msgid "Build it up: %s at the gate"
+msgstr "건축하기: 성문에서 %s"
 
-msgid "Build it up — %s at the wall"
-msgstr "건축하기 — 성벽에서 %s"
+msgid "Build it up: %s at the wall"
+msgstr "건축하기: 성벽에서 %s"
 
 msgid "Next: bring %s to the gate"
 msgstr "다음: %s → 성문"
@@ -341,8 +341,8 @@ msgstr "잔해"
 msgid "Gathering the crew"
 msgstr "작업단 모으는 중"
 
-msgid "Dawn — ready the workers"
-msgstr "새벽 — 일꾼들을 준비시키세요"
+msgid "Dawn. Ready the workers"
+msgstr "새벽. 일꾼들을 준비시키세요"
 
 msgid "The day's work is done"
 msgstr "오늘의 작업 완료"
@@ -389,8 +389,8 @@ msgstr "%d/%d 구간  ·  %s"
 msgid "The %s stands"
 msgstr "%s 완공"
 
-msgid "A new best for this stretch — %d of 3 marks."
-msgstr "이 구간 최고 기록 — 휘장 3개 중 %d개."
+msgid "A new best for this stretch: %d of 3 marks."
+msgstr "이 구간 최고 기록: 휘장 3개 중 %d개."
 
 msgid "%d of 3 marks. Your best here stays as it was."
 msgstr "휘장 3개 중 %d개. 이 구간 최고 기록은 그대로입니다."
@@ -533,11 +533,11 @@ msgstr "함밉갓 문"
 msgid "Finish the gate: hang its doors, bolts and bars"
 msgstr "성문을 완성하세요: 문짝과 빗장과 자물쇠를 다세요"
 
-msgid "The beams are heavy — carry them in pairs"
-msgstr "들보는 무겁습니다 — 둘이서 함께 나르세요"
+msgid "The beams are heavy. Carry them in pairs"
+msgstr "들보는 무겁습니다. 둘이서 함께 나르세요"
 
-msgid "No quarry stone here — salvage it from the burned rubble"
-msgstr "여기엔 채석한 돌이 없습니다 — 불탄 잔해에서 건져 내세요"
+msgid "No quarry stone here. Salvage it from the burned rubble"
+msgstr "여기엔 채석한 돌이 없습니다. 불탄 잔해에서 건져 내세요"
 
 msgid "Make the mortar: lime and water into the trough, then to the wall"
 msgstr "회반죽을 만드세요: 석회와 물을 통에 넣고 성벽으로 가져가세요"
@@ -548,17 +548,17 @@ msgstr "넓은 성벽: 두 겹 두께로 쌓으세요 — 돌이 더 들고, 네
 msgid "They come up the valley in surges — {horn} sounds the horn: gather there"
 msgstr "적들이 골짜기로 몰려옵니다 — {horn} 뿔나팔을 불면 그곳에 모이세요"
 
-msgid "A long haul from the yard — drop a load beside a friend to pass it on"
-msgstr "자재 더미에서 먼 길입니다 — 동료 옆에 짐을 내려놓아 넘겨주세요"
+msgid "A long haul from the yard: drop a load beside a friend to pass it on"
+msgstr "자재 더미에서 먼 길입니다: 동료 옆에 짐을 내려놓아 넘겨주세요"
 
-msgid "A quiet stretch by the Pool of Shelah — the water is close at hand"
-msgstr "셀라 못 옆의 조용한 구간 — 물이 가까이 있습니다"
+msgid "A quiet stretch by the Pool of Shelah. The water is close at hand"
+msgstr "셀라 못 옆의 조용한 구간. 물이 가까이 있습니다"
 
-msgid "Night falls on the work — keep to the torchlight, they come out of the dark"
-msgstr "밤이 되었습니다 — 횃불 곁에 머무세요, 적들이 어둠 속에서 나옵니다"
+msgid "Night falls on the work. Keep to the torchlight; they come out of the dark"
+msgstr "밤이 되었습니다. 횃불 곁에 머무세요, 적들이 어둠 속에서 나옵니다"
 
-msgid "Each priest builds in front of his own house — mind the narrow lanes"
-msgstr "제사장마다 자기 집 앞을 건축합니다 — 좁은 골목을 조심하세요"
+msgid "Each priest builds in front of his own house. Mind the narrow lanes"
+msgstr "제사장마다 자기 집 앞을 건축합니다. 좁은 골목을 조심하세요"
 
 msgid "Messengers will call you down to Ono — do not go with them"
 msgstr "사자들이 오노로 내려오라고 부를 것입니다 — 따라가지 마세요"
@@ -685,14 +685,14 @@ msgstr "오노 평지로 내려오라"
 msgid "Let go of the beam"
 msgstr "들보를 놓았습니다"
 
-msgid "Holding the other end — {interact} to let go"
-msgstr "반대쪽 끝을 드는 중 — {interact} 놓기"
+msgid "Holding the other end. {interact} to let go"
+msgstr "반대쪽 끝을 드는 중. {interact} 놓기"
 
 msgid "Stage built!"
 msgstr "단계 완성!"
 
-msgid "Hands full — deliver it, or {drop} to drop"
-msgstr "손이 가득 참 — 전달하거나 {drop} 내려놓기"
+msgid "Hands full: deliver it, or {drop} to drop"
+msgstr "손이 가득 참: 전달하거나 {drop} 내려놓기"
 
 msgid "Bring it to a wall"
 msgstr "성벽으로 가져가세요"
@@ -700,8 +700,8 @@ msgstr "성벽으로 가져가세요"
 msgid "Needs {need} first"
 msgstr "먼저 필요: {need}"
 
-msgid "Build this stage first — {drop} to drop, then {interact} to work"
-msgstr "이 단계를 먼저 쌓으세요 — {drop} 내려놓고 {interact} 작업"
+msgid "Build this stage first: {drop} to drop, then {interact} to work"
+msgstr "이 단계를 먼저 쌓으세요: {drop} 내려놓고 {interact} 작업"
 
 msgid "This wall is finished"
 msgstr "이 성벽은 완성되었습니다"
@@ -709,8 +709,8 @@ msgstr "이 성벽은 완성되었습니다"
 msgid "Caught it"
 msgstr "받았다"
 
-msgid "Heavy — a partner can take the other end {interact}"
-msgstr "무거움 — 동료가 반대쪽 끝을 들 수 있습니다 {interact}"
+msgid "Heavy: a partner can take the other end {interact}"
+msgstr "무거움: 동료가 반대쪽 끝을 들 수 있습니다 {interact}"
 
 msgid "Enough hands here"
 msgstr "여기는 일손이 충분합니다"
@@ -776,8 +776,8 @@ msgstr "하스나아 자손이 어문을 세우고 들보를 얹습니다."
 msgid "Joiada and Meshullam repair the Gate of the Old City. Its stone lies in the burned rubble."
 msgstr "요야다와 므술람이 옛 성의 문을 보수합니다. 그 돌은 불탄 잔해 속에 묻혀 있습니다."
 
-msgid "Goldsmiths and ointment makers — craftsmen, not masons — repair the wall as far as the Broad Wall."
-msgstr "금장색과 향품 장사 — 석공이 아닌 장인들 — 이 넓은 성벽까지 성벽을 보수합니다."
+msgid "Goldsmiths and ointment makers (craftsmen, not masons) repair the wall as far as the Broad Wall."
+msgstr "금장색과 향품 장사 (석공이 아닌 장인들) 이 넓은 성벽까지 성벽을 보수합니다."
 
 msgid "Malchijah and Hasshub repair another section, and the Tower of the Bake Ovens."
 msgstr "말기야와 핫숩이 다른 구간과 화덕 망대를 보수합니다."
@@ -905,8 +905,8 @@ msgstr "그들은 그를 해치려고 네 번이나 같은 초대를 보냅니�
 msgid "“I am doing a great work, so that I can’t come down.”"
 msgstr "“나는 큰 공사를 하고 있으므로 내려갈 수 없습니다.”"
 
-msgid "%d slipped through — but the wall stands."
-msgid_plural "%d slipped through — but the wall stands."
+msgid "%d slipped through, but the wall stands."
+msgid_plural "%d slipped through, but the wall stands."
 msgstr[0] "%d명이 뚫고 들어왔지만 성벽은 무사합니다."
 
 msgid "%d got through"
@@ -1180,11 +1180,11 @@ msgstr "습격"
 msgid "The sun is low"
 msgstr "해가 기울었습니다"
 
-msgid "Finish before the stars appear — the %s must stand tonight"
-msgstr "별이 뜨기 전에 끝내세요 — 오늘 밤 %s이(가) 서야 합니다"
+msgid "Finish before the stars appear: the %s must stand tonight"
+msgstr "별이 뜨기 전에 끝내세요: 오늘 밤 %s이(가) 서야 합니다"
 
-msgid "The last day of this stretch — it must stand before the stars appear"
-msgstr "이 구간의 마지막 날 — 별이 뜨기 전에 세워야 합니다"
+msgid "The last day of this stretch: it must stand before the stars appear"
+msgstr "이 구간의 마지막 날: 별이 뜨기 전에 세워야 합니다"
 
 msgid "The %s was not finished by nightfall. Gather the workers and begin again."
 msgstr "해가 질 때까지 %s을(를) 끝내지 못했습니다. 일꾼들을 모아 다시 시작하세요."
@@ -1210,8 +1210,8 @@ msgstr "물맷돌이 떨어졌습니다"
 msgid "The post needs timber"
 msgstr "망대에는 목재가 필요합니다"
 
-msgid "Enough timber — {interact} to raise it"
-msgstr "목재는 충분합니다 — {interact}로 세우세요"
+msgid "Enough timber. {interact} to raise it"
+msgstr "목재는 충분합니다. {interact}로 세우세요"
 
 msgid "The slinger wants stone for his sling"
 msgstr "물매꾼에게는 물맷돌이 필요합니다"
@@ -1219,9 +1219,9 @@ msgstr "물매꾼에게는 물맷돌이 필요합니다"
 msgid "The slinger has stones enough"
 msgstr "물매꾼에게 돌이 충분합니다"
 
-msgid "The stars appeared — %d wall piece left for tomorrow."
-msgid_plural "The stars appeared — %d wall pieces left for tomorrow."
-msgstr[0] "별이 떴습니다 — 남은 성벽 부분 %d개는 내일로 넘어갑니다."
+msgid "The stars appeared: %d wall piece left for tomorrow."
+msgid_plural "The stars appeared: %d wall pieces left for tomorrow."
+msgstr[0] "별이 떴습니다: 남은 성벽 부분 %d개는 내일로 넘어갑니다."
 
 msgid "The stretch"
 msgstr "이 구간"
@@ -1229,12 +1229,12 @@ msgstr "이 구간"
 msgid "What isn't built by the stars waits for tomorrow"
 msgstr "별이 뜰 때까지 못 지은 것은 내일로 미뤄집니다"
 
-msgid "%d of %d stand — %d days left"
-msgstr "%d/%d 완성 — %d일 남음"
+msgid "%d of %d stand, %d days left"
+msgstr "%d/%d 완성, %d일 남음"
 
-msgid "Raise the whole stretch — %d day before the stars"
-msgid_plural "Raise the whole stretch — %d days before the stars"
-msgstr[0] "구간 전체를 세우세요 — 별이 뜨기까지 %d일"
+msgid "Raise the whole stretch: %d day before the stars"
+msgid_plural "Raise the whole stretch: %d days before the stars"
+msgstr[0] "구간 전체를 세우세요: 별이 뜨기까지 %d일"
 
 msgid "Finished with %d day to spare"
 msgid_plural "Finished with %d days to spare"
@@ -1312,18 +1312,18 @@ msgstr "%s 님이 참가하는 중…"
 msgid "A builder is joining…"
 msgstr "건축가가 참가하는 중…"
 
-msgid "Down — a crewmate has to help you up"
-msgstr "쓰러짐 — 동료가 일으켜 줘야 합니다"
+msgid "Down. A crewmate has to help you up"
+msgstr "쓰러짐. 동료가 일으켜 줘야 합니다"
 
-msgid "A finished piece was knocked down — build it back up"
-msgstr "완성된 부분이 무너졌습니다 — 다시 쌓으세요"
+msgid "A finished piece was knocked down. Build it back up"
+msgstr "완성된 부분이 무너졌습니다. 다시 쌓으세요"
 
 msgid "The stretch stands"
 msgstr "구간이 완성되었습니다"
 
-msgid "%d piece still to finish — look for the amber footing"
-msgid_plural "%d pieces still to finish — look for the amber footings"
-msgstr[0] "마무리할 부분 %d개 — 호박색 기초를 찾으세요"
+msgid "%d piece still to finish. Look for the amber footing"
+msgid_plural "%d pieces still to finish. Look for the amber footings"
+msgstr[0] "마무리할 부분 %d개. 호박색 기초를 찾으세요"
 
 msgid "Last piece!  %s"
 msgstr "마지막 부분!  %s"
@@ -1367,11 +1367,11 @@ msgstr "다시 하기"
 msgid "Try the stretch again"
 msgstr "이 구간 다시 도전"
 
-msgid "The host's pick decides — or most of the crew"
+msgid "The host's pick decides (or most of the crew)"
 msgstr "호스트의 선택 또는 다수결로 정합니다"
 
-msgid "%s — %d of %d"
-msgstr "%s — %d/%d"
+msgid "%s: %d of %d"
+msgstr "%s: %d/%d"
 
 msgid "Waiting for the host or most of the crew"
 msgstr "호스트 또는 다수의 선택을 기다리는 중"
@@ -1477,8 +1477,8 @@ msgstr "잠김"
 msgid "The Festival of Booths"
 msgstr "초막절"
 
-msgid "The wall is finished. No clock, no enemy — walk the city."
-msgstr "성벽이 완성되었습니다. 시간 제한도 적도 없습니다 — 성을 거닐어 보세요."
+msgid "The wall is finished. No clock, no enemy. Walk the city."
+msgstr "성벽이 완성되었습니다. 시간 제한도 적도 없습니다. 성을 거닐어 보세요."
 
 msgid "Walk up to people and press %s to talk"
 msgstr "사람들에게 다가가 %s 키를 눌러 대화하세요"
@@ -1492,20 +1492,20 @@ msgstr "느 8장  ·  일곱째 달"
 msgid "Hear Ezra read the Law at the Water Gate"
 msgstr "수문 앞에서 에스라가 율법을 낭독하는 것을 듣기"
 
-msgid "Build booths with branches from the mount — %d of %d"
-msgstr "산에서 가져온 가지로 초막 짓기 — %d/%d"
+msgid "Build booths with branches from the mount: %d of %d"
+msgstr "산에서 가져온 가지로 초막 짓기: %d/%d"
 
-msgid "Send portions to those with nothing prepared — %d of %d"
-msgstr "아무것도 준비하지 못한 이들에게 몫 보내기 — %d/%d"
+msgid "Send portions to those with nothing prepared: %d of %d"
+msgstr "아무것도 준비하지 못한 이들에게 몫 보내기: %d/%d"
 
-msgid "Meet the people who built the wall — %d of %d"
-msgstr "성벽을 쌓은 사람들 만나기 — %d/%d"
+msgid "Meet the people who built the wall: %d of %d"
+msgstr "성벽을 쌓은 사람들 만나기: %d/%d"
 
 msgid "Go up to the house of God, by the Sheep Gate"
 msgstr "양문 곁 하느님의 집에 올라가기"
 
-msgid "Walk the wall round — %d of %d gates"
-msgstr "성벽 한 바퀴 돌기 — 성문 %d/%d"
+msgid "Walk the wall round: %d of %d gates"
+msgstr "성벽 한 바퀴 돌기: 성문 %d/%d"
 
 msgid "There was very great gladness"
 msgstr "크게 기뻐하였다"
@@ -1540,11 +1540,11 @@ msgstr "%s 참조"
 msgid "This booth stands"
 msgstr "이 초막은 다 지었어요"
 
-msgid "The booth wants branches — from the olive trees outside the wall"
-msgstr "초막에는 가지가 필요해요 — 성벽 밖 올리브나무에서"
+msgid "The booth wants branches from the olive trees outside the wall"
+msgstr "초막에는 가지가 필요해요, 성벽 밖 올리브나무에서"
 
-msgid "Branches enough — {interact} to build it"
-msgstr "가지가 충분해요 — {interact} 눌러 짓기"
+msgid "Branches enough. {interact} to build it"
+msgstr "가지가 충분해요. {interact} 눌러 짓기"
 
 msgid "They're after bread, not that"
 msgstr "그게 아니라 빵이 필요해요"
@@ -1555,8 +1555,8 @@ msgstr "이제 넉넉히 있어요"
 msgid "Nothing is prepared in my house for the feast."
 msgstr "우리 집에는 명절에 먹을 것이 하나도 없어요."
 
-msgid "Blessings on you — the joy of Yahweh is our strength today."
-msgstr "복 받으세요 — 오늘은 여호와를 기뻐하는 것이 우리의 힘이에요."
+msgid "Blessings on you. The joy of Yahweh is our strength today."
+msgstr "복 받으세요. 오늘은 여호와를 기뻐하는 것이 우리의 힘이에요."
 
 msgid "Then Eliashib the high priest rose up with his brothers the priests, and they built the sheep gate."
 msgstr "대제사장 엘리아십이 그의 형제 제사장들과 함께 일어나 양문을 건축하였다."
@@ -1603,8 +1603,8 @@ msgstr "그다음은 동문지기 스가냐의 아들 스마야가 보수하였�
 msgid "Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner."
 msgstr "금장색 말기야는 성전 봉사자들과 상인들의 집까지, 함밉갓 문 맞은편과 성 모퉁이 오르는 곳까지 보수하였다."
 
-msgid "The wall is finished — in fifty-two days!"
-msgstr "성벽이 완성되었어요 — 오십이 일 만에!"
+msgid "The wall is finished in fifty-two days!"
+msgstr "성벽이 완성되었어요, 오십이 일 만에!"
 
 msgid "Have you been out to the mount for branches?"
 msgstr "산에 가지 꺾으러 다녀왔어요?"
@@ -1615,8 +1615,8 @@ msgstr "우리 모두 저마다 자기 지붕 위 나뭇가지 초막에 있지�
 msgid "Not since the days of Joshua has it been kept like this."
 msgstr "여호수아 때 이후로 이렇게 지킨 적이 없었어요."
 
-msgid "Walk the whole wall round — every gate stands."
-msgstr "성벽을 한 바퀴 돌아보세요 — 성문이 모두 섰어요."
+msgid "Walk the whole wall round: every gate stands."
+msgstr "성벽을 한 바퀴 돌아보세요: 성문이 모두 섰어요."
 
 msgid "You shall take on the first day the fruit of majestic trees, branches of palm trees, and boughs of thick trees, and willows of the brook; and you shall rejoice before Yahweh your God seven days."
 msgstr "첫날에는 아름다운 나무의 열매와 종려나무 가지와 무성한 나무의 가지와 시냇가의 버드나무를 가져다가, 칠 일 동안 너희 하느님 여호와 앞에서 즐거워하여라."
@@ -1654,11 +1654,11 @@ msgstr "조용히 하십시오. 오늘은 거룩한 날이니 근심하지 마�
 msgid "I repaired the wall from the door of Eliashib's house to its end."
 msgstr "나는 엘리아십의 집 문에서 그 집 끝까지 성벽을 보수했지요."
 
-msgid "They're building shelters in the courts of God's house too — round the wall at the Sheep Gate."
-msgstr "하느님의 집 뜰에도 초막을 짓고 있어요 — 성벽을 따라 양문 쪽에요."
+msgid "They're building shelters in the courts of God's house too, round the wall at the Sheep Gate."
+msgstr "하느님의 집 뜰에도 초막을 짓고 있어요, 성벽을 따라 양문 쪽에요."
 
-msgid "Out through the gate for branches — olive, myrtle, palm. Go to the mount."
-msgstr "성문 밖으로 나가 가지를 꺾어 오세요 — 올리브, 화석류, 종려나무. 산으로 가세요."
+msgid "Out through the gate for branches: olive, myrtle, palm. Go to the mount."
+msgstr "성문 밖으로 나가 가지를 꺾어 오세요: 올리브, 화석류, 종려나무. 산으로 가세요."
 
 msgid "The gates stay open today. Nobody is coming to fight."
 msgstr "오늘은 성문을 열어 둡니다. 싸우러 오는 사람은 없어요."
@@ -1678,8 +1678,8 @@ msgstr "우리가 우리 하느님의 집을 저버리지 않겠습니다."
 msgid "Fire shall be kept burning on the altar continually; it shall not go out."
 msgstr "제단 위의 불은 끊임없이 타게 하여 꺼지지 않게 하여라."
 
-msgid "Go up into the court — there's a shelter to put up by the altar."
-msgstr "뜰로 올라가세요 — 제단 곁에 세울 초막이 있어요."
+msgid "Go up into the court. There's a shelter to put up by the altar."
+msgstr "뜰로 올라가세요. 제단 곁에 세울 초막이 있어요."
 
 msgid "What is this thing that you are doing? Will you rebel against the king?"
 msgstr "너희가 하는 이 일이 무엇이냐? 왕을 배반하려느냐?"
@@ -1702,8 +1702,8 @@ msgstr "산발랏의 편지"
 msgid "Day %d  ·  %s"
 msgstr "%d일차  ·  %s"
 
-msgid "A piece has fallen — raise it again!"
-msgstr "한 부분이 무너졌습니다 — 다시 쌓으세요!"
+msgid "A piece has fallen. Raise it again!"
+msgstr "한 부분이 무너졌습니다. 다시 쌓으세요!"
 
 msgid "The stretch stands!"
 msgstr "구간이 섰습니다!"
@@ -1746,14 +1746,14 @@ msgstr "동쪽에서"
 msgid "straight at the gate"
 msgstr "곧장 성문으로"
 
-msgid "Up the valley — %s!"
-msgstr "골짜기로 올라옵니다 — %s!"
+msgid "Up the valley: %s!"
+msgstr "골짜기로 올라옵니다: %s!"
 
-msgid "They're coming — %s!"
-msgstr "적이 옵니다 — %s!"
+msgid "They're coming: %s!"
+msgstr "적이 옵니다: %s!"
 
-msgid "A brute at the wall — bring him down!"
-msgstr "거한이 성벽에 붙었습니다 — 쓰러뜨리세요!"
+msgid "A brute at the wall! Bring him down!"
+msgstr "거한이 성벽에 붙었습니다! 쓰러뜨리세요!"
 
 msgid "They're battering the wall!"
 msgstr "성벽을 치고 있습니다!"
@@ -1761,15 +1761,15 @@ msgstr "성벽을 치고 있습니다!"
 msgid "A brute! He'll batter the wall"
 msgstr "거한입니다! 성벽을 부수려 합니다"
 
-msgid "Raiders — quick ones, mind the gaps!"
-msgstr "약탈자입니다 — 빠르니 틈을 지키세요!"
+msgid "Raiders! Quick ones, mind the gaps!"
+msgstr "약탈자입니다! 빠르니 틈을 지키세요!"
 
 msgid "One got into the city!  %d of %d"
 msgstr "한 명이 도성에 들어왔습니다!  %d/%d"
 
-msgid "One got in — %d more and the city falls!"
-msgid_plural "One got in — %d more and the city falls!"
-msgstr[0] "한 명이 들어왔습니다 — %d명만 더 들어오면 도성이 무너집니다!"
+msgid "One got in. %d more and the city falls!"
+msgid_plural "One got in. %d more and the city falls!"
+msgstr[0] "한 명이 들어왔습니다. %d명만 더 들어오면 도성이 무너집니다!"
 
 msgid "Day info"
 msgstr "하루 정보"
@@ -1804,8 +1804,8 @@ msgstr "돌을 더 빨리 쌓는다"
 msgid "Walks faster with a load"
 msgstr "짐을 지고 더 빨리 걷는다"
 
-msgid "Works timber faster — frames, doors, watch posts"
-msgstr "목재 일을 더 빨리 한다 — 틀, 문, 망대"
+msgid "Works timber faster: frames, doors, watch posts"
+msgstr "목재 일을 더 빨리 한다: 틀, 문, 망대"
 
 msgid "Sword and sling hit harder"
 msgstr "칼과 물매가 더 세게 친다"
@@ -1819,20 +1819,20 @@ msgstr "공사는 크고 성벽은 길어 일꾼들이 멀리 흩어져 있습�
 msgid "Knack"
 msgstr "특기"
 
-msgid "Anyone can do any job — pick your trade when the crew gathers"
-msgstr "누구나 어떤 일이든 할 수 있다 — 일꾼이 모일 때 직분을 고르자"
+msgid "Anyone can do any job. Pick your trade when the crew gathers"
+msgstr "누구나 어떤 일이든 할 수 있다. 일꾼이 모일 때 직분을 고르자"
 
-msgid "Your trade — quicker hands at this work"
-msgstr "내 직분 — 이 일에 손이 더 빠르다"
+msgid "Your trade: quicker hands at this work"
+msgstr "내 직분: 이 일에 손이 더 빠르다"
 
-msgid "Your trade — quicker with a load"
-msgstr "내 직분 — 짐을 지고 더 빠르다"
+msgid "Your trade: quicker with a load"
+msgstr "내 직분: 짐을 지고 더 빠르다"
 
-msgid "Your trade — your blows land harder"
-msgstr "내 직분 — 더 세게 친다"
+msgid "Your trade: your blows land harder"
+msgstr "내 직분: 더 세게 친다"
 
-msgid "Progress saved — Continue from the title screen"
-msgstr "진행 상황이 저장되었습니다 — 타이틀 화면에서 이어하기"
+msgid "Progress saved. Continue from the title screen"
+msgstr "진행 상황이 저장되었습니다. 타이틀 화면에서 이어하기"
 
 msgid "Progress is saved at the dawn of each new stretch."
 msgstr "새 구간의 새벽마다 진행 상황이 저장됩니다."
@@ -1870,14 +1870,14 @@ msgstr "습격"
 msgid "New at the %s"
 msgstr "%s의 새 소식"
 
-msgid "Scattered — tidy  [%s]"
-msgstr "흩어짐 — 정리  [%s]"
+msgid "Scattered: tidy  [%s]"
+msgstr "흩어짐: 정리  [%s]"
 
-msgid "What you can do — let go of %s to carry on"
-msgstr "할 수 있는 일 — %s을(를) 내려놓고 계속하세요"
+msgid "What you can do: let go of %s to carry on"
+msgstr "할 수 있는 일: %s을(를) 내려놓고 계속하세요"
 
-msgid "%s Drop it — beside a friend, it goes into their hands"
-msgstr "%s 내려놓기 — 동료 곁에서는 그의 손으로 넘어갑니다"
+msgid "%s Drop it (beside a friend, it goes into their hands)"
+msgstr "%s 내려놓기 (동료 곁에서는 그의 손으로 넘어갑니다)"
 
 msgid "A beam goes quicker with a partner on the other end"
 msgstr "들보는 반대쪽 끝에 동료가 있으면 더 빨리 옮겨집니다"
@@ -1918,17 +1918,17 @@ msgstr "%s 넘어가기"
 msgid "%s Tidy the strewn pile"
 msgstr "%s 흩어진 더미 정리"
 
-msgid "Saboteur — stop him before he strews the yard"
-msgstr "방해꾼 — 자재터를 어지럽히기 전에 막으세요"
+msgid "Saboteur! Stop him before he strews the yard"
+msgstr "방해꾼! 자재터를 어지럽히기 전에 막으세요"
 
-msgid "Don't go with him — just walk away"
+msgid "Don't go with him. Just walk away"
 msgstr "따라가지 말고 그냥 돌아서세요"
 
-msgid "Watch the %s — %s"
-msgstr "%s 지켜보기 — %s"
+msgid "Watch the %s: %s"
+msgstr "%s 지켜보기: %s"
 
-msgid "The %s pile was strewn — tidy it (%s at the pile)"
-msgstr "%s 더미가 흩어졌습니다 — 정리하세요 (더미 앞에서 %s)"
+msgid "The %s pile was strewn. Tidy it (%s at the pile)"
+msgstr "%s 더미가 흩어졌습니다. 정리하세요 (더미 앞에서 %s)"
 
 msgid "A new robe dye earned: %s — wear it from the menu"
 msgstr "새 옷 염료 획득: %s — 메뉴에서 입어 보세요"
@@ -1948,8 +1948,8 @@ msgstr "이어하기"
 msgid "%s · day %d"
 msgstr "%s · %d일째"
 
-msgid "One's slipped in — the yard! He's after the piles"
-msgstr "하나가 숨어들었습니다 — 자재터예요! 더미를 노립니다"
+msgid "One's slipped into the yard! He's after the piles"
+msgstr "하나가 숨어들었습니다. 자재터예요! 더미를 노립니다"
 
 msgid "At the gate! Torches!"
 msgstr "성문으로! 횃불이다!"
@@ -1957,11 +1957,11 @@ msgstr "성문으로! 횃불이다!"
 msgid "Beams take two"
 msgstr "들보는 둘이서"
 
-msgid "Both ends at once — split up!"
-msgstr "양쪽 끝에서 동시에 — 나뉘세요!"
+msgid "Both ends at once. Split up!"
+msgstr "양쪽 끝에서 동시에. 나뉘세요!"
 
-msgid "Both ends — mind the lanes!"
-msgstr "양쪽 끝이에요 — 골목을 지키세요!"
+msgid "Both ends. Mind the lanes!"
+msgstr "양쪽 끝이에요. 골목을 지키세요!"
 
 msgid "Brutes for the gate!"
 msgstr "거한들이 성문으로!"
@@ -1990,8 +1990,8 @@ msgstr "대제사장 엘리아십"
 msgid "Everyone gathers to the horn"
 msgstr "모두가 뿔나팔 소리에 모입니다"
 
-msgid "Everything they have — to the gate!"
-msgstr "가진 모든 것을 던져 — 성문으로!"
+msgid "Everything they have, to the gate!"
+msgstr "가진 모든 것을 던져, 성문으로!"
 
 msgid "Ezra the scribe"
 msgstr "서기관 에스라"
@@ -2008,14 +2008,14 @@ msgstr "절반 높이! 그들도 소문을 들었습니다…"
 msgid "Hananiah the perfumer"
 msgstr "향품 제조자 하나냐"
 
-msgid "Hang the doors — the crew walks through, the foe can't"
-msgstr "문짝을 다세요 — 작업단은 지나가고 적은 못 지나갑니다"
+msgid "Hang the doors: the crew walks through, the foe can't"
+msgstr "문짝을 다세요: 작업단은 지나가고 적은 못 지나갑니다"
 
 msgid "Hanun of Zanoah"
 msgstr "사노아의 하눈"
 
-msgid "Heaps outside the wall hold twice as much — if you dare"
-msgstr "성벽 밖 더미에는 두 배가 있습니다 — 감히 나간다면요"
+msgid "Heaps outside the wall hold twice as much, if you dare"
+msgstr "성벽 밖 더미에는 두 배가 있습니다, 감히 나간다면요"
 
 msgid "If a fox climbed up it, he would break down their stone wall."
 msgstr "여우가 올라가도 그들의 돌 성벽은 무너지리라."
@@ -2023,8 +2023,8 @@ msgstr "여우가 올라가도 그들의 돌 성벽은 무너지리라."
 msgid "Ignore him — he gives up and leaves"
 msgstr "무시하세요 — 그는 포기하고 떠납니다"
 
-msgid "It mixes by itself — wait a moment"
-msgstr "저절로 섞입니다 — 잠시 기다리세요"
+msgid "It mixes by itself. Wait a moment"
+msgstr "저절로 섞입니다. 잠시 기다리세요"
 
 msgid "It stands up to the brutes twice as long"
 msgstr "거한들을 두 배 오래 버팁니다"
@@ -2056,8 +2056,8 @@ msgstr "회반죽 이기기"
 msgid "More stone to each piece, four hands at the work"
 msgstr "조각마다 돌이 더 들고, 네 손이 함께 일합니다"
 
-msgid "Narrow lanes — one at a time"
-msgstr "좁은 골목 — 한 번에 한 명씩"
+msgid "Narrow lanes: one at a time"
+msgstr "좁은 골목: 한 번에 한 명씩"
 
 msgid "Nehemiah son of Azbuk"
 msgstr "아스북의 아들 느헤미야"
@@ -2080,8 +2080,8 @@ msgstr "북쪽이 위"
 msgid "Olive green"
 msgstr "올리브 녹색"
 
-msgid "Out of the dark — both ends!"
-msgstr "어둠 속에서 — 양쪽 끝이에요!"
+msgid "Out of the dark, both ends!"
+msgstr "어둠 속에서, 양쪽 끝이에요!"
 
 msgid "Pass loads over rather than queue"
 msgstr "줄 서지 말고 짐을 넘겨 주세요"
@@ -2095,7 +2095,7 @@ msgstr "자재터와 성벽 사이의 제사장 집들"
 msgid "Quiet in the valley today."
 msgstr "오늘 골짜기는 조용합니다."
 
-msgid "Quiet ones — after the yard!"
+msgid "Quiet ones, after the yard!"
 msgstr "조용한 자들이 자재터를 노립니다!"
 
 msgid "Raiders on the haul road!"
@@ -2140,11 +2140,11 @@ msgstr "적이 어둠 속에서 나옵니다"
 msgid "The gatekeeper"
 msgstr "문지기"
 
-msgid "The last of it — hold on!"
-msgstr "마지막이에요 — 버티세요!"
+msgid "The last of it. Hold on!"
+msgstr "마지막이에요. 버티세요!"
 
-msgid "The last stone — all of them at once!"
-msgstr "마지막 돌 — 전부 한꺼번에!"
+msgid "The last stone! All of them at once!"
+msgstr "마지막 돌! 전부 한꺼번에!"
 
 msgid "The long haul"
 msgstr "먼 운반길"
@@ -2185,14 +2185,14 @@ msgstr "문짝이 달리기 전에 성문을 노릴 겁니다!"
 msgid "They're all coming!"
 msgstr "모두 몰려옵니다!"
 
-msgid "They're at the gate — hold it!"
-msgstr "성문에 왔어요 — 지키세요!"
+msgid "They're at the gate! Hold it!"
+msgstr "성문에 왔어요! 지키세요!"
 
 msgid "They've all come together!"
 msgstr "모두 한데 모였습니다!"
 
-msgid "Torches light the way — each worker has a lamp"
-msgstr "횃불이 길을 밝힙니다 — 일꾼마다 등불이 있습니다"
+msgid "Torches light the way: each worker has a lamp"
+msgstr "횃불이 길을 밝힙니다: 일꾼마다 등불이 있습니다"
 
 msgid "Tyrian purple"
 msgstr "두로 자주색"
@@ -2206,11 +2206,11 @@ msgstr "금장색 웃시엘"
 msgid "Wall across"
 msgstr "성벽 가로"
 
-msgid "Watch the carpenter — two to a beam"
-msgstr "목수를 보세요 — 들보 하나에 둘이"
+msgid "Watch the carpenter: two to a beam"
+msgstr "목수를 보세요: 들보 하나에 둘이"
 
-msgid "Water close at hand — mortar comes quickly"
-msgstr "물이 가까워 — 회반죽이 금방 됩니다"
+msgid "Water close at hand: mortar comes quickly"
+msgstr "물이 가까워: 회반죽이 금방 됩니다"
 
 msgid "What are these feeble Jews doing?"
 msgstr "이 힘없는 유다 사람들이 무엇을 하는 것이냐?"
@@ -2251,11 +2251,11 @@ msgstr "오래된 돌, 불탄 들보"
 msgid "Old and burned"
 msgstr "옛 성벽과 불탄 자리"
 
-msgid "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built"
+msgid "Not every stretch starts bare: old courses still stand in places, and burned timbers must be pulled down before anything is built"
 msgstr "모든 구간이 빈터에서 시작하는 것은 아닙니다. 곳곳에 옛 성벽이 남아 있고, 불탄 들보는 먼저 치워야 쌓을 수 있습니다"
 
-msgid "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows"
-msgstr "넓은 성벽: 바깥 면을 쌓고, 안쪽 면을 쌓은 뒤, 그 사이를 채우세요 — 네 명이 함께 일할 수 있고, 타격도 절반만 받습니다"
+msgid "The Broad Wall: raise the outer face, then the inner, then fill between. Room for four at the work, and it takes half the blows"
+msgstr "넓은 성벽: 바깥 면을 쌓고, 안쪽 면을 쌓은 뒤, 그 사이를 채우세요. 네 명이 함께 일할 수 있고, 타격도 절반만 받습니다"
 
 msgid "“The work is great and large.” Choose how the crew meets this stretch; each way has its price. The crew's pick decides; the host breaks a tie."
 msgstr "“이 일은 크고 넓습니다.” 이번 구간을 어떻게 해 나갈지 고르세요. 어느 쪽이든 대가가 따릅니다. 다수결로 정하고, 동수이면 호스트가 정합니다."
@@ -2350,34 +2350,34 @@ msgstr "망대가 새벽부터 서 있고 돌이 채워져 있습니다"
 msgid "Sound the horn [horn] — a ring marks the spot"
 msgstr "뿔나팔을 불면 [horn] 자리에 원이 표시돼요"
 
-msgid "Sound the horn [%s] — a ring marks the spot"
+msgid "Sound the horn [%s]: a ring marks the spot"
 msgstr "뿔나팔을 불면 [%s] 자리에 원이 표시돼요"
 
 msgid "Gather in the ring: blows land harder there"
 msgstr "원 안에 모이세요. 그 안에서는 공격이 더 강해져요"
 
-msgid "Horn — rally the crew (stronger blows in its ring)"
-msgstr "뿔나팔 — 일꾼을 모으기 (원 안에서 더 강한 공격)"
+msgid "Horn: rally the crew (stronger blows in its ring)"
+msgstr "뿔나팔: 일꾼을 모으기 (원 안에서 더 강한 공격)"
 
-msgid "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder"
-msgstr "적이 골짜기를 따라 파도처럼 몰려와요 — {horn} 키로 뿔나팔을 불고, 원 안에 모이면 공격이 더 강해져요"
+msgid "They come up the valley in surges. {horn} sounds the horn: gather in its ring and your blows land harder"
+msgstr "적이 골짜기를 따라 파도처럼 몰려와요. {horn} 키로 뿔나팔을 불고, 원 안에 모이면 공격이 더 강해져요"
 
-msgid "[%s] Sound the horn — whoever stands in its ring strikes harder"
-msgstr "[%s] 뿔나팔 불기 — 원 안에 선 사람은 더 강하게 공격해요"
+msgid "[%s] Sound the horn: whoever stands in its ring strikes harder"
+msgstr "[%s] 뿔나팔 불기: 원 안에 선 사람은 더 강하게 공격해요"
 
-msgid "RALLY — stronger blows here"
-msgstr "집결 — 여기서는 공격이 더 강해요"
+msgid "RALLY: stronger blows here"
+msgstr "집결: 여기서는 공격이 더 강해요"
 
-msgid "Rallied — your blows land harder here"
-msgstr "집결! — 여기서는 공격이 더 강해요"
+msgid "Rallied: your blows land harder here"
+msgstr "집결!: 여기서는 공격이 더 강해요"
 
-msgid "They'll slip in tonight — a watch on the wall!"
+msgid "They'll slip in tonight. A watch on the wall!"
 msgstr "오늘 밤 숨어들 거예요. 성벽에 파수꾼을 세우세요!"
 
 msgid "But we made our prayer to our God, and set a watch against them day and night, because of them."
 msgstr "그러나 우리는 우리 하느님께 기도하고, 그들 때문에 밤낮으로 파수꾼을 세웠다."
 
-msgid "The watch held — they crept off in the dark."
+msgid "The watch held. They crept off in the dark."
 msgstr "파수가 버텨 냈어요. 그들은 어둠 속으로 물러갔어요."
 
 msgid "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work."
@@ -2386,7 +2386,7 @@ msgstr "원수들은 우리가 알아챘고 하느님께서 그들의 계획을 
 msgid "The watch held in the night"
 msgstr "밤사이 파수가 버텼다"
 
-msgid "In the night they came — a stretch pulled down, the yard in rubble!"
+msgid "In the night they came: a stretch pulled down, the yard in rubble!"
 msgstr "밤에 습격이 있었어요. 한 구간이 무너지고 마당은 잔해로 가득해요!"
 
 msgid "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall."
@@ -2398,7 +2398,7 @@ msgstr "밤에 무너짐"
 msgid "A fox! Tobiah said one would break our wall down…"
 msgstr "여우다! 도비야가 여우 한 마리가 우리 성벽을 무너뜨릴 거라고 했는데…"
 
-msgid "The hungry went back to their fields — we're short of hands."
+msgid "The hungry went back to their fields. We're short of hands."
 msgstr "굶주린 이들이 밭으로 돌아갔어요. 일손이 모자라요."
 
 msgid "Yet now our flesh is as the flesh of our brothers, our children as their children."
@@ -2416,7 +2416,7 @@ msgstr "이 말대로라면 당신이 그들의 왕이 되려는 것이다."
 msgid "A rumour weakens every hand"
 msgstr "소문이 모두의 손을 약하게 함"
 
-msgid "“No such things are done” — the letter is turned away."
+msgid "“No such things are done.” The letter is turned away."
 msgstr "“그런 일은 없다.” 편지를 물리쳤어요."
 
 msgid "There are no such things done as you say, but you imagine them out of your own heart."
@@ -2425,7 +2425,7 @@ msgstr "네가 말하는 그런 일은 없다. 네 마음에서 지어낸 것이
 msgid "The letter answered"
 msgstr "편지에 답함"
 
-msgid "The rumour dies down — strengthen our hands!"
+msgid "The rumour dies down. Strengthen our hands!"
 msgstr "소문이 잦아들어요. 우리 손을 굳세게 하소서!"
 
 msgid "An open letter: “You would be their king”"
@@ -2434,7 +2434,7 @@ msgstr "공개 편지: “당신이 그들의 왕이 되려 한다”"
 msgid "Reading the letter…"
 msgstr "편지를 읽는 중…"
 
-msgid "A man of the temple is asking for you — it's a trap!"
+msgid "A man of the temple is asking for you. It's a trap!"
 msgstr "성전의 한 사람이 당신을 찾아요. 함정이에요!"
 
 msgid "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple."
@@ -2458,7 +2458,7 @@ msgstr "그는 내가 두려워하여 그렇게 하고 죄를 짓도록 고용�
 msgid "One hid in the temple"
 msgstr "한 사람이 성전에 숨음"
 
-msgid "Hide in the temple — they come tonight to kill you"
+msgid "Hide in the temple. They come tonight to kill you"
 msgstr "성전에 숨으세요. 오늘 밤 당신을 죽이러 와요"
 
 msgid "Going to hide in the temple…"
@@ -2497,7 +2497,7 @@ msgstr "석판화"
 msgid "Cel"
 msgstr "셀 셰이딩"
 
-msgid "Hold on — I'm coming!"
+msgid "Hold on, I'm coming!"
 msgstr "버텨요, 지금 가요!"
 
 msgid "I've got your back!"
@@ -2512,7 +2512,7 @@ msgstr "반대쪽은 내가 들게요."
 msgid "Foes at the wall!"
 msgstr "적이 성벽에 왔다!"
 
-msgid "I've fallen — help me up!"
+msgid "I've fallen! Help me up!"
 msgstr "쓰러졌어요, 일으켜 줘요!"
 
 msgid "Thank you, friend!"
@@ -2533,13 +2533,13 @@ msgstr "마을에서 온 사람: “어디로 돌아서든 그들이 우리를 �
 msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
 msgstr "집에 틀어박힌 스마야: “하나님의 집에서 함께 만납시다”"
 
-msgid "I am doing a great work — I can't come down!"
+msgid "I am doing a great work. I can't come down!"
 msgstr "나는 큰 일을 하고 있으니 내려갈 수 없소!"
 
 msgid "No such things are done as you say!"
 msgstr "네가 말한 그런 일은 없다!"
 
-msgid "He points to where they'll come — watch there!"
+msgid "He points to where they'll come. Watch there!"
 msgstr "그가 적이 올 곳을 가리킨다. 그곳을 지켜라!"
 
 msgid "All quiet on the road for now"
@@ -2548,10 +2548,10 @@ msgstr "지금은 길이 조용하다"
 msgid "Hide in the temple? {interact} go with him, or walk on"
 msgstr "성전에 숨을까? {interact} 따라가기, 아니면 그냥 지나가기"
 
-msgid "He talks and talks — your work goes slower. {interact} to answer him"
+msgid "He talks and talks. Your work goes slower. {interact} to answer him"
 msgstr "그가 계속 말을 건다. 일이 느려진다. {interact} 대답하기"
 
-msgid "Messengers will call you down to Ono — answer them and keep working"
+msgid "Messengers will call you down to Ono. Answer them and keep working"
 msgstr "사자들이 오노로 내려오라 부를 것이다. 대답하고 일을 계속하라"
 
 msgid "Wave in %d s · %s"
@@ -2575,8 +2575,8 @@ msgid "%d raider"
 msgid_plural "%d raiders"
 msgstr[0] "%d명의 약탈자"
 
-msgid "Wave called in early — the crew is spurred"
-msgstr "습격을 앞당겼다 — 일꾼들이 힘을 얻었다"
+msgid "Wave called in early: the crew is spurred"
+msgstr "습격을 앞당겼다: 일꾼들이 힘을 얻었다"
 
 
 msgid "Hurt? Drink at the well"
@@ -2591,11 +2591,11 @@ msgstr "마시기"
 msgid "Set the load down first"
 msgstr "먼저 짐을 내려놓으세요"
 
-msgid "Set it down first — {drop}, then {interact} to drink"
-msgstr "먼저 내려놓으세요 — {drop}, 그다음 {interact}로 마시기"
+msgid "Set it down first: {drop}, then {interact} to drink"
+msgstr "먼저 내려놓으세요: {drop}, 그다음 {interact}로 마시기"
 
-msgid "%s Drink — hands free, stand still to mend"
-msgstr "%s 마시기 — 손을 비우고 가만히 서서 회복"
+msgid "%s Drink (hands free, stand still to mend)"
+msgstr "%s 마시기 (손을 비우고 가만히 서서 회복)"
 
 msgid "Set the load down, then drink at the well to mend"
 msgstr "짐을 내려놓고 우물에서 마시면 회복돼요"

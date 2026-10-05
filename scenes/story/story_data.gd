@@ -33,7 +33,7 @@ const SECTION_LINES := [
 	"Eliashib the high priest and his brothers the priests take up the work at the Sheep Gate.",
 	"The sons of Hassenaah build the Fish Gate and lay its beams.",
 	"Joiada and Meshullam repair the Gate of the Old City. Its stone lies in the burned rubble.",
-	"Goldsmiths and ointment makers — craftsmen, not masons — repair the wall as far as the Broad Wall.",
+	"Goldsmiths and ointment makers (craftsmen, not masons) repair the wall as far as the Broad Wall.",
 	"Malchijah and Hasshub repair another section, and the Tower of the Bake Ovens.",
 	"Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall.",
 	"Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked.",

@@ -79,17 +79,17 @@ signal boon_changed
 # Shown under the dawn banner the first time a section uses a twist
 const TWIST_INTRO := {
 	"doors": "Finish the gate: hang its doors, bolts and bars",
-	"beams": "The beams are heavy — carry them in pairs",
-	"salvage": "No quarry stone here — salvage it from the burned rubble; heaps outside the wall hold twice as much",
+	"beams": "The beams are heavy. Carry them in pairs",
+	"salvage": "No quarry stone here. Salvage it from the burned rubble; heaps outside the wall hold twice as much",
 	"mixing": "Make the mortar: lime and water into the trough, then to the wall",
-	"ruins": "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built",
-	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
-	"horn": "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder",
-	"haul": "A long haul from the yard — leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
-	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
-	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
-	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
-	"schemes": "Messengers will call you down to Ono — answer them and keep working",
+	"ruins": "Not every stretch starts bare: old courses still stand in places, and burned timbers must be pulled down before anything is built",
+	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between. Room for four at the work, and it takes half the blows",
+	"horn": "They come up the valley in surges. {horn} sounds the horn: gather in its ring and your blows land harder",
+	"haul": "A long haul from the yard: leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
+	"spring": "A quiet stretch by the Pool of Shelah. The water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
+	"night": "Night falls on the work. Keep to the torchlight; they come out of the dark",
+	"cramped": "Each priest builds in front of his own house. Mind the narrow lanes",
+	"schemes": "Messengers will call you down to Ono. Answer them and keep working",
 }
 ## A verse reference in the player's language: short ("Neh. 3:1") for plaques, long
 ## ("Nehemiah 3:1") for cards and quotes. Takes either English form.

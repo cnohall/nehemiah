@@ -143,7 +143,7 @@ visible = false
 layout_mode = 2
 theme_type_variation = &"Eyebrow"
 theme_override_colors/font_color = Color(0.676, 0.313, 0.124, 1)
-text = "Dawn — ready the workers"
+text = "Dawn. Ready the workers"
 horizontal_alignment = 1
 
 [node name="ThreatPlaque" type="PanelContainer" parent="Root"]

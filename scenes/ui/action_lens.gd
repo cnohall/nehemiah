@@ -68,7 +68,7 @@ func _process(_delta: float) -> void:
 		l.text = entries[i][1]
 		l.size = l.get_combined_minimum_size()
 		l.position = cam.unproject_position(at) - Vector2(l.size.x * 0.5, l.size.y)
-	_hint.text = tr("What you can do — let go of %s to carry on") % InputMode.key("reveal")
+	_hint.text = tr("What you can do: let go of %s to carry on") % InputMode.key("reveal")
 	_hint.size = _hint.get_combined_minimum_size()
 
 ## [world position, text, distance] for everything near `me` that answers a press
@@ -84,13 +84,13 @@ func _entries(me: Player) -> Array:
 	var carrying := me.carried_kind
 	# Yourself: what the other buttons do right now
 	if not carrying.is_empty() and carrying != "beam":
-		add.call(here, tr("%s Drop it — beside a friend, it goes into their hands") % g)
+		add.call(here, tr("%s Drop it (beside a friend, it goes into their hands)") % g)
 	elif carrying == "beam":
 		add.call(here, tr("A beam goes quicker with a partner on the other end"))
 	else:
 		add.call(here, tr("[%s] Sling · up close it's the sword") % InputMode.key("throw"))
 	if GameState.has_twist("horn"):
-		add.call(here + Vector3.UP * 0.7, tr("[%s] Sound the horn — whoever stands in its ring strikes harder") % InputMode.key("horn"))
+		add.call(here + Vector3.UP * 0.7, tr("[%s] Sound the horn: whoever stands in its ring strikes harder") % InputMode.key("horn"))
 	for p: Player in get_tree().get_nodes_in_group("players"):
 		if p == me:
 			continue
@@ -123,16 +123,16 @@ func _entries(me: Player) -> Array:
 			if at.distance_to(here) < 5.0:
 				add.call(at, tr("%s Climb over") % e)
 	for pile: Node3D in get_tree().get_nodes_in_group("scattered_piles"):
-		add.call(pile.global_position, tr("%s Gather up the scattered %s — nothing to take until then") % [e, _mat(pile.kind)])
+		add.call(pile.global_position, tr("%s Gather up the scattered %s. Nothing to take until then") % [e, _mat(pile.kind)])
 	if me.health < Player.MAX_HEALTH and Player.can_drink_now():
 		for well: Node3D in get_tree().get_nodes_in_group("wells"):
-			add.call(well.global_position + Vector3.UP * 0.7, tr("%s Drink — hands free, stand still to mend") % e if carrying.is_empty() \
+			add.call(well.global_position + Vector3.UP * 0.7, tr("%s Drink (hands free, stand still to mend)") % e if carrying.is_empty() \
 				else tr("Set the load down, then drink at the well to mend"))
 	for foe: Node3D in get_tree().get_nodes_in_group("enemies"):
 		if foe.has_method("is_saboteur") and foe.is_saboteur():
-			add.call(foe.global_position, tr("Saboteur — stop him before he scatters a pile"))
+			add.call(foe.global_position, tr("Saboteur! Stop him before he scatters a pile"))
 	for m: Node3D in get_tree().get_nodes_in_group("messengers"):
-		add.call(m.global_position, tr("Don't go with him — just walk away"))
+		add.call(m.global_position, tr("Don't go with him. Just walk away"))
 	return out
 
 func _mat(kind: String) -> String:

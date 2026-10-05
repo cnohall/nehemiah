@@ -106,7 +106,7 @@ func _hint_text(n: int) -> String:
 		return tr("The porter walks back for more")
 	if n > 0:
 		return tr("The porter will carry these to the wall")
-	return tr("Drop loads here — a porter carries them to the wall")
+	return tr("Drop loads here. A porter carries them to the wall")
 
 ## Server: a trip leaves when the mat is full, or PORTER_EVERY after the first load landed
 func _dispatch(delta: float) -> void:

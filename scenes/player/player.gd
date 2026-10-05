@@ -827,7 +827,7 @@ func _server_interact(at: Vector3) -> void:
 		Act.HELP:
 			_set_helping.rpc(target.worker_id())
 			_sfx.rpc("pickup")
-			_tell("Holding the other end — {interact} to let go")
+			_tell("Holding the other end. {interact} to let go")
 		Act.DELIVER:
 			_deliver(target, at)
 		Act.TALK:
@@ -905,13 +905,13 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 # [message, material for its {need}]
 func _why_not_needed(at: Vector3) -> PackedStringArray:
 	if carried_kind == "debris":
-		return ["Rubbish — carry it clear of the footing, then {drop}", ""]
+		return ["Rubbish: carry it clear of the footing, then {drop}", ""]
 	var wall := _nearest_in_reach("build_sites", at, func(_s): return true)
 	if wall == null:
 		if health < MAX_HEALTH and _nearest_in_reach("wells", at, func(_w): return true) != null:
-			return ["Set it down first — {drop}, then {interact} to drink", ""]
+			return ["Set it down first: {drop}, then {interact} to drink", ""]
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
-			return ["Hands full — deliver it, or {drop} to drop", ""]
+			return ["Hands full: deliver it, or {drop} to drop", ""]
 		return ["Bring it to a wall", ""]
 	if wall.has_method("refusal"):   # a watch post explains itself
 		return [wall.refusal(carried_kind), ""]
@@ -920,7 +920,7 @@ func _why_not_needed(at: Vector3) -> PackedStringArray:
 		return ["Needs {need} first", need]
 	if wall.can_build():
 		# Every load for this stage is in; it only wants working before the next material
-		return ["Build this stage first — {drop} to drop, then {interact} to work", ""]
+		return ["Build this stage first: {drop} to drop, then {interact} to work", ""]
 	return ["This wall is finished", ""]
 
 @rpc("any_peer", "call_local", "reliable")
@@ -985,7 +985,7 @@ func _drop_carried(at: Vector3) -> void:
 				item.position = Vector3(slot.x, GROUND_Y, slot.z)
 				if not RelayMat.told:
 					RelayMat.told = true
-					_tell("Left on the relay mat — the porter carries it to the wall")
+					_tell("Left on the relay mat: the porter carries it to the wall")
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
 	items.add_child(item, true)
@@ -1001,9 +1001,9 @@ func _set_carried(kind: String) -> void:
 	if multiplayer.is_server() and kind != "beam":
 		_release_helper()
 	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
-		_toast("Heavy — a partner can take the other end {interact}")
+		_toast("Heavy: a partner can take the other end {interact}")
 	elif not kind.is_empty() and is_multiplayer_authority() and Trade.carry_mult(trade) > 1.0:
-		_knack("Your trade — quicker with a load")
+		_knack("Your trade: quicker with a load")
 	# Pick up → squashed under the load; put down → spring back up
 	_sprite.squash(Vector2(1.08, 0.92) if not kind.is_empty() else Vector2(0.95, 1.05))
 
@@ -1095,7 +1095,7 @@ func release_throw() -> void:
 		if true_shot and brain == null:
 			InputMode.rumble(0.2, 0.0, 0.06)
 		if Trade.hit_mult(trade) > 1.0:
-			_knack("Your trade — your blows land harder")
+			_knack("Your trade: your blows land harder")
 
 # ── Sword ──────────────────────────────────────────────────
 
@@ -1132,7 +1132,7 @@ func _swing_sword(foe: Node3D) -> void:
 		return   # knocked out of the swing before it landed
 	_server_sword.rpc_id(1, global_position, aim_yaw)
 	if Trade.hit_mult(trade) > 1.0 and is_instance_valid(foe) and foe.is_in_group("enemies"):   # not a jar
-		_knack("Your trade — your blows land harder")
+		_knack("Your trade: your blows land harder")
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_sword(at: Vector3, yaw: float) -> void:
@@ -1228,7 +1228,7 @@ func _riposte_hint() -> void:
 		if String(enemy.anim).begins_with("brace") and Vector2(enemy.global_position.x - global_position.x,
 				enemy.global_position.z - global_position.z).length() < SWORD_REACH:
 			_riposte_told = true
-			_toast("Cut as he draws back — turn the blow")
+			_toast("Cut as he draws back: turn the blow")
 			return
 
 # Turn toward a ground point: exact yaw for the rig, nearest 4-way facing for the rest
@@ -1483,7 +1483,7 @@ func _set_downed(value: bool) -> void:
 		if is_multiplayer_authority():
 			_jolt(0.6, 0.3, 0.8, 0.35)
 		if multiplayer.is_server() and not _nobody_to_raise():
-			bark("I've fallen — help me up!", true)
+			bark("I've fallen! Help me up!", true)
 	else:
 		health = MAX_HEALTH * REVIVE_HEALTH
 	if is_multiplayer_authority():
@@ -1567,7 +1567,7 @@ func _set_working(site_path: NodePath) -> void:
 		anim = "build_" + _facing
 		_sprite.squash(Vector2(1.06, 0.94))
 		if Trade.prefers(trade, site.work_material()):
-			_knack("Your trade — quicker hands at this work")
+			_knack("Your trade: quicker hands at this work")
 	elif not downed and not _is_busy:
 		anim = "idle_" + _facing
 
@@ -1707,7 +1707,7 @@ func _server_call_early() -> void:
 	var waves := get_node_or_null("../../WaveManager")
 	if waves != null and waves.call_early():
 		_action.rpc("halfslash")
-		_tell("Wave called in early — the crew is spurred")
+		_tell("Wave called in early: the crew is spurred")
 
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 
@@ -1948,7 +1948,7 @@ func _glint() -> void:
 	SlingStone.flash(get_tree().current_scene, _whirl_stone.global_position, 0.9, 0.2)
 	if self == local and brain == null and not _true_told:
 		_true_told = true
-		_toast("Let go as it glints — a true shot")
+		_toast("Let go as it glints: a true shot")
 
 # ── Carried prop ───────────────────────────────────────────
 

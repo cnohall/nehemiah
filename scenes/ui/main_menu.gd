@@ -79,7 +79,7 @@ func _ready() -> void:
 	walk.name = "FestivalButton"
 	walk.text = "Explore Jerusalem"
 	var built := GameState.built_sections()
-	walk.tooltip_text = tr("The wall is finished: the Festival of Booths.") if not built.has(false) 		else tr("Walk the city as far as your wall stands — %d of %d stretches. The Festival of Booths waits for the whole wall.") % [built.count(true), built.size()]
+	walk.tooltip_text = tr("The wall is finished: the Festival of Booths.") if not built.has(false) 		else tr("Walk the city as far as your wall stands: %d of %d stretches. The Festival of Booths waits for the whole wall.") % [built.count(true), built.size()]
 	menu.add_child(walk)
 	walk.pressed.connect(_on_festival)
 	_second_tier([_sections_btn, learn, walk])
@@ -282,11 +282,11 @@ func _use_steam() -> bool:
 
 func _show_default_status() -> void:
 	if _use_steam():
-		net_status.text = tr("Signed in to Steam as %s — invite friends once in game") % NetworkManager.steam_name()
+		net_status.text = tr("Signed in to Steam as %s. Invite friends once in game") % NetworkManager.steam_name()
 	elif NetworkManager.steam_available():
-		net_status.text = tr("LAN mode — share your IP address to play together")
+		net_status.text = tr("LAN mode: share your IP address to play together")
 	else:
-		net_status.text = tr("Steam unavailable: %s — LAN play only") % tr(NetworkManager.steam_error())
+		net_status.text = tr("Steam unavailable: %s. LAN play only") % tr(NetworkManager.steam_error())
 
 # ── Host ───────────────────────────────────────────────────
 
@@ -445,7 +445,7 @@ func _on_connect() -> void:
 	# Steam lobby ids are 64-bit numbers; anything else is treated as an IP/hostname
 	if addr.is_valid_int() and addr.length() > 12:
 		if not NetworkManager.steam_available():
-			_join_failed("That's a Steam lobby code — start Steam first.")
+			_join_failed("That's a Steam lobby code. Start Steam first.")
 			return
 		NetworkManager.join_steam(addr.to_int())
 	else:

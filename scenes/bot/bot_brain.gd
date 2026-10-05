@@ -395,7 +395,7 @@ func _set_job(job: Job, target: Node3D) -> void:
 func _bark_for(job: Job, target: Node3D) -> void:
 	match job:
 		Job.REVIVE:
-			_p.bark("Hold on — I'm coming!")
+			_p.bark("Hold on, I'm coming!")
 		Job.COVER:
 			_p.bark("I've got your back!")
 		Job.CHASE:

@@ -233,7 +233,7 @@ func is_complete() -> bool:
 ## Player: why a load was refused here
 func refusal(kind: String) -> String:
 	if not built:
-		return "The post needs timber" if kind != "wood" else "Enough timber — {interact} to raise it"
+		return "The post needs timber" if kind != "wood" else "Enough timber. {interact} to raise it"
 	if kind != "stone":
 		return "The slinger wants stone for his sling"
 	return "The slinger has stones enough"

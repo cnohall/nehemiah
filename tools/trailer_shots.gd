@@ -66,6 +66,9 @@ func _process(_delta: float) -> bool:
 		_main.director.begin()
 		if not _hud:
 			gs.attract = true
+		# Settings loads the saved crew after _initialize, so the 3 asked for there can
+		# come back as the player's own count: fill the crew here, at full skill
+		_main.fit_bots(3)
 	if _frame < 3:
 		return false
 	if gs.phase in [gs.Phase.STORY, gs.Phase.DUSK] and _frame % 30 == 0:

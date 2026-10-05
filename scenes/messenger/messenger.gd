@@ -144,7 +144,7 @@ func _process(_delta: float) -> void:
 # What he says, as it stands now (Shemaiah's word, once heard)
 func _note_now() -> String:
 	if kind == Kind.SHEMAIAH and heard:
-		return "Hide in the temple — they come tonight to kill you"
+		return "Hide in the temple. They come tonight to kill you"
 	return _note
 
 ## What [E] does to him now (shown on his note)
@@ -190,7 +190,7 @@ func _physics_process(delta: float) -> void:
 				anim = "idle_" + _facing
 				if not _told and pesters(_target) and _target.building_site != null:
 					_told = true
-					_target._tell("He talks and talks — your work goes slower. {interact} to answer him")
+					_target._tell("He talks and talks. Your work goes slower. {interact} to answer him")
 		State.LEADING:
 			if _timer > _lead_time or not is_instance_valid(_led):
 				_release()
@@ -214,7 +214,7 @@ func answer(worker: Node3D) -> void:
 		return
 	match kind:
 		Kind.ENVOY:
-			worker.answer_pause(ANSWER_TIME, "I am doing a great work — I can't come down!")
+			worker.answer_pause(ANSWER_TIME, "I am doing a great work. I can't come down!")
 			_leave()
 		Kind.LETTER:
 			worker.answer_pause(ANSWER_TIME, "No such things are done as you say!")
@@ -222,7 +222,7 @@ func answer(worker: Node3D) -> void:
 		Kind.NEIGHBOUR:
 			var waves := get_node_or_null("../../WaveManager")
 			var told: bool = waves != null and waves.warn_early()
-			worker.answer_pause(ANSWER_TIME, "He points to where they'll come — watch there!" if told \
+			worker.answer_pause(ANSWER_TIME, "He points to where they'll come. Watch there!" if told \
 				else "All quiet on the road for now")
 			_leave(false)
 		Kind.SHEMAIAH:

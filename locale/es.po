@@ -56,14 +56,14 @@ msgstr "Atrás"
 msgid "Connect"
 msgstr "Conectar"
 
-msgid "Signed in to Steam as %s — invite friends once in game"
-msgstr "Conectado a Steam como %s — invita a tus amigos ya en la partida"
+msgid "Signed in to Steam as %s. Invite friends once in game"
+msgstr "Conectado a Steam como %s. Invita a tus amigos ya en la partida"
 
-msgid "LAN mode — share your IP address to play together"
-msgstr "Modo LAN — comparte tu dirección IP para jugar juntos"
+msgid "LAN mode: share your IP address to play together"
+msgstr "Modo LAN: comparte tu dirección IP para jugar juntos"
 
-msgid "Steam unavailable: %s — LAN play only"
-msgstr "Steam no disponible: %s — solo juego por LAN"
+msgid "Steam unavailable: %s. LAN play only"
+msgstr "Steam no disponible: %s. Solo juego por LAN"
 
 msgid "Steam plugin failed to load"
 msgstr "No se pudo cargar el complemento de Steam"
@@ -86,8 +86,8 @@ msgstr "Primero escribe una dirección o un código de sala."
 msgid "Connecting…"
 msgstr "Conectando…"
 
-msgid "That's a Steam lobby code — start Steam first."
-msgstr "Eso es un código de sala de Steam — primero abre Steam."
+msgid "That's a Steam lobby code. Start Steam first."
+msgstr "Eso es un código de sala de Steam. Primero abre Steam."
 
 msgid "Connection failed. Check the address and that the host is running."
 msgstr "Falló la conexión. Revisa la dirección y que el anfitrión esté en marcha."
@@ -272,20 +272,20 @@ msgstr "Salir al título"
 msgid "Move"
 msgstr "Moverse"
 
-msgid "Sling — charge, then throw"
-msgstr "Honda — carga y lanza"
+msgid "Sling: charge, then throw"
+msgstr "Honda: carga y lanza"
 
 msgid "Horn — call the crew"
 msgstr "Cuerno — llama al equipo"
 
-msgid "Controller disconnected — reconnect it to carry on"
-msgstr "Mando desconectado — vuelve a conectarlo para seguir"
+msgid "Controller disconnected. Reconnect it to carry on"
+msgstr "Mando desconectado. Vuelve a conectarlo para seguir"
 
 msgid "Invite friends"
 msgstr "Invitar amigos"
 
-msgid "Overlay off — use the Crew panel"
-msgstr "Overlay desactivado — usa el panel del equipo"
+msgid "Overlay off. Use the Crew panel"
+msgstr "Overlay desactivado. Usa el panel del equipo"
 
 msgid "or press %s to begin"
 msgstr "o pulsa %s para empezar"
@@ -302,14 +302,14 @@ msgstr "Lleva %s a la puerta"
 msgid "Take the %s to the wall"
 msgstr "Lleva %s a la muralla"
 
-msgid "Nothing needs %s now — drop it (%s)"
-msgstr "Ahora nada necesita %s — suelta la carga (%s)"
+msgid "Nothing needs %s now. Drop it (%s)"
+msgstr "Ahora nada necesita %s. Suelta la carga (%s)"
 
-msgid "Build it up — %s at the gate"
-msgstr "A construir — %s en la puerta"
+msgid "Build it up: %s at the gate"
+msgstr "A construir: %s en la puerta"
 
-msgid "Build it up — %s at the wall"
-msgstr "A construir — %s en la muralla"
+msgid "Build it up: %s at the wall"
+msgstr "A construir: %s en la muralla"
 
 msgid "Next: bring %s to the gate"
 msgstr "Siguiente: lleva %s a la puerta"
@@ -341,8 +341,8 @@ msgstr "escombros"
 msgid "Gathering the crew"
 msgstr "Reuniendo al equipo"
 
-msgid "Dawn — ready the workers"
-msgstr "Amanecer — preparen a los obreros"
+msgid "Dawn. Ready the workers"
+msgstr "Amanecer. Preparen a los obreros"
 
 msgid "The day's work is done"
 msgstr "El trabajo del día está hecho"
@@ -389,8 +389,8 @@ msgstr "Tramo %d de %d  ·  %s"
 msgid "The %s stands"
 msgstr "¡En pie: %s!"
 
-msgid "A new best for this stretch — %d of 3 marks."
-msgstr "Nuevo récord en este tramo — %d de 3 marcas."
+msgid "A new best for this stretch: %d of 3 marks."
+msgstr "Nuevo récord en este tramo: %d de 3 marcas."
 
 msgid "%d of 3 marks. Your best here stays as it was."
 msgstr "%d de 3 marcas. Tu récord aquí no cambia."
@@ -533,11 +533,11 @@ msgstr "Puerta de Mifcad"
 msgid "Finish the gate: hang its doors, bolts and bars"
 msgstr "Termina la puerta: coloca sus hojas, cerrojos y barras"
 
-msgid "The beams are heavy — carry them in pairs"
-msgstr "Las vigas pesan — llévenlas de dos en dos"
+msgid "The beams are heavy. Carry them in pairs"
+msgstr "Las vigas pesan. Llévenlas de dos en dos"
 
-msgid "No quarry stone here — salvage it from the burned rubble"
-msgstr "Aquí no hay piedra de cantera — rescátala de los escombros quemados"
+msgid "No quarry stone here. Salvage it from the burned rubble"
+msgstr "Aquí no hay piedra de cantera. Rescátala de los escombros quemados"
 
 msgid "Make the mortar: lime and water into the trough, then to the wall"
 msgstr "Prepara el mortero: cal y agua en la artesa, y luego a la muralla"
@@ -548,17 +548,17 @@ msgstr "El Muro Ancho: constrúyelo doble de grueso — más piedra, y sitio par
 msgid "They come up the valley in surges — {horn} sounds the horn: gather there"
 msgstr "Suben por el valle en oleadas — {horn} toca el cuerno: reúnanse allí"
 
-msgid "A long haul from the yard — drop a load beside a friend to pass it on"
-msgstr "Un largo trecho desde el acopio — suelta la carga junto a un compañero para pasársela"
+msgid "A long haul from the yard: drop a load beside a friend to pass it on"
+msgstr "Un largo trecho desde el acopio: suelta la carga junto a un compañero para pasársela"
 
-msgid "A quiet stretch by the Pool of Shelah — the water is close at hand"
-msgstr "Un tramo tranquilo junto al estanque de Selah — el agua está a mano"
+msgid "A quiet stretch by the Pool of Shelah. The water is close at hand"
+msgstr "Un tramo tranquilo junto al estanque de Selah. El agua está a mano"
 
-msgid "Night falls on the work — keep to the torchlight, they come out of the dark"
-msgstr "Cae la noche sobre la obra — no se alejen de las antorchas, vienen desde la oscuridad"
+msgid "Night falls on the work. Keep to the torchlight; they come out of the dark"
+msgstr "Cae la noche sobre la obra. No se alejen de las antorchas, vienen desde la oscuridad"
 
-msgid "Each priest builds in front of his own house — mind the narrow lanes"
-msgstr "Cada sacerdote construye frente a su propia casa — cuidado con los callejones"
+msgid "Each priest builds in front of his own house. Mind the narrow lanes"
+msgstr "Cada sacerdote construye frente a su propia casa. Cuidado con los callejones"
 
 msgid "Messengers will call you down to Ono — do not go with them"
 msgstr "Unos mensajeros te llamarán a bajar a Ono — no vayas con ellos"
@@ -685,14 +685,14 @@ msgstr "Baja a la llanura de Ono"
 msgid "Let go of the beam"
 msgstr "Suelta la viga"
 
-msgid "Holding the other end — {interact} to let go"
-msgstr "Sujetas el otro extremo — {interact} para soltar"
+msgid "Holding the other end. {interact} to let go"
+msgstr "Sujetas el otro extremo. {interact} para soltar"
 
 msgid "Stage built!"
 msgstr "¡Etapa construida!"
 
-msgid "Hands full — deliver it, or {drop} to drop"
-msgstr "Manos llenas — entrégalo o {drop} para soltar"
+msgid "Hands full: deliver it, or {drop} to drop"
+msgstr "Manos llenas: entrégalo o {drop} para soltar"
 
 msgid "Bring it to a wall"
 msgstr "Lleva la carga a la muralla"
@@ -700,8 +700,8 @@ msgstr "Lleva la carga a la muralla"
 msgid "Needs {need} first"
 msgstr "Primero necesita {need}"
 
-msgid "Build this stage first — {drop} to drop, then {interact} to work"
-msgstr "Primero construye esta etapa — {drop} para soltar la carga, luego {interact} para trabajar"
+msgid "Build this stage first: {drop} to drop, then {interact} to work"
+msgstr "Primero construye esta etapa: {drop} para soltar la carga, luego {interact} para trabajar"
 
 msgid "This wall is finished"
 msgstr "Esta muralla está terminada"
@@ -709,8 +709,8 @@ msgstr "Esta muralla está terminada"
 msgid "Caught it"
 msgstr "¡Atrapada!"
 
-msgid "Heavy — a partner can take the other end {interact}"
-msgstr "Pesa — un compañero puede tomar el otro extremo {interact}"
+msgid "Heavy: a partner can take the other end {interact}"
+msgstr "Pesa: un compañero puede tomar el otro extremo {interact}"
 
 msgid "Enough hands here"
 msgstr "Ya hay suficientes manos aquí"
@@ -777,8 +777,8 @@ msgstr "Los hijos de Senaá construyen la Puerta del Pescado y colocan sus vigas
 msgid "Joiada and Meshullam repair the Gate of the Old City. Its stone lies in the burned rubble."
 msgstr "Joiadá y Mesulam reparan la Puerta de la Ciudad Vieja. Su piedra yace entre los escombros quemados."
 
-msgid "Goldsmiths and ointment makers — craftsmen, not masons — repair the wall as far as the Broad Wall."
-msgstr "Orfebres y perfumistas —artesanos, no albañiles— reparan la muralla hasta el Muro Ancho."
+msgid "Goldsmiths and ointment makers (craftsmen, not masons) repair the wall as far as the Broad Wall."
+msgstr "Orfebres y perfumistas (artesanos, no albañiles) reparan la muralla hasta el Muro Ancho."
 
 msgid "Malchijah and Hasshub repair another section, and the Tower of the Bake Ovens."
 msgstr "Malquías y Hasub reparan otro tramo y la Torre de los Hornos."
@@ -906,10 +906,10 @@ msgstr "Cuatro veces le envían la misma invitación, con la intención de hacer
 msgid "“I am doing a great work, so that I can’t come down.”"
 msgstr "“Estoy haciendo una gran obra, y no puedo bajar.”"
 
-msgid "%d slipped through — but the wall stands."
-msgid_plural "%d slipped through — but the wall stands."
-msgstr[0] "%d se coló — pero la muralla sigue en pie."
-msgstr[1] "%d se colaron — pero la muralla sigue en pie."
+msgid "%d slipped through, but the wall stands."
+msgid_plural "%d slipped through, but the wall stands."
+msgstr[0] "%d se coló, pero la muralla sigue en pie."
+msgstr[1] "%d se colaron, pero la muralla sigue en pie."
 
 msgid "%d got through"
 msgid_plural "%d got through"
@@ -1186,11 +1186,11 @@ msgstr "Ataque"
 msgid "The sun is low"
 msgstr "El sol está bajo"
 
-msgid "Finish before the stars appear — the %s must stand tonight"
-msgstr "Terminen antes de que salgan las estrellas — %s debe quedar en pie esta noche"
+msgid "Finish before the stars appear: the %s must stand tonight"
+msgstr "Terminen antes de que salgan las estrellas: %s debe quedar en pie esta noche"
 
-msgid "The last day of this stretch — it must stand before the stars appear"
-msgstr "El último día de este tramo — debe quedar en pie antes de que salgan las estrellas"
+msgid "The last day of this stretch: it must stand before the stars appear"
+msgstr "El último día de este tramo: debe quedar en pie antes de que salgan las estrellas"
 
 msgid "The %s was not finished by nightfall. Gather the workers and begin again."
 msgstr "No se terminó %s antes del anochecer. Reúnan a los obreros y empiecen de nuevo."
@@ -1216,8 +1216,8 @@ msgstr "Sin piedras para la honda"
 msgid "The post needs timber"
 msgstr "El puesto necesita madera"
 
-msgid "Enough timber — {interact} to raise it"
-msgstr "Ya hay madera — {interact} para levantarlo"
+msgid "Enough timber. {interact} to raise it"
+msgstr "Ya hay madera. {interact} para levantarlo"
 
 msgid "The slinger wants stone for his sling"
 msgstr "El hondero quiere piedras para su honda"
@@ -1225,10 +1225,10 @@ msgstr "El hondero quiere piedras para su honda"
 msgid "The slinger has stones enough"
 msgstr "El hondero ya tiene piedras suficientes"
 
-msgid "The stars appeared — %d wall piece left for tomorrow."
-msgid_plural "The stars appeared — %d wall pieces left for tomorrow."
-msgstr[0] "Salieron las estrellas — queda %d tramo de muro para mañana."
-msgstr[1] "Salieron las estrellas — quedan %d tramos de muro para mañana."
+msgid "The stars appeared: %d wall piece left for tomorrow."
+msgid_plural "The stars appeared: %d wall pieces left for tomorrow."
+msgstr[0] "Salieron las estrellas: queda %d tramo de muro para mañana."
+msgstr[1] "Salieron las estrellas: quedan %d tramos de muro para mañana."
 
 msgid "The stretch"
 msgstr "El tramo"
@@ -1236,13 +1236,13 @@ msgstr "El tramo"
 msgid "What isn't built by the stars waits for tomorrow"
 msgstr "Lo que no esté hecho al salir las estrellas espera a mañana"
 
-msgid "%d of %d stand — %d days left"
-msgstr "%d de %d en pie — quedan %d días"
+msgid "%d of %d stand, %d days left"
+msgstr "%d de %d en pie, quedan %d días"
 
-msgid "Raise the whole stretch — %d day before the stars"
-msgid_plural "Raise the whole stretch — %d days before the stars"
-msgstr[0] "Levanten todo el tramo — %d día antes de las estrellas"
-msgstr[1] "Levanten todo el tramo — %d días antes de las estrellas"
+msgid "Raise the whole stretch: %d day before the stars"
+msgid_plural "Raise the whole stretch: %d days before the stars"
+msgstr[0] "Levanten todo el tramo: %d día antes de las estrellas"
+msgstr[1] "Levanten todo el tramo: %d días antes de las estrellas"
 
 msgid "Finished with %d day to spare"
 msgid_plural "Finished with %d days to spare"
@@ -1321,19 +1321,19 @@ msgstr "%s se está uniendo…"
 msgid "A builder is joining…"
 msgstr "Un constructor se está uniendo…"
 
-msgid "Down — a crewmate has to help you up"
-msgstr "Caído — un compañero tiene que levantarte"
+msgid "Down. A crewmate has to help you up"
+msgstr "Caído. Un compañero tiene que levantarte"
 
-msgid "A finished piece was knocked down — build it back up"
-msgstr "Derribaron un tramo terminado — vuelve a levantarlo"
+msgid "A finished piece was knocked down. Build it back up"
+msgstr "Derribaron un tramo terminado. Vuelve a levantarlo"
 
 msgid "The stretch stands"
 msgstr "El tramo está en pie"
 
-msgid "%d piece still to finish — look for the amber footing"
-msgid_plural "%d pieces still to finish — look for the amber footings"
-msgstr[0] "Falta terminar %d tramo — busca la base ámbar"
-msgstr[1] "Faltan terminar %d tramos — busca las bases ámbar"
+msgid "%d piece still to finish. Look for the amber footing"
+msgid_plural "%d pieces still to finish. Look for the amber footings"
+msgstr[0] "Falta terminar %d tramo. Busca la base ámbar"
+msgstr[1] "Faltan terminar %d tramos. Busca las bases ámbar"
 
 msgid "Last piece!  %s"
 msgstr "¡Último tramo!  %s"
@@ -1377,11 +1377,11 @@ msgstr "Jugar otra vez"
 msgid "Try the stretch again"
 msgstr "Reintentar el tramo"
 
-msgid "The host's pick decides — or most of the crew"
-msgstr "Decide el anfitrión — o la mayoría del equipo"
+msgid "The host's pick decides (or most of the crew)"
+msgstr "Decide el anfitrión (o la mayoría del equipo)"
 
-msgid "%s — %d of %d"
-msgstr "%s — %d de %d"
+msgid "%s: %d of %d"
+msgstr "%s: %d de %d"
 
 msgid "Waiting for the host or most of the crew"
 msgstr "Esperando al anfitrión o a la mayoría"
@@ -1487,8 +1487,8 @@ msgstr "Bloqueado"
 msgid "The Festival of Booths"
 msgstr "La Fiesta de las Cabañas"
 
-msgid "The wall is finished. No clock, no enemy — walk the city."
-msgstr "La muralla está terminada. Sin reloj ni enemigos — recorre la ciudad."
+msgid "The wall is finished. No clock, no enemy. Walk the city."
+msgstr "La muralla está terminada. Sin reloj ni enemigos. Recorre la ciudad."
 
 msgid "Walk up to people and press %s to talk"
 msgstr "Acércate a la gente y pulsa %s para hablar"
@@ -1502,20 +1502,20 @@ msgstr "Neh. 8  ·  El séptimo mes"
 msgid "Hear Ezra read the Law at the Water Gate"
 msgstr "Escucha a Esdras leer la Ley en la Puerta de las Aguas"
 
-msgid "Build booths with branches from the mount — %d of %d"
-msgstr "Construye cabañas con ramas del monte — %d de %d"
+msgid "Build booths with branches from the mount: %d of %d"
+msgstr "Construye cabañas con ramas del monte: %d de %d"
 
-msgid "Send portions to those with nothing prepared — %d of %d"
-msgstr "Envía porciones a quienes no tienen nada preparado — %d de %d"
+msgid "Send portions to those with nothing prepared: %d of %d"
+msgstr "Envía porciones a quienes no tienen nada preparado: %d de %d"
 
-msgid "Meet the people who built the wall — %d of %d"
-msgstr "Conoce a la gente que construyó la muralla — %d de %d"
+msgid "Meet the people who built the wall: %d of %d"
+msgstr "Conoce a la gente que construyó la muralla: %d de %d"
 
 msgid "Go up to the house of God, by the Sheep Gate"
 msgstr "Sube a la casa de Dios, junto a la Puerta de las Ovejas"
 
-msgid "Walk the wall round — %d of %d gates"
-msgstr "Da la vuelta a la muralla — %d de %d puertas"
+msgid "Walk the wall round: %d of %d gates"
+msgstr "Da la vuelta a la muralla: %d de %d puertas"
 
 msgid "There was very great gladness"
 msgstr "Hubo muy grande alegría"
@@ -1550,11 +1550,11 @@ msgstr "ver %s"
 msgid "This booth stands"
 msgstr "Esta cabaña ya está en pie"
 
-msgid "The booth wants branches — from the olive trees outside the wall"
-msgstr "La cabaña necesita ramas — de los olivos fuera de la muralla"
+msgid "The booth wants branches from the olive trees outside the wall"
+msgstr "La cabaña necesita ramas, de los olivos fuera de la muralla"
 
-msgid "Branches enough — {interact} to build it"
-msgstr "Ya hay ramas suficientes — {interact} para construirla"
+msgid "Branches enough. {interact} to build it"
+msgstr "Ya hay ramas suficientes. {interact} para construirla"
 
 msgid "They're after bread, not that"
 msgstr "Buscan pan, no eso"
@@ -1565,8 +1565,8 @@ msgstr "Ya tienen de sobra"
 msgid "Nothing is prepared in my house for the feast."
 msgstr "En mi casa no hay nada preparado para la fiesta."
 
-msgid "Blessings on you — the joy of Yahweh is our strength today."
-msgstr "Bendito seas — hoy la alegría de Jehová es nuestra fuerza."
+msgid "Blessings on you. The joy of Yahweh is our strength today."
+msgstr "Bendito seas. Hoy la alegría de Jehová es nuestra fuerza."
 
 msgid "Then Eliashib the high priest rose up with his brothers the priests, and they built the sheep gate."
 msgstr "Entonces el sumo sacerdote Eliasib se levantó con sus hermanos los sacerdotes, y construyeron la Puerta de las Ovejas."
@@ -1613,8 +1613,8 @@ msgstr "Después de él reparó Semaías hijo de Secanías, guarda de la Puerta 
 msgid "Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner."
 msgstr "Malquías, uno de los orfebres, reparó hasta la casa de los servidores del templo y de los comerciantes, frente a la Puerta de Mifcad, y hasta la subida de la esquina."
 
-msgid "The wall is finished — in fifty-two days!"
-msgstr "¡La muralla está terminada — en cincuenta y dos días!"
+msgid "The wall is finished in fifty-two days!"
+msgstr "¡La muralla está terminada, en cincuenta y dos días!"
 
 msgid "Have you been out to the mount for branches?"
 msgstr "¿Ya fuiste al monte por ramas?"
@@ -1625,8 +1625,8 @@ msgstr "Cada uno de nosotros en su propia azotea, en una cabaña de ramas."
 msgid "Not since the days of Joshua has it been kept like this."
 msgstr "Desde los días de Josué no se había celebrado así."
 
-msgid "Walk the whole wall round — every gate stands."
-msgstr "Recorre toda la muralla — todas las puertas están en pie."
+msgid "Walk the whole wall round: every gate stands."
+msgstr "Recorre toda la muralla: todas las puertas están en pie."
 
 msgid "You shall take on the first day the fruit of majestic trees, branches of palm trees, and boughs of thick trees, and willows of the brook; and you shall rejoice before Yahweh your God seven days."
 msgstr "El primer día tomarán fruto de árboles majestuosos, ramas de palmera, ramas de árboles frondosos y sauces del arroyo, y se alegrarán delante de Jehová su Dios durante siete días."
@@ -1664,11 +1664,11 @@ msgstr "Callen, porque el día es santo. No se entristezcan."
 msgid "I repaired the wall from the door of Eliashib's house to its end."
 msgstr "Yo reparé la muralla desde la puerta de la casa de Eliasib hasta el final de ella."
 
-msgid "They're building shelters in the courts of God's house too — round the wall at the Sheep Gate."
-msgstr "También están haciendo cabañas en los patios de la casa de Dios — siguiendo la muralla, en la Puerta de las Ovejas."
+msgid "They're building shelters in the courts of God's house too, round the wall at the Sheep Gate."
+msgstr "También están haciendo cabañas en los patios de la casa de Dios, siguiendo la muralla, en la Puerta de las Ovejas."
 
-msgid "Out through the gate for branches — olive, myrtle, palm. Go to the mount."
-msgstr "Sal por la puerta a buscar ramas — olivo, mirto, palmera. Ve al monte."
+msgid "Out through the gate for branches: olive, myrtle, palm. Go to the mount."
+msgstr "Sal por la puerta a buscar ramas: olivo, mirto, palmera. Ve al monte."
 
 msgid "The gates stay open today. Nobody is coming to fight."
 msgstr "Hoy las puertas se quedan abiertas. Nadie viene a pelear."
@@ -1688,8 +1688,8 @@ msgstr "No abandonaremos la casa de nuestro Dios."
 msgid "Fire shall be kept burning on the altar continually; it shall not go out."
 msgstr "El fuego se mantendrá encendido sobre el altar continuamente; no se apagará."
 
-msgid "Go up into the court — there's a shelter to put up by the altar."
-msgstr "Sube al patio — hay una cabaña que levantar junto al altar."
+msgid "Go up into the court. There's a shelter to put up by the altar."
+msgstr "Sube al patio. Hay una cabaña que levantar junto al altar."
 
 msgid "What is this thing that you are doing? Will you rebel against the king?"
 msgstr "¿Qué es esto que están haciendo? ¿Se van a rebelar contra el rey?"
@@ -1712,8 +1712,8 @@ msgstr "Carta de Sanbalat"
 msgid "Day %d  ·  %s"
 msgstr "Día %d  ·  %s"
 
-msgid "A piece has fallen — raise it again!"
-msgstr "¡Cayó un tramo — vuelve a levantarlo!"
+msgid "A piece has fallen. Raise it again!"
+msgstr "¡Cayó un tramo. Vuelve a levantarlo!"
 
 msgid "The stretch stands!"
 msgstr "¡El tramo está en pie!"
@@ -1758,14 +1758,14 @@ msgstr "por el este"
 msgid "straight at the gate"
 msgstr "directo a la puerta"
 
-msgid "Up the valley — %s!"
-msgstr "¡Suben por el valle — %s!"
+msgid "Up the valley: %s!"
+msgstr "¡Suben por el valle: %s!"
 
-msgid "They're coming — %s!"
-msgstr "¡Ahí vienen — %s!"
+msgid "They're coming: %s!"
+msgstr "¡Ahí vienen: %s!"
 
-msgid "A brute at the wall — bring him down!"
-msgstr "¡Un bruto en la muralla — derríbenlo!"
+msgid "A brute at the wall! Bring him down!"
+msgstr "¡Un bruto en la muralla! Derríbenlo!"
 
 msgid "They're battering the wall!"
 msgstr "¡Están golpeando la muralla!"
@@ -1773,16 +1773,16 @@ msgstr "¡Están golpeando la muralla!"
 msgid "A brute! He'll batter the wall"
 msgstr "¡Un bruto! Va a golpear la muralla"
 
-msgid "Raiders — quick ones, mind the gaps!"
-msgstr "¡Saqueadores — son rápidos, cuidado con las brechas!"
+msgid "Raiders! Quick ones, mind the gaps!"
+msgstr "¡Saqueadores! Son rápidos, cuidado con las brechas!"
 
 msgid "One got into the city!  %d of %d"
 msgstr "¡Uno entró en la ciudad!  %d de %d"
 
-msgid "One got in — %d more and the city falls!"
-msgid_plural "One got in — %d more and the city falls!"
-msgstr[0] "Entró uno — ¡%d más y la ciudad cae!"
-msgstr[1] "Entró uno — ¡%d más y la ciudad cae!"
+msgid "One got in. %d more and the city falls!"
+msgid_plural "One got in. %d more and the city falls!"
+msgstr[0] "Entró uno. ¡%d más y la ciudad cae!"
+msgstr[1] "Entró uno. ¡%d más y la ciudad cae!"
 
 msgid "Day info"
 msgstr "Info del día"
@@ -1817,8 +1817,8 @@ msgstr "Coloca piedra más rápido"
 msgid "Walks faster with a load"
 msgstr "Camina más rápido con carga"
 
-msgid "Works timber faster — frames, doors, watch posts"
-msgstr "Trabaja la madera más rápido — armazones, puertas, puestos de guardia"
+msgid "Works timber faster: frames, doors, watch posts"
+msgstr "Trabaja la madera más rápido: armazones, puertas, puestos de guardia"
 
 msgid "Sword and sling hit harder"
 msgstr "Espada y honda golpean más fuerte"
@@ -1832,20 +1832,20 @@ msgstr "La obra es grande y la muralla larga, y los constructores están dispers
 msgid "Knack"
 msgstr "Destreza"
 
-msgid "Anyone can do any job — pick your trade when the crew gathers"
-msgstr "Cualquiera puede hacer cualquier trabajo — elige tu oficio cuando el equipo se reúna"
+msgid "Anyone can do any job. Pick your trade when the crew gathers"
+msgstr "Cualquiera puede hacer cualquier trabajo. Elige tu oficio cuando el equipo se reúna"
 
-msgid "Your trade — quicker hands at this work"
-msgstr "Tu oficio — manos más rápidas en esta obra"
+msgid "Your trade: quicker hands at this work"
+msgstr "Tu oficio: manos más rápidas en esta obra"
 
-msgid "Your trade — quicker with a load"
-msgstr "Tu oficio — más rápido con carga"
+msgid "Your trade: quicker with a load"
+msgstr "Tu oficio: más rápido con carga"
 
-msgid "Your trade — your blows land harder"
-msgstr "Tu oficio — tus golpes pegan más fuerte"
+msgid "Your trade: your blows land harder"
+msgstr "Tu oficio: tus golpes pegan más fuerte"
 
-msgid "Progress saved — Continue from the title screen"
-msgstr "Progreso guardado — continúa desde la pantalla de título"
+msgid "Progress saved. Continue from the title screen"
+msgstr "Progreso guardado. Continúa desde la pantalla de título"
 
 msgid "Progress is saved at the dawn of each new stretch."
 msgstr "El progreso se guarda al amanecer de cada nuevo tramo."
@@ -1883,14 +1883,14 @@ msgstr "Embestida"
 msgid "New at the %s"
 msgstr "Novedad en la %s"
 
-msgid "Scattered — tidy  [%s]"
-msgstr "Esparcido — ordena  [%s]"
+msgid "Scattered: tidy  [%s]"
+msgstr "Esparcido: ordena  [%s]"
 
-msgid "What you can do — let go of %s to carry on"
-msgstr "Qué puedes hacer — suelta %s para seguir"
+msgid "What you can do: let go of %s to carry on"
+msgstr "Qué puedes hacer: suelta %s para seguir"
 
-msgid "%s Drop it — beside a friend, it goes into their hands"
-msgstr "%s Suéltalo — junto a un amigo, pasa a sus manos"
+msgid "%s Drop it (beside a friend, it goes into their hands)"
+msgstr "%s Suéltalo (junto a un amigo, pasa a sus manos)"
 
 msgid "A beam goes quicker with a partner on the other end"
 msgstr "Una viga avanza más rápido con un compañero en el otro extremo"
@@ -1931,17 +1931,17 @@ msgstr "%s Trepar"
 msgid "%s Tidy the strewn pile"
 msgstr "%s Ordenar el montón esparcido"
 
-msgid "Saboteur — stop him before he strews the yard"
-msgstr "Saboteador — detenlo antes de que esparza el patio"
+msgid "Saboteur! Stop him before he strews the yard"
+msgstr "Saboteador! Detenlo antes de que esparza el patio"
 
-msgid "Don't go with him — just walk away"
-msgstr "No vayas con él — simplemente aléjate"
+msgid "Don't go with him. Just walk away"
+msgstr "No vayas con él. Simplemente aléjate"
 
-msgid "Watch the %s — %s"
-msgstr "Mira al %s — %s"
+msgid "Watch the %s: %s"
+msgstr "Mira al %s: %s"
 
-msgid "The %s pile was strewn — tidy it (%s at the pile)"
-msgstr "El montón de %s quedó esparcido — ordénalo (%s junto al montón)"
+msgid "The %s pile was strewn. Tidy it (%s at the pile)"
+msgstr "El montón de %s quedó esparcido. Ordénalo (%s junto al montón)"
 
 msgid "A new robe dye earned: %s — wear it from the menu"
 msgstr "Nuevo tinte de túnica ganado: %s — póntelo desde el menú"
@@ -1961,8 +1961,8 @@ msgstr "Continuar"
 msgid "%s · day %d"
 msgstr "%s · día %d"
 
-msgid "One's slipped in — the yard! He's after the piles"
-msgstr "Uno se coló — ¡el patio! Va tras los montones"
+msgid "One's slipped into the yard! He's after the piles"
+msgstr "Uno se coló. ¡el patio! Va tras los montones"
 
 msgid "At the gate! Torches!"
 msgstr "¡A la puerta! ¡Antorchas!"
@@ -1970,11 +1970,11 @@ msgstr "¡A la puerta! ¡Antorchas!"
 msgid "Beams take two"
 msgstr "Las vigas piden dos"
 
-msgid "Both ends at once — split up!"
-msgstr "¡Ambos extremos a la vez — dividíos!"
+msgid "Both ends at once. Split up!"
+msgstr "¡Ambos extremos a la vez. Dividíos!"
 
-msgid "Both ends — mind the lanes!"
-msgstr "¡Ambos extremos — cuidado con los callejones!"
+msgid "Both ends. Mind the lanes!"
+msgstr "¡Ambos extremos. Cuidado con los callejones!"
 
 msgid "Brutes for the gate!"
 msgstr "¡Brutos hacia la puerta!"
@@ -2003,8 +2003,8 @@ msgstr "Eliasib, el sumo sacerdote"
 msgid "Everyone gathers to the horn"
 msgstr "Todos se reúnen al son del cuerno"
 
-msgid "Everything they have — to the gate!"
-msgstr "¡Con todo lo que tienen — a la puerta!"
+msgid "Everything they have, to the gate!"
+msgstr "¡Con todo lo que tienen, a la puerta!"
 
 msgid "Ezra the scribe"
 msgstr "Esdras, el escriba"
@@ -2021,14 +2021,14 @@ msgstr "¡A media altura! Y ya se han enterado…"
 msgid "Hananiah the perfumer"
 msgstr "Hananías, el perfumista"
 
-msgid "Hang the doors — the crew walks through, the foe can't"
-msgstr "Cuelga las hojas — el equipo pasa, el enemigo no"
+msgid "Hang the doors: the crew walks through, the foe can't"
+msgstr "Cuelga las hojas: el equipo pasa, el enemigo no"
 
 msgid "Hanun of Zanoah"
 msgstr "Hanún de Zanoa"
 
-msgid "Heaps outside the wall hold twice as much — if you dare"
-msgstr "Los montones fuera del muro rinden el doble — si te atreves"
+msgid "Heaps outside the wall hold twice as much, if you dare"
+msgstr "Los montones fuera del muro rinden el doble, si te atreves"
 
 msgid "If a fox climbed up it, he would break down their stone wall."
 msgstr "Si una zorra subiera, derribaría su muro de piedra."
@@ -2036,8 +2036,8 @@ msgstr "Si una zorra subiera, derribaría su muro de piedra."
 msgid "Ignore him — he gives up and leaves"
 msgstr "Ignóralo — se rinde y se va"
 
-msgid "It mixes by itself — wait a moment"
-msgstr "Se mezcla sola — espera un momento"
+msgid "It mixes by itself. Wait a moment"
+msgstr "Se mezcla sola. Espera un momento"
 
 msgid "It stands up to the brutes twice as long"
 msgstr "Resiste a los brutos el doble de tiempo"
@@ -2069,8 +2069,8 @@ msgstr "Mezcla el mortero"
 msgid "More stone to each piece, four hands at the work"
 msgstr "Más piedra en cada pieza, cuatro manos en la obra"
 
-msgid "Narrow lanes — one at a time"
-msgstr "Callejones estrechos — de uno en uno"
+msgid "Narrow lanes: one at a time"
+msgstr "Callejones estrechos: de uno en uno"
 
 msgid "Nehemiah son of Azbuk"
 msgstr "Nehemías hijo de Azbuc"
@@ -2093,8 +2093,8 @@ msgstr "Norte arriba"
 msgid "Olive green"
 msgstr "Verde oliva"
 
-msgid "Out of the dark — both ends!"
-msgstr "¡Salen de la oscuridad — por ambos extremos!"
+msgid "Out of the dark, both ends!"
+msgstr "¡Salen de la oscuridad, por ambos extremos!"
 
 msgid "Pass loads over rather than queue"
 msgstr "Pasad las cargas de mano en mano en vez de hacer cola"
@@ -2108,8 +2108,8 @@ msgstr "Casas de sacerdotes entre el patio y el muro"
 msgid "Quiet in the valley today."
 msgstr "Hoy hay calma en el valle."
 
-msgid "Quiet ones — after the yard!"
-msgstr "¡Los sigilosos — van por el patio!"
+msgid "Quiet ones, after the yard!"
+msgstr "¡Los sigilosos, van por el patio!"
 
 msgid "Raiders on the haul road!"
 msgstr "¡Saqueadores en el camino de acarreo!"
@@ -2153,11 +2153,11 @@ msgstr "El enemigo sale de la oscuridad"
 msgid "The gatekeeper"
 msgstr "El portero"
 
-msgid "The last of it — hold on!"
-msgstr "¡Lo último — resistid!"
+msgid "The last of it. Hold on!"
+msgstr "¡Lo último. Resistid!"
 
-msgid "The last stone — all of them at once!"
-msgstr "¡La última piedra — todos a la vez!"
+msgid "The last stone! All of them at once!"
+msgstr "¡La última piedra! Todos a la vez!"
 
 msgid "The long haul"
 msgstr "El largo acarreo"
@@ -2198,14 +2198,14 @@ msgstr "¡Probarán la puerta antes de que cuelguen sus hojas!"
 msgid "They're all coming!"
 msgstr "¡Vienen todos!"
 
-msgid "They're at the gate — hold it!"
-msgstr "¡Están en la puerta — resistid!"
+msgid "They're at the gate! Hold it!"
+msgstr "¡Están en la puerta! Resistid!"
 
 msgid "They've all come together!"
 msgstr "¡Se han juntado todos!"
 
-msgid "Torches light the way — each worker has a lamp"
-msgstr "Las antorchas alumbran el camino — cada obrero lleva una lámpara"
+msgid "Torches light the way: each worker has a lamp"
+msgstr "Las antorchas alumbran el camino: cada obrero lleva una lámpara"
 
 msgid "Tyrian purple"
 msgstr "Púrpura de Tiro"
@@ -2219,11 +2219,11 @@ msgstr "Uziel, el orfebre"
 msgid "Wall across"
 msgstr "Muro a lo ancho"
 
-msgid "Watch the carpenter — two to a beam"
-msgstr "Mira al carpintero — dos por viga"
+msgid "Watch the carpenter: two to a beam"
+msgstr "Mira al carpintero: dos por viga"
 
-msgid "Water close at hand — mortar comes quickly"
-msgstr "Agua a mano — el mortero sale rápido"
+msgid "Water close at hand: mortar comes quickly"
+msgstr "Agua a mano: el mortero sale rápido"
 
 msgid "What are these feeble Jews doing?"
 msgstr "¿Qué hacen estos débiles judíos?"
@@ -2264,11 +2264,11 @@ msgstr "Piedras viejas, vigas quemadas"
 msgid "Old and burned"
 msgstr "Viejo y quemado"
 
-msgid "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built"
+msgid "Not every stretch starts bare: old courses still stand in places, and burned timbers must be pulled down before anything is built"
 msgstr "No todos los tramos empiezan vacíos: en algunos aún quedan hiladas antiguas, y las vigas quemadas hay que derribarlas antes de construir"
 
-msgid "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows"
-msgstr "La Muralla Ancha: levanten la cara exterior, luego la interior y rellenen entre ambas — caben cuatro trabajando, y recibe la mitad de los golpes"
+msgid "The Broad Wall: raise the outer face, then the inner, then fill between. Room for four at the work, and it takes half the blows"
+msgstr "La Muralla Ancha: levanten la cara exterior, luego la interior y rellenen entre ambas. Caben cuatro trabajando, y recibe la mitad de los golpes"
 
 msgid "“The work is great and large.” Choose how the crew meets this stretch; each way has its price. The crew's pick decides; the host breaks a tie."
 msgstr "“La obra es grande y extensa.” Elijan cómo afrontará el equipo este tramo; cada camino tiene su precio. Decide la mayoría; el anfitrión desempata."
@@ -2363,34 +2363,34 @@ msgstr "Los puestos de guardia están en pie desde el amanecer, con piedras"
 msgid "Sound the horn [horn] — a ring marks the spot"
 msgstr "Toca el cuerno [horn] — un círculo marca el lugar"
 
-msgid "Sound the horn [%s] — a ring marks the spot"
-msgstr "Toca el cuerno [%s] — un círculo marca el lugar"
+msgid "Sound the horn [%s]: a ring marks the spot"
+msgstr "Toca el cuerno [%s]: un círculo marca el lugar"
 
 msgid "Gather in the ring: blows land harder there"
 msgstr "Reúnanse en el círculo: allí los golpes pegan más fuerte"
 
-msgid "Horn — rally the crew (stronger blows in its ring)"
-msgstr "Cuerno — reúne al equipo (golpes más fuertes en su círculo)"
+msgid "Horn: rally the crew (stronger blows in its ring)"
+msgstr "Cuerno: reúne al equipo (golpes más fuertes en su círculo)"
 
-msgid "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder"
-msgstr "Suben por el valle en oleadas — {horn} toca el cuerno: reúnanse en su círculo y sus golpes serán más fuertes"
+msgid "They come up the valley in surges. {horn} sounds the horn: gather in its ring and your blows land harder"
+msgstr "Suben por el valle en oleadas. {horn} toca el cuerno: reúnanse en su círculo y sus golpes serán más fuertes"
 
-msgid "[%s] Sound the horn — whoever stands in its ring strikes harder"
-msgstr "[%s] Toca el cuerno — quien esté en su círculo golpea más fuerte"
+msgid "[%s] Sound the horn: whoever stands in its ring strikes harder"
+msgstr "[%s] Toca el cuerno: quien esté en su círculo golpea más fuerte"
 
-msgid "RALLY — stronger blows here"
-msgstr "REUNIÓN — golpes más fuertes aquí"
+msgid "RALLY: stronger blows here"
+msgstr "REUNIÓN: golpes más fuertes aquí"
 
-msgid "Rallied — your blows land harder here"
-msgstr "¡Reunidos! — aquí tus golpes pegan más fuerte"
+msgid "Rallied: your blows land harder here"
+msgstr "¡Reunidos!: aquí tus golpes pegan más fuerte"
 
-msgid "They'll slip in tonight — a watch on the wall!"
+msgid "They'll slip in tonight. A watch on the wall!"
 msgstr "Se colarán esta noche. ¡Guardia en el muro!"
 
 msgid "But we made our prayer to our God, and set a watch against them day and night, because of them."
 msgstr "Pero oramos a nuestro Dios y, por causa de ellos, pusimos guardia contra ellos de día y de noche."
 
-msgid "The watch held — they crept off in the dark."
+msgid "The watch held. They crept off in the dark."
 msgstr "La guardia resistió: se esfumaron en la oscuridad."
 
 msgid "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work."
@@ -2399,7 +2399,7 @@ msgstr "Cuando nuestros enemigos supieron que lo sabíamos y que Dios había fru
 msgid "The watch held in the night"
 msgstr "La guardia resistió de noche"
 
-msgid "In the night they came — a stretch pulled down, the yard in rubble!"
+msgid "In the night they came: a stretch pulled down, the yard in rubble!"
 msgstr "Vinieron de noche: un tramo derribado y el patio hecho escombros."
 
 msgid "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall."
@@ -2411,7 +2411,7 @@ msgstr "Derribado de noche"
 msgid "A fox! Tobiah said one would break our wall down…"
 msgstr "¡Un zorro! Tobías dijo que uno derribaría nuestro muro…"
 
-msgid "The hungry went back to their fields — we're short of hands."
+msgid "The hungry went back to their fields. We're short of hands."
 msgstr "Los hambrientos volvieron a sus campos: faltan manos."
 
 msgid "Yet now our flesh is as the flesh of our brothers, our children as their children."
@@ -2429,7 +2429,7 @@ msgstr "Tú serías su rey, según estas palabras."
 msgid "A rumour weakens every hand"
 msgstr "Un rumor debilita todas las manos"
 
-msgid "“No such things are done” — the letter is turned away."
+msgid "“No such things are done.” The letter is turned away."
 msgstr "«Nada de eso ocurre»: la carta es rechazada."
 
 msgid "There are no such things done as you say, but you imagine them out of your own heart."
@@ -2438,7 +2438,7 @@ msgstr "No se ha hecho nada de lo que dices; tú lo inventas en tu propio coraz�
 msgid "The letter answered"
 msgstr "La carta fue respondida"
 
-msgid "The rumour dies down — strengthen our hands!"
+msgid "The rumour dies down. Strengthen our hands!"
 msgstr "El rumor se apaga: ¡fortalece nuestras manos!"
 
 msgid "An open letter: “You would be their king”"
@@ -2447,7 +2447,7 @@ msgstr "Una carta abierta: «Serías su rey»"
 msgid "Reading the letter…"
 msgstr "Leyendo la carta…"
 
-msgid "A man of the temple is asking for you — it's a trap!"
+msgid "A man of the temple is asking for you. It's a trap!"
 msgstr "Un hombre del templo pregunta por ti: ¡es una trampa!"
 
 msgid "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple."
@@ -2471,7 +2471,7 @@ msgstr "Lo contrataron para que yo tuviera miedo, lo hiciera y pecara."
 msgid "One hid in the temple"
 msgstr "Uno se escondió en el templo"
 
-msgid "Hide in the temple — they come tonight to kill you"
+msgid "Hide in the temple. They come tonight to kill you"
 msgstr "Escóndete en el templo: vienen esta noche a matarte"
 
 msgid "Going to hide in the temple…"
@@ -2510,7 +2510,7 @@ msgstr "Litografía"
 msgid "Cel"
 msgstr "Cel"
 
-msgid "Hold on — I'm coming!"
+msgid "Hold on, I'm coming!"
 msgstr "¡Aguanta, ya voy!"
 
 msgid "I've got your back!"
@@ -2525,7 +2525,7 @@ msgstr "Yo tomo el otro extremo."
 msgid "Foes at the wall!"
 msgstr "¡Enemigos en el muro!"
 
-msgid "I've fallen — help me up!"
+msgid "I've fallen! Help me up!"
 msgstr "¡Caí, levántame!"
 
 msgid "Thank you, friend!"
@@ -2546,13 +2546,13 @@ msgstr "De las aldeas: «Por dondequiera que te vuelvas, nos atacarán»"
 msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
 msgstr "Semaías, encerrado en su casa: «Reunámonos en la casa de Dios»"
 
-msgid "I am doing a great work — I can't come down!"
+msgid "I am doing a great work. I can't come down!"
 msgstr "¡Estoy haciendo una gran obra, no puedo bajar!"
 
 msgid "No such things are done as you say!"
 msgstr "¡No ha sucedido nada de lo que dices!"
 
-msgid "He points to where they'll come — watch there!"
+msgid "He points to where they'll come. Watch there!"
 msgstr "Señala por dónde vendrán: ¡vigilen allí!"
 
 msgid "All quiet on the road for now"
@@ -2561,10 +2561,10 @@ msgstr "Por ahora, el camino está tranquilo"
 msgid "Hide in the temple? {interact} go with him, or walk on"
 msgstr "¿Esconderte en el templo? {interact} ir con él, o seguir tu camino"
 
-msgid "He talks and talks — your work goes slower. {interact} to answer him"
+msgid "He talks and talks. Your work goes slower. {interact} to answer him"
 msgstr "Habla y habla: tu trabajo va más lento. {interact} para responderle"
 
-msgid "Messengers will call you down to Ono — answer them and keep working"
+msgid "Messengers will call you down to Ono. Answer them and keep working"
 msgstr "Llegarán mensajeros a llamarte a Ono: respóndeles y sigue trabajando"
 
 msgid "Wave in %d s · %s"
@@ -2591,8 +2591,8 @@ msgid_plural "%d raiders"
 msgstr[0] "%d asaltante"
 msgstr[1] "%d asaltantes"
 
-msgid "Wave called in early — the crew is spurred"
-msgstr "Ataque anunciado antes de tiempo — la cuadrilla está animada"
+msgid "Wave called in early: the crew is spurred"
+msgstr "Ataque anunciado antes de tiempo: la cuadrilla está animada"
 
 
 msgid "Hurt? Drink at the well"
@@ -2607,11 +2607,11 @@ msgstr "Beber"
 msgid "Set the load down first"
 msgstr "Deja la carga primero"
 
-msgid "Set it down first — {drop}, then {interact} to drink"
-msgstr "Déjala primero — {drop}, luego {interact} para beber"
+msgid "Set it down first: {drop}, then {interact} to drink"
+msgstr "Déjala primero: {drop}, luego {interact} para beber"
 
-msgid "%s Drink — hands free, stand still to mend"
-msgstr "%s Beber — manos libres, quieto para sanar"
+msgid "%s Drink (hands free, stand still to mend)"
+msgstr "%s Beber (manos libres, quieto para sanar)"
 
 msgid "Set the load down, then drink at the well to mend"
 msgstr "Deja la carga y bebe en el pozo para sanar"

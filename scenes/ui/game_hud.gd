@@ -44,8 +44,8 @@ const CONTROLS := [
 	["interact", "Pick up · deliver · build"],
 	["drop", "Drop"],
 	["dash", "Dash"],
-	["throw", "Sling — charge, then throw"],
-	["horn", "Horn — rally the crew (stronger blows in its ring)"],   # only in sections with the horn
+	["throw", "Sling: charge, then throw"],
+	["horn", "Horn: rally the crew (stronger blows in its ring)"],   # only in sections with the horn
 	["reveal", "Hold: what can I do here?"],
 	["pause", "Menu"],   # "Pause · menu" when playing alone (see _refresh_controls)
 ]
@@ -134,7 +134,7 @@ func _ready() -> void:
 	var lens := ActionLens.new()
 	$Root.add_child(lens)
 	$Root.move_child(lens, banner.get_index())
-	add_child(BotDemo.new())   # "Watch the carpenter — two to a beam"
+	add_child(BotDemo.new())   # "Watch the carpenter: two to a beam"
 	if NetworkManager.in_steam_lobby():
 		_build_invite_panel()
 	breach_pips.count = GameState.MAX_BREACHES
@@ -178,7 +178,7 @@ func _ready() -> void:
 	_pad_lost_note = Label.new()
 	_pad_lost_note.theme_type_variation = &"Caption"
 	_pad_lost_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_pad_lost_note.text = "Controller disconnected — reconnect it to carry on"
+	_pad_lost_note.text = "Controller disconnected. Reconnect it to carry on"
 	_pad_lost_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pad_lost_note.visible = false
 	$Root/PauseMenu/Center/Modal/VBox.add_child(_pad_lost_note)
@@ -270,7 +270,7 @@ func _build_gamepad_begin() -> void:
 		invite.theme_type_variation = &"GhostButton"
 		invite.pressed.connect(func():
 			if not NetworkManager.open_invite_overlay():
-				invite.text = "Overlay off — use the Crew panel"
+				invite.text = "Overlay off. Use the Crew panel"
 				invite.disabled = true)
 		vb.add_child(invite)
 		vb.move_child(invite, $Root/PauseMenu/Center/Modal/VBox/Settings.get_index())
@@ -419,7 +419,7 @@ func _refresh_sun() -> void:
 		_sun_warned = true
 		Sfx.play("alert")
 		_flash(_sun_row, Color(1.0, 0.72, 0.6))
-		_show_banner(tr("The sun is low"), tr("Finish before the stars appear — the %s must stand tonight") % tr(GameState.get_current_section()["name"]) \
+		_show_banner(tr("The sun is low"), tr("Finish before the stars appear: the %s must stand tonight") % tr(GameState.get_current_section()["name"]) \
 			if GameState.last_day_of_section() else tr("What isn't built by the stars waits for tomorrow"), 2.2)
 
 func _process(delta: float) -> void:
@@ -489,22 +489,22 @@ func _next_text() -> String:
 	if me == null or not is_instance_valid(me):
 		return ""
 	if me.downed:
-		return "Down — a crewmate has to help you up"
+		return "Down. A crewmate has to help you up"
 	if Time.get_ticks_msec() < _knocked_until:
-		return "A finished piece was knocked down — build it back up"
+		return "A finished piece was knocked down. Build it back up"
 	var left := GameState.targets_total - GameState.targets_done
 	# A saboteur scattered a pile: nothing comes from it until it's gathered up
 	if me.carried_kind.is_empty():
 		var mess := get_tree().get_first_node_in_group("scattered_piles")
 		if mess != null:
-			return tr("The %s pile is scattered — nothing to take until you gather it up (%s at the pile)") % [_material_name(mess.kind), InputMode.key("interact")]
+			return tr("The %s pile is scattered. Nothing to take until you gather it up (%s at the pile)") % [_material_name(mess.kind), InputMode.key("interact")]
 	var site := SiteFocus.site()
 	if site == null:
 		# Only "done" when it is (playtest 2: players thought the wall stood and waited
 		# for a day end that never came) — a piece knocked back down still counts
 		if left <= 0:
 			return "The stretch stands"
-		return tr_n("%d piece still to finish — look for the amber footing", "%d pieces still to finish — look for the amber footings", left) % left
+		return tr_n("%d piece still to finish. Look for the amber footing", "%d pieces still to finish. Look for the amber footings", left) % left
 	var line := _site_line(site, me)
 	if left == 1 and not line.is_empty():
 		return tr("Last piece!  %s") % line
@@ -517,9 +517,9 @@ func _site_line(site: Node3D, me: Player) -> String:
 	if not carry.is_empty():
 		if SiteFocus.matches_carry():
 			return (tr("Take the %s to the gate") if at_gate else tr("Take the %s to the wall")) % _material_name(carry)
-		return tr("Nothing needs %s now — drop it (%s)") % [_material_name(carry), InputMode.key("drop")]
+		return tr("Nothing needs %s now. Drop it (%s)") % [_material_name(carry), InputMode.key("drop")]
 	if GameState.active_build and site.can_build():
-		return (tr("Build it up — %s at the gate") if at_gate else tr("Build it up — %s at the wall")) % InputMode.key("interact")
+		return (tr("Build it up: %s at the gate") if at_gate else tr("Build it up: %s at the wall")) % InputMode.key("interact")
 	var need: String = site.next_need()
 	if need.is_empty():
 		return ""
@@ -551,7 +551,7 @@ func _refresh_progress() -> void:
 		GameState.Phase.STORY:
 			phase_label.text = ""
 		GameState.Phase.DAWN:
-			phase_label.text = "Dawn — ready the workers"
+			phase_label.text = "Dawn. Ready the workers"
 		GameState.Phase.DUSK:
 			phase_label.text = "The day's work is done"
 		GameState.Phase.WON:
@@ -609,13 +609,13 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			if GameState.sun_total > 0.0:
 				var pos := GameState.day_in_section(GameState.current_day)
 				if pos.x == 0:
-					sub += "\n" + tr_n("Raise the whole stretch — %d day before the stars", "Raise the whole stretch — %d days before the stars", pos.y) % pos.y
+					sub += "\n" + tr_n("Raise the whole stretch: %d day before the stars", "Raise the whole stretch: %d days before the stars", pos.y) % pos.y
 				elif pos.x == pos.y - 1:
-					sub += "\n" + tr("The last day of this stretch — it must stand before the stars appear")
+					sub += "\n" + tr("The last day of this stretch: it must stand before the stars appear")
 				else:
-					sub += "\n" + tr("%d of %d stand — %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
+					sub += "\n" + tr("%d of %d stand, %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
 			if first_day and GameState.dawn_saved():
-				sub += "\n" + tr("Progress saved — Continue from the title screen")
+				sub += "\n" + tr("Progress saved. Continue from the title screen")
 			if not GameState.free_play():
 				_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
@@ -855,7 +855,7 @@ func _build_vote(won: bool, vb: Control) -> void:
 		_vote_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_vote_note.add_theme_color_override("font_color", UiStyle.INK_MUTED)
 		vb.add_child(_vote_note)
-	_vote_note.text = "" if _solo() else tr("The host's pick decides — or most of the crew")
+	_vote_note.text = "" if _solo() else tr("The host's pick decides (or most of the crew)")
 
 ## DayDirector.votes_changed: how many want what
 func set_votes(votes: Dictionary) -> void:
@@ -866,7 +866,7 @@ func set_votes(votes: Dictionary) -> void:
 	for choice: String in _vote_buttons:
 		var n := votes.values().count(choice)
 		if n > 0:
-			lines.append(tr("%s — %d of %d") % [tr(_vote_buttons[choice].text), n, people])
+			lines.append(tr("%s: %d of %d") % [tr(_vote_buttons[choice].text), n, people])
 	var mine: String = votes.get(multiplayer.get_unique_id(), "")
 	for choice: String in _vote_buttons:
 		_vote_buttons[choice].disabled = not mine.is_empty()
@@ -880,7 +880,7 @@ func _replay_end(won: bool, vb: Control, stats: Control) -> void:
 	if won:
 		vb.get_node("Title").text = tr("The %s stands") % tr(sec["name"])
 		var got := GameState.mark_count(GameState.section_marks[i])
-		vb.get_node("Message").text = (tr("A new best for this stretch — %d of 3 marks.") if GameState.rating_improved 			else tr("%d of 3 marks. Your best here stays as it was.")) % got
+		vb.get_node("Message").text = (tr("A new best for this stretch: %d of 3 marks.") if GameState.rating_improved 			else tr("%d of 3 marks. Your best here stays as it was.")) % got
 	elif GameState.loss_reason == "stars":
 		vb.get_node("Message").text = tr("The stretch was not finished by nightfall. Try it again.")
 	else:
@@ -927,12 +927,12 @@ func show_tally(stats: Dictionary) -> void:
 	var section := GameState.get_current_section()
 	var title := tr("Day %d complete") % day
 	# A clean day says nothing; only a breach earns a line
-	var sub := "" if stats["breaches"] == 0 		else tr_n("%d slipped through — but the wall stands.", "%d slipped through — but the wall stands.", stats["breaches"]) % stats["breaches"]
+	var sub := "" if stats["breaches"] == 0 		else tr_n("%d slipped through, but the wall stands.", "%d slipped through, but the wall stands.", stats["breaches"]) % stats["breaches"]
 	var unfinished: int = stats.get("unfinished", 0)
 	if unfinished > 0:
 		# The stars came first: the day ends, the rest waits for tomorrow
 		title = tr("Nightfall on day %d") % day
-		sub = tr_n("The stars appeared — %d wall piece left for tomorrow.", "The stars appeared — %d wall pieces left for tomorrow.", unfinished) % unfinished
+		sub = tr_n("The stars appeared: %d wall piece left for tomorrow.", "The stars appeared: %d wall pieces left for tomorrow.", unfinished) % unfinished
 	# The whole section is done (rated) — say so, and how many days it had to spare
 	elif stats.has("marks"):
 		title = tr("The %s stands") % tr(section["name"])

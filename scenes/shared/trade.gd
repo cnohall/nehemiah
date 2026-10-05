@@ -19,7 +19,7 @@ const HIT_MULT   := 1.6    # overseer: sword and sling (a full sling fells a sco
 const ABOUT := [
 	"Lays stone faster",
 	"Walks faster with a load",
-	"Works timber faster — frames, doors, watch posts",
+	"Works timber faster: frames, doors, watch posts",
 	"Sword and sling hit harder",
 ]
 

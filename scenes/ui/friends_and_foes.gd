@@ -274,7 +274,7 @@ func _fill_extra(e: Dictionary, known: bool, where: String) -> void:
 		row.add_child(_label(&"Body", 17, UiStyle.INK, false, Trade.ABOUT[e["slot"]]))
 		_extra.add_child(row)
 		_extra.add_child(_label(&"Eyebrow", 13, UiStyle.INK_MUTED, false,
-			"Anyone can do any job — pick your trade when the crew gathers"))
+			"Anyone can do any job. Pick your trade when the crew gathers"))
 	if e.has("enemy"):
 		var t := _enemy_type(e)
 		# Against the fastest, toughest, hardest-hitting of the three

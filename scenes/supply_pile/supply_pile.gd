@@ -223,7 +223,7 @@ func _show_scatter() -> void:
 	_strewn.visible = scattered
 	_visual.visible = not scattered
 	if scattered:
-		count_label.text = tr("Scattered — gather up  [%s]") % InputMode.key("interact")
+		count_label.text = tr("Scattered: gather up  [%s]") % InputMode.key("interact")
 		count_label.pulse = true
 	else:
 		count_label.pulse = false

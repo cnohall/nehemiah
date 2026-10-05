@@ -35,18 +35,18 @@ func _ready() -> void:
 ## The three captions for a twist (English; translated when drawn)
 static func captions(t: String) -> Array:
 	match t:
-		"doors": return ["Raise both pillars of the gate", "Then bring timber to the gap", "Hang the doors — the crew walks through, the foe can't"]
+		"doors": return ["Raise both pillars of the gate", "Then bring timber to the gap", "Hang the doors: the crew walks through, the foe can't"]
 		"beams": return ["A beam dragged alone goes slowly", "A friend takes the other end [%s]" % "interact", "Carry it together to the wall"]
-		"salvage": return ["No stone pile here", "Dig the stone out of the rubble heaps", "Heaps outside the wall hold twice as much — if you dare"]
-		"mixing": return ["Lime and water into the trough", "It mixes by itself — wait a moment", "Carry the mortar to the wall"]
-		"thick": return ["The Broad Wall is built in two faces", "Outer face first, then the inner — four hands at the work", "Filled and mortared, it takes half the blows"]
+		"salvage": return ["No stone pile here", "Dig the stone out of the rubble heaps", "Heaps outside the wall hold twice as much, if you dare"]
+		"mixing": return ["Lime and water into the trough", "It mixes by itself. Wait a moment", "Carry the mortar to the wall"]
+		"thick": return ["The Broad Wall is built in two faces", "Outer face first, then the inner: four hands at the work", "Filled and mortared, it takes half the blows"]
 		"ruins": return ["Some stretches still stand: only the mortar is wanted", "Some are burned: pull the charred timbers down [%s]" % "interact", "Then build as usual"]
-		"horn": return ["They come up the valley in surges", "Sound the horn [%s] — a ring marks the spot" % "horn", "Gather in the ring: blows land harder there"]
-		"haul": return ["The yard is far from the wall", "Drop loads on the relay mat halfway — a porter carries them on", "Or hand a load to a friend [%s]" % "drop"]
-		"spring": return ["The pool is by the wall", "Water close at hand — mortar comes quickly", "A quiet stretch: catch your breath"]
-		"night": return ["Night falls on the work", "Torches light the way — each worker has a lamp", "The foe comes out of the dark"]
-		"cramped": return ["Priests' houses between yard and wall", "Narrow lanes — one at a time", "Pass loads over rather than queue"]
-		"schemes": return ["A messenger calls you down to Ono", "While he talks at you, your work goes slower — answer him [%s]" % "interact", "A neighbour in plain wool brings a warning: hear him"]
+		"horn": return ["They come up the valley in surges", "Sound the horn [%s]: a ring marks the spot" % "horn", "Gather in the ring: blows land harder there"]
+		"haul": return ["The yard is far from the wall", "Drop loads on the relay mat halfway: a porter carries them on", "Or hand a load to a friend [%s]" % "drop"]
+		"spring": return ["The pool is by the wall", "Water close at hand: mortar comes quickly", "A quiet stretch: catch your breath"]
+		"night": return ["Night falls on the work", "Torches light the way: each worker has a lamp", "The foe comes out of the dark"]
+		"cramped": return ["Priests' houses between yard and wall", "Narrow lanes: one at a time", "Pass loads over rather than queue"]
+		"schemes": return ["A messenger calls you down to Ono", "While he talks at you, your work goes slower. Answer him [%s]" % "interact", "A neighbour in plain wool brings a warning: hear him"]
 	return []
 
 func _draw() -> void:
