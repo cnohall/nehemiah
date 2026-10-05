@@ -226,7 +226,7 @@ Three rules, each on by default and each switched off from the command line to A
 5. Scatters **two piles at most**, then flees back out the way he came (existing flee: `FLEE_SPEED`, off at `FLEE_Z`). Never counts as a breach: the harm he does is lost time
 6. **Doesn't fight.** He ignores workers (no aggro), doesn't batter walls, has no weapon. A worker in reach just gets dodged around
 
-**Tidying a scattered pile:** the Neh. 4:17 cost. Stand at the pile and press [E] / A ("Tidy [E]"), then work it like a wall stage (§5.4): 2 s for one worker, extra hands +70%, moving or a hit stops it, progress is kept. Tidied → the pile works again. A scattered pile's tag pulses "Scattered — tidy [E]" for everyone.
+**Gathering up a scattered pile:** the Neh. 4:17 cost. Stand at the pile and press [E] / A ("Gather up [E]"), then work it like a wall stage (§5.4): 2 s for one worker, extra hands +70%, moving or a hit stops it, progress is kept. Gathered up → the pile works again. A scattered pile's tag pulses "Scattered — gather up [E]" for everyone.
 
 **Stats:**
 | Speed | Health | Damage | Knockback felt |
@@ -246,18 +246,18 @@ Three rules, each on by default and each switched off from the command line to A
 **Tutorial:** none. The watchman call, the pointer and the "Tidy [E]" tag teach it the first time (as the brute's first appearance does today).
 
 **Build notes:**
-- `SupplyPile`: `scattered` bool, synced like `count`; `request_pickup()` refuses while scattered; `tidy_progress` synced for the build-style bar. A strewn-loads mesh layer toggled on the pad
+- `SupplyPile`: `scattered` bool, synced like `count`; `request_pickup()` refuses while scattered; `tidy_progress` synced for the build-style bar. A scattered-loads mesh layer toggled on the pad
 - `enemy.gd`: a saboteur branch in `_pick_target` (pile, not player/wall), the climb as a timed state, `_fleeing` reused
 - `WaveManager`: its own timer for saboteurs, apart from the trickle and the waves
 - A/B switch `-- --no-saboteur`, like `--no-waves`. Debug `-- --day=6` to see one on day 1 of the run
-- Test `tools/saboteur_test.gd`: gets in through a gap, scatters the right pile, pickups refused, tidy restores, flees after two, climbs when there's no gap, knocked off by a hit
+- Test `tools/saboteur_test.gd`: gets in through a gap, scatters the right pile, pickups refused, gathering up restores, flees after two, climbs when there's no gap, knocked off by a hit
 - New strings English only at first; run the i18n extract for es / pt_BR / de / ko
 
-**Not in v1:** stealing dropped loads, tipping the mortar trough, setting fires (Neh 4:11 says "cause the work to cease", not burn it), tidying while carrying.
+**Not in v1:** stealing dropped loads, tipping the mortar trough, setting fires (Neh 4:11 says "cause the work to cease", not burn it), gathering up while carrying.
 
 **Watch in playtests:**
 - Does one person end up parked in the yard all day? (He should be something that interrupts you, not a post to stand at.) If so: longer interval, or he only comes in during waves
-- Is 2 s of tidying felt, or ignored? Is the climb readable enough to stop before he's over?
+- Is 2 s of gathering up felt, or ignored? Is the climb readable enough to stop before he's over?
 - Solo: is it a fair tax, or does it wreck the sun-clock par? Tune `sun_slack` against it, not him
 - Does it hide the archer's job (guarding builders) when both are in? Archer spec waits for this playtest
 
@@ -304,7 +304,7 @@ Three rules, each on by default and each switched off from the command line to A
 **Built (each part can be cut on its own after playtest 3):**
 - **Continue** (`GameState.campaign_save`): the run is saved at the dawn of each new stretch after the first, with its day, marks and chronicle, and cleared on the win. The title shows "Continue — Broad Wall, day 13" first, and Host becomes "New Game". "Try the stretch again" restores the marks and map the same way. A new run doesn't overwrite the save until it reaches its second stretch. Test: `tools/continue_test.gd`
 - **Twist cards** (`TwistCard`, a StoryData slide per twist new to the section, after its card): three drawn panels with a caption each, e.g. *a beam dragged alone goes slowly → a friend takes the other end [E] → carry it together*. They're part of the story, so the ready check makes the whole crew see them before the work starts. Shots: `tools/twist_card_shots.gd`
-- **What can I do here?** (`ActionLens`): hold [Tab] or View (rebindable `reveal`). Everything within 16 m that answers a press gets a chip (take stone, work it up, help up, take the other end, hand over, climb over, tidy, don't go with him), plus a chip on yourself for the other buttons. It's listed on the controls card
+- **What can I do here?** (`ActionLens`): hold [Tab] or View (rebindable `reveal`). Everything within 16 m that answers a press gets a chip (take stone, work it up, help up, take the other end, hand over, climb over, gather up, don't go with him), plus a chip on yourself for the other buttons. It's listed on the controls card
 - **Beam prompt:** while one worker drags a beam alone, its free end says "Take the other end [E]" on every other free worker's screen. Help reach went up from 2.0 to 3.2 m so the end itself is in reach
 - **Bot demo** (`BotDemo`): the first time in a section that a bot does something the section brought (holds a beam end, carries lime or water, digs rubble, uses the relay mat), it gets a callout "Watch the carpenter — two to a beam" and an edge pointer
 - **Saboteur**: built, spec and tests in §5.9
@@ -454,13 +454,13 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 | Thing | Anchor | Section it arrives | What it does | What it costs |
 |---|---|---|---|---|
 | **Spear from a rack** | "half of them held the spears" (4:16), "with one hand… and with the other held his weapon" (4:17) | Valley Gate (6), with the horn | Two-handed, **reach** (≈2× sword): a thrust holds a foe at arm's length, so one spear-holder can keep a gap or a ladder clear while builders work behind them. Every thrust shoves like a half-charged stone. It doesn't replace the sword's turned blow (§5.16); its job is to keep foes back, not to knock them down | Can't pick up loads or work the wall while holding it. Put it back on the rack (or drop it) to build. The crew splits into workers and guards, which is 4:16 as play |
-| **Donkey** | Nehemiah's animal on the night ride (2:12, 2:14) | Gate of the Ash Heaps (7), the long haul | A tethered donkey follows whoever leads it and carries 3 loads (any mix) in panniers. Unload it at the wall | Slow (≈60% walk speed). A raider or a horn blast spooks it: it bolts and spills its loads (the saboteur's scatter + tidy). Escort it or lose the trip. Only one donkey per section |
+| **Donkey** | Nehemiah's animal on the night ride (2:12, 2:14) | Gate of the Ash Heaps (7), the long haul | A tethered donkey follows whoever leads it and carries 3 loads (any mix) in panniers. Unload it at the wall | Slow (≈60% walk speed). A raider or a horn blast spooks it: it bolts and spills its loads (the saboteur's scatter + gather up). Escort it or lose the trip. Only one donkey per section |
 | **Daughters of Shallum** | "Shallum… repaired, he and his daughters" (3:12) | Tower of the Ovens (5), next to 3:12 | A **household helper** from the city: a call at the gate brings out one helper who works a single unit (bot work speed, no fighting) for the rest of the day | Foes go for helpers first, and a helper who is hit goes home. Someone has to stand guard. Ties into Fall 1 (4:10 weariness) as a rise |
 | **Water jar** | Fountain Gate water, the burden-bearers' weariness (4:10) | Fountain Gate (8) | Set the jar on a spot: crew within 4 m work ×1.25 for 30 s, then it is empty. Refill it at the pool | One trip from the pool. **Overlaps the horn** (a buff in a ring), so build it last, and only if the horn doesn't already fill this role |
 
 **Cut:** builder's tools as pickups (overlaps trades), medkits (§5.3 backlog; the water jar would replace that row if it is ever built), anything that lasts past one day.
 
-**Why these four:** each one already has a system to sit on. Spear = `Player` held-item state + a rack (watch post art); donkey = `Fox`/`Passersby` follow + `SupplyPile` scatter/tidy; helpers = bot worker + messenger "led away" pathing; water jar = horn rally ring. None of them needs new UI beyond a world label.
+**Why these four:** each one already has a system to sit on. Spear = `Player` held-item state + a rack (watch post art); donkey = `Fox`/`Passersby` follow + `SupplyPile` scatter/gather up; helpers = bot worker + messenger "led away" pathing; water jar = horn rally ring. None of them needs new UI beyond a world label.
 
 **Fun check:**
 - **Fantasy:** the crew of 4:16-17, half on the spear and half on the trowel; leading a loaded donkey up the long haul
