@@ -8,7 +8,10 @@ extends SceneTree
 # - a brute shrugs off a light blow mid-draw, not a solid one
 # - a true shot strikes ×1.5 and knocks the foe off his feet; a plain one only shoves
 # - `GameState.true_shot` off: a "true" release is a plain throw
-# Screenshots (out_dir): the draw, the aim ring with the closing ring, a foe knocked down.
+# - a sword cut in the draw turns the blow: ×RIPOSTE_MULT and off his feet, even a brute;
+#   with `GameState.riposte` off it only knocks the strike aside
+# Screenshots (out_dir): the draw, the aim ring with the closing ring, a foe knocked down,
+# a turned blow.
 # Exit code 0 = every check passed.
 
 var _out := ""
@@ -153,6 +156,42 @@ func _process(delta: float) -> bool:
 				_check(absf(took - plain) < 0.5, "true shots off: a plain throw (%.1f)" % took)
 				_check(not String(_foe.anim).begins_with("knocked"), "…that doesn't knock him down (%s)" % _foe.anim)
 				_gs.true_shot = true
+				_foe.queue_free()
+				_foe = null
+				_player.set_physics_process(true)
+				_spawn(1, Vector3(1.3, 0, 0))
+				_next("riposte")
+		"riposte":
+			# A sword cut in a brute's draw: struck ×RIPOSTE_MULT and off his feet
+			_player.health = _P.MAX_HEALTH
+			if _bracing() and _mark == 0.0:
+				_mark = _t
+				_foe_hp = _foe.health
+				_cut()
+				_shot_at(0.05, "sword_riposte")
+				_shot_at(0.12, "sword_riposte2")
+			elif _mark > 0.0 and _foe_hp > 0.0 and _t - _mark > 0.1:
+				var took: float = _foe_hp - _foe.health
+				var cut: float = _P.SWORD_DAMAGE * _T.hit_mult(_player.trade) * _P.RIPOSTE_MULT
+				_check(absf(took - cut) < 0.5, "a cut in the draw strikes ×%.1f (%.1f)" % [_P.RIPOSTE_MULT, took])
+				_check(String(_foe.anim).begins_with("knocked"), "…and takes even a brute off his feet (%s)" % _foe.anim)
+				_foe.queue_free()
+				_foe = null
+				_spawn(0, Vector3(1.2, 0, 0))
+				_gs.riposte = false
+				_next("riposte_off")
+		"riposte_off":
+			_player.health = _P.MAX_HEALTH
+			if _bracing() and _mark == 0.0:
+				_mark = _t
+				_foe_hp = _foe.health
+				_cut()
+			elif _mark > 0.0 and _foe_hp > 0.0 and _t - _mark > 0.1:
+				var took: float = _foe_hp - _foe.health
+				var cut: float = _P.SWORD_DAMAGE * _T.hit_mult(_player.trade)
+				_check(absf(took - cut) < 0.5, "riposte off: a plain cut (%.1f)" % took)
+				_check(String(_foe.anim).begins_with("reel"), "…that only knocks the strike aside (%s)" % _foe.anim)
+				_gs.riposte = true
 				return _finish()
 	return false
 
@@ -161,6 +200,11 @@ func _spawn(type: int, off: Vector3) -> void:
 	for e in _main.get_node("Enemies").get_children():
 		if e.type == type and not e.is_queued_for_deletion():
 			_foe = e
+
+# The server's half of a sword cut, straight at the foe under test
+func _cut() -> void:
+	var d: Vector3 = _foe.global_position - _player.global_position
+	_player._server_sword.rpc_id(1, _player.global_position, atan2(d.x, d.z))
 
 func _bracing() -> bool:
 	return is_instance_valid(_foe) and String(_foe.anim).begins_with("brace")

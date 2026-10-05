@@ -13,9 +13,9 @@ are still saved in `user://progress.cfg` and pushed on the first start under the
 | SECTION_02 | The Fish Gate stands | Finish the Fish Gate (Neh. 3:3) | |
 | SECTION_03 | The Jeshanah Gate stands | Finish the Jeshanah Gate (Neh. 3:6) | |
 | SECTION_04 | The Broad Wall stands | Finish the Broad Wall (Neh. 3:8) | |
-| SECTION_05 | The Tower of Ovens stands | Finish the Tower of Ovens (Neh. 3:11) | |
+| SECTION_05 | The Tower of the Ovens stands | Finish the Tower of the Ovens (Neh. 3:11) | |
 | SECTION_06 | The Valley Gate stands | Finish the Valley Gate (Neh. 3:13) | |
-| SECTION_07 | The Dung Gate stands | Finish the Dung Gate (Neh. 3:14) | |
+| SECTION_07 | The Gate of the Ash Heaps stands | Finish the Gate of the Ash Heaps (Neh. 3:14) | |
 | SECTION_08 | The Fountain Gate stands | Finish the Fountain Gate (Neh. 3:15) | |
 | SECTION_09 | The Water Gate stands | Finish the Water Gate (Neh. 3:26) | |
 | SECTION_10 | The Horse Gate stands | Finish the Horse Gate (Neh. 3:28) | |

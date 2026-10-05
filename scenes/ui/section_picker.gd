@@ -41,11 +41,15 @@ var _lock: Label
 var _progress: Label
 var _progress_bar: Control
 var _hint: Label
+var _margin: MarginContainer
+var _column: VBoxContainer
+var _tallest := 0.0   # the column's height on its tallest stretch (_measure_tallest)
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_build()
+	resized.connect(_fit_column)
 	InputMode.changed.connect(func(_pad: bool): _update_hint())
 	hide()
 
@@ -57,6 +61,9 @@ func open(section_index := 0) -> void:
 		_map.unlocked.append(GameState.is_unlocked(i))
 	_update_progress()
 	_update_hint()
+	if not Mobile.enabled():
+		_tallest = _measure_tallest()
+		_fit_column()
 	show()
 	UiFx.fade_in(self, 0.35)
 	_select(clampi(section_index, 0, GameState.SECTIONS.size() - 1))
@@ -239,6 +246,39 @@ func _on_build() -> void:
 
 # ── Layout ─────────────────────────────────────────────────
 
+# A stretch with a long note and three foe chips runs the column past a short window
+# (the buttons fell off the bottom): shrink the whole column from its top-left corner
+# until it fits, as the settings sheet does. One scale for every stretch, from the
+# tallest, so the column doesn't jump in size as the player browses. The margin is
+# scaled, not the column — a container resets its children's scale.
+func _fit_column() -> void:
+	if size.y <= 0.0 or Mobile.enabled():
+		return   # phones scroll the details instead
+	var pad := float(_margin.get_theme_constant("margin_top") + _margin.get_theme_constant("margin_bottom"))
+	var need := maxf(_tallest, _column.get_combined_minimum_size().y) + pad
+	var s := clampf(size.y / need, 0.6, 1.0)
+	_margin.scale = Vector2(s, s)
+	_margin.position = Vector2.ZERO
+	_margin.size = size / s
+
+## Fill the column with each stretch in turn (the parts that vary: its line, twists,
+## note, foes) and keep the tallest; open() then selects the real one
+func _measure_tallest() -> float:
+	# Before the first layout (the picker is still hidden) everything is 1 px wide and the
+	# wrapped text measures a word to a line: give the varying parts their real widths,
+	# and sort the chip rows by hand (a flow container only knows its height once sorted)
+	for c: Control in [_text, _twist_note, _twists]:
+		c.size.x = COLUMN_W
+	_foes.size.x = COLUMN_W - _foes.get_parent().get_child(0).get_combined_minimum_size().x - 12
+	var tallest := 0.0
+	for i in GameState.SECTIONS.size():
+		_text.text = tr(StoryData.SECTION_LINES[i])
+		_fill_details(i)
+		for flow: Container in [_twists, _foes]:
+			flow.notification(Container.NOTIFICATION_SORT_CHILDREN)
+		tallest = maxf(tallest, _column.get_combined_minimum_size().y)
+	return tallest
+
 func _build() -> void:
 	# Phones: a narrower column in phone type, its details scrolling between a fixed
 	# header (back · title) and the Build button, so nothing runs off a short screen
@@ -261,6 +301,7 @@ func _build() -> void:
 
 	var s := Mobile.safe_insets() if m else Vector4.ZERO
 	var margin := MarginContainer.new()
+	_margin = margin
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_theme_constant_override("margin_left", int(16 + s.x) if m else 140)
@@ -269,6 +310,7 @@ func _build() -> void:
 	add_child(margin)
 
 	var column := VBoxContainer.new()
+	_column = column
 	column.add_theme_constant_override("separation", 6 if m else 10)
 	# Narrow enough that the text stays clear of the gate plaques on the west wall
 	column.custom_minimum_size.x = PHONE_COLUMN_W if m else COLUMN_W

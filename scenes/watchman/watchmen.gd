@@ -24,6 +24,7 @@ var _men: Array[Dictionary] = []
 var _poll := 0.0
 var _wall_called := {}     # wall instance id → msec
 var _seen_today := {}      # enemy type → true, the first of each type called once a day
+var _scatter_called := {}  # pile instance id → true while it stays scattered
 var _last_breaches := 0
 var _sun_called := false
 
@@ -47,6 +48,7 @@ func _process(delta: float) -> void:
 	_poll = POLL
 	_watch_walls()
 	_watch_newcomers()
+	_watch_scatter()
 	if not _sun_called and GameState.sun_low():
 		_sun_called = true
 		_call(_nearest_man(Player.local.global_position.x if Player.local else 0.0),
@@ -79,6 +81,22 @@ func _watch_walls() -> void:
 			tr("A brute at the wall — bring him down!") if brute else tr("They're battering the wall!"), true)
 		return   # one call at a time
 
+## A pile just went dead (saboteur or night raid): say which, and what to do
+func _watch_scatter() -> void:
+	var now: Dictionary = {}
+	for pile: Node3D in get_tree().get_nodes_in_group("scattered_piles"):
+		var id := pile.get_instance_id()
+		now[id] = true
+		if _scatter_called.has(id):
+			continue
+		_scatter_called[id] = true
+		var mat: String = tr({"beam": "beams"}.get(pile.kind, pile.kind))
+		_call(_nearest_man(pile.global_position.x), tr("He's scattered the %s pile — gather it up!") % mat, false)
+		return   # one call at a time
+	for id: int in _scatter_called.keys():
+		if not now.has(id):
+			_scatter_called.erase(id)
+
 func _watch_newcomers() -> void:
 	for e: Node3D in get_tree().get_nodes_in_group("enemies"):
 		var t = e.get("type")
@@ -88,7 +106,7 @@ func _watch_newcomers() -> void:
 			continue   # called when he's over, not while he's still sneaking up
 		_seen_today[t] = true
 		var line := tr("A brute! He'll batter the wall") if t == Enemy.Type.BRUTE \
-			else (tr("One's slipped in — the yard! He's after the piles") if t == Enemy.Type.SABOTEUR \
+			else (tr("One's slipped in — the supply yard! He'll scatter the piles") if t == Enemy.Type.SABOTEUR \
 			else tr("Raiders — quick ones, mind the gaps!"))
 		_call(_nearest_man(e.global_position.x), line, false)
 		return

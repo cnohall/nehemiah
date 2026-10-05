@@ -506,14 +506,14 @@ msgstr "Puerta de Jesaná"
 msgid "Broad Wall"
 msgstr "Muro Ancho"
 
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr "Torre de los Hornos"
 
 msgid "Valley Gate"
 msgstr "Puerta del Valle"
 
-msgid "Dung Gate"
-msgstr "Puerta del Muladar"
+msgid "Gate of the Ash Heaps"
+msgstr "Puerta de los Montones de Cenizas"
 
 msgid "Fountain Gate"
 msgstr "Puerta de la Fuente"
@@ -786,8 +786,8 @@ msgstr "Malquías y Hasub reparan otro tramo y la Torre de los Hornos."
 msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
 msgstr "Hanún y los habitantes de Zanoa reconstruyen la Puerta del Valle y mil codos de muralla."
 
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
-msgstr "Malquías hijo de Recab repara la Puerta del Muladar, lejos de donde se apila la piedra."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
+msgstr "Malquías hijo de Recab repara la Puerta de los Montones de Cenizas, lejos de donde se apila la piedra."
 
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr "Salum repara la Puerta de la Fuente, junto al estanque del Jardín del Rey."
@@ -1981,9 +1981,6 @@ msgstr "[%s] Honda · de cerca es la espada"
 msgid "[%s] Sound the horn — the crew gathers to you"
 msgstr "[%s] Toca el cuerno — el equipo se reúne contigo"
 
-msgid "%s Help up"
-msgstr "%s Ayudar a levantarse"
-
 msgid "%s Take the other end"
 msgstr "%s Tomar el otro extremo"
 
@@ -2038,8 +2035,11 @@ msgstr "Túnica: %s"
 msgid "%s at %d marks (you have %d)"
 msgstr "%s con %d marcas (tienes %d)"
 
-msgid "Continue — %s, day %d"
-msgstr "Continuar — %s, día %d"
+msgid "Continue"
+msgstr "Continuar"
+
+msgid "%s · day %d"
+msgstr "%s · día %d"
 
 msgid "One's slipped in — the yard! He's after the piles"
 msgstr "Uno se coló — ¡el patio! Va tras los montones"
@@ -2559,3 +2559,139 @@ msgstr "Yendo a esconderse en el templo…"
 
 msgid "Should a man like me flee? Back to the wall!"
 msgstr "¿Un hombre como yo ha de huir? ¡De vuelta al muro!"
+
+msgid "Graphics"
+msgstr "Gráficos"
+
+msgid "3D resolution"
+msgstr "Resolución 3D"
+
+msgid "Low"
+msgstr "Baja"
+
+msgid "Medium"
+msgstr "Media"
+
+msgid "High"
+msgstr "Alta"
+
+msgid "Window size"
+msgstr "Tamaño de ventana"
+
+msgid "Default"
+msgstr "Predeterminado"
+
+msgid "Art style"
+msgstr "Estilo artístico"
+
+msgid "Lithograph"
+msgstr "Litografía"
+
+msgid "Cel"
+msgstr "Cel"
+
+msgid "Hold on — I'm coming!"
+msgstr "¡Aguanta, ya voy!"
+
+msgid "I've got your back!"
+msgstr "¡Yo te cubro!"
+
+msgid "A thief in the yard!"
+msgstr "¡Un ladrón en el patio!"
+
+msgid "I'll take the other end."
+msgstr "Yo tomo el otro extremo."
+
+msgid "Foes at the wall!"
+msgstr "¡Enemigos en el muro!"
+
+msgid "I've fallen — help me up!"
+msgstr "¡Caí, levántame!"
+
+msgid "Thank you, friend!"
+msgstr "¡Gracias, amigo!"
+
+msgid "Answer him"
+msgstr "Respóndele"
+
+msgid "Hear him"
+msgstr "Escúchalo"
+
+msgid "Go with him"
+msgstr "Ve con él"
+
+msgid "From the villages: “Wherever you turn, they will attack us”"
+msgstr "De las aldeas: «Por dondequiera que te vuelvas, nos atacarán»"
+
+msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
+msgstr "Semaías, encerrado en su casa: «Reunámonos en la casa de Dios»"
+
+msgid "I am doing a great work — I can't come down!"
+msgstr "¡Estoy haciendo una gran obra, no puedo bajar!"
+
+msgid "No such things are done as you say!"
+msgstr "¡No ha sucedido nada de lo que dices!"
+
+msgid "He points to where they'll come — watch there!"
+msgstr "Señala por dónde vendrán: ¡vigilen allí!"
+
+msgid "All quiet on the road for now"
+msgstr "Por ahora, el camino está tranquilo"
+
+msgid "Hide in the temple? {interact} go with him, or walk on"
+msgstr "¿Esconderte en el templo? {interact} ir con él, o seguir tu camino"
+
+msgid "He talks and talks — your work goes slower. {interact} to answer him"
+msgstr "Habla y habla: tu trabajo va más lento. {interact} para responderle"
+
+msgid "Messengers will call you down to Ono — answer them and keep working"
+msgstr "Llegarán mensajeros a llamarte a Ono: respóndeles y sigue trabajando"
+
+msgid "Wave in %d s · %s"
+msgstr "Ataque en %d s · %s"
+
+msgid "They come! · %s"
+msgstr "¡Vienen! · %s"
+
+msgid " · the crew is spurred"
+msgstr " · la cuadrilla está animada"
+
+msgid "%d scout"
+msgid_plural "%d scouts"
+msgstr[0] "%d explorador"
+msgstr[1] "%d exploradores"
+
+msgid "%d brute"
+msgid_plural "%d brutes"
+msgstr[0] "%d bruto"
+msgstr[1] "%d brutos"
+
+msgid "%d raider"
+msgid_plural "%d raiders"
+msgstr[0] "%d asaltante"
+msgstr[1] "%d asaltantes"
+
+msgid "Wave called in early — the crew is spurred"
+msgstr "Ataque anunciado antes de tiempo — la cuadrilla está animada"
+
+
+msgid "Hurt? Drink at the well"
+msgstr "¿Herido? Bebe en el pozo"
+
+msgid "Well"
+msgstr "Pozo"
+
+msgid "Drink"
+msgstr "Beber"
+
+msgid "Set the load down first"
+msgstr "Deja la carga primero"
+
+msgid "Set it down first — {drop}, then {interact} to drink"
+msgstr "Déjala primero — {drop}, luego {interact} para beber"
+
+msgid "%s Drink — hands free, stand still to mend"
+msgstr "%s Beber — manos libres, quieto para sanar"
+
+msgid "Set the load down, then drink at the well to mend"
+msgstr "Deja la carga y bebe en el pozo para sanar"

@@ -1,7 +1,7 @@
 extends Node
 
 # Rearranges the shared map for the current section (GDD §6): the supply yard moves so
-# each stretch plays differently (e.g. the long haul at the Dung Gate); a section may
+# each stretch plays differently (e.g. the long haul at the Gate of the Ash Heaps); a section may
 # also pin single piles elsewhere ("piles"). Runs on every
 # peer from GameState alone — deterministic, nothing replicated. The DayDirector
 # rebakes navigation at dawn, after this has run.

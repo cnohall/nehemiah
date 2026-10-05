@@ -58,6 +58,8 @@ var _cam_base := Vector3.ZERO
 var _lead := Vector3.ZERO
 var _zoom := 1.0             # the mood's camera size over CAM_SIZE (dusk leans in)
 var _was_fixed := false
+const MODE_BLEND := 0.8       # s, the glide between camera settings (Follow/Fixed, View)
+var _mode_tween: Tween
 var _trauma := 0.0
 var _shake_t := 0.0
 var _hud_timer := 0.0
@@ -66,9 +68,32 @@ var _day_sun_energy: float
 var _mood_tween: Tween
 var _wall_cam: Tween
 var _carvings: Array[Label3D] = []   # names on their tablets
+var _look: LookPass
+
+func _on_art_style_changed() -> void:
+	_look.look = LookPass.STYLES[Settings.art_style]
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	# Drawn looks over the world and its tags (under the HUD), on trial: Settings'
+	# art style; `-- --look=litho|cel` overrides, F10 cycles, F9 over the HUD too (debug)
+	var look := LookPass.new(($WorldEnvironment as WorldEnvironment).environment)
+	look.cycle_key = true
+	look.keep_film = true
+	look.grain = 0.3    # in motion the crayon grain shimmers; keep it faint
+	if GameState.attract:
+		look.base_layer = -1     # the title menu draws on layer 0, over the world
+	look.whole_screen = "--look-world" not in OS.get_cmdline_user_args()
+	add_child(look)
+	var forced := LookPass.from_args()
+	_look = look
+	if forced != LookPass.PLAIN:
+		look.look = forced
+	else:
+		# A bound method, not a lambda holding `look`: the connection to the autoload
+		# drops with this scene when a new day reloads it
+		_on_art_style_changed()
+		Settings.art_style_changed.connect(_on_art_style_changed)
 	# The stretch's own arc: the enemy answers the work at half and at the last unit
 	var beats := SectionBeats.new()
 	beats.name = "SectionBeats"
@@ -77,7 +102,7 @@ func _ready() -> void:
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
 	add_child(Taunts.new())
-	var relay := RelayMat.new()   # the long haul's halfway stack + porter (Dung Gate)
+	var relay := RelayMat.new()   # the long haul's halfway stack + porter (Gate of the Ash Heaps)
 	relay.name = "RelayMat"       # same node path on every peer, for its trip RPC
 	add_child(relay)
 	add_child(Households.new())   # the hungry families of Neh. 5 (Fountain Gate)
@@ -110,10 +135,14 @@ func _ready() -> void:
 	director.ready_changed.connect(story.set_ready_state)
 	director.ready_changed.connect(hud.set_ready_state)
 	hud.ready_pressed.connect(director.mark_ready)
+	hud.unready_pressed.connect(director.unmark_ready)
 	hud.begin_now_requested.connect(director.force_ready)
 	director.story_ended.connect(story.close)
 	story.finished.connect(_on_story_finished)
 	story.choice_made.connect(director.cast_choice)
+	story.unreadied.connect(director.unmark_ready)
+	story.slide_changed.connect(director.report_slide)
+	director.slides_changed.connect(story.set_slide_progress)
 	story.start_now_requested.connect(director.force_ready)
 	# After the ending story: the credits, then the end screen
 	credits = CreditsRoll.new()
@@ -129,6 +158,8 @@ func _ready() -> void:
 	camera.look_at(Vector3(0, 0, 2), Vector3.UP)
 	camera.make_current()
 
+	if not GameState.attract and "--no-well" not in OS.get_cmdline_user_args():
+		add_child(Well.new())   # the city well: where a hurt worker mends (GDD §5.22)
 	_spawn_player(multiplayer.get_unique_id())
 
 	if multiplayer.is_server():
@@ -207,7 +238,8 @@ func _frame_crew(delta: float) -> void:
 
 func _follow_local_player(delta: float) -> void:
 	var local_player := Player.local
-	if local_player == null or (_wall_cam != null and _wall_cam.is_running()):
+	if local_player == null or (_wall_cam != null and _wall_cam.is_running()) \
+			or (_mode_tween != null and _mode_tween.is_running()):
 		return
 	var fixed := _fixed_cam()
 	if fixed != _was_fixed:
@@ -244,7 +276,7 @@ func _fixed_cam() -> bool:
 	return Settings.fixed_camera and not GameState.festival and not GameState.attract
 
 ## The ground (x/z) the fixed camera keeps in view: FIXED_FRAME plus every stockpile
-## and heap standing this section (the yard moves — the Dung Gate's sits far east)
+## and heap standing this section (the yard moves — the Gate of the Ash Heaps's sits far east)
 func _fixed_frame() -> Rect2:
 	var frame := FIXED_FRAME
 	for group: Node in [$Supplies, $Rubble]:
@@ -292,6 +324,45 @@ func _turn_to_map() -> void:
 	var yaw := RingCompass.north_up_yaw(GameState.current_section_index) if Settings.turn_to_map else 0.0
 	if not is_equal_approx(yaw, view_yaw):
 		set_view_yaw(yaw)
+
+## Settings panel: a camera setting changed (maybe while paused) — ease into it at once
+func refresh_camera() -> void:
+	if GameState.attract:
+		return
+	if Player.local == null or (_wall_cam != null and _wall_cam.is_running()):
+		_turn_to_map()
+		return
+	var from_xf := camera.global_transform
+	var from_size := camera.size
+	var from_yaw := view_yaw
+	var from_focus := from_xf.origin - _cam_offset()
+	from_focus.y = 0.0
+	if _mode_tween != null:
+		_mode_tween.kill()
+	# Land the camera on the new mode, read where it sits, then put it back and glide there
+	_turn_to_map()
+	_was_fixed = _fixed_cam()
+	if not _was_fixed:
+		camera.size = CAM_SIZE * _zoom
+	_cam_snapped = false
+	_follow_local_player(0.0)
+	var to_focus := _cam_base - _cam_offset()
+	to_focus.y = 0.0
+	var to_size := camera.size
+	camera.global_transform = from_xf
+	camera.size = from_size
+	# Runs while paused, too — the pause menu is where the setting changes
+	_mode_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_mode_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_mode_tween.tween_method(_blend_camera.bind(from_focus, to_focus, from_yaw, view_yaw, from_size, to_size),
+		0.0, 1.0, MODE_BLEND)
+
+func _blend_camera(t: float, from_focus: Vector3, to_focus: Vector3, from_yaw: float, to_yaw: float,
+		from_size: float, to_size: float) -> void:
+	var focus := from_focus.lerp(to_focus, t)
+	camera.global_position = focus + CAM_OFFSET.rotated(Vector3.UP, lerp_angle(from_yaw, to_yaw, t))
+	camera.look_at(focus, Vector3.UP)
+	camera.size = lerpf(from_size, to_size, t)
 
 func _cam_offset() -> Vector3:
 	return CAM_OFFSET.rotated(Vector3.UP, view_yaw)
@@ -486,7 +557,14 @@ func _despawn(id: int) -> void:
 	GameState.remove_player(id)
 	_assign_colors()
 	if multiplayer.is_server():
-		GameState.set_crew(players_root.get_child_count())
+		_set_crew()
+
+# Server: head count, and the crew's weight with each bot counted by its skill
+func _set_crew() -> void:
+	var weight := 0.0
+	for p in players_root.get_children():
+		weight += p.brain.skill["crew"] if p.brain != null else 1.0
+	GameState.set_crew(players_root.get_child_count(), weight)
 
 # `peer_id` is a worker id: a peer's own, or a bot's (Player.BOT_ID_BASE and up, owned
 # by the host — whose copy gets the brain)
@@ -502,12 +580,11 @@ func _spawn_player(peer_id: int) -> void:
 	players_root.add_child(player)
 	# A small ring round the spawn point, a place per worker, so the crew doesn't start stacked
 	var slot := players_root.get_child_count() - 1
-	player.global_position = player.RESPAWN_POS \
-		+ (Vector3.ZERO if slot == 0 else Vector3(1.3, 0, 0).rotated(Vector3.UP, slot * TAU / 4.0 - PI / 4.0))
+	player.global_position = Player.start_spot(slot)
 	GameState.register_player(peer_id, "Bot" if bot else "Builder")
 	_assign_colors()
 	if multiplayer.is_server():
-		GameState.set_crew(players_root.get_child_count())
+		_set_crew()
 
 # Sorted by peer id so every peer agrees on slot → colour
 func _sorted_players() -> Array:
@@ -550,6 +627,7 @@ func fit_bots(count := -1) -> void:
 		bots.append(players_root.get_node(str(next)))
 		for peer in _ready_peers():
 			_receive_roster_entry.rpc_id(peer, next)
+	_set_crew()   # a new skill reweighs the bots already here
 
 # The title-screen crew shows the game played well
 func _bot_skill() -> int:

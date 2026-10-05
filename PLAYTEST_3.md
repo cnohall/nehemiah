@@ -101,7 +101,7 @@ Playtest feedback (30 Sep 2026): fun for 2–3 stretches, then no pull to finish
 - [ ] Noticed a "Watch the carpenter…" callout and copied the bot
 - [ ] Saw the saboteur coming (watchman call / pointer) before a pile was strewn
 - [ ] One player parked in the yard guarding the piles (bad sign, §5.9)
-- [ ] Used the relay mat at the Dung Gate, or dug the outside rubble heaps
+- [ ] Used the relay mat at the Gate of the Ash Heaps, or dug the outside rubble heaps
 - [ ] Noticed Sanballat & co. on the rise; reacted when they left
 - [ ] Broad Wall: said the wall looks thick, or asked why it takes two passes ("outer face / inner face")
 - [ ] Jeshanah: found the charred timbers without help; grumbled that clearing isn't building

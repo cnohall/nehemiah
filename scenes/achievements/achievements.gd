@@ -121,7 +121,7 @@ func on_day_tallied(stats: Dictionary) -> void:
 			unlock("FOES_ALL")
 
 func _on_game_won() -> void:
-	if GameState.is_replay():
+	if GameState.is_replay() or GameState.is_demo():
 		return
 	unlock("WALL_DONE")
 	if GameState.breaches == 0:

@@ -10,7 +10,7 @@ extends Node
 
 # Setbacks (GDD §5.15): one verse each, warned or seen in the world, felt in the loop,
 # answered by what comes next. Table keys are section indices.
-# The ambush (Neh. 4:11), Tower of Ovens: on the stretch's 3rd day (RAID) the watch calls
+# The ambush (Neh. 4:11), Tower of the Ovens: on the stretch's 3rd day (RAID) the watch calls
 # that they'll come in the night; at the next dawn, unless a watch post stands stocked
 # (4:9 — "we set a watch"), they pull one finished piece down two stages and strew the yard.
 # Never on the last day, never without a piece to lose.
@@ -41,6 +41,7 @@ const SETBACK_LINES := {
 	"shem_go": ["Someone has gone to hide in the temple!", "He hired so that I would be afraid, do so, and sin.", "Neh. 6:13", "One hid in the temple"],
 }
 const DAWN_TIME        := 5.0
+const FRESH_DAWN_TIME  := 9.0   # a new stretch's first dawn: time to look round before the work starts
 const DUSK_TIME        := 9.0   # long enough to read the tally (title screen: nobody to wait for)
 const DUSK_MIN         := 4.0   # the cheer plays out even if everyone is ready at once
 const CELEBRATE_STEP   := 0.12  # seconds between each finished unit's flourish
@@ -53,6 +54,8 @@ signal story_started(day: int)
 signal story_ended
 # Every peer: who the story / tally is still waiting on ("story" | "tally" | "" = none)
 signal ready_changed(kind: String, waiting: Array)
+# Every peer: where each reader is in the story, peer_id → Vector2i(slide index, slide count)
+signal slides_changed(at: Dictionary)
 # Every peer: end-screen picks so far, peer_id → "again" | "next"
 signal votes_changed(votes: Dictionary)
 # Every peer: the day's numbers, for the dusk tally card
@@ -76,6 +79,7 @@ var _story_day := 0          # server: last day whose story has played
 # waits until every peer in the scene is through. peer_id → true while not yet ready.
 var _wait_kind := ""
 var _waiting := {}
+var _slides_at := {}   # server: story slide each peer is on, peer_id → Vector2i(index, count)
 var _votes := {}   # server: end-screen picks, peer_id → "again" | "next"
 # Server: today's numbers. "crew" is peer_id → { loads, foes }
 var _stats := {}
@@ -157,6 +161,8 @@ func _process(delta: float) -> void:
 				var done := _section_done()
 				if GameState.is_replay() and (done or pos.x == pos.y - 1):
 					GameState.set_phase(GameState.Phase.WON)
+				elif GameState.is_demo() and GameState.current_day >= GameState.DEMO_LAST_DAY:
+					GameState.set_phase(GameState.Phase.WON)   # the demo ends here, brute and all
 				elif GameState.sun and done and pos.x < pos.y - 1:
 					# Sun clock: the stretch stood early — the days to spare are skipped,
 					# the next stretch starts tomorrow (the last one wins at once)
@@ -307,6 +313,7 @@ func _begin_day() -> void:
 		# Posts start bare too — including any raised while the crew was still gathering
 		# (section_changed doesn't fire going from the gathering into the first day)
 		get_tree().call_group("watch_posts", "reset_slot")
+		_crew_to_start.rpc()
 		# The crew's pick for this stretch, put in play once (a later one starts from "plan")
 		# Debug builds: `-- --boon=<key>` plays every stretch with that boon (to A/B a trade)
 		if _chosen_boon.is_empty() and OS.is_debug_build():
@@ -345,7 +352,7 @@ func _begin_day() -> void:
 	_reset_stats()
 	GameState.set_phase(GameState.Phase.DAWN)
 	_update_progress()
-	_timer = DAWN_TIME
+	_timer = FRESH_DAWN_TIME if fresh_section else DAWN_TIME
 	_request_nav_rebake()
 
 # Server: the sun clock runs down; at the stars the day ends with whatever is built.
@@ -474,6 +481,7 @@ func _on_game_over() -> void:
 func _start_story() -> void:
 	_story_day = GameState.current_day
 	_choices.clear()
+	_slides_at.clear()
 	GameState.set_phase(GameState.Phase.STORY)
 	for id: int in _scene_peers():
 		_show_story.rpc_id(id, _story_day)
@@ -537,6 +545,43 @@ func mark_ready() -> void:
 		_peer_ready(1)
 	else:
 		_ready_from_peer.rpc_id(1)
+
+## Every peer: take the local player's ready back (the story, to reread or change the pick)
+func unmark_ready() -> void:
+	if multiplayer.is_server():
+		_peer_unready(1)
+	else:
+		_unready_from_peer.rpc_id(1)
+
+@rpc("any_peer", "reliable")
+func _unready_from_peer() -> void:
+	if multiplayer.is_server():
+		_peer_unready(multiplayer.get_remote_sender_id())
+
+func _peer_unready(id: int) -> void:
+	if _wait_kind.is_empty() or _waiting.has(id):
+		return
+	_waiting[id] = true
+	_broadcast_ready()
+
+## Every peer: which slide this reader is on (shown to the rest of the crew)
+func report_slide(index: int, count: int) -> void:
+	if multiplayer.is_server():
+		_peer_slide(1, index, count)
+	else:
+		_slide_from_peer.rpc_id(1, index, count)
+
+@rpc("any_peer", "reliable")
+func _slide_from_peer(index: int, count: int) -> void:
+	if multiplayer.is_server():
+		_peer_slide(multiplayer.get_remote_sender_id(), index, count)
+
+func _peer_slide(id: int, index: int, count: int) -> void:
+	if _wait_kind != "story":
+		return
+	_slides_at[id] = Vector2i(index, count)
+	for peer: int in _scene_peers():
+		_set_slides.rpc_id(peer, _slides_at)
 
 ## Server: host pressed "Begin now" — don't wait for the slow ones
 func force_ready() -> void:
@@ -654,6 +699,13 @@ func _on_peer_left(id: int) -> void:
 	if multiplayer.is_server():
 		_peer_ready(id)
 
+## A fresh stretch: each peer puts the workers it owns back at the start spot
+@rpc("authority", "call_local", "reliable")
+func _crew_to_start() -> void:
+	for p in get_tree().get_nodes_in_group("players"):
+		if p.is_multiplayer_authority():
+			p.to_start()
+
 @rpc("authority", "call_local", "reliable")
 func _show_story(day: int) -> void:
 	story_started.emit(day)
@@ -661,6 +713,10 @@ func _show_story(day: int) -> void:
 @rpc("authority", "call_local", "reliable")
 func _set_ready_state(kind: String, waiting: Array) -> void:
 	ready_changed.emit(kind, waiting)
+
+@rpc("authority", "call_local", "reliable")
+func _set_slides(at: Dictionary) -> void:
+	slides_changed.emit(at)
 
 @rpc("authority", "call_local", "reliable")
 func _hide_story() -> void:
@@ -728,7 +784,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 # ── Progress ───────────────────────────────────────────────
 
 func _on_stage_changed() -> void:
-	if not multiplayer.is_server():
+	# Explore Jerusalem raises and ruins whole stretches as you walk round: no day to end
+	if not multiplayer.is_server() or GameState.festival:
 		return
 	_request_nav_rebake()
 	_update_progress()

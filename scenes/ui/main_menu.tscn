@@ -1,12 +1,12 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/main_menu.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/menu_bg.jpg" id="2_bg"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="3_settings"]
 
 [sub_resource type="Gradient" id="Gradient_veil"]
-offsets = PackedFloat32Array(0, 0.26, 0.47)
-colors = PackedColorArray(0.959, 0.932, 0.883, 0.93, 0.959, 0.932, 0.883, 0.74, 0.959, 0.932, 0.883, 0)
+offsets = PackedFloat32Array(0, 0.34, 0.6)
+colors = PackedColorArray(0.959, 0.932, 0.883, 0.93, 0.959, 0.932, 0.883, 0.76, 0.959, 0.932, 0.883, 0)
 
 [sub_resource type="GradientTexture2D" id="Tex_veil"]
 gradient = SubResource("Gradient_veil")
@@ -24,6 +24,18 @@ width = 4
 height = 256
 fill_from = Vector2(0, 0)
 fill_to = Vector2(0, 1)
+
+[sub_resource type="Gradient" id="Gradient_corner"]
+offsets = PackedFloat32Array(0, 0.55, 1)
+colors = PackedColorArray(0.959, 0.932, 0.883, 0.6, 0.959, 0.932, 0.883, 0.38, 0.959, 0.932, 0.883, 0)
+
+[sub_resource type="GradientTexture2D" id="Tex_corner"]
+gradient = SubResource("Gradient_corner")
+width = 256
+height = 128
+fill = 1
+fill_from = Vector2(0, 1)
+fill_to = Vector2(1, 1)
 
 [sub_resource type="Gradient" id="Gradient_rule"]
 offsets = PackedFloat32Array(0, 1)
@@ -76,6 +88,18 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 texture = SubResource("Tex_veil")
+expand_mode = 1
+
+[node name="Corner" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -460.0
+offset_right = 1100.0
+grow_vertical = 0
+mouse_filter = 2
+texture = SubResource("Tex_corner")
 expand_mode = 1
 
 [node name="Content" type="MarginContainer" parent="."]
@@ -212,26 +236,6 @@ layout_mode = 2
 theme_type_variation = &"Eyebrow"
 theme_override_font_sizes/font_size = 12
 text = "Nehemiah 4:19"
-
-[node name="Credits" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -900.0
-offset_top = -58.0
-offset_right = -40.0
-offset_bottom = -24.0
-grow_horizontal = 0
-grow_vertical = 0
-mouse_filter = 2
-theme_type_variation = &"Caption"
-theme_override_font_sizes/font_size = 13
-text = "Music: “The Desert of Dreams” by insydnis (CC-BY 3.0)  ·  “Desert theme” by yd (CC0)  ·  Sound: Kenney.nl (CC0)  ·  Scripture adapted from the World English Bible (public domain)"
-horizontal_alignment = 2
-vertical_alignment = 1
 
 [node name="JoinPanel" type="Control" parent="."]
 visible = false

@@ -6,6 +6,7 @@ extends CanvasLayer
 signal begin_requested   # host pressed "Begin the work" (Main forwards to DayDirector)
 signal bots_changed      # host changed Settings.bot_count / bot_skill (Main refits the crew)
 signal ready_pressed         # local player is done with the dusk tally (Main → DayDirector)
+signal unready_pressed       # ...and changed their mind
 signal begin_now_requested   # host: go on without the ones still at the tally
 signal vote_cast(choice: String)   # end screen: "again" | "next" (Main → DayDirector)
 
@@ -28,7 +29,8 @@ const MARKS_BIG_H   := 172.0  # (a finished stretch: big gems, captions beneath)
 const STRIP_H       := 32.0    # (an ordinary day: the campaign strip above its counts)
 const TALLY_SMALL_H := 84.0   # (and then its counts, smaller)
 const READY_H       := 56.0    # …plus who's ready to go on
-const SUB_LINE_H    := 28.0    # …plus each extra line under the title (days to spare, the campaign)
+const BUILDERS_H    := 58.0   # (a finished stretch: the "next to him…" names, one or two lines)
+const SUB_LINE_H    := 28.0   # …plus each extra line under the title (days to spare, the campaign)
 const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
 const MAX_SLOTS     := 4
@@ -136,6 +138,7 @@ func _ready() -> void:
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
 	$Root.move_child(alerts, banner.get_index())
+	$Root.add_child(ForecastChip.new())   # experimental wave forecast (GDD §5.21), hidden unless told
 	# Hold [Tab] / View: a chip over everything near that answers a press
 	var lens := ActionLens.new()
 	$Root.add_child(lens)
@@ -194,6 +197,7 @@ func _ready() -> void:
 	_pad_lost_note.theme_type_variation = &"Caption"
 	_pad_lost_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pad_lost_note.text = "Controller disconnected — reconnect it to carry on"
+	_pad_lost_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_pad_lost_note.visible = false
 	$Root/PauseMenu/Center/Modal/VBox.add_child(_pad_lost_note)
 	$Root/PauseMenu/Center/Modal/VBox.move_child(_pad_lost_note, 0)
@@ -475,13 +479,21 @@ func _apply_style() -> void:
 
 # Low and centred, clear of the crew cards and the controls card: a slim parchment
 # plaque, like the rest of the HUD
+const COMPASS_PHONE := 0.6
+
 func _build_compass() -> void:
 	_compass = RingCompass.new()
 	_compass.follow_section = true
 	$Root.add_child(_compass)
+	$Root.move_child(_compass, pause_menu.get_index())   # under the menus, not over them
 	_compass.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_compass.offset_right = -18.0
-	_compass.offset_left = -18.0 - _compass.custom_minimum_size.x
+	var right := 18.0
+	if Mobile.enabled():
+		# Phones: a third of the width at full size; smaller, inside the safe area
+		_compass.scale = Vector2.ONE * COMPASS_PHONE
+		right += Mobile.safe_insets().z
+	_compass.offset_right = -right
+	_compass.offset_left = -right - _compass.custom_minimum_size.x * _compass.scale.x
 
 # Under the threat plaque when it's up; out of the way of the story and the end screen
 func _place_compass() -> void:
@@ -490,7 +502,7 @@ func _place_compass() -> void:
 	if threat.visible:
 		top = threat.get_global_rect().end.y - $Root.get_global_rect().position.y + 12.0
 	_compass.offset_top = top
-	_compass.offset_bottom = top + _compass.custom_minimum_size.y
+	_compass.offset_bottom = top + _compass.custom_minimum_size.y * _compass.scale.y
 
 func _build_next_caption() -> void:
 	_next_caption = Label.new()
@@ -518,11 +530,11 @@ func _next_text() -> String:
 	if Time.get_ticks_msec() < _knocked_until:
 		return "A finished piece was knocked down — build it back up"
 	var left := GameState.targets_total - GameState.targets_done
-	# A saboteur strewed a pile: nothing comes from it until it's tidied
+	# A saboteur scattered a pile: nothing comes from it until it's gathered up
 	if me.carried_kind.is_empty():
 		var mess := get_tree().get_first_node_in_group("scattered_piles")
 		if mess != null:
-			return tr("The %s pile was strewn — tidy it (%s at the pile)") % [_material_name(mess.kind), InputMode.key("interact")]
+			return tr("The %s pile is scattered — nothing to take until you gather it up (%s at the pile)") % [_material_name(mess.kind), InputMode.key("interact")]
 	var site := SiteFocus.site()
 	if site == null:
 		# Only "done" when it is (playtest 2: players thought the wall stood and waited
@@ -697,14 +709,20 @@ func _show_end(won: bool) -> void:
 	var vb := $Root/EndScreen/Center/VBox
 	vb.get_node("Eyebrow").text = tr("Day %d of %d") % [GameState.current_day, GameState.TOTAL_DAYS]
 	var stars := not won and GameState.loss_reason == "stars"
+	var demo_end := won and GameState.is_demo() and not GameState.is_replay()
 	vb.get_node("Title").text = "The wall is finished" if won else ("The stars appeared" if stars else "The city is overrun")
 	vb.get_node("Message").text = WIN_VERSE if won \
 		else (tr("The %s was not finished by nightfall. Gather the workers and begin again.") % tr(GameState.get_current_section()["name"]) if stars \
 		else tr("Too many enemies reached the inner city. Gather the workers and begin again."))
 	vb.get_node("Ref").text = GameState.long_ref(WIN_VERSE_REF) if won else ""
 	vb.get_node("Ref").visible = won
-	var days_done := GameState.TOTAL_DAYS if won else GameState.current_day - 1
-	var sections_done := GameState.SECTIONS.size() if won else GameState.current_section_index
+	if demo_end:
+		vb.get_node("Title").text = tr("The first brute")
+		vb.get_node("Message").text = tr("Nine days, two stretches of wall, and the enemy has sent a brute. %d days and %d stretches remain, and they will only grow bolder.") \
+			% [GameState.TOTAL_DAYS - GameState.current_day, GameState.SECTIONS.size() - GameState.current_section_index]
+		vb.get_node("Ref").hide()
+	var days_done := GameState.current_day if demo_end else (GameState.TOTAL_DAYS if won else GameState.current_day - 1)
+	var sections_done := GameState.current_section_index if demo_end else (GameState.SECTIONS.size() if won else GameState.current_section_index)
 	var stats: Control = vb.get_node("Stats")
 	for c in stats.get_children():
 		c.queue_free()
@@ -723,6 +741,20 @@ func _show_end(won: bool) -> void:
 	UiFx.stagger(vb.get_children(), 0.6, 0.08, 0.3)
 	var first: Button = vb.get_node("Buttons").get_child(0)
 	first.grab_focus()
+	_fit_end(vb)
+
+# The reel is the only elastic part: shrink it (16:9) until the buttons sit on screen
+func _fit_end(vb: Control) -> void:
+	var pic := vb.find_child("*TextureRect*", true, false) as Control
+	if pic == null:
+		return
+	pic.custom_minimum_size = REEL_SIZE
+	await get_tree().process_frame
+	var over := vb.get_combined_minimum_size().y - (end_screen.size.y - 48.0)
+	if over <= 0.0:
+		return
+	var h := maxf(REEL_SIZE.y - over, 72.0)
+	pic.custom_minimum_size = Vector2(h * REEL_SIZE.x / REEL_SIZE.y, h)
 
 # ── End screen: the scribe's map ───────────────────────────
 
@@ -775,6 +807,7 @@ var _reel: Control
 var _reel_tween: Tween
 var _vote_note: Label
 var _vote_buttons := {}   # choice → Button
+var _wishlist_btn: Button   # demo end card
 
 # The run's stills (Highlights), one after another while the crew decides
 # Phones: too short to stack it over the verdict, so it takes a column on the left
@@ -846,7 +879,7 @@ func _build_vote(won: bool, vb: Control) -> void:
 	if GameState.is_replay():
 		choices.append(["again", "Play it again"])
 		var next := GameState.replay_section + 1
-		if won and next < GameState.SECTIONS.size():
+		if won and next < (GameState.DEMO_SECTIONS if GameState.is_demo() else GameState.SECTIONS.size()):
 			choices.append(["next", "Next stretch"])
 	elif won:
 		choices.append(["again", "Play again"])
@@ -863,6 +896,19 @@ func _build_vote(won: bool, vb: Control) -> void:
 		buttons.move_child(b, i)
 		_vote_buttons[choice] = b
 	(vb.get_node("Buttons/MenuButton") as Button).theme_type_variation = &"GhostButton"
+	if _wishlist_btn:
+		_wishlist_btn.queue_free()
+		_wishlist_btn = null
+	if won and GameState.is_demo() and not GameState.is_replay() and not GameState.DEMO_WISHLIST_URL.is_empty():
+		_wishlist_btn = Button.new()
+		_wishlist_btn.text = "Wishlist on Steam"
+		_wishlist_btn.custom_minimum_size.x = 220
+		_wishlist_btn.theme_type_variation = &"PrimaryButton"
+		_wishlist_btn.pressed.connect(func(): OS.shell_open(GameState.DEMO_WISHLIST_URL))
+		buttons.add_child(_wishlist_btn)
+		buttons.move_child(_wishlist_btn, 0)
+		for b in _vote_buttons.values():
+			b.theme_type_variation = &"GhostButton"
 	if _vote_note == null:
 		_vote_note = Label.new()
 		_vote_note.theme_type_variation = &"Caption"
@@ -961,6 +1007,7 @@ func show_tally(stats: Dictionary) -> void:
 	# A finished stretch leads with its marks (the payoff); an ordinary day with the
 	# campaign strip, today's cell filling. Counts beneath either way, smaller.
 	var marks_line: Control = null
+	var builders_shown := false
 	var strip: CircuitStrip = null
 	if stats.has("marks") and unfinished == 0:
 		var gap := Control.new()
@@ -968,6 +1015,10 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(gap)
 		marks_line = _marks_line(stats, true)
 		_tally.add_child(marks_line)
+		var builders := _builders_line()
+		if builders:
+			builders_shown = true
+			_tally.add_child(builders)
 		var after := Control.new()  # air between the marks and the counts
 		after.custom_minimum_size.y = 8
 		_tally.add_child(after)
@@ -1012,12 +1063,14 @@ func show_tally(stats: Dictionary) -> void:
 	if waits:
 		_ready_row = ReadyRow.new(false)
 		_ready_row.holdable = true
+		_ready_row.cancellable = true
 		_ready_row.ready_pressed.connect(ready_pressed.emit)
+		_ready_row.unready_pressed.connect(unready_pressed.emit)
 		_ready_row.begin_now.connect(begin_now_requested.emit)
 		_tally.add_child(_ready_row)
 		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
+	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (BUILDERS_H if marks_line and builders_shown else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
 ") * SUB_LINE_H
 	_tally.show()
 	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
@@ -1136,6 +1189,23 @@ func _crew_num(text: String, best: bool, color := UiStyle.INK_SOFT) -> Label:
 		l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
 	return l
 
+# Who built this stretch, from Neh 3's "next to him…" chain (StoryData.BUILDERS)
+func _builders_line() -> Control:
+	var i := GameState.SECTIONS.find(GameState.get_current_section())  # as the title above
+	if i < 0 or i >= StoryData.BUILDERS.size():
+		return null
+	var l := Label.new()
+	l.text = tr(StoryData.BUILDERS[i])
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size.x = 640
+	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	return l
+
 # A hairline between the tally's counts
 func _rule_v(h: float) -> Control:
 	var r := ColorRect.new()
@@ -1212,20 +1282,21 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	var more := _bot_button("+", in_menu)
 	var skill := _bot_button("", in_menu)
 	var skill_about := _host_caption()
-	var bot_row := _host_row([label, fewer, more, skill])
+	var bot_row := _host_row([label, fewer, more])
+	var skill_row := _host_row([skill])
 	# Gather panel: point a lone builder at the bots (playtest: nobody found them)
 	var nudge := _host_caption()
 	nudge.text = "Short of hands? Add bots to the crew."
 	nudge.add_theme_color_override("font_color", UiStyle.INK)
 	nudge.visible = false
-	var rows: Array[Control] = [diff_row, diff_about, nudge, bot_row, skill_about]
+	var rows: Array[Control] = [diff_row, diff_about, nudge, bot_row, skill_row, skill_about]
 	var summary: Button = null
 	if not in_menu and Mobile.enabled():
 		# Phones: the gather panel keeps the world in view — one line saying how the crew
 		# is set, which opens the game menu's crew page to change it
 		var tucked := VBoxContainer.new()
 		tucked.visible = false
-		for c in [diff_row, diff_about, bot_row, skill_about]:
+		for c in [diff_row, diff_about, bot_row, skill_row, skill_about]:
 			tucked.add_child(c)
 		summary = _bot_button("")
 		summary.pressed.connect(func():
@@ -1353,6 +1424,8 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 	vb.move_child(tiles, at)
 	vb.add_child(about)
 	vb.move_child(about, at + 1)
+	if in_menu and Mobile.enabled():
+		about.hide()   # the gather panel says it; the phone menu has no room for two lines
 	var group := ButtonGroup.new()
 	var portraits: Array[CrewPortrait] = []
 	for t in CharacterRig.TRADES.size():
@@ -1369,6 +1442,10 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 		for i in tiles.get_child_count():
 			var tile := tiles.get_child(i) as Button
 			tile.set_pressed_no_signal(i == t)   # no signal, so the group won't clear the rest
+			# One person per trade: someone else's is greyed, tagged with their name
+			var holder := NetworkManager.trade_holder(i, multiplayer.get_unique_id())
+			tile.disabled = holder != 0 and i != t
+			tile.tooltip_text = tr("Taken by %s") % _holder_name(holder) if tile.disabled else tr(Trade.ABOUT[i])
 			tile.get_meta("paint").call()
 		about.text = "%s  ·  %s" % [tr("Your trade: %s") % tr(CharacterRig.TRADES[t]), tr(Trade.ABOUT[t])]
 		var me := _worker(multiplayer.get_unique_id())
@@ -1381,7 +1458,27 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 	if not NetworkManager.crew_info_changed.is_connected(_refresh_rows_later):
 		NetworkManager.crew_info_changed.connect(_refresh_rows_later)
 	_host_refreshers.append(refresh)
+	var about_texts: Array[String] = []
+	for t in CharacterRig.TRADES.size():
+		about_texts.append("%s  ·  %s" % [tr("Your trade: %s") % tr(CharacterRig.TRADES[t]), tr(Trade.ABOUT[t])])
+	_fit_widest(about, about_texts)
+	# Lost the race for a trade: say so for a moment, then the caption returns
+	NetworkManager.trade_refused.connect(func(taken: int):
+		if not is_instance_valid(about):
+			return
+		about.text = tr("%s was just taken. Pick another trade.") % tr(CharacterRig.TRADES[taken])
+		get_tree().create_timer(2.5).timeout.connect(func():
+			if is_instance_valid(about):
+				refresh.call()), CONNECT_REFERENCE_COUNTED)
 	refresh.call()
+
+## Name for a trade's holder: their Steam name, else the colour slot they stand in
+func _holder_name(id: int) -> String:
+	var n := NetworkManager.name_of(id)
+	if not n.is_empty():
+		return n
+	var w := _worker(id)
+	return tr("Player %d") % (w.slot + 1) if w != null and "slot" in w else tr("another player")
 
 # A trade to pick: the worker in its dress, its name under; the chosen one sits pressed
 # into the parchment with a terracotta frame
@@ -1411,7 +1508,8 @@ func _trade_tile(t: int, group: ButtonGroup, focusable: bool) -> Button:
 	col.offset_bottom = -pad.y - 2
 	b.add_child(col)
 	var face := CrewPortrait.new()
-	face.custom_minimum_size = Vector2(TRADE_TILE_PX, TRADE_TILE_PX)
+	var px := TRADE_TILE_PX * (0.75 if Mobile.enabled() else 1.0)   # phones: the menu must fit 360dp
+	face.custom_minimum_size = Vector2(px, px)
 	face.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	col.add_child(face)
 	var name_l := Label.new()
@@ -1425,8 +1523,9 @@ func _trade_tile(t: int, group: ButtonGroup, focusable: bool) -> Button:
 	col.add_child(name_l)
 	var paint := func():
 		name_l.add_theme_color_override("font_color", UiStyle.TERRACOTTA_DEEP if b.button_pressed \
-			else (UiStyle.TERRACOTTA if b.is_hovered() else UiStyle.INK_SOFT))
-		face.modulate = Color.WHITE if b.button_pressed or b.is_hovered() else Color(1, 1, 1, 0.72)
+			else (UiStyle.TERRACOTTA if b.is_hovered() and not b.disabled else UiStyle.INK_SOFT))
+		face.modulate = Color(1, 1, 1, 0.3) if b.disabled \
+			else (Color.WHITE if b.button_pressed or b.is_hovered() else Color(1, 1, 1, 0.72))
 	b.toggled.connect(func(_on: bool): paint.call())
 	b.mouse_entered.connect(paint)
 	b.mouse_exited.connect(paint)
@@ -1457,19 +1556,34 @@ func _host_caption() -> Label:
 	l.theme_type_variation = &"Caption"
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
+	# Wraps inside the panel instead of widening it
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
-# Min width of a Button/Label = its widest candidate text (hidden/toggled controls keep their slot width)
+const HOST_WRAP_PX := 400.0   # wrap width the caption height is reserved for (modal 440 less padding)
+
+# Buttons: min width = widest candidate text (hidden/toggled controls keep their slot width).
+# Labels wrap, so they reserve the tallest candidate's height instead and never set the width.
 func _fit_widest(c: Control, texts: Array[String]) -> void:
 	var font := c.get_theme_font("font")
 	var px := c.get_theme_font_size("font_size")
 	if font == null:
+		return
+	if c is Label:
+		var h := 0.0
+		for t in texts:
+			h = maxf(h, font.get_multiline_string_size(t, HORIZONTAL_ALIGNMENT_CENTER, HOST_WRAP_PX, px).y)
+		c.custom_minimum_size.y = ceilf(h)
 		return
 	var w := 0.0
 	for t in texts:
 		w = maxf(w, font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x)
 	if c is Button:
 		w += c.get_theme_stylebox("normal").get_minimum_size().x
+		# Never wider than the panel: a long translation ellipsizes rather than widening it
+		w = minf(w, HOST_WRAP_PX)
+		c.clip_text = true
+		c.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	c.custom_minimum_size.x = ceilf(w)
 
 func _bot_button(text: String, focusable := false) -> Button:
@@ -1553,8 +1667,8 @@ func set_player_carry(slot: int, kind: String) -> void:
 		return
 	var icon: TagIcon = _cards[slot].load
 	var k := kind.trim_suffix("s") if kind == "beams" else kind
-	icon.visible = not k.is_empty()
-	if icon.visible and icon.kind != k:
+	icon.modulate.a = 0.0 if k.is_empty() else 1.0
+	if not k.is_empty() and icon.kind != k:
 		icon.kind = k
 		icon.queue_redraw()
 
@@ -1674,10 +1788,23 @@ func _build_player_cards() -> void:
 		vb.alignment = BoxContainer.ALIGNMENT_CENTER
 		vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(vb)
+		# "Downed" sits on the eyebrow line and the load icon always keeps its slot
+		# (faded when empty), so the card never changes width mid-play
+		var who_row := HBoxContainer.new()
+		who_row.add_theme_constant_override("separation", 8)
+		vb.add_child(who_row)
 		var who := Label.new()
 		who.theme_type_variation = &"Eyebrow"
 		who.add_theme_font_size_override("font_size", 12)
-		vb.add_child(who)
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who_row.add_child(who)
+		var carry := Label.new()
+		carry.theme_type_variation = &"Caption"
+		carry.add_theme_font_size_override("font_size", 12)
+		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
+		carry.text = "Downed"
+		carry.visible = false
+		who_row.add_child(carry)
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		vb.add_child(top)
@@ -1687,16 +1814,9 @@ func _build_player_cards() -> void:
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(name_lbl)
 		var load_icon := TagIcon.make("stone", 24)
-		load_icon.visible = false
+		load_icon.modulate.a = 0.0
 		load_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		top.add_child(load_icon)
-		var carry := Label.new()
-		carry.theme_type_variation = &"Caption"
-		carry.add_theme_font_size_override("font_size", 12 if Mobile.enabled() else 14)
-		carry.add_theme_color_override("font_color", UiStyle.TERRACOTTA)
-		carry.text = "Downed"
-		carry.visible = false
-		top.add_child(carry)
 		var bar := ProgressBar.new()
 		bar.theme_type_variation = &"Meter"
 		bar.custom_minimum_size = Vector2(0, 9)

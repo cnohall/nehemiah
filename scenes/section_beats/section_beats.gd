@@ -56,7 +56,7 @@ const BEATS := {
 			"pack": [[S, 2], [B, 1]], "at": "both", "leader": "sanballat" },
 		"last": { "call": "They want the last gap!", "pack": [[B, 2], [S, 2]], "at": "gate" },
 	},
-	4: {   # Tower of Ovens — the conspiracy, and the plan to stop the work (4:8, 4:11)
+	4: {   # Tower of the Ovens — the conspiracy, and the plan to stop the work (4:8, 4:11)
 		"half": { "call": "They've all come together!",
 			"verse": ["and they all conspired together to come and fight against Jerusalem, and to cause confusion among us.", "Neh. 4:8"],
 			"pack": [[S, 4], [B, 2]], "at": "flank", "leader": "tobiah" },
@@ -70,7 +70,7 @@ const BEATS := {
 			"verse": ["Wherever you hear the sound of the trumpet, rally there to us. Our God will fight for us.", "Neh. 4:20"],
 			"pack": [[B, 2], [R, 2], [S, 3]], "at": "gate", "leader": "sanballat" },
 	},
-	6: {   # Dung Gate — the long haul
+	6: {   # Gate of the Ash Heaps — the long haul
 		"half": { "call": "Raiders on the haul road!", "pack": [[R, 3]], "at": "yard" },
 		"last": { "call": "Brutes for the gate!", "pack": [[B, 3]], "at": "gate" },
 	},

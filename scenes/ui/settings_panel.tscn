@@ -65,7 +65,7 @@ color = Color(0.716, 0.63, 0.526, 0.6)
 [node name="Grid" type="GridContainer" parent="Center/Modal/VBox"]
 layout_mode = 2
 theme_override_constants/h_separation = 40
-theme_override_constants/v_separation = 22
+theme_override_constants/v_separation = 12
 columns = 2
 
 [node name="DisplayLabel" type="Label" parent="Center/Modal/VBox/Grid"]

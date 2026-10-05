@@ -1,18 +1,26 @@
 class_name Messenger
 extends Node3D
 
-# "schemes" twist (East Gate — Neh. 6:1-4): Sanballat and Geshem send a messenger with an
-# invitation to "the plain of Ono". He walks up to a worker and waits beside them, in
-# reach of [E]. A worker who goes with him is led away from the wall for a while and
-# has to walk back; ignored, he gives up and leaves. The right answer, every time, is
-# to keep working (6:3).
-# Two others come by the same road (DayDirector, GDD §5.15): the fifth messenger with the
-# open letter (6:5, named "Letter": turned away, he answers the rumour) and Shemaiah at the
-# Miphkad Gate (6:10-13, named "Shemaiah": "let us shut the doors of the temple" — going
-# with him leads the worker off toward the city for a while; "Should a man like me flee?").
-# Server moves him; clients mirror position / anim / state via the synchronizer.
+# "schemes" twist (East Gate — Neh. 6:1-4, GDD §6.7): visitors come by the road along the
+# inside of the wall, one at a time, and stand at a worker's elbow.
+# - Sanballat's man (court purple, a sealed scroll): "come down to the plain of Ono". While
+#   he stands talking, whoever he stands by works slower. [E] answers him, a short stop —
+#   "I am doing a great work, so that I can't come down" (6:3) — and he goes. Ignored, he
+#   gives up after a while. The fifth carries the open letter (6:5, named "Letter"):
+#   answered or given up on, the rumour is answered (DayDirector).
+# - A neighbour from the villages (undyed robe, no scroll, named "Neighbour…"): "wherever
+#   you turn, they will attack us" (4:12). [E] hears him: the next pack's spot is marked
+#   now, long before the bell. Ignored, he leaves; nothing lost.
+# - Shemaiah (Miphkad Gate, 6:10-13, named "Shemaiah", sent by DayDirector) comes in the
+#   neighbour's robe. [E] hears him — and his word points away from the wall: "hide in the
+#   temple". Then [E] goes with him (led toward the city for a while); walking on refuses
+#   him ("Should a man like me flee?").
+# `-- --old-messenger`: the first pass (A/B) — [E] goes with any messenger, ignoring costs
+# nothing, no neighbours.
+# Server moves him; clients mirror position / anim / state / heard via the synchronizer.
 
 enum State { COMING, WAITING, LEADING, LEAVING }
+enum Kind { ENVOY, LETTER, NEIGHBOUR, SHEMAIAH }
 
 const SPEED      := 3.2    # slower than a running worker — you can walk away from him
 const LEAD_SPEED := 3.4
@@ -22,8 +30,14 @@ const MAX_STAY   := 30.0   # however long he's been chasing
 const LEAD_TIME  := 7.0
 const LEAVE_TIME := 4.0
 const LABEL_RANGE := 7.0
+const ANSWER_TIME := 1.2   # the worker stops this long to answer or hear him
+const ELBOW       := STAND_OFF + 0.6   # this near, he's talking at you (and [E] is his)
+const PESTER_MULT := 0.6   # work pace of whoever an envoy stands talking at
 const ROBE   := Color(0.34, 0.22, 0.44)   # court purple — not one of the crew
 const SCROLL := Color(0.93, 0.88, 0.74)
+const HOMESPUN := Color(0.70, 0.62, 0.48)   # undyed wool — a neighbour, one of our own
+
+static var old_rules: bool = "--old-messenger" in OS.get_cmdline_user_args()
 
 var anim := "idle_down":
 	set(value):
@@ -35,6 +49,9 @@ var state := State.COMING:
 		state = value
 		if is_node_ready():
 			_refresh()
+## Shemaiah: his word has been heard — [E] now goes with him
+var heard := false
+var kind := Kind.ENVOY
 
 var _target: Node3D
 var _led: Node3D
@@ -43,6 +60,8 @@ var _waited := 0.0
 var _facing := "down"
 var _exit := Vector3.ZERO
 var _label: WorldTag
+var _note := ""
+var _told := false   # server: the one he stands by was told he slows them
 var lead_toast := "Going down to Ono…"
 var release_toast := "Why should the work stop? Back to the wall!"
 var _lead_time := LEAD_TIME
@@ -50,47 +69,65 @@ var _lead_time := LEAD_TIME
 @onready var _figure: CharacterRig = $Figure
 
 func _ready() -> void:
-	_figure.setup({
-		"skin": Color(0.66, 0.46, 0.32), "robe": ROBE, "trim": ROBE.darkened(0.45),
-		"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.86, 0.78, 0.56), "tool": false,
-		"band": Color(0.80, 0.62, 0.26), "beard": "short", "hair": Color(0.12, 0.09, 0.07),
-		"outline": Color(0.20, 0.12, 0.24),
-	})
+	kind = kind_of(name)
+	if kind == Kind.NEIGHBOUR or kind == Kind.SHEMAIAH:
+		# Homespun, no scroll: by his look, one of our own. Shemaiah is grey-haired.
+		_figure.setup({
+			"skin": Color(0.62, 0.45, 0.33), "robe": HOMESPUN, "trim": HOMESPUN.darkened(0.4),
+			"sash": Color(0.52, 0.40, 0.28), "hat": "wrap", "hat_color": Color(0.86, 0.82, 0.74), "tool": false,
+			"band": Color(0.52, 0.40, 0.28), "beard": "short",
+			"hair": Color(0.45, 0.42, 0.40) if kind == Kind.SHEMAIAH else Color(0.16, 0.11, 0.08),
+			"outline": Color(0.24, 0.19, 0.13),
+		})
+	else:
+		_figure.setup({
+			"skin": Color(0.66, 0.46, 0.32), "robe": ROBE, "trim": ROBE.darkened(0.45),
+			"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.86, 0.78, 0.56), "tool": false,
+			"band": Color(0.80, 0.62, 0.26), "beard": "short", "hair": Color(0.12, 0.09, 0.07),
+			"outline": Color(0.20, 0.12, 0.24),
+		})
+		# The letter in his hand (6:5 — "an open letter")
+		var scroll := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.07
+		cyl.bottom_radius = 0.07
+		cyl.height = 0.45
+		scroll.mesh = cyl
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = SCROLL
+		scroll.material_override = mat
+		scroll.position = Vector3(0.38, 1.25, 0.25)
+		scroll.rotation.z = PI / 2.4
+		add_child(scroll)
 	_figure.play(anim)
 	GameState.mark_met("messenger")
-	# The letter in his hand (6:5 — "an open letter")
-	var scroll := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.07
-	cyl.bottom_radius = 0.07
-	cyl.height = 0.45
-	scroll.mesh = cyl
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = SCROLL
-	scroll.material_override = mat
-	scroll.position = Vector3(0.38, 1.25, 0.25)
-	scroll.rotation.z = PI / 2.4
-	add_child(scroll)
-	var note := "Come down to the plain of Ono"
-	if name == &"Letter":
-		note = "An open letter: “You would be their king”"
-		lead_toast = "Reading the letter…"
-	elif name == &"Shemaiah":
-		note = "Hide in the temple — they come tonight to kill you"
-		lead_toast = "Going to hide in the temple…"
-		release_toast = "Should a man like me flee? Back to the wall!"
-		_lead_time = 10.0
-		_figure.setup({
-			"skin": Color(0.62, 0.45, 0.33), "robe": Color(0.40, 0.42, 0.46), "trim": Color(0.22, 0.23, 0.26),
-			"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.80, 0.78, 0.72), "tool": false,
-			"band": Color(0.80, 0.62, 0.26), "beard": "short", "hair": Color(0.45, 0.42, 0.40),
-			"outline": Color(0.16, 0.17, 0.20),
-		})
-	_label = WorldTag.make(WorldTag.Kind.NOTE, note)
+	match kind:
+		Kind.ENVOY:
+			_note = "Come down to the plain of Ono"
+		Kind.LETTER:
+			_note = "An open letter: “You would be their king”"
+			lead_toast = "Reading the letter…"
+		Kind.NEIGHBOUR:
+			_note = "From the villages: “Wherever you turn, they will attack us”"
+		Kind.SHEMAIAH:
+			_note = "Shemaiah, shut in at home: “Let us meet together in God's house”"
+			lead_toast = "Going to hide in the temple…"
+			release_toast = "Should a man like me flee? Back to the wall!"
+			_lead_time = 10.0
+	_label = WorldTag.make(WorldTag.Kind.NOTE, _note)
 	_label.position.y = 3.0
 	add_child(_label)
 	GameState.phase_changed.connect(_on_phase_changed)
 	_refresh()
+
+static func kind_of(n: StringName) -> Kind:
+	if n == &"Letter":
+		return Kind.LETTER
+	if n == &"Shemaiah":
+		return Kind.SHEMAIAH
+	if String(n).begins_with("Neighbour"):
+		return Kind.NEIGHBOUR
+	return Kind.ENVOY
 
 func _refresh() -> void:
 	# Only while he's asking can [E] take his invitation
@@ -101,6 +138,32 @@ func _refresh() -> void:
 
 func _process(_delta: float) -> void:
 	_label.visible = state == State.WAITING and _local_player_near()
+	if _label.visible:
+		_label.text = _note_now() + "\n[%s] %s" % [InputMode.key("interact"), _verb()]
+
+# What he says, as it stands now (Shemaiah's word, once heard)
+func _note_now() -> String:
+	if kind == Kind.SHEMAIAH and heard:
+		return "Hide in the temple — they come tonight to kill you"
+	return _note
+
+## What [E] does to him now (shown on his note)
+func _verb() -> String:
+	if old_rules or (kind == Kind.SHEMAIAH and heard):
+		return "Go with him"
+	return "Hear him" if kind == Kind.NEIGHBOUR or kind == Kind.SHEMAIAH else "Answer him"
+
+## Every peer (state, position synced): standing talking at `p` — near enough that [E] is his
+func at_elbow(p: Node3D) -> bool:
+	if state != State.WAITING:
+		return false
+	var d := p.global_position - global_position
+	d.y = 0.0
+	return d.length() < ELBOW
+
+## Server: an envoy talking at `p` slows their work (Sanballat's men, not the neighbours)
+func pesters(p: Node3D) -> bool:
+	return not old_rules and (kind == Kind.ENVOY or kind == Kind.LETTER) and at_elbow(p)
 
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
@@ -125,6 +188,9 @@ func _physics_process(delta: float) -> void:
 				_waited += delta
 				_face(to)
 				anim = "idle_" + _facing
+				if not _told and pesters(_target) and _target.building_site != null:
+					_told = true
+					_target._tell("He talks and talks — your work goes slower. {interact} to answer him")
 		State.LEADING:
 			if _timer > _lead_time or not is_instance_valid(_led):
 				_release()
@@ -137,6 +203,33 @@ func _physics_process(delta: float) -> void:
 				return
 			_walk_to(_exit, delta, SPEED)
 
+## Server: a worker pressed [E] at him. Answer an envoy, hear a neighbour or Shemaiah —
+## or, once Shemaiah has been heard (or under the old rules), go with him.
+func answer(worker: Node3D) -> void:
+	if state == State.LEADING or state == State.LEAVING:
+		return
+	if old_rules or (kind == Kind.SHEMAIAH and heard):
+		accept(worker)
+		get_tree().call_group("day_director", "note_shemaiah" if kind == Kind.SHEMAIAH else "note_ono")
+		return
+	match kind:
+		Kind.ENVOY:
+			worker.answer_pause(ANSWER_TIME, "I am doing a great work — I can't come down!")
+			_leave()
+		Kind.LETTER:
+			worker.answer_pause(ANSWER_TIME, "No such things are done as you say!")
+			_leave()
+		Kind.NEIGHBOUR:
+			var waves := get_node_or_null("../../WaveManager")
+			var told: bool = waves != null and waves.warn_early()
+			worker.answer_pause(ANSWER_TIME, "He points to where they'll come — watch there!" if told \
+				else "All quiet on the road for now")
+			_leave(false)
+		Kind.SHEMAIAH:
+			heard = true
+			_waited = 0.0   # time to weigh his word
+			worker.answer_pause(ANSWER_TIME, "Hide in the temple? {interact} go with him, or walk on")
+
 ## Server: a worker took the invitation — lead them off toward Ono
 func accept(worker: Node3D) -> void:
 	if state == State.LEADING or state == State.LEAVING:
@@ -147,8 +240,10 @@ func accept(worker: Node3D) -> void:
 	state = State.LEADING
 	worker.lead_away(self, _lead_time)
 
-func _leave() -> void:
-	get_tree().call_group("day_director", "note_refused", str(name))   # turned away
+# Off he goes. `refused`: Sanballat's man turned away (answers the letter, refuses Shemaiah)
+func _leave(refused := true) -> void:
+	if refused:
+		get_tree().call_group("day_director", "note_refused", str(name))
 	_timer = 0.0
 	_exit = _exit_point()
 	state = State.LEAVING
@@ -160,7 +255,7 @@ func _release() -> void:
 
 # Out the nearer side of the site, along the inside of the wall
 func _exit_point() -> Vector3:
-	if name == &"Shemaiah":
+	if kind == Kind.SHEMAIAH:
 		return Vector3(global_position.x * 0.5, global_position.y, 46.0)   # in, toward the temple
 	var side := -1.0 if global_position.x < 4.0 else 1.0
 	return Vector3(side * 48.0, global_position.y, clampf(global_position.z, 6.0, 14.0))
@@ -178,6 +273,8 @@ func _pick_target() -> Node3D:
 		if d < best_d:
 			best_d = d
 			best = p
+	if best != _target:
+		_told = false
 	return best
 
 func _walk_to(dest: Vector3, delta: float, speed: float) -> void:

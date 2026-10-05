@@ -19,6 +19,9 @@ uniform float streaks = 0.0;
 // Contact darkening toward the ground — grounds blocks without relying on SSAO alone
 uniform float ground_ao = 0.28;
 uniform float ground_ao_height = 0.55;
+// Foliage in the wind: each crown piece sways on its own phase, with slow gusts
+// travelling across the ground (0 = rigid)
+uniform float wind_amp = 0.0;
 
 varying float v_edge;
 varying vec3 v_wnormal;
@@ -47,6 +50,13 @@ float vnoise(vec3 x) {
 }
 
 void vertex() {
+	if (wind_amp > 0.0) {
+		vec3 o = MODEL_MATRIX[3].xyz;
+		float ph = dot(o.xz, vec2(0.41, 0.27));
+		float gust = 0.5 + 0.5 * sin(TIME * 0.45 - dot(o.xz, vec2(0.085, 0.052)));
+		float w = (sin(TIME * 1.35 + ph) * 0.6 + sin(TIME * 2.4 + ph * 1.9) * 0.4) * (0.45 + 0.9 * gust);
+		VERTEX += inverse(mat3(MODEL_MATRIX)) * (vec3(0.85, 0.0, 0.52) * w * wind_amp);
+	}
 	vec3 an = abs(NORMAL);
 	v_edge = step(0.1, 1.0 - max(an.x, max(an.y, an.z)));
 	if (bevel > 0.0 && unit_inset > 0.0) {

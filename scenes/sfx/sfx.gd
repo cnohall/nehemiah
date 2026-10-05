@@ -42,6 +42,9 @@ var _defs := {
 	"enemy_die":      [_n("impactPunch_heavy_%03d", 0, 5), -2.0, 0.75, 0.9],
 	# Builder's sword (Neh. 4:18): the swing, higher and brighter than an enemy's
 	"sword":          [["knifeSlice", "knifeSlice2"], -6.0, 1.15, 1.35],
+	# A cut that turns a foe's blow (GDD §5.16): bronze on the shaft, then the heavy blow
+	# (tools/synth_sword.py)
+	"riposte":        [_n("riposte_%03d", 0, 3), -2.0, 0.95, 1.05],
 	"sling_miss":     [_n("impactGeneric_light_%03d", 0, 5), -8.0, 0.8, 1.0],
 	# The sling (GDD §5.16), synthesized by tools/synth_sling.py: one pass of the whirl
 	# (pitched up as it speeds), the taut-cord ting of a true-shot window, the release
@@ -85,7 +88,7 @@ const TRIM := {
 	"clothBelt": 16.5, "clothBelt2": 15.0,
 	"handleSmallLeather": 18.5, "handleSmallLeather2": 24.0,
 }
-# Loud enough to put the birds up (Birds): event → reach in metres, 0 = the whole site
+# Loud enough to put the birds up (Birds) and make the sheep shy (Flock): event → reach in metres, 0 = the whole site
 const STARTLES := {
 	"sword": 3.5, "dash": 3.0, "shatter": 4.5, "sling_miss": 3.0, "wall_crumble": 8.0,
 	"enemy_die": 4.0, "downed": 4.0, "horn": 0.0, "breach": 0.0, "sling_crack": 3.0,
@@ -216,6 +219,7 @@ func play(event: String, at: Variant = null, pitch_mul := 1.0) -> void:
 	_last_played[event] = now
 	if STARTLES.has(event):
 		get_tree().call_group("bird_set", "startle", at, STARTLES[event])
+		get_tree().call_group("sheep_flocks", "startle", at, STARTLES[event])
 	var def: Array = _defs[event]
 	var stream: AudioStream = streams.pick_random()
 	var pitch := randf_range(def[2], def[3]) * pitch_mul

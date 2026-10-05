@@ -64,7 +64,7 @@ const ENTRIES := [
 	{ "key": "saboteur", "group": "foes", "name": "Saboteur", "enemy": "saboteur", "move": "thrust",
 	  "role": "From day 6",
 	  "quote": "“They will not know or see, until we come in the middle of them… and cause the work to cease.”", "ref": "Neh. 4:11",
-	  "text": "Hooded, an empty sack on his back, no weapon. He slips over the wall for the yard and strews the pile the work needs. Two cuts bring him down; a strewn pile must be tidied before it gives anything." },
+	  "text": "Hooded, an empty sack on his back, no weapon. He slips over the wall for the supply yard and scatters a pile. Nobody can take from it until someone gathers it up. Two cuts bring him down." },
 	{ "key": "raider", "group": "foes", "name": "Raider", "enemy": "raider", "move": "slash",
 	  "role": "From day 21",
 	  "quote": "“…and cause the work to cease.”", "ref": "Neh. 4:11",
@@ -83,6 +83,7 @@ const SUN_X      := 0.84      # of the plate's width: off to the side, clear of 
 # The backdrop runs this far past each side of the plate, so its wall reads chunkier
 const BACKDROP_BLEED := 0.125
 const TEXT_W     := 860.0     # measure of the text column, so lines stay readable
+const LOOK_GRAIN := 0.6       # litho grain on the plate: stiller than play, so a touch more
 # Not met yet: the figure as one flat shape of ink, no detail showing through — but
 # edged in moonlight on the plate, so it still reads against the night
 const SILHOUETTE := """
@@ -116,6 +117,7 @@ var _plate: Control
 var _scene: Control          # backdrop + figure, clipped to the arch
 var _backdrop: StoryBackdrop
 var _floor: Control
+var _ink: Control            # the art style (litho / cel) over the arch
 var _view_box: SubViewportContainer
 var _holder: Node3D
 var _rig: CharacterRig
@@ -227,6 +229,7 @@ func _select(i: int) -> void:
 	_rig.set_look(_look(e))
 	_holder.scale = Vector3.ONE * (Enemy.SCALE[_enemy_type(e)] if e.has("enemy") else 1.0)
 	_view_box.material = null if known else _silhouette_rim
+	_apply_style()
 	_floor.queue_redraw()
 	_rig.play("idle_down")
 	_rig.squash(Vector2(0.92, 1.08))
@@ -499,6 +502,20 @@ func _build_plate() -> Control:
 	_scene.add_child(_view_box)
 	_build_world()
 
+	# The art style over the painting only, so text and medals stay clean. A sibling
+	# after the clipped scene, not inside it: the screen read needs the finished arch.
+	_ink = Control.new()
+	_ink.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ink.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ink.draw.connect(func(): _ink.draw_colored_polygon(_arch(_ink.size, 0.0), Color.WHITE))
+	var look_mat := ShaderMaterial.new()
+	look_mat.shader = load("res://scenes/shared/look_screen.gdshader")
+	look_mat.set_shader_parameter("grain_amount", LOOK_GRAIN)
+	_ink.material = look_mat
+	_plate.add_child(_ink)
+	_apply_style()
+	Settings.art_style_changed.connect(_apply_style)
+
 	var frame := Control.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -510,9 +527,15 @@ func _build_plate() -> Control:
 		inner.append(inner[0])
 		frame.draw_polyline(inner, Color(UiStyle.GOLD, 0.85), 1.5, true))
 	_plate.add_child(frame)
-	for n: Control in [_scene, frame, _floor]:
+	for n: Control in [_scene, frame, _floor, _ink]:
 		_plate.resized.connect(n.queue_redraw)
 	return _plate
+
+## Settings' art style on the plate; off for an unmet one, already a flat silhouette
+func _apply_style() -> void:
+	var look: int = LookPass.STYLES[Settings.art_style]
+	_ink.visible = look != LookPass.PLAIN and (_selected < 0 or _known(ENTRIES[_selected]))
+	(_ink.material as ShaderMaterial).set_shader_parameter("look", look)
 
 ## Round-topped arch filling `s`, inset by `inset` pixels
 static func _arch(s: Vector2, inset: float) -> PackedVector2Array:

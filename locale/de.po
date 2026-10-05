@@ -506,14 +506,14 @@ msgstr "Jeschana-Tor"
 msgid "Broad Wall"
 msgstr "Breite Mauer"
 
-msgid "Tower of Ovens"
+msgid "Tower of the Ovens"
 msgstr "Ofenturm"
 
 msgid "Valley Gate"
 msgstr "Taltor"
 
-msgid "Dung Gate"
-msgstr "Misttor"
+msgid "Gate of the Ash Heaps"
+msgstr "Tor der Aschenhaufen"
 
 msgid "Fountain Gate"
 msgstr "Quelltor"
@@ -786,8 +786,8 @@ msgstr "Malkija und Haschub bessern ein weiteres Stück aus und den Ofenturm."
 msgid "Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall."
 msgstr "Hanun und die Bewohner von Sanoach bauen das Taltor und tausend Ellen Mauer wieder auf."
 
-msgid "Malchijah son of Rechab repairs the Dung Gate, far from where the stone is stacked."
-msgstr "Malkija, der Sohn Rechabs, bessert das Misttor aus, weit weg vom Steinlager."
+msgid "Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked."
+msgstr "Malkija, der Sohn Rechabs, bessert das Tor der Aschenhaufen aus, weit weg vom Steinlager."
 
 msgid "Shallun repairs the Fountain Gate, down by the pool at the King's Garden."
 msgstr "Schallun bessert das Quelltor aus, unten am Teich beim Königsgarten."
@@ -1981,9 +1981,6 @@ msgstr "[%s] Schleuder · aus der Nähe das Schwert"
 msgid "[%s] Sound the horn — the crew gathers to you"
 msgstr "[%s] Ins Horn stoßen — die Truppe sammelt sich bei dir"
 
-msgid "%s Help up"
-msgstr "%s Aufhelfen"
-
 msgid "%s Take the other end"
 msgstr "%s Anderes Ende nehmen"
 
@@ -2038,8 +2035,11 @@ msgstr "Gewand: %s"
 msgid "%s at %d marks (you have %d)"
 msgstr "%s ab %d Abzeichen (du hast %d)"
 
-msgid "Continue — %s, day %d"
-msgstr "Fortsetzen — %s, Tag %d"
+msgid "Continue"
+msgstr "Fortsetzen"
+
+msgid "%s · day %d"
+msgstr "%s · Tag %d"
 
 msgid "One's slipped in — the yard! He's after the piles"
 msgstr "Einer ist eingedrungen — der Lagerplatz! Er will an die Haufen"
@@ -2559,3 +2559,139 @@ msgstr "Geht, sich im Tempel zu verstecken …"
 
 msgid "Should a man like me flee? Back to the wall!"
 msgstr "Sollte ein Mann wie ich fliehen? Zurück zur Mauer!"
+
+msgid "Graphics"
+msgstr "Grafik"
+
+msgid "3D resolution"
+msgstr "3D-Auflösung"
+
+msgid "Low"
+msgstr "Niedrig"
+
+msgid "Medium"
+msgstr "Mittel"
+
+msgid "High"
+msgstr "Hoch"
+
+msgid "Window size"
+msgstr "Fenstergröße"
+
+msgid "Default"
+msgstr "Standard"
+
+msgid "Art style"
+msgstr "Grafikstil"
+
+msgid "Lithograph"
+msgstr "Lithografie"
+
+msgid "Cel"
+msgstr "Cel-Shading"
+
+msgid "Hold on — I'm coming!"
+msgstr "Halt durch — ich komme!"
+
+msgid "I've got your back!"
+msgstr "Ich geb dir Deckung!"
+
+msgid "A thief in the yard!"
+msgstr "Ein Dieb im Hof!"
+
+msgid "I'll take the other end."
+msgstr "Ich nehm das andere Ende."
+
+msgid "Foes at the wall!"
+msgstr "Feinde an der Mauer!"
+
+msgid "I've fallen — help me up!"
+msgstr "Ich bin gefallen — hilf mir auf!"
+
+msgid "Thank you, friend!"
+msgstr "Danke, Freund!"
+
+msgid "Answer him"
+msgstr "Antworte ihm"
+
+msgid "Hear him"
+msgstr "Hör ihn an"
+
+msgid "Go with him"
+msgstr "Geh mit ihm"
+
+msgid "From the villages: “Wherever you turn, they will attack us”"
+msgstr "Aus den Dörfern: „Wohin ihr euch auch wendet, sie werden uns angreifen“"
+
+msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
+msgstr "Schemaja, daheim eingeschlossen: „Lass uns im Haus Gottes zusammenkommen“"
+
+msgid "I am doing a great work — I can't come down!"
+msgstr "Ich tue ein großes Werk — ich kann nicht hinabkommen!"
+
+msgid "No such things are done as you say!"
+msgstr "Nichts von dem, was du sagst, ist geschehen!"
+
+msgid "He points to where they'll come — watch there!"
+msgstr "Er zeigt, wo sie kommen werden — gebt dort acht!"
+
+msgid "All quiet on the road for now"
+msgstr "Auf dem Weg ist es vorerst ruhig"
+
+msgid "Hide in the temple? {interact} go with him, or walk on"
+msgstr "Im Tempel verstecken? {interact} mit ihm gehen, oder weitergehen"
+
+msgid "He talks and talks — your work goes slower. {interact} to answer him"
+msgstr "Er redet und redet — deine Arbeit geht langsamer. {interact} antworte ihm"
+
+msgid "Messengers will call you down to Ono — answer them and keep working"
+msgstr "Boten werden dich nach Ono hinabrufen — antworte ihnen und arbeite weiter"
+
+msgid "Wave in %d s · %s"
+msgstr "Angriff in %d s · %s"
+
+msgid "They come! · %s"
+msgstr "Sie kommen! · %s"
+
+msgid " · the crew is spurred"
+msgstr " · die Mannschaft ist angespornt"
+
+msgid "%d scout"
+msgid_plural "%d scouts"
+msgstr[0] "%d Späher"
+msgstr[1] "%d Späher"
+
+msgid "%d brute"
+msgid_plural "%d brutes"
+msgstr[0] "%d Rohling"
+msgstr[1] "%d Rohlinge"
+
+msgid "%d raider"
+msgid_plural "%d raiders"
+msgstr[0] "%d Räuber"
+msgstr[1] "%d Räuber"
+
+msgid "Wave called in early — the crew is spurred"
+msgstr "Angriff vorzeitig gerufen — die Mannschaft ist angespornt"
+
+
+msgid "Hurt? Drink at the well"
+msgstr "Verletzt? Trink am Brunnen"
+
+msgid "Well"
+msgstr "Brunnen"
+
+msgid "Drink"
+msgstr "Trinken"
+
+msgid "Set the load down first"
+msgstr "Erst die Last abstellen"
+
+msgid "Set it down first — {drop}, then {interact} to drink"
+msgstr "Erst abstellen — {drop}, dann {interact} zum Trinken"
+
+msgid "%s Drink — hands free, stand still to mend"
+msgstr "%s Trinken — Hände frei, stillstehen zum Heilen"
+
+msgid "Set the load down, then drink at the well to mend"
+msgstr "Last abstellen, dann am Brunnen trinken, um zu heilen"

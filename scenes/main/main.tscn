@@ -17,6 +17,9 @@
 [ext_resource type="Script" path="res://scenes/day_light/day_light.gd" id="13_daylight"]
 [ext_resource type="Script" path="res://scenes/horn/horn.gd" id="14_horn"]
 [ext_resource type="PackedScene" path="res://scenes/watch_post/watch_post.tscn" id="15_post"]
+[ext_resource type="Script" path="res://scenes/shared/ground_mesh.gd" id="16_groundmesh"]
+[ext_resource type="Script" path="res://scenes/shared/breeze.gd" id="17_breeze"]
+[ext_resource type="Script" path="res://scenes/festival/passersby.gd" id="18_passersby"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 geometry/parsed_geometry_type = 1
@@ -153,6 +156,7 @@ shape = SubResource("FloorShape")
 
 [node name="Mesh" type="MeshInstance3D" parent="Floor"]
 mesh = SubResource("FloorMesh")
+script = ExtResource("16_groundmesh")
 surface_material_override/0 = SubResource("FloorMat")
 
 [node name="NavRegion" type="NavigationRegion3D" parent="."]
@@ -306,6 +310,12 @@ script = ExtResource("41_birds")
 
 [node name="DayLight" type="Node" parent="."]
 script = ExtResource("13_daylight")
+
+[node name="Breeze" type="Node3D" parent="."]
+script = ExtResource("17_breeze")
+
+[node name="Passersby" type="Node3D" parent="."]
+script = ExtResource("18_passersby")
 
 [node name="Horn" type="Node3D" parent="."]
 script = ExtResource("14_horn")
