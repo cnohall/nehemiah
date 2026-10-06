@@ -4,7 +4,7 @@ extends RefCounted
 # The four trades of the crew (GDD §5.10, Neh. 4): anyone can do any job, each trade
 # does one thing better. Hands-on work takes WORK_MULT longer than before; a trade's own
 # work runs PACE faster, which is the old pace. Water carriers walk loaded faster; the
-# overseer hits harder. Off with `-- --no-trades` (GameState.trades): every worker plain,
+# overseer hits harder. Off with `-- --no-trades` or in the simple game (GameState.trades_on()): every worker plain,
 # work at the old times.
 
 enum { BUILDER, WATER_CARRIER, CARPENTER, OVERSEER }
@@ -25,7 +25,7 @@ const ABOUT := [
 
 ## How fast `trade` works up a stage of `material` (1 = anyone)
 static func work_pace(trade: int, material: String) -> float:
-	if not GameState.trades:
+	if not GameState.trades_on():
 		return 1.0
 	match trade:
 		BUILDER:
@@ -36,13 +36,13 @@ static func work_pace(trade: int, material: String) -> float:
 
 ## Seconds of work time are stretched by this (the festival keeps its own times)
 static func work_mult() -> float:
-	return WORK_MULT if GameState.trades and not GameState.festival else 1.0
+	return WORK_MULT if GameState.trades_on() and not GameState.festival else 1.0
 
 static func carry_mult(trade: int) -> float:
-	return CARRY_MULT if GameState.trades and trade == WATER_CARRIER else 1.0
+	return CARRY_MULT if GameState.trades_on() and trade == WATER_CARRIER else 1.0
 
 static func hit_mult(trade: int) -> float:
-	return HIT_MULT if GameState.trades and trade == OVERSEER else 1.0
+	return HIT_MULT if GameState.trades_on() and trade == OVERSEER else 1.0
 
 ## The work this trade is quicker at, for bots choosing a site ("" = none)
 static func prefers(trade: int, material: String) -> bool:

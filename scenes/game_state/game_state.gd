@@ -87,10 +87,16 @@ const TWIST_INTRO := {
 	"horn": "They come up the valley in surges. {horn} sounds the horn: gather in its ring and your blows land harder",
 	"haul": "A long haul from the yard: leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
 	"spring": "A quiet stretch by the Pool of Shelah. The water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
+	"spring_simple": "A quiet stretch by the Pool of Shelah. The water is close at hand: the mortar comes quickly",
 	"night": "Night falls on the work. Keep to the torchlight; they come out of the dark",
 	"cramped": "Each priest builds in front of his own house. Mind the narrow lanes",
 	"schemes": "Messengers will call you down to Ono. Answer them and keep working",
 }
+## A twist's dawn line; the simple game's own where it leaves part of the twist out
+func twist_intro(twist: String) -> String:
+	var key := twist + "_simple"
+	return TWIST_INTRO.get(key if simplified() and TWIST_INTRO.has(key) else twist, "")
+
 ## A verse reference in the player's language: short ("Neh. 3:1") for plaques, long
 ## ("Nehemiah 3:1") for cards and quotes. Takes either English form.
 func short_ref(ref: String) -> String:
@@ -147,6 +153,9 @@ var tell: bool = "--no-tell" not in OS.get_cmdline_user_args()
 var true_shot: bool = "--no-true-shot" not in OS.get_cmdline_user_args()
 # `-- --no-riposte`: a sword cut in a foe's draw only knocks the strike aside, like any hit
 var riposte: bool = "--no-riposte" not in OS.get_cmdline_user_args()
+# Simple game (Settings.simple_game): the host's pick, as clients last heard it. Read it
+# through simplified()
+var simple := false
 signal rules_changed
 
 # Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
@@ -250,6 +259,33 @@ func get_section_for_day(day: int) -> Dictionary:
 func get_current_section() -> Dictionary:
 	return get_section_for_day(current_day)
 
+## The simple game (Settings.simple_game) is in play: the host reads its own setting live,
+## clients what the host sent. Never in the practice or Explore Jerusalem
+func simplified() -> bool:
+	if tutorial or festival:
+		return false
+	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
+		return Settings.simple_game
+	return simple
+
+## Trades in play (GDD §5.10): the rule, and not the simple game (every worker plain)
+func trades_on() -> bool:
+	return trades and not simplified()
+
+## The saboteur in play (GDD §5.9): the rule, and not the simple game
+func saboteur_on() -> bool:
+	return saboteur and not simplified()
+
+## The marks a stretch can earn: the simple game has no "In good time"
+func marks_in_play() -> Array:
+	return [Mark.CLEAN, Mark.SOUND] if simplified() else MARKS
+
+## Server: the host changed a rule mid-session (the simple game) — tell everyone
+func share_rules() -> void:
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_rules.rpc(waves, sun, posts, trades, saboteur, tell, true_shot, riposte, simplified())
+	rules_changed.emit()
+
 ## "In good time": days a stretch must have left over when its last unit stands — one for
 ## a short stretch, two from five days up (the sun clock already spreads par over the days)
 func pace_spare_needed(section_index := current_section_index) -> int:
@@ -276,11 +312,12 @@ func pressure() -> float:
 
 ## The boon's modifier `key` for this stretch (1 = none)
 func mod(key: String) -> float:
-	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	var plain := simplified()   # no boons, no rumour: no hidden modifiers in the simple game
+	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) and not plain else 1.0
 	if key == "work":
 		v *= 1.0 + HOUSEHOLD_WORK * households_fed
 		v *= 1.0 - HUNGRY_WORK * hungry_left
-		if rumour:
+		if rumour and not plain:
 			v *= RUMOUR_WORK
 		if Time.get_ticks_msec() < spur_until:
 			v *= SPUR_WORK
@@ -475,10 +512,12 @@ func built_sections() -> Array[bool]:
 func wall_finished() -> bool:
 	return not built_sections().has(false)
 
-## Day 1 of a real run: the wall is raised from stone alone (dug out of the rubble), so a
-## new player learns one verb before wood and mortar arrive (playtest 2026-10-04)
-func intro_day() -> bool:
-	return current_day == 1 and not attract and not free_play()
+## The first stretch of a real run (the Sheep Gate), in either game: timber and stone only.
+## The frames go up in timber and the courses in stone; there's no mortar (the finish and any
+## mending take stone) and no watch posts, so a new player meets two materials and the wall
+## before anything else (playtest 2026-10-04)
+func first_stretch() -> bool:
+	return current_section_index == 0 and not attract and not free_play()
 
 ## A practice or the festival: no waves, no story, nothing saved
 func free_play() -> bool:
@@ -663,7 +702,7 @@ func apply_attract_start() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
-	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot, riposte)
+	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot, riposte, simplified())
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size, crew_weight)
@@ -706,7 +745,7 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool, rp: bool) -> void:
+func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool, rp: bool, sim: bool) -> void:
 	waves = w
 	sun = s
 	posts = p
@@ -715,6 +754,7 @@ func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bo
 	tell = tl
 	true_shot = ts
 	riposte = rp
+	simple = sim
 	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")

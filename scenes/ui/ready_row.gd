@@ -6,7 +6,7 @@ extends HBoxContainer
 # "Begin now" past anyone who's gone quiet. DayDirector owns the state
 # (ready_changed); this only shows it and reports the local press.
 #   holdable — hold [interact] to mark ready (the dusk tally, where a tap of E is still
-#              a habit from the day's work); the story marks you ready by reading on
+#              a habit from the day's work, and the story's last slide with company)
 
 signal ready_pressed
 signal unready_pressed

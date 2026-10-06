@@ -10,7 +10,7 @@ extends Node3D
 # wall ("all my servants were gathered there to the work", 5:16): building +6% each for
 # the stretch (GameState.households_fed). Bots don't carry to them — a job for people.
 # Built on every peer from GameState alone; the server's deliveries are told to the rest.
-# `-- --no-households` to play without them.
+# `-- --no-households` to play without them; the simple game (GameState.simplified) has none.
 
 const HOUSEHOLD_TWIST := "spring"
 const PILE_AT := Vector3(-4.5, 0.0, 13.0)
@@ -49,17 +49,25 @@ func _ready() -> void:
 	_pile.ready.connect(func(): _pile.count_label.clamp_to_screen = false)
 	add_child(_pile)
 	GameState.section_changed.connect(_refresh.unbind(1))
+	GameState.rules_changed.connect(_on_rules)
 	_refresh()
 
 func _active() -> bool:
-	return GameState.has_twist(HOUSEHOLD_TWIST) and not GameState.free_play() and not GameState.attract
+	return GameState.has_twist(HOUSEHOLD_TWIST) and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
+
+## The host switched the simple game: no one is left hungry for it, and the stand goes
+func _on_rules() -> void:
+	if GameState.simplified() or (_active() and _families.is_empty()):
+		_refresh(false)
 
 ## The stretch changed: the households stand in the Fountain Gate and nowhere else, each
 ## stretch hungry again
-func _refresh() -> void:
+func _refresh(stretch_over := true) -> void:
 	# Those still hungry as the Fountain Gate ends are missing from the next stretch (Neh. 5:5)
 	var hungry := _families.filter(func(f): return is_instance_valid(f) and f.hungry).size()
-	GameState.hungry_left = 0 if _active() else hungry
+	GameState.hungry_left = hungry if stretch_over and not _active() and not GameState.simplified() else 0
+	_pile.off = GameState.simplified()
+	_pile._refresh_active()
 	for f in _families:
 		if is_instance_valid(f):
 			f.remove_from_group("households")

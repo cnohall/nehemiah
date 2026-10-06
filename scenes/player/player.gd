@@ -310,9 +310,10 @@ func to_start() -> void:
 	global_position = start_spot(_slot)
 	velocity = Vector3.ZERO
 
-## "Carpenter" etc. — untranslated (callers tr() it)
+## "Carpenter" etc. — untranslated (callers tr() it). With no trades in play (the simple
+## game, `--no-trades`) everyone is a plain builder (Neh. 4:18, "the builders")
 func trade_name() -> String:
-	return CharacterRig.TRADES[trade]
+	return CharacterRig.TRADES[trade] if GameState.trades_on() else "Builder"
 
 # Small diamond in the player's colour over the head — who's who in a busy crew.
 # Only with company; pulses while downed so teammates see who needs help.

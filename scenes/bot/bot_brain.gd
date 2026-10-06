@@ -252,12 +252,12 @@ func _decide() -> void:
 		return
 	# Trades (Trade): the overseer is the first to stand guard when foes close on the work
 	var foes := _foes_near_work()
-	if _guards() < _guards_wanted() or (_p.trade == Trade.OVERSEER and GameState.trades \
+	if _guards() < _guards_wanted() or (_p.trade == Trade.OVERSEER and GameState.trades_on() \
 			and not foes.is_empty() and _guards() == 0):
 		_set_job(Job.GUARD, _site_facing(foes))
 		return
 	# …the water carrier would rather carry, while anything is wanted
-	if _p.trade == Trade.WATER_CARRIER and GameState.trades:
+	if _p.trade == Trade.WATER_CARRIER and GameState.trades_on():
 		var haul := _pick_fetch()
 		if haul != null:
 			_set_job(Job.FETCH, haul)
@@ -470,7 +470,8 @@ func _missing(site: Node3D) -> Dictionary:
 				want[kind] = 1
 		return want
 	if site.has_method("repairing") and site.repairing():
-		return { "mortar": 1 } if site.needs("mortar") else {}
+		var mend_with: String = site.repair_material()
+		return { mend_with: 1 } if site.needs(mend_with) else {}
 	if site.has_method("cost_for") and site.get("pending") is Dictionary:
 		var out := {}
 		var cost: Dictionary = site.cost_for(site.stage + 1)

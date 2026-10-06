@@ -43,17 +43,22 @@ func _process(delta: float) -> void:
 # One of Sanballat's men stands out beyond the wall and calls the taunt across it (as
 # Sanballat's servant came with his open letter, Neh. 6:5): at the start of the work and
 # every so often after, until the stretch is half built — then he's gone. His call slides
-# in from the screen edge, so it's heard from anywhere on the site.
+# in from the screen edge, so it's heard from anywhere on the site. Each call he walks up
+# from beyond, calls, and walks off again, see-through (as Leaders): a still figure in the
+# lane read as a foe nobody could hit.
 const HERALD_AT    := Vector3(7.0, 0.1, -6.5)
 const HERALD_FIRST := 1.5
 const HERALD_EVERY := 40.0
 const HERALD_UNTIL := 0.5    # of the stretch built
 const HERALD_HOLD  := 5.5
+const HERALD_WALK  := 2.2    # s, up from beyond / back off
+const HERALD_FROM  := 6.0    # units further out he walks from
 
 var _herald: Node3D
 var _herald_rig: CharacterRig
 var _herald_shout: Shout
 var _herald_t := HERALD_FIRST
+var _herald_walk: Tween
 var _row: Array = []
 
 func _build_herald() -> void:
@@ -68,6 +73,7 @@ func _build_herald() -> void:
 	_herald_rig.setup(look, 0.95)
 	_herald_rig.set_ring_color(Color(0, 0, 0, 0))
 	_herald_rig.play("idle_down")
+	Leaders.ghost.call_deferred(_herald, _herald_rig)
 	_herald_shout = Shout.make_shout()
 	_herald_shout.position = Vector3(0, 2.8, 0)
 	_herald.add_child(_herald_shout)
@@ -76,8 +82,10 @@ func _tick_herald(delta: float) -> void:
 	if _herald == null:
 		return
 	var on := not _row.is_empty() and _progress(_parts) < HERALD_UNTIL and not GameState.is_over()
-	_herald.visible = on
+	_herald.visible = on and _herald_walk != null and _herald_walk.is_running()
 	if not on or GameState.phase != GameState.Phase.WORK:
+		if not on and _herald_walk:
+			_herald_walk.kill()
 		if GameState.phase == GameState.Phase.DAWN:
 			_herald_t = HERALD_FIRST
 		return
@@ -85,12 +93,29 @@ func _tick_herald(delta: float) -> void:
 	if _herald_t > 0.0:
 		return
 	_herald_t = HERALD_EVERY
-	_herald_shout.say("“%s”  (%s, %s)" % [tr(_row[0]), tr(_row[1]), GameState.short_ref(_row[2])], HERALD_HOLD)
-	_herald_rig.squash(Vector2(0.9, 1.12))
-	_herald_rig.play("thrust_down")
-	get_tree().create_timer(0.8).timeout.connect(func():
-		if is_instance_valid(_herald_rig):
-			_herald_rig.play("idle_down"))
+	_herald_call()
+
+# Up from beyond, the call, back off the way he came
+func _herald_call() -> void:
+	if _herald_walk:
+		_herald_walk.kill()
+	var out := HERALD_AT + Vector3(0, 0, -HERALD_FROM)
+	_herald.position = out
+	_herald.visible = true
+	_herald_rig.play("walk_down")
+	var line := "“%s”  (%s, %s)" % [tr(_row[0]), tr(_row[1]), GameState.short_ref(_row[2])]
+	_herald_walk = create_tween()
+	_herald_walk.tween_property(_herald, "position", HERALD_AT, HERALD_WALK).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_herald_walk.tween_callback(func():
+		_herald_shout.say(line, HERALD_HOLD)
+		_herald_rig.squash(Vector2(0.9, 1.12))
+		_herald_rig.play("thrust_down"))
+	_herald_walk.tween_interval(0.8)
+	_herald_walk.tween_callback(_herald_rig.play.bind("idle_down"))
+	_herald_walk.tween_interval(HERALD_HOLD - 0.8)
+	_herald_walk.tween_callback(_herald_rig.play.bind("walk_up"))
+	_herald_walk.tween_property(_herald, "position", out, HERALD_WALK).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+
 ## 0 bare footings … 1 the whole stretch stands
 static func _progress(parts: Array) -> float:
 	var sum := 0.0

@@ -18,6 +18,7 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | Solo with bots: crew weight, calls, cover | 5.20 | n/a | pending |
 | Experimental: wave forecast, call early (Thronefall-inspired) | 5.21 | Settings → Experimental (off by default) | pending |
 | The well: drink to mend | 5.22 | `--no-well` | pending |
+| Simple game (depth without load) | 5.23 | Settings → Game → Simple (host's choice, `GameState.simplified()`) | built 6 Oct 2026; test `tools/simple_game_test.gd --day=34`; needs playtest 4 |
 | Choice before each stretch (boons) | 6.5 | `--boon=<key>` | pending |
 | Section beats | 6.4 | `--no-beats` | pending |
 | Explore Jerusalem, dedication choirs | 5.8, 5.19 | n/a | **frozen** (side mode) |
@@ -171,7 +172,7 @@ Three rules, each on by default and each switched off from the command line to A
 
 **Waiting for players (one shared widget):**
 - ✅ **Tally card waits for everyone** (important). One ready check in `DayDirector` (`ready_changed`, `mark_ready`, `force_ready`) serves the story cards and the dusk tally. The tally stays up (after a 4 s minimum for the cheer) until every person in the scene is ready; the title screen's bot crew still moves on by itself after 9 s. At dusk [E] no longer picks things up. Still two screens at a section's end (tally, then the story); fold them together only if that still feels clunky
-- ✅ **Ready state** (`ReadyRow`): hold [E] / A (0.6 s, a bar fills) or click to say you're ready; with company, a chip per person (colour, "You" or their trade, a drawn tick when ready), "Waiting for N builders", and the host's "Begin now". In the story, with company, Esc reads "I'm ready" instead of "Skip" (the old skip-vs-continue confusion)
+- ✅ **Ready state** (`ReadyRow`): hold [E] / A (0.6 s, a bar fills) or click to say you're ready; with company, a chip per person (colour, "You" or their trade, a drawn tick when ready), "Waiting for N builders", and the host's "Begin now". In the story, with company, the last slide is the same hold (it confirms the pick on the choice card; a click still counts), E / Enter there only finish the typing, Esc skips to the last slide instead of past it, and E · ← / "Not ready yet" takes it back (6 Oct 2026)
 - ✅ **Loading panel**: `NetworkManager.crew_info` — the server keeps who's in the session (Steam name, still loading or in) and mirrors it to every peer; a client introduces itself on connect. The HUD shows "<name> is joining…" top centre while anyone loads; player cards and ready chips show Steam names (the trade when there's none) and a dimmed "joining" state
 
 **Flow:**
@@ -195,7 +196,7 @@ Three rules, each on by default and each switched off from the command line to A
 
 ### 5.8 The world tells it — ◐ first pass (29 Sep 2026), needs playtest 3
 - **Diegetic HUD** (Settings "Day info": *In the world* default, *Plaques* brings the old day/threat plaques back). The **sun** sinks from mid-morning (61°) to 22° and swings west as the daylight runs out — shadows lengthen toward the stars (`DayLight`). A **scribe** (`Scribe`) at a desk by the yard keeps the record on a scroll over his head: day and stretch, one block per piece (inked when it stands), red strokes for each one through, out of ten; he calls pieces standing or falling. Two **watchmen** (`Watchmen`) on timber stands at the ends of the stretch (Neh. 4:9) call waves and their side, a battered wall, the first brute/raider of the day, a breach, the sun low; a call from off-screen slides in from the edge (`Shout`, a `WorldTag` kind). The "Next:" line stays as an ink-rimmed caption low on screen. Watch: do new players still find the day count and breaches?
-- **Taunts** (`Taunts`): a herald of Sanballat's outside the wall calls the taunt across it (as his servant came with the open letter, 6:5) — at the start of the work and every 40 s until the stretch is half built; the call slides in from the screen edge. Sheep Gate (2:19), Jeshanah / Broad Wall / Tower of the Ovens (4:2-3), East Gate (Sanballat's letter, 6:6). (The line used to be daubed on the ground outside the wall too; cut Sep 29 2026, it read strangely)
+- **Taunts** (`Taunts`): a herald of Sanballat's outside the wall calls the taunt across it (as his servant came with the open letter, 6:5) — at the start of the work and every 40 s until the stretch is half built; the call slides in from the screen edge. Each call he walks up from beyond, calls and walks off, see-through like the leaders (Oct 6 2026: a still figure in the lane read as an unhittable foe). Sheep Gate (2:19), Jeshanah / Broad Wall / Tower of the Ovens (4:2-3), East Gate (Sanballat's letter, 6:6). (The line used to be daubed on the ground outside the wall too; cut Sep 29 2026, it read strangely)
 - **Wall cam**: when a stretch stands the camera runs along it (3.2 s) and a dedication tablet rises on each piece with the name of whoever carried most to it (Steam name, else the trade). Server credits each load to its unit (`DayDirector.note_load(peer, site)`); the tally waits for the run. Free trailer material
 - **Scribe's map** (`CircuitMap.aged`, `GameState.chronicle`): the circuit map on the story cards and the end screen wears with the run — edges darken with the days, folds at 4 and 8 sections, an ink blot where the enemy got in, a lamp-oil ring on stretches worked till the stars or past par, a margin note per stretch ("2 got in", "worked till the stars", "1 day to spare", "rebuilt what fell"). The end screen is the final map, words on a parchment column at left
 - **Explore Jerusalem** (`Festival`, title menu, solo offline, nothing saved): the Festival of Booths after the wall (Neh. 8) at the Water Gate. Ezra reads from a wooden platform (Lev. 23:40, 42; Neh. 8:15); fetch **branches** from the slopes outside and build five booths — broad place, courtyards, by the well, the temple court (8:15-16); carry **portions** to four with nothing prepared (8:10); talk to Nehemiah, a Levite, Shallum's daughters, Meremoth, a priest, the gatekeeper, children (`Folk`, [E]); go up to the **temple** (`Temple`: walled court, sanctuary facing east, altar with its fire). Journal ticks it off; all done → "There was very great gladness" (8:17). Not the Sabbath: Neh. 13:15-19 forbids carrying loads on it. Not the zero-menu start either — first launch should still meet the real loop (the practice); revisit if players want a gentler first minute
@@ -515,6 +516,34 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 **Bots** (`BotBrain` Job.DRINK): under 45% health, hands free, no foe within 5 m, they walk to the well and drink to full; they stay put while drinking. **Switch:** `--no-well`.
 **Not done:** the Tab lens row ("well" when hurt); a drinking pose (the worker just stands, facing the well); the trough is not a second drinking spot; the 24 m trip is a guess (a closer second well per section is the fix if it is too far).
 **Kill rule:** nobody uses it (deaths are fine without it, or the toast was missed), or the trek makes hurt workers sit out most of a wave. **Tune:** `Player.DRINK_RATE`, `Well.SHOW_BELOW`, `BotBrain.DRINK_BELOW`. Tests: `tools/well_test.gd` (tag states, load refusal, drink to full, a blow interrupts, hint once), `tools/bot_well_test.gd`.
+
+### 5.23 Depth without load: the simple game — ◐ built 6 Oct 2026, needs playtest 4
+**Playtest 3 (4 Oct 2026), what it said about load:** "overwhelming? too much going? perhaps too much at the same time". The specific confusions were all *rules everyone must learn*: scattered piles / tidying up (saboteur), whether the choice card is personal or the group's and why it can't be changed (boons), the character choice conflict (trades). Distractions: sheep, the busy city. Nobody named a missed skill mechanic.
+
+**The test for every system — which kind of depth is it?**
+| Kind | What it does to a new player | Systems | Simple game |
+|---|---|---|---|
+| **Mastery** (a high ceiling) | Nothing. Ignoring it still works; finding it is a reward | true shot, turning the blow, the tell, mending, the well, watch posts | **kept** |
+| **Section twist** (one new ingredient, Overcooked) | One thing to learn, taught by a twist card, then built on | beams, salvage, ruins, two faces, mixing, the horn, haul, night, lanes, messengers | **kept**: this *is* the campaign's depth |
+| **Story setback that is felt** | A visible loss with a visible answer | the ambush (piece knocked back, posts answer it), Shemaiah, the fox | **kept** |
+| **Mandatory rule on top** | Everyone must learn it, every stretch, on top of the twist | trades, saboteur + tidying up, boons, hungry households, call early | **off** |
+| **Invisible modifier** | Nothing, because nobody can feel it. Noise in the design, not depth | boons ±15–20%, rumour ×0.9, spur ×1.15, households ±6%, trades ×1.6 | **off** |
+| **Decoration that answers back / moves** | Draws the eye off the work (playtest 3: "the sheep, distraction") | jars, birds, townsfolk in the streets, wandering sheep | **off** (sheep stay, standing still) |
+| **Second screen / second goal** | One more thing to read | *In good time* mark (the sun already says it), the stretch-end tally's ready check | **off** |
+
+**Simple game** (`Settings.simple_game` → `GameState.simplified()`, `trades_on()`, `saboteur_on()`): plain workers at the base work times (2 / 3 / 2 s, trades' ×1.6 gone), no saboteur and nothing to tidy (the ambush no longer strews the yard), no choice card, no rumour, no households, jars, birds or townsfolk, sheep standing still, two marks, the stretch-end tally moves on by itself after 11 s, no call early. Host's choice, synced on change. Practice and Explore Jerusalem are never simplified. The full game is unchanged, apart from the first stretch below, which both games share.
+
+**The first stretch, in both games** (`GameState.first_stretch()`, playtest 3: "first level just stones?"; 6 Oct 2026): the Sheep Gate has **timber and stone only** and **no watch posts**. Frames go up in timber, courses in stone, the finish and any mending take stone; mortar and the posts arrive with the Fish Gate. Replaces the day-1 stone-only rule (which needed pre-built frames and timber appearing mid-stretch for the doors — more to explain, not less). Test `tools/first_stretch_test.gd -- --nostory [--simple]`. **Watch:** the Fish Gate now brings beams, mortar and posts at once (and the saboteur on day 6 in the full game) — if playtest 4 shows that stretch overwhelming, move posts to the Jeshanah Gate.
+
+**Rule from now on:** a new system says which kind it is. Mastery and twists are welcome; a mandatory rule must replace one, not add to the pile; an invisible modifier is either made ≥25% and visible, or not built.
+
+**For the full game (proposed, not built — decide after playtest 4 compares the two):**
+1. **Stagger, don't stack.** The full game's extras arrive one at a time, like twists: trades offered from the 3rd stretch (Jeshanah), the saboteur from the Broad Wall with its own twist card, boons from the Tower of the Ovens. The first two stretches play as the simple game
+2. **Make the modifiers felt or drop them.** Trades: a visible tool and a sound on your own work (or ×2 instead of ×1.6). Boons: each option must change something you *see* (e.g. "posts from dawn") rather than a percentage
+3. **Fix the confusions playtest 3 named regardless of mode:** the choice card says "the crew votes — you can change your vote until everyone is ready"; the scattered pile's twist card before the saboteur's first day
+4. **Simple as the default for a first run?** If playtest 4 shows new players happier in Simple and the dev circle bored, ship Simple as the default "Story" setting and the full game as "Full crew" — not a difficulty, a depth choice
+
+**Playtest 4:** run A (Sheep → Fish, new players) in Simple, run B in Full with a different group. Compare: "what do I do?" ticks, Fellowship ticks, would they play the next stretch.
 
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |

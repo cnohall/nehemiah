@@ -601,7 +601,7 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			# First day of a section that brings something new: say what
 			if first_day:
 				for twist: String in GameState.new_twists():
-					sub += "\n" + tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
+					sub += "\n" + tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
 				if GameState.BOONS.has(GameState.boon):
 					var lines := GameState.boon_lines(GameState.boon)
 					sub += "\n" + tr("The crew chose: %s") % tr(GameState.BOONS[GameState.boon]["title"])
@@ -691,7 +691,7 @@ func _show_end(won: bool) -> void:
 	stats.add_child(_stat("%d / %d" % [sections_done, GameState.SECTIONS.size()], "Sections"))
 	stats.add_child(_stat(str(GameState.breaches), "Breaches"))
 	if sections_done > 0:
-		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
+		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.marks_in_play().size()], "Marks"))
 	if GameState.is_replay():
 		_replay_end(won, vb, stats)
 	_build_end_map(won)
@@ -999,7 +999,8 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(_crew_line(crew))
 	# The tally stays until everyone is ready (playtest 2) — the title screen's crew
 	# has nobody to ask, so there it fades as before
-	var waits := not GameState.attract
+	# Simple game: a stretch's last tally moves on by itself (DayDirector.SECTION_DUSK_TIME)
+	var waits := not GameState.attract and not (stats.has("marks") and GameState.simplified())
 	if waits:
 		_ready_row = ReadyRow.new(false)
 		_ready_row.holdable = true
@@ -1013,7 +1014,7 @@ func show_tally(stats: Dictionary) -> void:
 	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (BUILDERS_H if marks_line and builders_shown else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
 ") * SUB_LINE_H
 	_tally.show()
-	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
+	_show_banner(title, sub, -1.0 if waits or (stats.has("marks") and GameState.simplified()) else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
 	if strip and unfinished == 0:
 		# Today's cell fills in: the day's work, banked
@@ -1043,7 +1044,7 @@ func _marks_line(stats: Dictionary, big := false) -> Control:
 		GameState.Mark.CLEAN: tr("all through the section") if mask & GameState.Mark.CLEAN 			else tr_n("%d got through", "%d got through", stats["section_breaches"]) % stats["section_breaches"],
 		GameState.Mark.SOUND: tr("%d%% sound") % roundi(stats["wall"] * 100.0),
 	}
-	for m: int in GameState.MARKS:
+	for m: int in GameState.marks_in_play():
 		var earned := bool(mask & m)
 		# Big: the hero of the tally — a large gem with its name and proof stacked beneath
 		var chip: BoxContainer = VBoxContainer.new() if big else HBoxContainer.new()
@@ -1295,6 +1296,13 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 	tiles.alignment = BoxContainer.ALIGNMENT_CENTER
 	tiles.add_theme_constant_override("separation", 6)
 	var about := _host_caption()
+	# The simple game has no trades: the row hides while it's in play (the host may switch)
+	var show_row := func():
+		if is_instance_valid(tiles):
+			tiles.visible = GameState.trades_on()
+			about.visible = GameState.trades_on()
+	GameState.rules_changed.connect(show_row)
+	show_row.call()
 	vb.add_child(tiles)
 	vb.move_child(tiles, at)
 	vb.add_child(about)
@@ -1512,11 +1520,17 @@ func set_player_present(slot: int, present: bool, is_local: bool, is_bot := fals
 		return
 	var card: Dictionary = _cards[slot]
 	card.root.visible = present
-	card.name.text = CharacterRig.TRADES[(trade if trade >= 0 else slot) % CharacterRig.TRADES.size()]
+	card.trade = trade
+	_card_title(card)
 	var who: String = tr("You") if is_local else (tr("Bot") if is_bot \
 		else (display if not display.is_empty() else tr("Crew %s") % ROMAN[slot]))
 	card.who.text = tr("%s · joining…") % who if loading else who
 	card.root.modulate.a = 0.6 if loading else 1.0
+
+## The trade under a card's name — or "Builder" for all with no trades in play (the simple game)
+func _card_title(card: Dictionary) -> void:
+	var t: int = card.trade if card.trade >= 0 else card.slot
+	card.name.text = CharacterRig.TRADES[t % CharacterRig.TRADES.size()] if GameState.trades_on() else "Builder"
 
 func set_player_health(slot: int, frac: float) -> void:
 	if slot >= _cards.size():
@@ -1627,6 +1641,10 @@ func _refresh_controls() -> void:
 		_controls_tween.tween_callback(_controls.hide)
 
 func _build_player_cards() -> void:
+	# The simple game has no trades: every card reads "Builder" (the host may switch mid-game)
+	GameState.rules_changed.connect(func():
+		for card in _cards:
+			_card_title(card))
 	for slot in MAX_SLOTS:
 		var root := PanelContainer.new()
 		root.theme_type_variation = &"Card"
@@ -1686,7 +1704,7 @@ func _build_player_cards() -> void:
 		vb.add_child(bar)
 		players_row.add_child(root)
 		_cards.append({ root = root, portrait = portrait, name = name_lbl, who = who,
-			carry = carry, bar = bar, fill = fill, load = load_icon })
+			carry = carry, bar = bar, fill = fill, load = load_icon, trade = -1, slot = slot })
 
 # ── Steam invite ───────────────────────────────────────────
 

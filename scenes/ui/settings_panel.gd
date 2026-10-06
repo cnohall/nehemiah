@@ -37,6 +37,8 @@ const EXPERIMENTS := [
 ]
 
 var _exp_btns := {}         # Settings property → [Off, On]
+var _full_game: Button
+var _simple_game: Button
 var _rumble_on: Button
 var _world_hud: Button
 var _plaque_hud: Button
@@ -132,6 +134,8 @@ func open() -> void:
 	_map_view.button_pressed     = Settings.turn_to_map
 	_hold.button_pressed         = not Settings.toggle_charge
 	_toggle_mode.button_pressed  = Settings.toggle_charge
+	_full_game.button_pressed     = not Settings.simple_game
+	_simple_game.button_pressed   = Settings.simple_game
 	for key: String in _exp_btns:
 		_exp_btns[key][0].button_pressed = not Settings.get(key)
 		_exp_btns[key][1].button_pressed = Settings.get(key)
@@ -247,7 +251,27 @@ func _build_extra_rows() -> void:
 	_keys_btn.pressed.connect(_show_keys.bind(true))
 	_grid.add_child(_keys_btn)
 	_build_language_row()
+	_build_game_row()
 	_build_experimental_rows()
+
+# Full or simple game (Settings.simple_game): the host's pick, sent to the crew at once
+func _build_game_row() -> void:
+	var pair := _segment_row("Game", "Full", "Simple")
+	_full_game = pair[0]
+	_simple_game = pair[1]
+	_full_game.pressed.connect(_set_simple.bind(false))
+	_simple_game.pressed.connect(_set_simple.bind(true))
+	_add_label("")
+	var note := Label.new()
+	note.theme_type_variation = &"Caption"
+	note.text = "Host's choice. Simple keeps the wall, the fight and each stretch's new twist; it drops trades, the saboteur, the choice before each stretch, hungry households, and the life in the streets."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(300, 0)
+	_grid.add_child(note)
+
+func _set_simple(on: bool) -> void:
+	_toggle("simple_game", on)
+	GameState.share_rules()
 
 # Ideas being tried with playtesters (GDD §5.21): off unless switched on, the host's pick rules
 func _build_experimental_rows() -> void:

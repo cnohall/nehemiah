@@ -238,7 +238,7 @@ func _tell_forecast(called: bool) -> void:
 
 ## Server: a worker calls the next wave in. False when it isn't allowed or isn't worth it.
 func call_early() -> bool:
-	if not _active or not Settings.exp_call_early or GameState.has_twist("horn") or not GameState.waves 			or _surge_left > 0 or _surge_timer < CALL_EARLY_MIN:
+	if not _active or not Settings.exp_call_early or GameState.simplified() or GameState.has_twist("horn") or not GameState.waves 			or _surge_left > 0 or _surge_timer < CALL_EARLY_MIN:
 		return false
 	_surge_timer = WAVE_WARN + 0.01
 	if not _forecasted:
@@ -329,7 +329,7 @@ func _warn_surge(at: Vector3, horn: bool, warn: float) -> void:
 	get_tree().call_group("watchmen", "warn_wave", at, horn)
 
 func _tick_saboteurs(delta: float) -> void:
-	if not GameState.saboteur or _day < SABOTEUR_DAY:
+	if not GameState.saboteur_on() or _day < SABOTEUR_DAY:
 		return
 	_sab_timer -= delta
 	if _sab_timer > 0.0:

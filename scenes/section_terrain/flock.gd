@@ -119,12 +119,13 @@ func _multimesh(mesh: Mesh, count: int) -> MultiMesh:
 # ── Every frame ───────────────────────────────────────────────
 
 func _process(delta: float) -> void:
-	if _sheep.is_empty():
+	# The simple game: the sheep stay where they stand, scenery that doesn't catch the eye
+	if _sheep.is_empty() or GameState.simplified():
 		return
 	_t += delta
 	var players := get_tree().get_nodes_in_group("players")
 	var foes := get_tree().get_nodes_in_group("enemies")
-	var calm := GameState.intro_day()   # day 1: the flock only grazes where it stands
+	var calm := GameState.first_stretch()   # the first stretch: the flock only grazes where it stands
 	for sh in _sheep:
 		sh.shy = maxf(sh.shy - delta, 0.0)
 		sh.alert = maxf(sh.alert - delta, 0.0)
@@ -259,7 +260,7 @@ func _turn_in_place(sh: Dictionary) -> void:
 
 ## Sfx (via group "sheep_flocks"): something loud at `at` (null or reach 0 = heard site-wide)
 func startle(at: Variant, reach: float) -> void:
-	if GameState.intro_day():
+	if GameState.first_stretch():
 		return
 	for sh in _sheep:
 		if sh.shy > 0.0:

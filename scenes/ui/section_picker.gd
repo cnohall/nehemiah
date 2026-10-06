@@ -177,7 +177,7 @@ func _fill_details(i: int) -> void:
 		_foes.add_child(_chip(tr(FOE_NAMES[k]) if met else "?", met, true))
 
 func _intro(twist: String) -> String:
-	return tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
+	return tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
 
 func _chip(text: String, strong: bool, foe := false, fresh := false) -> Label:
 	var l := _label(&"Eyebrow", 13, UiStyle.INK if fresh else UiStyle.CREAM if strong else UiStyle.INK_SOFT, false, text)

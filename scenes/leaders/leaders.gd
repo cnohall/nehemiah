@@ -60,8 +60,8 @@ func _on_phase(phase: GameState.Phase) -> void:
 				_leave()
 
 func _arrive(keys: Array) -> void:
-	if GameState.intro_day():
-		return   # day 1 teaches one thing; a ghost by the wall reads as a bug
+	if GameState.first_stretch():
+		return   # the first stretch teaches the wall; a ghost by the wall reads as a bug
 	var i := 0
 	for key: String in keys:
 		if not LINES.has(key) or _here.has(key):
@@ -74,7 +74,7 @@ func _arrive(keys: Array) -> void:
 		n.add_child(rig)
 		rig.setup(FriendsAndFoes._look({ "key": key }), 1.1)
 		rig.set_ring_color(Color(0, 0, 0, 0))
-		_ghost.call_deferred(n, rig)
+		Leaders.ghost.call_deferred(n, rig)
 		rig.play("walk_down")
 		var shout := Shout.make_shout()
 		shout.position = Vector3(0, 3.0, 0)
@@ -96,7 +96,7 @@ func _arrive(keys: Array) -> void:
 
 # See-through, no shadow, no ground marker: reads as "watching", not as a unit to hit.
 # Deferred — the rig builds its parts and its ground marker (a sibling) a frame late.
-func _ghost(n: Node3D, rig: CharacterRig) -> void:
+static func ghost(n: Node3D, rig: CharacterRig) -> void:
 	if not is_instance_valid(n):
 		return
 	for c in n.get_children():

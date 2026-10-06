@@ -38,15 +38,21 @@ func _process(delta: float) -> bool:
 		return _finish()
 	match _state:
 		"gather":
-			_post = get_nodes_in_group("watch_posts")[0]
-			while _post.needs("wood"):
-				_post.deposit("wood", 1)
-			_check(_post.try_build() and _post.built, "post raised while gathering")
+			# The first stretch has no watch posts (they come with the Fish Gate)
+			_post = null
+			if _gs.first_stretch():
+				_check(get_nodes_in_group("watch_posts").is_empty(), "no watch posts while gathering for the first stretch")
+			else:
+				_post = get_nodes_in_group("watch_posts")[0]
+				while _post.needs("wood"):
+					_post.deposit("wood", 1)
+				_check(_post.try_build() and _post.built, "post raised while gathering")
 			_main.director.begin()
 			_state = "dawn"
 		"dawn":
 			if _gs.phase == _gs.Phase.DAWN or _gs.phase == _gs.Phase.WORK:
-				_check(not _post.built, "gathering post is bare at day 1")
+				if _post != null:
+					_check(not _post.built, "gathering post is bare at day 1")
 				_state = "work"
 		"work":
 			if _gs.phase != _gs.Phase.WORK:

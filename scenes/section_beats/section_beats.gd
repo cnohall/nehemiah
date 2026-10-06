@@ -202,7 +202,7 @@ func _pack(pack: Array, spots: Array) -> Array:
 	var pace: float = Settings.diff()["pace"]
 	for entry: Array in pack:
 		var type: Enemy.Type = entry[0]
-		if type == Enemy.Type.SABOTEUR and not GameState.saboteur:
+		if type == Enemy.Type.SABOTEUR and not GameState.saboteur_on():
 			continue
 		var n: int = entry[1]
 		if type != Enemy.Type.SABOTEUR:

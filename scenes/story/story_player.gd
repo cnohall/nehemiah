@@ -133,6 +133,12 @@ func _input(event: InputEvent) -> void:
 			and _choice_input(event):
 		get_viewport().set_input_as_handled()
 		return
+	# The last slide with company: E / Enter only finish the typing — ready is a hold (ReadyRow)
+	if _holds_ready() and (event.is_action_pressed("interact") or event.is_action_pressed("ui_accept")):
+		get_viewport().set_input_as_handled()
+		if _typing():
+			_advance()
+		return
 	# ← back, → forward (on the choice card they pick, ↑ / Backspace go back)
 	if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_up") \
 			or (event is InputEventKey and event.pressed and event.keycode == KEY_BACKSPACE):
@@ -146,7 +152,11 @@ func _input(event: InputEvent) -> void:
 		_advance()
 	elif event.is_action_pressed("pause"):
 		get_viewport().set_input_as_handled()
-		_finish()
+		# With company Esc only skips to the last slide; being ready is still a hold there
+		if _with_company() and _can_unready():
+			_goto(_slides.size() - 1)
+		else:
+			_finish()
 
 func _typing() -> bool:
 	return _type_tween != null and _type_tween.is_running()
@@ -174,7 +184,8 @@ func _choice_input(event: InputEvent) -> bool:
 		_pick(event.keycode - KEY_1)
 		return true
 	if event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
-		_confirm_choice()
+		if not _holds_ready():   # with company the pick is confirmed by holding (_ready_held)
+			_confirm_choice()
 		return true
 	return false
 
@@ -190,13 +201,35 @@ func _confirm_choice() -> void:
 func _can_unready() -> bool:
 	return _with_company() and GameState.phase == GameState.Phase.STORY
 
+## The last slide, with company, not through yet: hold E to say you're ready (as on the tally)
+func _holds_ready() -> bool:
+	return _can_unready() and not _done and _index == _slides.size() - 1
+
+## The ready row's hold filled: through (confirming the highlighted pick on the choice card)
+func _ready_held() -> void:
+	if _done:
+		return
+	if _type_tween:
+		_type_tween.kill()
+	_reveal_all()
+	if _on_choice_card():
+		_picked = _choice_keys[_choice_index]
+		choice_made.emit(_picked)
+	_finish()
+
+# The ready row shows on the last slide with company: the hold before, who's waiting after
+func _refresh_ready_row() -> void:
+	_ready_row.visible = _can_unready() and _index == _slides.size() - 1
+	if _ready_row.visible:
+		_ready_row.refresh()
+
 ## Take "I'm through" back: the slide you stopped on is live again
 func _unfinish() -> void:
 	_done = false
-	_ready_row.hide()
 	_hint.show()
 	_update_hint()
 	_refresh_note()
+	_refresh_ready_row()
 	unreadied.emit()
 
 func _fill_choices() -> void:
@@ -276,6 +309,7 @@ func _goto(i: int) -> void:
 		_finish()
 		return
 	_index = i
+	_refresh_ready_row()
 	if not _shown:
 		_show_slide(_slides[i])
 		return
@@ -288,15 +322,15 @@ func _goto(i: int) -> void:
 func _update_hint() -> void:
 	var company := _with_company()
 	var last := _index >= _slides.size() - 1
-	# One scheme throughout: E / click goes on (the last slide: "I'm ready"), E again undoes
-	# it, ← goes back, Esc skips to the end
+	# One scheme throughout: E / click goes on, ← goes back, Esc skips to the end. With
+	# company the last slide is a hold of E ("I'm ready", as on the tally); E again undoes it
 	if _done:
 		_hint.text = "E · ←   Not ready yet"
 	elif _on_choice_card():
-		_hint.text = "←  →   Choose          E · Click   Confirm" + ("  (I'm ready)" if company else "") \
-			+ "          ↑   Back"
+		_hint.text = ("←  →   Choose          Hold E · Click   Confirm (I'm ready)" if company \
+			else "←  →   Choose          E · Click   Confirm") + "          ↑   Back"
 	elif last:
-		_hint.text = "←   Back          E · Click   I'm ready" if company \
+		_hint.text = "←   Back          Hold E · Click   I'm ready" if company \
 			else "←   Back          E · Click   Continue"
 	else:
 		_hint.text = "←  →   Slides          E · Click   Next          Esc   Skip"
@@ -352,6 +386,7 @@ func _show_slide(slide: Dictionary) -> void:
 		_fill_choices()
 	_update_hint()
 	_refresh_note()
+	_refresh_ready_row()
 	_set_label(_eyebrow, slide.get("eyebrow", ""))
 	_set_label(_title, slide.get("title", ""))
 	_set_label(_text, slide.get("text", ""))
@@ -418,8 +453,7 @@ func _finish() -> void:
 	finished.emit()
 	# Who else is still reading — only worth a row with company (the ending's credits
 	# follow straight on, nothing waits there)
-	_ready_row.visible = _can_unready()
-	_ready_row.refresh()
+	_refresh_ready_row()
 
 func _kill_tweens() -> void:
 	for tw: Tween in [_slide_tween, _type_tween, _drift_tween]:
@@ -542,7 +576,9 @@ func _build() -> void:
 
 	_ready_row = ReadyRow.new(true)
 	_ready_row.hide()
+	_ready_row.holdable = true
 	_ready_row.cancellable = true
+	_ready_row.ready_pressed.connect(_ready_held)
 	_ready_row.unready_pressed.connect(_unfinish)
 	_ready_row.begin_now.connect(start_now_requested.emit)
 	footer.add_child(_ready_row)

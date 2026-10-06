@@ -37,6 +37,7 @@ var _flocks: Array[Dictionary] = []   # {spot, kind, birds, away, quiet, call}
 func _ready() -> void:
 	add_to_group("bird_set")
 	_terrain.rebuilt.connect(_rebuild)
+	GameState.rules_changed.connect(_rebuild)   # the simple game has none
 	GameState.phase_changed.connect(_on_phase_changed)
 	_rebuild()
 
@@ -51,6 +52,8 @@ func _rebuild() -> void:
 		remove_child(c)
 		c.queue_free()
 	_flocks.clear()
+	if GameState.simplified():
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9000 + GameState.current_section_index
 	_lay_out(FLOCKS_IN, 1.0, rng)

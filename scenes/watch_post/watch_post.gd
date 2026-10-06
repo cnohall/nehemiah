@@ -104,8 +104,9 @@ func _on_section_changed() -> void:
 		reset_slot()
 	_refresh()
 
+## Not on the first stretch (GameState.first_stretch): the wall comes first, posts from the Fish Gate
 func _enabled() -> bool:
-	return GameState.posts
+	return GameState.posts and not GameState.first_stretch()
 
 # Shown / in the groups only while the rule is on; solid only once it stands
 func _refresh() -> void:

@@ -51,6 +51,12 @@ var bot_skill := 1   # index into BotBrain.SKILLS
 var difficulty := 1
 # This player's trade (Trade), or -1 for their place in the crew's own
 var trade := -1
+# Simple game (GDD §5.23): the core loop and each stretch's twist, without the rules
+# everyone must learn on top — no trades, saboteur, boons, rumour, strewn yard, hungry
+# households, jars, birds, townsfolk, wandering sheep, "In good time" mark, stretch-end ready check or calling waves
+# early. Skill depth stays (true shot, turning the blow, mending, the well, posts).
+# Host's choice, synced (GameState.simple)
+var simple_game := false
 # Experimental (GDD §5.21), off by default; the host's choice rules the crew like difficulty
 var exp_forecast := false    # wave forecast: how many and what, ~22 s ahead, spot ringed on the ground
 var exp_call_early := false  # [Horn] brings the next wave forward for a short work boost
@@ -123,8 +129,12 @@ func _ready() -> void:
 		bot_skill = cfg.get_value("bots", "skill", bot_skill)
 		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
+		simple_game = cfg.get_value("general", "simple_game", simple_game)
 		exp_forecast = cfg.get_value("experimental", "forecast", exp_forecast)
 		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
+	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
+	if "--script" in OS.get_cmdline_args():
+		simple_game = "--simple" in OS.get_cmdline_user_args()
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -298,6 +308,7 @@ func save() -> void:
 	cfg.set_value("bots", "skill", bot_skill)
 	cfg.set_value("general", "difficulty", difficulty)
 	cfg.set_value("general", "trade", trade)
+	cfg.set_value("general", "simple_game", simple_game)
 	cfg.set_value("experimental", "forecast", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)

@@ -351,12 +351,16 @@ func needs(kind: String) -> bool:
 	if _clearing():
 		return false
 	if repairing():
-		return kind == "mortar" and pending.get("mortar", 0) < 1
+		return kind == repair_material() and pending.get(kind, 0) < 1
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return false
 	var cost: Dictionary = cost_for(next)
 	return cost.has(kind) and pending.get(kind, 0) < cost[kind]
+
+## What a mend takes: mortar, or stone on the first stretch, which has none (GameState.first_stretch)
+func repair_material() -> String:
+	return "stone" if GameState.first_stretch() else "mortar"
 
 ## A finished wall battered low enough to want mending (one load of mortar, then work)
 func repairing() -> bool:
@@ -370,11 +374,9 @@ func cost_for(target_stage: int) -> Dictionary:
 	if GameState.active_build:
 		for kind: String in cost:
 			cost[kind] = maxi(1, cost[kind] - ACTIVE_BUILD_DISCOUNT)
-	if GameState.intro_day():
-		var loads := 0
-		for kind: String in cost:
-			loads += cost[kind]
-		return { "stone": loads }   # day 1: every stage is stone; the wood and mortar piles are put away
+	if GameState.first_stretch() and cost.has("mortar"):
+		cost["stone"] = cost.get("stone", 0) + cost["mortar"]   # the first stretch has no mortar: finished in stone
+		cost.erase("mortar")
 	if is_thick():
 		for kind: String in THICK_EXTRA.get(target_stage, {}):
 			cost[kind] += THICK_EXTRA[target_stage][kind]
@@ -391,7 +393,7 @@ func work_material() -> String:
 	if _clearing():
 		return "wood"   # charred timbers — the carpenters' work
 	if repairing():
-		return "mortar"
+		return repair_material()
 	var next := stage + 1
 	return "" if next > Stage.MORTARED else cost_for(next).keys()[0]
 
@@ -400,7 +402,7 @@ func next_need() -> String:
 	if _clearing():
 		return ""
 	if repairing():
-		return "mortar" if needs("mortar") else ""
+		return repair_material() if needs(repair_material()) else ""
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return ""
@@ -414,7 +416,7 @@ func can_build() -> bool:
 	if _clearing():
 		return not pulled   # pulling down is work; hauling is not
 	if repairing():
-		return pending.get("mortar", 0) >= 1
+		return pending.get(repair_material(), 0) >= 1
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return false
@@ -433,7 +435,7 @@ func try_build() -> bool:
 		_dust_puff()
 		return true
 	if repairing():
-		pending["mortar"] -= 1
+		pending[repair_material()] -= 1
 		health = minf(MAX_HEALTH, health + MAX_HEALTH * REPAIR_GAIN)
 		_dust_puff()
 		return true
@@ -1000,7 +1002,8 @@ func _update_label() -> void:
 			parts.append("%s %d/%d" % [kind.capitalize(), have, cost[kind]])
 		lines.append("  ".join(parts))
 	elif repairing():
-		lines.append("Mend  [%s]" % InputMode.key("interact") if can_build() else "Mortar to mend  %d/1" % mini(pending.get("mortar", 0), 1))
+		var mend_with := repair_material()
+		lines.append("Mend  [%s]" % InputMode.key("interact") if can_build() 			else ("Stone to mend  %d/1" if mend_with == "stone" else "Mortar to mend  %d/1") % mini(pending.get(mend_with, 0), 1))
 	if is_built() and health < MAX_HEALTH:
 		lines.append("Wall %d%%" % roundi(health / MAX_HEALTH * 100.0))
 	_label.text = "\n".join(lines)

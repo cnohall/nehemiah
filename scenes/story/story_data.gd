@@ -203,7 +203,7 @@ static func slides_for_day(day: int) -> Array:
 
 ## The last card before a new stretch asks how the crew will meet it (campaign only)
 static func choice_offered(section_index: int) -> bool:
-	return section_index > 0 and not GameState.is_replay() and not GameState.free_play() and not GameState.attract
+	return section_index > 0 and not GameState.is_replay() and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
 
 const TWIST_TITLES := {
 	"doors": "Hang the doors", "beams": "Beams take two", "salvage": "Stone from the rubble",
