@@ -315,33 +315,34 @@ func to_start() -> void:
 func trade_name() -> String:
 	return CharacterRig.TRADES[trade] if GameState.trades_on() else "Builder"
 
-# Small diamond in the player's colour over the head — who's who in a busy crew.
-# Only with company; pulses while downed so teammates see who needs help.
+# Small mark in the player's colour over the head — who's who in a busy crew. Each slot
+# has its own shape too (CrewMark: diamond, circle, triangle, square), so it doesn't
+# rest on colour alone. Only with company; pulses while downed so teammates see who
+# needs help.
 var _pip: MeshInstance3D
 var _pip_tween: Tween
+var _pip_slot := -1
 
 func _build_pip() -> void:
-	var gem := SphereMesh.new()   # 4 segments × 2 rings = a diamond
-	gem.radius = 0.16
-	gem.height = 0.42
-	gem.radial_segments = 4
-	gem.rings = 1
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.no_depth_test = true
 	mat.render_priority = 1
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED   # the shape's outline, front on
+	mat.billboard_keep_scale = true                         # the downed pulse
 	_pip = MeshInstance3D.new()
-	_pip.mesh = gem
 	_pip.material_override = mat
 	_pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_pip.position.y = PIP_Y
-	_pip.rotation.y = PI / 4   # a face toward the iso camera
 	add_child(_pip)
 	_refresh_pip()
 
 func _refresh_pip() -> void:
 	if _pip == null:
 		return
+	if _pip_slot != _slot:
+		_pip_slot = _slot
+		_pip.mesh = CrewMark.pip_mesh(_slot)
 	_pip.visible = GameState.crew_size > 1 and not GameState.attract
 	(_pip.material_override as StandardMaterial3D).albedo_color = slot_color
 	if _pip_tween:

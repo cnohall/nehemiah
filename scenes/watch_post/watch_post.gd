@@ -432,5 +432,4 @@ func _update_label() -> void:
 		lines.append("Stone %d/%d" % [ceili(float(ammo) / SHOTS_PER_LOAD), MAX_AMMO / SHOTS_PER_LOAD])
 	# A short name stacks to fit the narrow post; a long one would tower, so it stays a line
 	_label.stack_name = built and ammo > 0
-	_label.text = "
-".join(lines)
+	_label.text = "\n".join(lines)

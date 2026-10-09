@@ -146,6 +146,9 @@ var health: float = MAX_HEALTH:
 			_shake()
 			Sfx.play("wall_hit", global_position)
 			last_hit_msec = Time.get_ticks_msec()
+		elif value - health >= MAX_HEALTH * REPAIR_GAIN * 0.8 and is_node_ready() \
+				and GameState.phase == GameState.Phase.WORK and is_complete():
+			Sfx.play("mend", global_position + _center)   # a mend took (§5.17); not the overnight repair
 		health = value
 		if is_node_ready():
 			_prime_work()   # the mending job opens and closes with the damage

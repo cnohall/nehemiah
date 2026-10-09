@@ -25,6 +25,7 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | Road mini-game | 5.13 | n/a | **cut to cards** (not built) |
 | Held things | 5.18 | `--no-held` | spear rack only, after playtest 3 |
 | Polish: breakables, birds, flock, townsfolk, smoke | 5.8, 6.6 | n/a | **frozen**; web perf untested |
+| Close call, Steam Timeline, crew marks | 7.1 #6–7, 7 | n/a | built 9 Oct 2026; `tools/close_call_test.gd --day=8`, shots `tools/marks_shots.gd`; Timeline untested inside Steam's recorder |
 
 ---
 
@@ -434,7 +435,8 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 - **Bots:** serve a battered wall like an unfinished one, even in a finished unit (`WorkFront` keeps battered parts open without using up the front's width).
 - **Cost is the limiter:** mortar is scarce on lime-and-water stretches, so mending competes with building. No per-day cap.
 - **Only finished walls** (mortared). A half-built wall hit down a stage is already rebuilt by the normal stages.
-- **Not built yet:** cracks on the stones; tune the numbers; a mend sound. Test: `tools/repair_test.gd -- --nostory`.
+- **Mend sound** (9 Oct 2026): `mend`, the stage-raise knock pitched lighter, on every peer when a mend's health lands during the work (not the overnight repair).
+- **Not built yet:** cracks on the stones; tune the numbers. Test: `tools/repair_test.gd -- --nostory --day=5` (the Sheep Gate has no mortar since §5.23).
 
 ### 5.18 Held things, not power-ups — 💡 idea (2 Oct 2026), spear rack only, after playtest 3
 **Question (user):** should the game have power-ups?
@@ -514,7 +516,7 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 2. **Where**: a `WorldTag` over the well's frame, shown only to a worker under 80% health: "Well" from afar (it slides in from the screen edge when off-screen), breathing under 50%. Healthy workers never see it.
 3. **How**: within reach it reads "Drink [E]"; with a load in hand "Set the load down first", and a press says "Set it down first — {drop}, then {interact} to drink". While drinking no tag; the HP bar fills and a sip splashes (existing `splash` sound).
 **Bots** (`BotBrain` Job.DRINK): under 45% health, hands free, no foe within 5 m, they walk to the well and drink to full; they stay put while drinking. **Switch:** `--no-well`.
-**Not done:** the Tab lens row ("well" when hurt); a drinking pose (the worker just stands, facing the well); the trough is not a second drinking spot; the 24 m trip is a guess (a closer second well per section is the fix if it is too far).
+**Not done:** a drinking pose (the worker just stands, facing the well); the trough is not a second drinking spot; the 24 m trip is a guess (a closer second well per section is the fix if it is too far).
 **Kill rule:** nobody uses it (deaths are fine without it, or the toast was missed), or the trek makes hurt workers sit out most of a wave. **Tune:** `Player.DRINK_RATE`, `Well.SHOW_BELOW`, `BotBrain.DRINK_BELOW`. Tests: `tools/well_test.gd` (tag states, load refusal, drink to full, a blow interrupts, hint once), `tools/bot_well_test.gd`.
 
 ### 5.23 Depth without load: the simple game — ◐ built 6 Oct 2026, needs playtest 4
@@ -693,7 +695,7 @@ Borrow Overcooked's **structure and readability**, not its tone.
 Judge new work against this list. Not built unless marked.
 - **Platform and store:** Steam desktop first (app id 480 is a placeholder), store page + wishlist plan, trailer (`tools/trailer.ps1`, v1 exists), price/platform plan in the business notes. Studio: Takiko Games
 - **Steam features:** achievements (map to the marks: *In good time*, *None got through*, *The wall holds*, plus run-level ones), Steam Cloud for `progress.cfg` / campaign save, rich presence, controller glyphs (done via `InputMode`)
-- **Accessibility:** colourblind-safe player markers (the rings are colour-only today), text size option, subtitles for watchman calls and sung/story audio, full rebinding (partly: `reveal` is rebindable), reduce-screen-shake (done), hold-vs-toggle for the ready check
+- **Accessibility:** colourblind-safe player markers (done 9 Oct 2026: `CrewMark`, a shape per slot (diamond, circle, triangle, square) on the billboarded pip over each head, the HUD cards and the tally's crew chips; the ground rings stay colour-only), text size option, subtitles for watchman calls and sung/story audio, full rebinding (partly: `reveal` is rebindable), reduce-screen-shake (done), hold-vs-toggle for the ready check
 - **Networking robustness:** host drop mid-day (what happens?), client reconnect, late join mid-day (known gaps: households, night ride co-op), disconnect while holding a beam end. Crossplay stays parked (`crossplay_plan`)
 - **Performance:** web and low-end desktop budgets; web-untested list: flock, map look, landscape pass, birds draw calls
 - **Localisation:** es / pt_BR / de / ko drafts exist; every new string is English-only until the i18n extract is run. Native-speaker pass before launch
@@ -709,12 +711,12 @@ Measured against what §8 promises. New mechanics (marked *mech*) wait for the f
 | 3 | **No couch co-op / Remote Play Together** *(mech)* | Overcooked / PlateUp! sell on one screen, four pads; streamers; families on one PC (§8 audience 2) | Biggest item. Several local players, one shared camera (fixed crew-framing view exists). Decide after playtest 3 |
 | 4 | **No ping / quick-call wheel** *(mech)* | The pitch sells the crew shouting; online without voice has only the horn | "Stone here / Help / Gap" at a spot, reuse `offscreen_alerts` pointers. Kill rule: nobody uses it |
 | 5 | **First minute isn't chaos** | Trailer starts at the wall, game starts on prologue cards | Hauling stone under attack within ~60 s on first play. Story after, or shortened (§5.13 risk a) |
-| 6 | **No near-miss beat** *(mech)* | Clips are the main channel; last-second finishes aren't framed | Last unit closes with foes near the gap → brief slow-down / camera punch. Respect reduce-screen-shake |
-| 7 | **No Steam Timeline markers** | Lets players clip breaches, completions and close calls from Steam recording | Cheap if GodotSteam exposes the Timeline API. Check version |
+| 6 | ✅ **Close call** (9 Oct 2026) | Clips are the main channel; last-second finishes weren't framed | `DayDirector._close_call()`: the stretch stands on its last day with ≤ 12 s of light ("stars"), or with a runner (one that would have got through: not a wrecker, which late in a stretch is always at the wall, nor the saboteur) within 4 m of the piece that closed it ("gap"). Every peer: slow motion 0.12 for 1.1 s (the dusk's is 0.3 for 0.5 s), the mix drops behind a low-pass and opens up (`Sfx.hold_breath`), a shake (respects the setting), the nearer watchman calls it, the tally adds "By a hair: …", the reel keeps a still, the scribe's margin says "by a hair" (`chronicle[i].close`). No bouncy text (§6.2). Test `tools/close_call_test.gd -- --nostory --day=8` |
+| 7 | ✅ **Steam Timeline** (9 Oct 2026) | Lets players clip breaches, completions and close calls from Steam recording | `Highlights`: every reel moment is also a timeline marker (`TIMELINE`: built-in `steam_*` icons, priority, clip priority; the close call is *featured*); game mode follows the phase (gathering = staging, story/end = menus, the day = playing); a tooltip "Day N · stretch" each dawn. Off without Steam. Not yet seen in Steam's own recorder |
 | 8 | **Store copy out of date** | `store_page.md` says GDD v0.6, Defend line names only the sling, short description lacks the 4:17 hook | Text pass, sync with §8 and the site dictionaries |
 | 9 | **No faith-audience page on the site** | Second audience needs "is it accurate?" and a parents/teachers page | nehemiah-website. Keep apart from Steam copy |
 
-**Order:** 1 (user) → 2 → 8 → 6 + 7 → 4 → 5 → 3 (decide after playtest 3) → 9.
+**Order:** 1 (user) → 2 → 8 → ~~6 + 7~~ → 4 → 5 → 3 (decide after playtest 3) → 9.
 
 ---
 

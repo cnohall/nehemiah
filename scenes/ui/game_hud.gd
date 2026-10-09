@@ -309,7 +309,8 @@ const SESSION_LOG := "user://sessions.log"
 var _logged := false
 
 func _log_session() -> void:
-	if _logged or GameState.attract or GameState.free_play():
+	# Test harnesses (`--script`) aren't sessions: they'd bury the playtesters' lines
+	if _logged or GameState.attract or GameState.free_play() or "--script" in OS.get_cmdline_args():
 		return
 	_logged = true
 	var f := FileAccess.open(SESSION_LOG, FileAccess.READ_WRITE) if FileAccess.file_exists(SESSION_LOG) \
@@ -938,6 +939,10 @@ func show_tally(stats: Dictionary) -> void:
 		title = tr("The %s stands") % tr(section["name"])
 		# One line: the marks below already say pace, breaches and soundness
 		sub = tr("Section %d of %d complete") % [GameState.current_section_index + 1, GameState.SECTIONS.size()]
+		# A close call earns its own line (DayDirector._close_call)
+		match stats.get("close", ""):
+			"stars": sub = tr("By a hair: the last stone was set as the stars came out.") + "\n" + sub
+			"gap":   sub = tr("By a hair: the gap closed in the enemy's face.") + "\n" + sub
 	# Where the campaign stands: the far goal in view every evening (a pull to day 52)
 	var campaign := not GameState.is_replay() and not GameState.attract
 	if campaign:
@@ -1011,8 +1016,7 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(_ready_row)
 		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (BUILDERS_H if marks_line and builders_shown else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("
-") * SUB_LINE_H
+	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (BUILDERS_H if marks_line and builders_shown else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("\n") * SUB_LINE_H
 	_tally.show()
 	_show_banner(title, sub, -1.0 if waits or (stats.has("marks") and GameState.simplified()) else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
@@ -1113,7 +1117,14 @@ func _crew_line(crew: Array) -> Control:
 		var name_l := _crew_label(who, UiStyle.INK)
 		if me:
 			name_l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
-		vb.add_child(name_l)
+		var name_row := HBoxContainer.new()
+		name_row.add_theme_constant_override("separation", 6)
+		var mark := CrewMark.make(11)   # the slot's shape, as over their head
+		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mark.set_mark(slot, _slot_colors[slot % _slot_colors.size()])
+		name_row.add_child(mark)
+		name_row.add_child(name_l)
+		vb.add_child(name_row)
 		var nums := HBoxContainer.new()
 		nums.add_theme_constant_override("separation", 6)
 		nums.add_child(_crew_num(tr_n("%d load", "%d loads", r[1]) % r[1], r[1] > 0 and r[1] == top_loads))
@@ -1563,6 +1574,7 @@ func set_player_color(slot: int, color: Color, trade := -1) -> void:
 		return
 	_slot_colors[slot] = color
 	(_cards[slot].portrait as CrewPortrait).set_worker(trade if trade >= 0 else slot, color)
+	(_cards[slot].mark as CrewMark).set_mark(slot, color)
 	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat
 	card.content_margin_left = 10
 	card.content_margin_top = 8
@@ -1668,6 +1680,9 @@ func _build_player_cards() -> void:
 		var who_row := HBoxContainer.new()
 		who_row.add_theme_constant_override("separation", 8)
 		vb.add_child(who_row)
+		var mark := CrewMark.make(13)   # the shape over their head, not just its colour
+		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		who_row.add_child(mark)
 		var who := Label.new()
 		who.theme_type_variation = &"Eyebrow"
 		who.add_theme_font_size_override("font_size", 12)
@@ -1703,7 +1718,7 @@ func _build_player_cards() -> void:
 		bar.add_theme_stylebox_override("fill", fill)
 		vb.add_child(bar)
 		players_row.add_child(root)
-		_cards.append({ root = root, portrait = portrait, name = name_lbl, who = who,
+		_cards.append({ root = root, portrait = portrait, name = name_lbl, who = who, mark = mark,
 			carry = carry, bar = bar, fill = fill, load = load_icon, trade = -1, slot = slot })
 
 # ── Steam invite ───────────────────────────────────────────

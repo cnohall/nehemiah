@@ -2615,3 +2615,24 @@ msgstr "%s Trinken (Hände frei, stillstehen zum Heilen)"
 
 msgid "Set the load down, then drink at the well to mend"
 msgstr "Last abstellen, dann am Brunnen trinken, um zu heilen"
+
+msgid "Day %d · %s"
+msgstr "Tag %d · %s"
+
+msgid "By a hair! The stars are coming out!"
+msgstr "Ganz knapp! Die Sterne gehen schon auf!"
+
+msgid "Just in time! They were at the stones!"
+msgstr "Gerade noch rechtzeitig! Sie standen schon an den Steinen!"
+
+msgid "Day %d · by a hair"
+msgstr "Tag %d · ganz knapp"
+
+msgid "by a hair"
+msgstr "ganz knapp"
+
+msgid "By a hair: the last stone was set as the stars came out."
+msgstr "Ganz knapp: Der letzte Stein lag, als die Sterne aufgingen."
+
+msgid "By a hair: the gap closed in the enemy's face."
+msgstr "Ganz knapp: Die Lücke schloss sich direkt vor dem Feind."

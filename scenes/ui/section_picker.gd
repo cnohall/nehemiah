@@ -167,8 +167,7 @@ func _fill_details(i: int) -> void:
 		_twists.add_child(chip)
 	# What's new here, in a sentence — unless everything is (the finale)
 	var lines: Array = fresh.map(_intro)
-	_twist_note.text = "" if not open_ else ("
-".join(lines) if fresh.size() <= 2 else tr("Everything the wall has asked of you, all at once."))
+	_twist_note.text = "" if not open_ else ("\n".join(lines) if fresh.size() <= 2 else tr("Everything the wall has asked of you, all at once."))
 	_twist_note.visible = not _twist_note.text.is_empty()
 
 	# Once a foe has shown up, it keeps coming (GameState.MET_AT: where each first shows)

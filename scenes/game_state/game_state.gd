@@ -780,7 +780,7 @@ func _apply_marks(section_index: int, mask: int) -> void:
 func _no_chronicle() -> Array:
 	var a := []
 	for i in SECTIONS.size():
-		a.append({ "breaches": 0, "knocked": 0, "nightfalls": 0, "days": 0, "done": false, "late": false, "spare": 0, "boon": "" })
+		a.append({ "breaches": 0, "knocked": 0, "nightfalls": 0, "days": 0, "done": false, "late": false, "spare": 0, "boon": "", "close": false })
 	return a
 
 ## Every peer, at each dusk (Main): the day goes into the chronicle
@@ -793,6 +793,7 @@ func chronicle_day(stats: Dictionary) -> void:
 		c["done"] = true
 		c["late"] = stats.get("spare", 0) < stats.get("pace_needed", 0)
 		c["spare"] = stats.get("spare", 0)
+		c["close"] = stats.has("close")   # stood by a hair (DayDirector._close_call)
 
 func _no_marks() -> Array:
 	var a := []

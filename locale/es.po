@@ -2615,3 +2615,24 @@ msgstr "%s Beber (manos libres, quieto para sanar)"
 
 msgid "Set the load down, then drink at the well to mend"
 msgstr "Deja la carga y bebe en el pozo para sanar"
+
+msgid "Day %d · %s"
+msgstr "Día %d · %s"
+
+msgid "By a hair! The stars are coming out!"
+msgstr "¡Por un pelo! ¡Ya salen las estrellas!"
+
+msgid "Just in time! They were at the stones!"
+msgstr "¡Justo a tiempo! ¡Ya estaban junto a las piedras!"
+
+msgid "Day %d · by a hair"
+msgstr "Día %d · por un pelo"
+
+msgid "by a hair"
+msgstr "por un pelo"
+
+msgid "By a hair: the last stone was set as the stars came out."
+msgstr "Por un pelo: la última piedra quedó puesta cuando salían las estrellas."
+
+msgid "By a hair: the gap closed in the enemy's face."
+msgstr "Por un pelo: la brecha se cerró en las narices del enemigo."

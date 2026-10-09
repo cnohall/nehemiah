@@ -39,6 +39,9 @@ const CFG_STATS    := "stats"
 
 var _unlocked := {}   # id → true
 var _stats := {}      # "loads" / "foes" → lifetime total
+# Test harnesses (`--script`) play real days: they mustn't unlock the player's achievements
+# or add to their lifetime totals in progress.cfg
+var _harness := "--script" in OS.get_cmdline_args()
 
 func _ready() -> void:
 	_load()
@@ -62,7 +65,7 @@ func is_unlocked(id: String) -> bool:
 	return _unlocked.has(id)
 
 func unlock(id: String) -> void:
-	if _unlocked.has(id) or GameState._debug_start:
+	if _unlocked.has(id) or GameState._debug_start or _harness:
 		return
 	_unlocked[id] = true
 	var cfg := ConfigFile.new()
@@ -131,7 +134,7 @@ func _on_game_won() -> void:
 
 func _add_stat(key: String, amount: int) -> int:
 	_stats[key] = _stats.get(key, 0) + amount
-	if amount > 0:
+	if amount > 0 and not _harness:
 		var cfg := ConfigFile.new()
 		cfg.load(GameState.PROGRESS_PATH)
 		cfg.set_value(CFG_STATS, key, _stats[key])

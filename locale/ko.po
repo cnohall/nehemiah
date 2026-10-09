@@ -2599,3 +2599,24 @@ msgstr "%s 마시기 (손을 비우고 가만히 서서 회복)"
 
 msgid "Set the load down, then drink at the well to mend"
 msgstr "짐을 내려놓고 우물에서 마시면 회복돼요"
+
+msgid "Day %d · %s"
+msgstr "%d일차 · %s"
+
+msgid "By a hair! The stars are coming out!"
+msgstr "아슬아슬했습니다! 별이 뜨고 있어요!"
+
+msgid "Just in time! They were at the stones!"
+msgstr "간신히 막았습니다! 적이 성벽 코앞까지 왔었어요!"
+
+msgid "Day %d · by a hair"
+msgstr "%d일차 · 아슬아슬하게"
+
+msgid "by a hair"
+msgstr "아슬아슬하게 완성"
+
+msgid "By a hair: the last stone was set as the stars came out."
+msgstr "아슬아슬했습니다: 별이 뜰 무렵 마지막 돌을 놓았습니다."
+
+msgid "By a hair: the gap closed in the enemy's face."
+msgstr "아슬아슬했습니다: 적의 코앞에서 틈을 막았습니다."

@@ -9,7 +9,7 @@ extends SceneTree
 # interact like a player would, and prints how long each stage's work took.
 # Saves a screenshot mid-work. Exit code 0 = the day's first unit got fully built.
 
-const TIMEOUT := 150.0         # trades stretch the work (Trade.WORK_MULT)
+const TIMEOUT := 240.0         # trades stretch the work (Trade.WORK_MULT); a solo worker gets knocked down
 const HOST_LIFETIME := 140.0
 
 var _out := ""
@@ -87,6 +87,17 @@ func _process(delta: float) -> bool:
 	if _wait > 0.0:
 		return false
 	var gs = root.get_node("GameState")
+	# The scripted worker only builds, never fights: over a whole solo stretch ten foes
+	# could walk in and end the run (1 in 3 runs did). This tests the build loop, so the
+	# city doesn't fall here.
+	if _mode == "offline" and gs.phase == gs.Phase.WORK:
+		gs.breaches = 0
+	# Knocked down (alone, back up by itself after a few seconds): wait it out, then pick
+	# the loop up where it is
+	if _player != null and _player.downed and _state != "dusk":
+		_state = "next"
+		_wait = 0.5
+		return false
 	match _state:
 		"wait":
 			if gs.phase == gs.Phase.WORK:

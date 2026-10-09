@@ -49,6 +49,11 @@ const CELEBRATE_STEP   := 0.12  # seconds between each finished unit's flourish
 const NAV_REBAKE_DELAY := 0.4
 const REPAIR_ON_DAWN   := 0.5   # fraction of lost health restored overnight
 const SUN_RESYNC       := 2.0   # seconds between sun-clock corrections to clients
+# A close call (GDD §7.1 #6): the stretch stood with the stars nearly out on its last day,
+# or with a foe at the very piece that closed it. Main gives it a held breath, the watch
+# calls it, the reel and Steam's recording keep it.
+const CLOSE_SUN := 12.0   # seconds of daylight left
+const CLOSE_FOE := 4.0    # metres from the last piece raised
 
 # Every peer: Main shows/hides the StoryPlayer on these
 signal story_started(day: int)
@@ -102,6 +107,7 @@ var _credit := {}
 var _choices := {}
 var _chosen_boon := ""
 var _sun_resync := 0.0
+var _last_raised: Node3D = null   # server: the wall part that last went up a stage
 
 func _ready() -> void:
 	add_to_group("day_director")
@@ -116,7 +122,7 @@ func _ready() -> void:
 			parts.append(node)
 		_units.append(parts)
 		for part in parts:
-			part.stage_changed.connect(_on_stage_changed.unbind(1))
+			part.stage_changed.connect(_on_stage_changed.bind(part).unbind(1))
 	# Parse the tagged scene roots (floor, wall, supplies, houses) rather than the
 	# region's own (empty) children. Set here: the .tscn key doesn't round-trip.
 	_nav.navigation_mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_WITH_CHILDREN
@@ -383,6 +389,9 @@ func _end_day(nightfall := false) -> void:
 		print("DayDirector: day %d — work %.0f s of %.0f s daylight%s" % [GameState.current_day,
 			_stats["time"], GameState.sun_total, ", nightfall with %d unfinished" % _stats["unfinished"] if nightfall else ""])
 	GameState.set_sun(GameState.sun_total, GameState.sun_left)
+	var close := "" if nightfall or not _section_done() else _close_call()
+	if not close.is_empty():
+		_stats["close"] = close
 	GameState.set_phase(GameState.Phase.DUSK)
 	for e in _enemies.get_children():
 		e.flee()
@@ -458,6 +467,23 @@ func _carvings() -> Array:
 				best = id
 		out.append(best)
 	return out
+
+## Server, as a stretch stands: "stars" (its last day, the light nearly gone), "gap" (a
+## runner at the piece that closed it: one that would have got through), or "" for an
+## ordinary finish. Wreckers batter whatever stands near, and late in a stretch they are
+## always at the wall, so they don't count; nor does the saboteur.
+func _close_call() -> String:
+	if GameState.sun_total > 0.0 and GameState.last_day_of_section() and GameState.sun_left <= CLOSE_SUN:
+		return "stars"
+	if not is_instance_valid(_last_raised):
+		return ""
+	for e in _enemies.get_children():
+		var foe := e as Enemy
+		if foe == null or foe.type == Enemy.Type.SABOTEUR or foe._wrecker or foe._fleeing or foe.health <= 0.0:
+			continue
+		if _last_raised.distance_to_point(foe.global_position) <= CLOSE_FOE:
+			return "gap"
+	return ""
 
 func _section_done() -> bool:
 	return _units.all(func(unit): return unit.all(func(p): return p.is_complete()))
@@ -788,10 +814,12 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 
 # ── Progress ───────────────────────────────────────────────
 
-func _on_stage_changed() -> void:
+func _on_stage_changed(part: Node3D) -> void:
 	# Explore Jerusalem raises and ruins whole stretches as you walk round: no day to end
 	if not multiplayer.is_server() or GameState.festival:
 		return
+	if part.is_complete():
+		_last_raised = part
 	_request_nav_rebake()
 	_update_progress()
 	if GameState.phase == GameState.Phase.WORK and GameState.targets_done >= GameState.targets_total:

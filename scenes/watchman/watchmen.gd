@@ -123,6 +123,10 @@ func _on_breaches(count: int) -> void:
 	var x := Player.local.global_position.x if Player.local else 0.0
 	_call(_nearest_man(x), line, true)
 
+## Main, at a close call: the nearer watchman to this player calls it
+func call_out(line: String) -> void:
+	_call(_nearest_man(Player.local.global_position.x if Player.local else 0.0), line, true)
+
 func _nearest_man(x: float) -> Dictionary:
 	return _men[0] if x < 0.0 else _men[1]
 

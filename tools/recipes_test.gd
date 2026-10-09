@@ -54,7 +54,15 @@ func _jeshanah() -> void:
 	_check(not burned.cleared and burned.can_build(), "burned unit has charred framing to clear")
 	_check(not burned.needs("wood") and not burned.needs("beam") and not burned.needs("stone"), "burned unit takes no loads before it is cleared")
 	_check(burned.next_need() == "" and burned.work_material() == "wood", "clearing is pure work")
-	_check(burned.try_build() and burned.cleared and not burned.is_built(), "clearing it leaves bare footing")
+	# Pulled down, its charred timbers lie on the footing; hauled clear, the footing is bare
+	_check(burned.try_build() and burned.pulled and not burned.cleared and not burned.is_built(), "pulling it down strews its timbers")
+	var debris: Array = burned.debris_on_pad()
+	_check(not debris.is_empty(), "charred timbers on the footing (%d)" % debris.size())
+	_check(not burned.needs("wood") and not burned.needs("beam"), "no loads while timbers lie there")
+	for it: Node in debris:
+		it.free()
+	burned._process(1.0)
+	_check(burned.cleared and not burned.is_built(), "hauling them clear leaves bare footing")
 	_check(burned.needs("wood") or burned.needs("beam"), "a cleared unit is built as usual")
 	# A knocked-down old unit loses its courses like any other
 	burned.stage = burned.Stage.FRAMED
