@@ -76,22 +76,39 @@ static func plaque(pad := Vector2(22, 14), alpha := 0.94) -> StyleBoxFlat:
 	var s := bordered(box(Color(PARCHMENT, alpha), pad, 3), Color(RULE, 0.55), 1, 3)
 	return shadowed(s, 10, 0.22)
 
-## Inlaid frame drawn over a plaque's paper, under its content: a hairline rule a few
-## px inside the edge, a small gold stud at each corner and one centred on the top.
-## Call once per panel; redraws with it.
+## Inlaid frame drawn over a plaque's paper, under its content: the sheet's fibre, a rule
+## pressed into it a few px inside the edge (its shadowed wall and lit lip), a small gold
+## stud at each corner and one centred on the top. Call once per panel; redraws with it.
 static func ornament(panel: Control, inset := 5.0, accent := GOLD) -> void:
 	panel.draw.connect(func():
+		_fibre(panel, panel.size)
 		var r := Rect2(Vector2.ONE * inset, panel.size - Vector2.ONE * inset * 2.0)
-		panel.draw_rect(r, Color(RULE, 0.5), false, 1.0)
+		panel.draw_rect(r.grow(-0.5), Color(RULE, 0.55), false, 1.0)
+		panel.draw_rect(Rect2(r.position + Vector2(1, 1), r.size).grow(-0.5), Color(1, 1, 1, 0.45), false, 1.0)
 		for c: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
 			_stud(panel, c, 3.5, accent)
 		_stud(panel, Vector2(r.get_center().x, r.position.y), 4.5, accent))
+
+## Paper, not plastic: faint flecks and short fibres in the sheet, the same for a panel at a
+## given size (seeded by it, so they never shimmer)
+static func _fibre(ci: CanvasItem, sz: Vector2) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(sz.x) * 7919 + int(sz.y) * 31
+	for i in int(sz.x * sz.y / 900.0):
+		var p := Vector2(rng.randf_range(4.0, sz.x - 4.0), rng.randf_range(4.0, sz.y - 6.0))
+		if rng.randf() < 0.6:
+			ci.draw_circle(p, rng.randf_range(0.4, 0.9), Color(INK, rng.randf_range(0.03, 0.07)))
+		else:
+			var a := rng.randf_range(-0.6, 0.6)
+			ci.draw_line(p, p + Vector2(cos(a), sin(a)) * rng.randf_range(2.0, 5.0), Color(RULE, rng.randf_range(0.10, 0.2)), 0.6, true)
 
 static func _stud(ci: CanvasItem, c: Vector2, s: float, color: Color) -> void:
 	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0)]),
 		Color(PARCHMENT, 1.0))
 	var inner := s - 1.2
 	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -inner), c + Vector2(inner, 0), c + Vector2(0, inner), c + Vector2(-inner, 0)]), color)
+	# Struck metal: a lit facet on the upper left
+	ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -inner), c + Vector2(-inner, 0), c + Vector2(-inner * 0.2, -inner * 0.2)]), color.lightened(0.3))
 
 static func theme_card() -> StyleBoxFlat:
 	return plaque(Vector2(14, 10), 0.92)

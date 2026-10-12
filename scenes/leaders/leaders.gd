@@ -15,7 +15,6 @@ const RISE_Z   := -10.5
 const SPACING  := 2.6
 const LEAVE_T  := 3.2
 const CALL_HOLD := 5.0
-const GHOST_ALPHA := 0.45   # toon_part "ghost": 0 solid, 1 gone
 const LINGER  := 3.0   # after the call, before they turn and go
 # Their own words (WEB), called across the wall when they arrive
 const LINES := {
@@ -61,7 +60,7 @@ func _on_phase(phase: GameState.Phase) -> void:
 
 func _arrive(keys: Array) -> void:
 	if GameState.first_stretch():
-		return   # the first stretch teaches the wall; a ghost by the wall reads as a bug
+		return   # the first stretch teaches the wall; a stranger by the wall reads as a bug
 	var i := 0
 	for key: String in keys:
 		if not LINES.has(key) or _here.has(key):
@@ -74,7 +73,6 @@ func _arrive(keys: Array) -> void:
 		n.add_child(rig)
 		rig.setup(FriendsAndFoes._look({ "key": key }), 1.1)
 		rig.set_ring_color(Color(0, 0, 0, 0))
-		Leaders.ghost.call_deferred(n, rig)
 		rig.play("walk_down")
 		var shout := Shout.make_shout()
 		shout.position = Vector3(0, 3.0, 0)
@@ -93,19 +91,6 @@ func _arrive(keys: Array) -> void:
 		tw.tween_callback(_dismiss.bind(key))
 		_here[key]["tween"] = tw
 		i += 1
-
-# See-through, no shadow, no ground marker: reads as "watching", not as a unit to hit.
-# Deferred — the rig builds its parts and its ground marker (a sibling) a frame late.
-static func ghost(n: Node3D, rig: CharacterRig) -> void:
-	if not is_instance_valid(n):
-		return
-	for c in n.get_children():
-		if c is MeshInstance3D:
-			c.visible = false   # contact shadow
-	for c in rig.find_children("*", "MeshInstance3D", true, false):
-		var mi := c as MeshInstance3D
-		mi.set_instance_shader_parameter("ghost", GHOST_ALPHA)
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _leave() -> void:
 	for key: String in _here.keys():

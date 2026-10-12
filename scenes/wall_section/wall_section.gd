@@ -900,7 +900,7 @@ func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color],
 		mm.set_instance_color(i, colors[i])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.material_override = mat if mat != null else Chunky.material(0.07)
+	mmi.material_override = mat if mat != null else Chunky.stone_material(0.07)
 	_visual.add_child(mmi)
 
 ## Every peer, at dusk: today's finished wall takes a bow

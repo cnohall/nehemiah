@@ -458,6 +458,7 @@ func _material_for(kind: String) -> Material:
 			_sheep_material.set_shader_parameter("grain", 0.0)
 			_sheep_material.set_shader_parameter("top_light", 0.02)
 			_sheep_material.set_shader_parameter("ground_ao", 0.08)
+			_sheep_material.set_shader_parameter("weather", 0.0)
 		return _sheep_material
 	return super._material_for(kind)
 

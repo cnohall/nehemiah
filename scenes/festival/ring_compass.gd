@@ -79,7 +79,13 @@ func _draw() -> void:
 func _draw_plan() -> void:
 	var font := UiStyle.CINZEL_BOLD
 	var rect := Rect2(Vector2.ZERO, Vector2(MAP, MAP))
-	draw_rect(rect, Color(UiStyle.PARCHMENT_DEEP, 0.7))
+	# A sheet of the plan: soft shadow under it, fibre in the paper, a rule pressed in
+	draw_rect(Rect2(rect.position + Vector2(0, 2), rect.size), Color(UiStyle.DUSK, 0.12))
+	draw_rect(rect, Color(UiStyle.PARCHMENT, 0.88))
+	UiStyle._fibre(self, rect.size)
+	var inner := rect.grow(-4.0)
+	draw_rect(inner.grow(-0.5), Color(UiStyle.RULE, 0.55), false, 1.0)
+	draw_rect(Rect2(inner.position + Vector2(1, 1), inner.size).grow(-0.5), Color(1, 1, 1, 0.45), false, 1.0)
 	draw_rect(rect, UiStyle.RULE, false, 1.0)
 	var n := CircuitDiorama.GATES.size()
 	if _fit == Transform2D():
@@ -87,13 +93,18 @@ func _draw_plan() -> void:
 	var ring := PackedVector2Array()
 	for k in n * 8 + 1:
 		ring.append(_fit * CircuitDiorama.ring_unit(k / 8.0))
-	draw_polyline(ring, UiStyle.INK_SOFT, 2.0, true)
+	# The wall as a plan draws it: a band of stone between two ink lines
 	var here := PackedVector2Array()
 	for k in 9:
 		here.append(_fit * CircuitDiorama.ring_unit(district + k / 8.0))
-	draw_polyline(here, UiStyle.GOLD, 5.0, true)
+	draw_polyline(here, Color(UiStyle.GOLD, 0.85), 8.0, true)
+	draw_polyline(ring, UiStyle.INK_SOFT, 4.2, true)
+	draw_polyline(ring, UiStyle.PARCHMENT_DEEP.lerp(UiStyle.CREAM, 0.3), 2.0, true)
 	for g in n:
-		draw_circle(_fit * CircuitDiorama.ring_unit(g), 2.5, UiStyle.INK)
+		# Each gate a small tower on the line
+		var at: Vector2 = _fit * CircuitDiorama.ring_unit(g)
+		draw_rect(Rect2(at - Vector2(3, 3), Vector2(6, 6)), UiStyle.INK)
+		draw_rect(Rect2(at - Vector2(1.5, 1.5), Vector2(3, 3)), UiStyle.PARCHMENT_DEEP)
 	var me := Player.local
 	if me != null and is_instance_valid(me):
 		var t := clampf(inverse_lerp(-SITE_HALF_X, SITE_HALF_X, me.global_position.x * Festival.FLOW), 0.0, 1.0)
@@ -122,21 +133,34 @@ func _fit_ring(n: int) -> Transform2D:
 # north as it lies in the view
 func _draw_dial(c: Vector2) -> void:
 	var font := UiStyle.CINZEL_BOLD
-	draw_circle(c, DIAL, Color(UiStyle.PARCHMENT_DEEP, 0.7))
-	draw_arc(c, DIAL, 0.0, TAU, 48, UiStyle.RULE, 1.0, true)
-	draw_arc(c, DIAL - 4.0, 0.0, TAU, 48, Color(UiStyle.RULE, 0.5), 1.0, true)
+	draw_circle(c + Vector2(0, 2), DIAL, Color(UiStyle.DUSK, 0.12))
+	draw_circle(c, DIAL, Color(UiStyle.PARCHMENT, 0.88))
+	draw_circle(c, DIAL - 6.0, Color(UiStyle.PARCHMENT_DEEP, 0.35))
+	draw_arc(c, DIAL, 0.0, TAU, 64, UiStyle.RULE, 1.0, true)
+	draw_arc(c, DIAL - 3.5, 0.0, TAU, 64, Color(UiStyle.RULE, 0.55), 1.0, true)
+	draw_arc(c, DIAL - 6.0, 0.0, TAU, 64, Color(UiStyle.RULE, 0.35), 1.0, true)
 	var dir := _north_on_screen()
 	if dir == Vector2.ZERO:
 		return
+	# Graduated between the two outer rings: sixteen points, the quarters cut deeper
+	for q in 16:
+		if q % 4 == 0:
+			continue
+		var d := dir.rotated(q * PI / 8.0)
+		draw_line(c + d * (DIAL - 3.5), c + d * (DIAL - (1.5 if q % 2 == 1 else 0.5)), Color(UiStyle.INK_SOFT, 0.6), 1.0, true)
 	for q in 4:
 		var d := dir.rotated(q * PI * 0.5)
 		var inner := DIAL - (9.0 if q == 0 else 7.0)
 		draw_line(c + d * inner, c + d * (DIAL - 1.0), UiStyle.INK_SOFT if q > 0 else UiStyle.TERRACOTTA, 2.0 if q == 0 else 1.0, true)
+	# The needle, struck in two halves: a lit and a shaded face along its spine
 	var r := DIAL - 13.0
 	var side := dir.orthogonal() * 4.5
-	draw_colored_polygon(PackedVector2Array([c + dir * r, c + side, c - side]), UiStyle.TERRACOTTA)
-	draw_colored_polygon(PackedVector2Array([c - dir * r, c + side, c - side]), UiStyle.INK_SOFT)
-	draw_circle(c, 2.0, UiStyle.CREAM)
+	draw_colored_polygon(PackedVector2Array([c + dir * r, c + side, c]), UiStyle.TERRACOTTA.lightened(0.12))
+	draw_colored_polygon(PackedVector2Array([c + dir * r, c, c - side]), UiStyle.TERRACOTTA.darkened(0.15))
+	draw_colored_polygon(PackedVector2Array([c - dir * r, c + side, c]), UiStyle.INK_SOFT.lightened(0.15))
+	draw_colored_polygon(PackedVector2Array([c - dir * r, c, c - side]), UiStyle.INK_SOFT)
+	draw_circle(c, 2.6, UiStyle.GOLD.darkened(0.1))
+	draw_circle(c, 1.4, UiStyle.CREAM)
 	# The N just outside the rim, off the north tick
 	var size := font.get_string_size("N", HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
 	var at := c + dir * (DIAL + 9.0)

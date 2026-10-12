@@ -30,8 +30,18 @@ static func foliage_material() -> ShaderMaterial:
 		m.set_shader_parameter("grain", 0.14)
 		m.set_shader_parameter("ground_ao", 0.0)
 		m.set_shader_parameter("wind_amp", 0.06)
+		m.set_shader_parameter("weather", 0.0)
 		_mats["foliage"] = m
 	return _mats["foliage"]
+
+## The wall's dressed courses: drafted margins round a rough boss on every face
+static func stone_material(bevel := 0.07) -> ShaderMaterial:
+	var key := "stone%.3f" % bevel
+	if not _mats.has(key):
+		var m := material(bevel).duplicate() as ShaderMaterial
+		m.set_shader_parameter("drafted", 1.0)
+		_mats[key] = m
+	return _mats[key]
 
 ## Material for multimesh / vertex-coloured chunky geometry.
 ##   bevel: world-space chamfer width (0 = leave the mesh as authored)

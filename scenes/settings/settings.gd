@@ -37,6 +37,14 @@ var fixed_camera := false
 # Turn the view on every stretch so north sits up-screen, the wall lying as it does on the
 # map (as Explore Jerusalem does) — off keeps the game's one view, outside always far
 var turn_to_map := false
+# The figures' build (CharacterRig.build): short and stubby, or tall (on trial). Every figure
+# on screen is rebuilt at once
+var tall_figures := false:
+	set(v):
+		tall_figures = v
+		CharacterRig.build = 1.0 if v else 0.0
+		if is_inside_tree():
+			get_tree().call_group(&"character_rigs", "refresh_build")
 var rumble := true
 var toggle_charge := false   # sling: press to start, press again to throw (instead of hold)
 # Keyboard / mouse rebinds: action → {"key": physical keycode} or {"mouse": button index}.
@@ -121,6 +129,7 @@ func _ready() -> void:
 		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
 		fixed_camera = cfg.get_value("display", "fixed_camera", fixed_camera)
 		turn_to_map = cfg.get_value("display", "turn_to_map", turn_to_map)
+		tall_figures = cfg.get_value("display", "tall_figures", tall_figures)
 		rumble = cfg.get_value("controls", "rumble", rumble)
 		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
@@ -135,6 +144,7 @@ func _ready() -> void:
 	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
 	if "--script" in OS.get_cmdline_args():
 		simple_game = "--simple" in OS.get_cmdline_user_args()
+		tall_figures = "--tall" in OS.get_cmdline_user_args()   # likewise the figures' build
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -297,6 +307,7 @@ func save() -> void:
 	cfg.set_value("display", "diegetic_hud", diegetic_hud)
 	cfg.set_value("display", "fixed_camera", fixed_camera)
 	cfg.set_value("display", "turn_to_map", turn_to_map)
+	cfg.set_value("display", "tall_figures", tall_figures)
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)

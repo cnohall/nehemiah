@@ -22,12 +22,21 @@ uniform float ground_ao_height = 0.55;
 // Foliage in the wind: each crown piece sways on its own phase, with slow gusts
 // travelling across the ground (0 = rigid)
 uniform float wind_amp = 0.0;
+// Weathering, as stone and plaster take it in the hills: each block a shade off its
+// neighbours (cut from a different bed), fine pitting, rain streaks under the top edge of
+// a tall face, ochre dust thrown up against the foot. 0 for foliage and painted props
+uniform float weather = 1.0;
+// Dressed ashlar (the wall's courses): each face a smooth tooled margin round a rough boss,
+// the chisel's strokes across the margin, a shadowed step where the boss stands proud
+uniform float drafted = 0.0;
 
 varying float v_edge;
 varying vec3 v_wnormal;
 varying vec3 v_wpos;
 varying vec3 v_lpos;
 varying vec3 v_scale;
+varying vec3 v_origin;
+varying vec3 v_lnormal;
 
 vec3 to_linear(vec3 c) {
 	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
@@ -70,6 +79,8 @@ void vertex() {
 	v_scale = sc2;
 	v_wnormal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	v_wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	v_origin = MODEL_MATRIX[3].xyz;
+	v_lnormal = NORMAL;
 }
 
 void fragment() {
@@ -87,6 +98,54 @@ void fragment() {
 		float g = vnoise(v_lpos * f * 22.0);
 		g = g * 0.7 + vnoise(v_lpos * f * 60.0 + 7.0) * 0.3;
 		c *= 1.0 - streaks + g * streaks * 1.6;
+	}
+	if (weather > 0.0) {
+		float h1 = hash3(floor(v_origin * 5.37) + 0.5);
+		float h2 = hash3(floor(v_origin * 3.11) + 7.5);
+		c *= 1.0 + (h1 - 0.5) * 0.08 * weather;
+		c = mix(c, c * vec3(1.03, 1.0, 0.95), (h2 - 0.5) * 0.7 * weather);
+		// Pits and the odd darker flake
+		float pit = smoothstep(0.74, 0.9, vnoise(v_wpos * 23.0 + 3.0));
+		c *= 1.0 - pit * 0.09 * weather;
+		// Rain has run down tall faces from the top edge, in lanes
+		if (abs(v_wnormal.y) < 0.35 && v_scale.y > 1.1) {
+			vec2 along = normalize(vec2(-v_wnormal.z, v_wnormal.x) + vec2(1e-4));
+			float lane = vnoise(vec3(dot(v_wpos.xz, along) * 5.0, 0.0, h1 * 9.0));
+			float from_top = v_scale.y * 0.5 - v_lpos.y;
+			float streak = smoothstep(0.5, 0.8, lane) * exp(-from_top * 1.4) * smoothstep(0.0, 0.08, from_top);
+			c *= 1.0 - streak * 0.13 * weather;
+		}
+		// Dust thrown up against the foot
+		float foot = 1.0 - smoothstep(0.02, 0.4, v_wpos.y);
+		c = mix(c, c * vec3(0.93, 0.85, 0.71), foot * 0.55 * weather);
+	}
+	if (drafted > 0.0 && v_edge < 0.5) {
+		vec3 an = abs(v_lnormal);
+		// The face's two in-plane axes, as half extents and positions in metres
+		vec2 half_ext;
+		vec2 pos;
+		if (an.x > an.y && an.x > an.z) { half_ext = v_scale.zy * 0.5; pos = v_lpos.zy; }
+		else if (an.y > an.z) { half_ext = v_scale.xz * 0.5; pos = v_lpos.xz; }
+		else { half_ext = v_scale.xy * 0.5; pos = v_lpos.xy; }
+		// From the chamfer's inner edge (the bevel takes the outer `bevel` of each face)
+		vec2 to_edge = half_ext - abs(pos) - min(vec2(bevel), half_ext * 0.6);
+		float d = min(to_edge.x, to_edge.y);
+		if (min(half_ext.x, half_ext.y) > 0.1) {
+			const float MARGIN = 0.045;
+			// The boss is knocked off by hand: its edge wanders
+			float dj = d + (vnoise(v_wpos * 16.0 + 5.0) - 0.5) * 0.03;
+			float margin = 1.0 - smoothstep(MARGIN - 0.01, MARGIN + 0.01, dj);
+			// Strokes run across the margin, square to the nearest edge
+			float along = to_edge.x < to_edge.y ? pos.y : pos.x;
+			float strokes = 0.5 + 0.5 * sin(along * 190.0 + vnoise(v_wpos * 40.0) * 3.0);
+			vec3 tooled = c * (1.03 + strokes * 0.025);
+			float rough = vnoise(v_wpos * 14.0 + 11.0) * 0.6 + vnoise(v_wpos * 37.0) * 0.4;
+			vec3 boss = c * (0.955 + rough * 0.075);
+			c = mix(boss, tooled, margin * drafted);
+			// The step down from the boss to the margin catches a faint shadow
+			float step_line = smoothstep(MARGIN + 0.016, MARGIN + 0.004, dj) * smoothstep(MARGIN - 0.01, MARGIN + 0.002, dj);
+			c *= 1.0 - step_line * 0.08 * drafted;
+		}
 	}
 	c *= mix(1.0 - ground_ao, 1.0, smoothstep(0.0, ground_ao_height, v_wpos.y));
 	ALBEDO = c;

@@ -26,7 +26,7 @@ const PORTER_LOOK := {
 	"skin": Color(0.64, 0.46, 0.32), "robe": Color(0.56, 0.44, 0.28), "trim": Color(0.34, 0.25, 0.14),
 	"sash": Color(0.70, 0.40, 0.22), "hat": "wrap", "hat_color": Color(0.84, 0.76, 0.54), "tool": false,
 	"band": Color(0.70, 0.40, 0.22), "beard": "short", "hair": Color(0.14, 0.10, 0.07),
-	"outline": Color(0.22, 0.15, 0.08),
+	"outline": Color(0.22, 0.15, 0.08), "sculpted_builder": true, "sculpted_body": true,
 }
 
 # The porter: the server decides when a trip leaves and what it carries (the loads leave the
@@ -168,6 +168,7 @@ func _porter_go(dest: Vector3, kinds: Array) -> void:
 		prop.scale = Vector3.ONE * 0.6
 		prop.position.y = i * 0.2
 		_cargo.add_child(prop)
+	_rig.hold = "front" if not kinds.is_empty() else ""
 
 func _home_stand() -> Vector3:
 	return global_position + Vector3(0, 0, SLOT_GAP * 1.6)
@@ -187,6 +188,7 @@ func _arrive() -> void:
 	if _leg == Leg.OUT:
 		for c in _cargo.get_children():
 			c.queue_free()
+		_rig.hold = ""
 		if multiplayer.is_server():
 			_deliver()
 		_leg = Leg.BACK
@@ -225,6 +227,7 @@ func _reset_porter() -> void:
 	if _porter != null:
 		_porter.visible = false
 		_rig.play("idle_down")
+		_rig.hold = ""
 		for c in _cargo.get_children():
 			c.queue_free()
 
@@ -239,9 +242,10 @@ func _build_porter() -> void:
 	_rig = CharacterRig.new()
 	_porter.add_child(_rig)
 	_rig.setup(PORTER_LOOK)
+	# The loads ride hugged at his chest, turning and bobbing with him (as a player's do)
 	_cargo = Node3D.new()
-	_cargo.position.y = 1.5
-	_porter.add_child(_cargo)
+	_cargo.position = Vector3(0, -0.12, 0.02)
+	_rig.carry_anchor().add_child(_cargo)
 
 func _build() -> void:
 	var mat := StandardMaterial3D.new()

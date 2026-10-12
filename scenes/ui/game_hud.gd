@@ -114,6 +114,11 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	for p: Control in [$Root/DayPlaque, $Root/ThreatPlaque, $Root/GatherPanel, $Root/PauseMenu/Center/Modal]:
 		UiStyle.ornament(p)
+	# The banner's band is drawn, not stretched from a texture: feathered top and bottom
+	# as well as at the ends, between two gold rules
+	$Root/Banner/Band.hide()
+	banner.draw.connect(_draw_banner_band)
+	banner.resized.connect(banner.queue_redraw)
 	_build_player_cards()
 	_build_controls_hint()
 	_build_next_line()
@@ -625,6 +630,38 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 				_show_end(true)
 		GameState.Phase.LOST:
 			_show_end(false)
+
+## Parchment band across the screen, fading out toward both ends and softened top and
+## bottom, framed by two hairline gold rules with a lozenge at their middle
+func _draw_banner_band() -> void:
+	var sz := banner.size
+	if sz.x < 4.0 or sz.y < 4.0:
+		return
+	const FEATHER := 18.0
+	const ALPHA := 0.92
+	var xs := [0.0, 0.28, 0.72, 1.0]
+	var xa := [0.0, 1.0, 1.0, 0.0]
+	var ys := [0.0, FEATHER, sz.y - FEATHER, sz.y]
+	var ya := [0.0, 1.0, 1.0, 0.0]
+	var paper := UiStyle.PARCHMENT
+	for i in 3:
+		for j in 3:
+			var pts := PackedVector2Array([Vector2(xs[i] * sz.x, ys[j]), Vector2(xs[i + 1] * sz.x, ys[j]),
+				Vector2(xs[i + 1] * sz.x, ys[j + 1]), Vector2(xs[i] * sz.x, ys[j + 1])])
+			var cols := PackedColorArray([Color(paper, ALPHA * xa[i] * ya[j]), Color(paper, ALPHA * xa[i + 1] * ya[j]),
+				Color(paper, ALPHA * xa[i + 1] * ya[j + 1]), Color(paper, ALPHA * xa[i] * ya[j + 1])])
+			banner.draw_polygon(pts, cols)
+	var gold := UiStyle.GOLD.darkened(0.12)
+	for y: float in [FEATHER * 0.7, sz.y - FEATHER * 0.7]:
+		var rx := [0.18, 0.4, 0.6, 0.82]
+		var ra := [0.0, 0.7, 0.7, 0.0]
+		for i in 3:
+			banner.draw_polygon(PackedVector2Array([Vector2(rx[i] * sz.x, y - 0.5), Vector2(rx[i + 1] * sz.x, y - 0.5),
+				Vector2(rx[i + 1] * sz.x, y + 0.5), Vector2(rx[i] * sz.x, y + 0.5)]),
+				PackedColorArray([Color(gold, ra[i]), Color(gold, ra[i + 1]), Color(gold, ra[i + 1]), Color(gold, ra[i])]))
+		var c := Vector2(sz.x * 0.5, y)
+		banner.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -3.5), c + Vector2(5.5, 0), c + Vector2(0, 3.5), c + Vector2(-5.5, 0)]), Color(paper, 1.0))
+		banner.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -2.5), c + Vector2(4.0, 0), c + Vector2(0, 2.5), c + Vector2(-4.0, 0)]), gold)
 
 func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally := false) -> void:
 	if _tally != null:
@@ -1625,11 +1662,23 @@ func _build_controls_hint() -> void:
 		if row[0] == "horn":
 			_horn_row = hb
 	_controls = panel
+	_even_keys(keys)
 	_refresh_controls()
 	InputMode.changed.connect(func(_pad: bool):
 		for i in keys.size():
 			keys[i].text = InputMode.key(CONTROLS[i][0])
+		_even_keys(keys)
 		_refresh_gather_hint())
+
+## Every keycap as wide as the widest, so the descriptions start on one line
+func _even_keys(keys: Array[Label]) -> void:
+	var widest := 64.0
+	for k in keys:
+		var font: Font = k.get_theme_font("font")
+		var w := font.get_string_size(k.text, HORIZONTAL_ALIGNMENT_LEFT, -1, k.get_theme_font_size("font_size")).x + 16.0
+		widest = maxf(widest, ceilf(w))
+	for k in keys:
+		k.custom_minimum_size.x = widest
 
 func _refresh_controls() -> void:
 	if _controls == null:

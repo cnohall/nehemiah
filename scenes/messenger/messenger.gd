@@ -77,28 +77,29 @@ func _ready() -> void:
 			"sash": Color(0.52, 0.40, 0.28), "hat": "wrap", "hat_color": Color(0.86, 0.82, 0.74), "tool": false,
 			"band": Color(0.52, 0.40, 0.28), "beard": "short",
 			"hair": Color(0.45, 0.42, 0.40) if kind == Kind.SHEMAIAH else Color(0.16, 0.11, 0.08),
-			"outline": Color(0.24, 0.19, 0.13),
+			"outline": Color(0.24, 0.19, 0.13), "sculpted_builder": true, "sculpted_body": true,
 		})
 	else:
 		_figure.setup({
 			"skin": Color(0.66, 0.46, 0.32), "robe": ROBE, "trim": ROBE.darkened(0.45),
 			"sash": Color(0.80, 0.62, 0.26), "hat": "wrap", "hat_color": Color(0.86, 0.78, 0.56), "tool": false,
 			"band": Color(0.80, 0.62, 0.26), "beard": "short", "hair": Color(0.12, 0.09, 0.07),
-			"outline": Color(0.20, 0.12, 0.24),
+			"outline": Color(0.20, 0.12, 0.24), "sculpted_builder": true, "sculpted_body": true,
 		})
 		# The letter in his hand (6:5 — "an open letter")
 		var scroll := MeshInstance3D.new()
 		var cyl := CylinderMesh.new()
-		cyl.top_radius = 0.07
-		cyl.bottom_radius = 0.07
-		cyl.height = 0.45
+		cyl.top_radius = 0.055
+		cyl.bottom_radius = 0.055
+		cyl.height = 0.34
 		scroll.mesh = cyl
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = SCROLL
 		scroll.material_override = mat
-		scroll.position = Vector3(0.38, 1.25, 0.25)
-		scroll.rotation.z = PI / 2.4
-		add_child(scroll)
+		# Held in his right fist, across it, so it goes where his hand goes
+		scroll.position = Vector3(0, -0.07, 0.05)
+		scroll.rotation.z = PI / 2.0
+		_figure.attach_to_hand(scroll)
 	_figure.play(anim)
 	GameState.mark_met("messenger")
 	match kind:

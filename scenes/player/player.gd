@@ -1155,8 +1155,6 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 		if turn:
 			enemy.knock_down(Vector3(to.x, 0.0, to.y), RIPOSTE_KNOCK)
 			turned.append(enemy.global_position)
-		else:
-			enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
 		hit = true
 	var pots := get_tree().get_first_node_in_group("breakable_set")
 	if pots and pots.smash_arc(at, fwd, SWORD_REACH + 0.4, SWORD_ARC_DEG):

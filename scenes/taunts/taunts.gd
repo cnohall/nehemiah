@@ -73,7 +73,6 @@ func _build_herald() -> void:
 	_herald_rig.setup(look, 0.95)
 	_herald_rig.set_ring_color(Color(0, 0, 0, 0))
 	_herald_rig.play("idle_down")
-	Leaders.ghost.call_deferred(_herald, _herald_rig)
 	_herald_shout = Shout.make_shout()
 	_herald_shout.position = Vector3(0, 2.8, 0)
 	_herald.add_child(_herald_shout)

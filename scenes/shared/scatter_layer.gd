@@ -512,11 +512,21 @@ func _ridge_tent(c: Vector3, yaw: float, cloth: Color) -> void:
 	var tilt := atan2(h, half)
 	cloth = _vary(cloth, 0.03)
 	for side: float in [-1.0, 1.0]:
-		var panel := b * Basis(Vector3.RIGHT, side * tilt) * Basis.from_scale(Vector3(l, 0.06, slope))
-		_add("block", Transform3D(panel, c + b * Vector3(0, h * 0.5, side * half * 0.5)), cloth.darkened(0.0 if side < 0 else 0.1))
+		var rot := b * Basis(Vector3.RIGHT, side * tilt)
+		var panel := rot * Basis.from_scale(Vector3(l, 0.06, slope))
+		var mid := c + b * Vector3(0, h * 0.5, side * half * 0.5)
+		var face := cloth.darkened(0.0 if side < 0 else 0.1)
+		_add("block", Transform3D(panel, mid), face)
+		# Sewn from strips of cloth: the seams run down the slope, a doubled hem at the eave
+		for k in 3:
+			var x := (k - 1) * l / 3.0
+			_add("block", Transform3D(rot * Basis.from_scale(Vector3(0.035, 0.07, slope)), mid + rot * Vector3(x, 0.006, 0)), face.darkened(0.14))
+		_add("block", Transform3D(rot * Basis.from_scale(Vector3(l, 0.07, 0.1)), mid + rot * Vector3(0, 0.006, slope * 0.5 - 0.06)), face.darkened(0.18))
 		# Pegged guy ropes off the eaves
 		for sx: float in [-1.0, 1.0]:
 			_rope(c + b * Vector3(sx * l * 0.45, 0.2, side * half), c + b * Vector3(sx * (l * 0.5 + 0.3), 0.0, side * (half + 0.55)))
+	# The ridge, where the two slopes are sewn over the ridge-pole
+	_add("block", Transform3D(b * Basis.from_scale(Vector3(l + 0.04, 0.08, 0.12)), c + b * Vector3(0, h + 0.01, 0)), cloth.darkened(0.2))
 	# Gable ends: a pole standing out of the ridge, the front flap open on a dark doorway
 	for sx: float in [-1.0, 1.0]:
 		_add("timber", Transform3D(b * Basis.from_scale(Vector3(0.08, h + 0.35, 0.08)), c + b * Vector3(sx * (l * 0.5 + 0.02), (h + 0.35) * 0.5, 0)), _vary(BEAM_COLOR, 0.04))
@@ -566,7 +576,8 @@ func _hair_tent(c: Vector3, yaw: float) -> void:
 # drooping lip, turned a little to look about. Pale belly, throat and muzzle
 func _camel(c: Vector3, yaw: float, pose := "kneel") -> void:
 	var b := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * 1.25)
-	var col := _vary(Color(0.69, 0.46, 0.26), 0.035)
+	# A dromedary's coat: sandy fawn, dusty, not orange
+	var col := _vary(Color(0.70, 0.55, 0.38), 0.03)
 	var pale := col.lightened(0.2)
 	var dark := col.darkened(0.2)
 	var cloth := Color(0.59, 0.28, 0.18)
@@ -609,15 +620,15 @@ func _camel(c: Vector3, yaw: float, pose := "kneel") -> void:
 	for sz: float in [-1.0, 1.0]:
 		part.call("blob", Vector3(0.04, 0.03, 0.05), Vector3(1.63, 1.42, sz * 0.055), dark.darkened(0.3))
 		# Big dark eyes under heavy brows, small round ears laid back
-		part.call("blob", Vector3(0.08, 0.09, 0.05), Vector3(1.24, 1.51, sz * 0.18), Color(0.08, 0.06, 0.05))
-		part.call("blob", Vector3(0.03, 0.03, 0.02), Vector3(1.26, 1.54, sz * 0.2), Color(0.95, 0.92, 0.85))
+		part.call("blob", Vector3(0.07, 0.075, 0.05), Vector3(1.24, 1.51, sz * 0.18), Color(0.08, 0.06, 0.05))
+		part.call("blob", Vector3(0.02, 0.02, 0.015), Vector3(1.26, 1.53, sz * 0.2), Color(0.80, 0.76, 0.70))
 		part.call("blob", Vector3(0.16, 0.05, 0.08), Vector3(1.23, 1.58, sz * 0.17), dark)
 		_add("blob", Transform3D(b * neck * Basis(Vector3.BACK, 0.5) * Basis.from_scale(Vector3(0.07, 0.15, 0.06)), c + b * (root + neck * (Vector3(1.04, 1.62, sz * 0.13) - root))), dark)
-	# Short shaggy ridges along the hump and throat catch the warm highlights.
+	# Longer, sun-bleached hair along the top of the hump: low tufts sunk into the coat
 	for i in 8:
 		var x := -0.58 + i * 0.15
-		var y := 0.42 + (0.78 * exp(-pow((x + 0.16) / 0.38, 2.0)))
-		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.19, 0.13, 0.21)), c + b * Vector3(x, y, 0)), col.lightened(0.08 + 0.015 * (i % 3)))
+		var y := 0.39 + (0.78 * exp(-pow((x + 0.16) / 0.38, 2.0)))
+		_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.16, 0.08, 0.17)), c + b * Vector3(x, y, 0)), col.lightened(0.05 + 0.01 * (i % 3)))
 	if pose == "pack":
 		for side: float in [-1.0, 1.0]:
 			_add("blob", Transform3D(b * Basis.from_scale(Vector3(0.37, 0.39, 0.22)), c + b * Vector3(-0.46, 0.54, side * 0.57)), Color(0.68, 0.45, 0.23))
@@ -818,7 +829,9 @@ func _smoke(at: Vector3, dark := false, thin := false) -> void:
 	p.amount = 10
 	p.lifetime = 4.0
 	if thin:
-		p.amount = 9
+		# A hearth's thread of smoke: many small faint puffs that run together into one
+		# wisp and widen as they thin out (a few big bright ones read as glowing balls)
+		p.amount = 22
 		p.lifetime = 7.0
 		p.preprocess = 7.0
 	p.direction = Vector3.UP
@@ -832,17 +845,21 @@ func _smoke(at: Vector3, dark := false, thin := false) -> void:
 		p.gravity = Vector3(0.28, 0.22, 0.17)   # leans downwind (Breeze.WIND)
 		p.initial_velocity_min = 0.25
 		p.initial_velocity_max = 0.4
-		p.scale_amount_min = 0.6
-		p.scale_amount_max = 1.1
-	p.scale_amount_curve = DustFx.grow_curve()
-	var c := Color(0.35, 0.33, 0.32) if dark else Color(0.85, 0.82, 0.78)
+		p.scale_amount_min = 0.5
+		p.scale_amount_max = 0.8
+	var grow := Curve.new()
+	grow.max_value = 3.0
+	grow.add_point(Vector2(0, 0.5))
+	grow.add_point(Vector2(1, 2.6 if thin else 1.4))
+	p.scale_amount_curve = grow if thin else DustFx.grow_curve()
+	var c := Color(0.35, 0.33, 0.32) if dark else (Color(0.70, 0.68, 0.66) if thin else Color(0.85, 0.82, 0.78))
 	var ramp := Gradient.new()
-	ramp.set_color(0, Color(c, 0.0))
-	ramp.add_point(0.2, Color(c, 0.6 if thin else 0.35))
-	ramp.set_color(1, Color(c, 0.0))
+	ramp.offsets = PackedFloat32Array([0.0, 0.12, 0.5, 1.0])
+	ramp.colors = PackedColorArray([Color(c, 0.0), Color(c, 0.2 if thin else 0.35),
+		Color(c.lightened(0.08), 0.11 if thin else 0.3), Color(c, 0.0)])
 	p.color_ramp = ramp
 	var quad := QuadMesh.new()
-	quad.size = Vector2(0.9, 0.9)
+	quad.size = Vector2(0.5, 0.5) if thin else Vector2(0.9, 0.9)
 	quad.material = DustFx.material()
 	p.mesh = quad
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -1150,6 +1167,7 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 		_stair(body, c + Vector3(0, 0, d * 0.5), w, h, 1.0 if _deco.randf() < 0.5 else -1.0)
 	_roof_life(c, w, d, h, rug_at, rug_half, upper, ux, uw)
 	_chimney(c, w, d, h)
+	_weathering(c, w, h, d, tint)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(w, top, d)
@@ -1174,6 +1192,30 @@ func _plaster(c: Vector3, w: float, h: float, d: float, tint: Color) -> void:
 	var splash := tint.lerp(Color(0.62, 0.50, 0.36), 0.35)
 	_add("wash", Transform3D(Basis.from_scale(Vector3(w + 0.02, 0.26, 0.02)), c + Vector3(0, 0.55, d * 0.5 + 0.01)), splash)
 	_add("wash", Transform3D(Basis.from_scale(Vector3(0.02, 0.26, d + 0.02)), c + Vector3(w * 0.5 + 0.01, 0.55, 0)), splash)
+
+# Age on the faces the camera sees (+x, +z): the lime-wash flaked off the corner where it
+# takes the knocks, showing the rubble stones under it, and a spout through the parapet
+# with the stain the winter rain has left down the wall under it
+func _weathering(c: Vector3, w: float, h: float, d: float, tint: Color) -> void:
+	var corner := c + Vector3(w * 0.5, 0, d * 0.5)
+	if _deco.randf() < 0.7:
+		var y := _deco.randf_range(0.55, 0.9)
+		for i in _deco.randi_range(2, 4):
+			var sw := _deco.randf_range(0.2, 0.34)
+			var sh := _deco.randf_range(0.13, 0.19)
+			# Wrapped round the corner, a hair proud of both faces; stepping in as they rise
+			var off := Vector3(-sw * 0.5 + 0.014 - (i % 2) * 0.06, y + sh * 0.5, -sw * 0.5 + 0.014 - ((i + 1) % 2) * 0.06)
+			_add("block", Transform3D(Basis.from_scale(Vector3(sw, sh, sw)), corner + off), _vary(FOOTING, 0.04).darkened(0.08))
+			y += sh + 0.025
+		# The edge of the broken wash round them, a shade darker than the wall
+		_add("wash", Transform3D(Basis.from_scale(Vector3(0.5, y - 0.4, 0.02)), corner + Vector3(-0.25, (y + 0.4) * 0.5, 0.012)), tint.darkened(0.07))
+	if _deco.randf() < 0.6:
+		var x := _deco.randf_range(-w * 0.32, w * 0.32)
+		var at := c + Vector3(x, h + 0.04, d * 0.5)
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.11, 0.09, 0.42)), at + Vector3(0, 0, 0.2)), _vary(BEAM_COLOR, 0.04))
+		var run := minf(h * 0.55, _deco.randf_range(0.9, 1.5))
+		_add("wash", Transform3D(Basis.from_scale(Vector3(0.16, run, 0.02)), at + Vector3(0, -run * 0.5 - 0.06, 0.012)), tint.lerp(Color(0.55, 0.48, 0.40), 0.22))
+		_add("wash", Transform3D(Basis.from_scale(Vector3(0.07, run * 0.55, 0.022)), at + Vector3(0.03, -run * 0.3 - 0.06, 0.014)), tint.lerp(Color(0.48, 0.42, 0.36), 0.3))
 
 # Stone steps built against the +z face, from the ground at one end up to the roof at
 # the `sx` corner
@@ -1269,8 +1311,18 @@ func _dress_walls(c: Vector3, w: float, h: float, d: float) -> void:
 # Door in a wall face (z = face side): dark recess, painted leaf, timber lintel, stone step
 func _door(at: Vector3, face: float) -> void:
 	_add("opening", Transform3D(Basis.from_scale(Vector3(1.0, 1.6, 0.08)), at + Vector3(0, 0.8 + 0.2, face * 0.02)), OPENING)
-	_add("opening", Transform3D(Basis.from_scale(Vector3(0.78, 1.42, 0.08)), at + Vector3(0, 0.71 + 0.2, face * 0.05)),
-		DOOR_COLORS[_rng.randi() % DOOR_COLORS.size()])
+	var leaf: Color = DOOR_COLORS[_rng.randi() % DOOR_COLORS.size()]
+	_add("opening", Transform3D(Basis.from_scale(Vector3(0.78, 1.42, 0.08)), at + Vector3(0, 0.71 + 0.2, face * 0.05)), leaf)
+	# Planks: the seams between them, two battens across, a row of nail heads along each
+	for x: float in [-0.195, 0.0, 0.195]:
+		_add("opening", Transform3D(Basis.from_scale(Vector3(0.016, 1.36, 0.02)), at + Vector3(x, 0.91, face * 0.092)), leaf.darkened(0.38))
+	for y: float in [0.5, 1.32]:
+		_add("opening", Transform3D(Basis.from_scale(Vector3(0.72, 0.075, 0.024)), at + Vector3(0, y, face * 0.1)), leaf.darkened(0.14))
+		for x: float in [-0.29, -0.1, 0.1, 0.29]:
+			_add("opening", Transform3D(Basis.from_scale(Vector3.ONE * 0.032), at + Vector3(x, y, face * 0.115)), Color(0.30, 0.25, 0.20))
+	# Jambs either side of the leaf, under the lintel
+	for sx: float in [-1.0, 1.0]:
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.12, 1.6, 0.18)), at + Vector3(sx * 0.55, 1.0, face * 0.06)), _vary(BEAM_COLOR, 0.03).darkened(0.06))
 	_add("timber", Transform3D(Basis.from_scale(Vector3(1.35, 0.18, 0.24)), at + Vector3(0, 1.72 + 0.2, face * 0.08)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(1.2, 0.14, 0.45)), at + Vector3(0, 0.07, face * 0.22)), _vary(FOOTING, 0.03))
 
@@ -1280,6 +1332,10 @@ func _window(at: Vector3) -> void:
 	_lamp_spots.append(Transform3D(Basis.from_scale(Vector3(0.02, 0.4, 0.4)), at + Vector3(0.065, 0, 0)))
 	_add("timber", Transform3D(Basis.from_scale(Vector3(0.16, 0.12, 0.78)), at + Vector3(0.06, 0.33, 0)), _vary(BEAM_COLOR, 0.03))
 	_add("block", Transform3D(Basis.from_scale(Vector3(0.16, 0.07, 0.66)), at + Vector3(0.06, -0.3, 0)), _vary(FOOTING, 0.03))
+	# A wooden grille across the opening: two uprights and a rail
+	for z: float in [-0.12, 0.12]:
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.04, 0.5, 0.04)), at + Vector3(0.05, 0, z)), BEAM_COLOR.darkened(0.1))
+	_add("timber", Transform3D(Basis.from_scale(Vector3(0.04, 0.04, 0.5)), at + Vector3(0.055, 0.02, 0)), BEAM_COLOR.darkened(0.1))
 
 # Cloth canopy on two front poles, sloping back toward the wall it leans on
 func _canopy(at: Vector3, w: float, d: float, face: float, cloth: Color) -> void:

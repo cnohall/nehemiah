@@ -421,8 +421,19 @@ func _build_logs(rng: RandomNumberGenerator) -> void:
 			var x := (i - (n - 1) * 0.5) * r * 2.05
 			var v := rng.randf_range(-0.05, 0.05)
 			var c: Color = COLORS["wood"]
-			_add(cyl, Color(c.r + v, c.g + v, c.b + v), Vector3(x, 0.19 + r + layer * r * 1.75, 0),
-				Vector3(PI / 2, 0, rng.randf_range(-0.05, 0.05)))
+			var pos := Vector3(x, 0.19 + r + layer * r * 1.75, 0)
+			var rot := Vector3(PI / 2, 0, rng.randf_range(-0.05, 0.05))
+			_add(cyl, Color(c.r + v, c.g + v, c.b + v).darkened(0.08), pos, rot)
+			# The sawn ends: pale sapwood, the darker heart, the pith; the bark left round them
+			var axis := Basis.from_euler(rot) * Vector3.UP
+			for end: float in [-1.0, 1.0]:
+				for ring: Array in [[0.9, 0.004, c.lightened(0.42)], [0.55, 0.008, c.lightened(0.22).lerp(Color(0.62, 0.36, 0.20), 0.25)], [0.12, 0.012, c.darkened(0.1)]]:
+					var disc := CylinderMesh.new()
+					disc.top_radius = r * ring[0]
+					disc.bottom_radius = r * ring[0]
+					disc.height = 0.01
+					disc.radial_segments = 14
+					_add(disc, ring[2], pos + axis * end * (cyl.height * 0.5 + ring[1]), rot)
 
 func _build_mortar(rng: RandomNumberGenerator) -> void:
 	# Timber tub of grey mortar — reads as "mortar" against the pale ground, where a
@@ -444,6 +455,17 @@ func _build_mortar(rng: RandomNumberGenerator) -> void:
 	fill.radius = 0.56
 	fill.height = 0.26
 	_add(fill, DroppedItem.MORTAR_FILL, Vector3(0.1, 0.49, 0.05), Vector3.ZERO)
+	# The mason's trowel left across the rim: a worn wooden grip, an iron blade in the mortar
+	var grip := CylinderMesh.new()
+	grip.top_radius = 0.028
+	grip.bottom_radius = 0.032
+	grip.height = 0.3
+	grip.radial_segments = 8
+	_add(grip, TIMBER.lightened(0.15), Vector3(0.62, 0.6, 0.18), Vector3(0, 0.3, 1.2))
+	var blade := BoxMesh.new()
+	blade.size = Vector3(0.26, 0.012, 0.15)
+	_add(blade, Color(0.45, 0.44, 0.43), Vector3(0.36, 0.56, 0.12), Vector3(0, 0.3, 0.12))
+	_add(_box(Vector3(0.1, 0.02, 0.06)), DroppedItem.MORTAR_FILL.darkened(0.08), Vector3(0.3, 0.575, 0.1), Vector3(0, 0.5, 0.1))
 	for i in 2:
 		var jar := CylinderMesh.new()
 		jar.top_radius = 0.13
