@@ -14,7 +14,8 @@ const LINTEL_SIZE  := Vector3(3.4, 0.55, 1.0)
 const LINTEL_Y     := 2.2
 const OPENING      := Vector3(3.0, 2.2, 0.35)   # door leaves fill this
 const COST_BY_CREW := [2, 3, 3]                 # loads for crews of 1, 2, 3+
-const STONE_COLOR  := Color(0.80, 0.74, 0.64)   # reads like the wall's textured limestone
+const STONE_COLOR  := Palette.WALL_STONE         # the pillars' limestone
+const IRON_COLOR   := Color(0.21, 0.20, 0.22)
 const LABEL_RANGE  := 6.0
 const LABEL_POLL   := 0.2
 const DOOR_COLOR   := Color(0.42, 0.29, 0.17)
@@ -48,7 +49,7 @@ var finished := false:
 			_refresh()
 			stage_changed.emit(1 if value else 0)
 
-var _lintel: MeshInstance3D
+var _lintel: Node3D   # the stone over the opening, its threshold and the torch brackets: up once both pillars are
 var _doors: Node3D
 var _infill: Node3D
 var _door_body: StaticBody3D
@@ -58,8 +59,7 @@ var _label_poll := 0.0
 var _work: BuildWork
 
 func _ready() -> void:
-	_lintel = _box_mesh(LINTEL_SIZE, Vector3(0, LINTEL_Y + LINTEL_SIZE.y * 0.5, 0), Color(0.74, 0.65, 0.50))
-	add_child(_lintel)
+	_build_lintel()
 	_build_doors()
 	_build_label()
 	_work = BuildWork.new()
@@ -197,38 +197,74 @@ func _refresh() -> void:
 	_footing.visible = _open_for_work() and is_target and not GameState.attract
 	_update_label()
 
-# Two plank leaves with cross battens and a heavy bar across both
+# Two plank leaves, each braced and strapped, with a heavy bar across both on the city
+# side (+z; the foe comes from -z) and a head beam under the lintel. Parts are batched into
+# a wood and an iron multimesh so BuildWork.reveal still raises them plank by plank.
 func _build_doors() -> void:
 	_doors = Node3D.new()
 	add_child(_doors)
+	var wood: Array = []
+	var iron: Array = []
 	var leaf_w := OPENING.x * 0.5 - 0.03
+	var h := OPENING.y
+	const PLANKS := 5
 	for side: float in [-1.0, 1.0]:
 		var cx := side * (leaf_w * 0.5 + 0.015)
-		for i in 4:
-			var plank_w := leaf_w / 4.0
-			var x := cx - leaf_w * 0.5 + plank_w * (i + 0.5)
+		var pw := leaf_w / PLANKS
+		for i in PLANKS:
+			var x := cx - leaf_w * 0.5 + pw * (i + 0.5)
 			var v := (hash(Vector2(side, i)) % 7) * 0.008
-			_doors.add_child(_box_mesh(Vector3(plank_w - 0.02, OPENING.y, 0.12), Vector3(x, OPENING.y * 0.5, 0),
-				Color(DOOR_COLOR.r + v, DOOR_COLOR.g + v, DOOR_COLOR.b + v)))
-		for y: float in [0.45, OPENING.y - 0.45]:
-			_doors.add_child(_box_mesh(Vector3(leaf_w - 0.1, 0.14, 0.05), Vector3(cx, y, -0.09), DOOR_COLOR.darkened(0.2)))
-	_doors.add_child(_box_mesh(Vector3(OPENING.x + 0.3, 0.16, 0.12), Vector3(0, OPENING.y * 0.55, -0.16), BAR_COLOR))
+			var trim := (hash(Vector2(i, side * 3.0)) % 5) * 0.02   # tops cut a hand off true, under the head beam
+			_part(wood, Vector3(pw - 0.02, h - trim, 0.12), Vector3(x, (h - trim) * 0.5, 0), _tone(DOOR_COLOR, v))
+	for side: float in [-1.0, 1.0]:
+		var cx := side * (leaf_w * 0.5 + 0.015)
+		for y: float in [0.45, h - 0.45]:
+			for z: float in [-0.09, 0.09]:
+				_part(wood, Vector3(leaf_w - 0.1, 0.14, 0.05), Vector3(cx, y, z), DOOR_COLOR.darkened(0.2))
+		# Diagonal brace on the city side, from the hinge foot up to the meeting stile
+		var foot := Vector2(cx + side * (leaf_w * 0.5 - 0.12), 0.45)
+		var head := Vector2(cx - side * (leaf_w * 0.5 - 0.12), h - 0.45)
+		var run := head - foot
+		var brace := Basis(Vector3.BACK, atan2(run.y, run.x))
+		_part(wood, Vector3(run.length(), 0.13, 0.04), Vector3((foot.x + head.x) * 0.5, (foot.y + head.y) * 0.5, 0.135), DOOR_COLOR.darkened(0.12), brace)
+	_part(wood, Vector3(0.08, h - 0.1, 0.2), Vector3(0, (h - 0.1) * 0.5, 0), DOOR_COLOR.darkened(0.25))   # covers the seam between the leaves
+	_part(wood, Vector3(OPENING.x + 0.3, 0.16, 0.12), Vector3(0, h * 0.55, 0.22), BAR_COLOR)
+	_part(wood, Vector3(OPENING.x + 0.2, 0.2, 0.3), Vector3(0, h - 0.1, 0), DOOR_COLOR.darkened(0.1))
+	# Iron: a strap across each batten with a row of studs, a ring pull at the stile, a
+	# cap on the hinge end, brackets cradling the bar
+	for side: float in [-1.0, 1.0]:
+		var cx := side * (leaf_w * 0.5 + 0.015)
+		for y: float in [0.45, h - 0.45]:
+			for face: float in [-1.0, 1.0]:
+				var z := face * (0.17 if face > 0.0 else 0.12)
+				_part(iron, Vector3(leaf_w * 0.92, 0.07, 0.03), Vector3(cx, y, z), IRON_COLOR)
+				_part(iron, Vector3(0.14, 0.12, 0.05), Vector3(side * (OPENING.x * 0.5 - 0.1), y, z), IRON_COLOR.lightened(0.04))
+				for k in 5:
+					_part(iron, Vector3(0.05, 0.05, 0.04), Vector3(cx - leaf_w * 0.36 + k * leaf_w * 0.18, y, z + face * 0.02), IRON_COLOR.lightened(0.1))
+		_part(iron, Vector3(0.12, 0.12, 0.03), Vector3(side * 0.16, 1.05, 0.19), IRON_COLOR)
+		for ring: Array in [[Vector3(0.16, 0.03, 0.03), Vector3(0, 0.07, 0)], [Vector3(0.16, 0.03, 0.03), Vector3(0, -0.07, 0)],
+				[Vector3(0.03, 0.17, 0.03), Vector3(-0.065, 0, 0)], [Vector3(0.03, 0.17, 0.03), Vector3(0.065, 0, 0)]]:
+			_part(iron, ring[0], Vector3(side * 0.16, 0.98, 0.215) + ring[1], IRON_COLOR.lightened(0.08))
+		_part(iron, Vector3(0.2, 0.28, 0.2), Vector3(side * (OPENING.x * 0.5 + 0.02), h * 0.55, 0.22), IRON_COLOR)
+	_blocks(_doors, wood, Chunky.wood_material(0.02))
+	_blocks(_doors, iron, Chunky.material(0.015, false, 0.3))
 	# No gate here: the gap is walled up in courses matching the pillars
 	_infill = Node3D.new()
 	add_child(_infill)
+	var courses: Array = []
 	var rows := 4
 	for r in rows:
-		var h := OPENING.y / rows
+		var rh := OPENING.y / rows
 		var stagger := 0.25 if r % 2 == 1 else 0.0
 		var x := -OPENING.x * 0.5
 		var i := 0
 		while x < OPENING.x * 0.5 - 0.05:
 			var w := minf(0.9 - (stagger if i == 0 else 0.0), OPENING.x * 0.5 - x)
 			var v := (hash(Vector2(r, i)) % 9) * 0.01 - 0.04
-			_infill.add_child(_box_mesh(Vector3(w - 0.05, h - 0.05, 0.9), Vector3(x + w * 0.5, h * (r + 0.5) + 0.1, 0),
-				Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v)))
+			_part(courses, Vector3(w - 0.05, rh - 0.05, 0.9), Vector3(x + w * 0.5, rh * (r + 0.5) + 0.1, 0), _tone(STONE_COLOR, v))
 			x += w
 			i += 1
+	_blocks(_infill, courses, Chunky.stone_material(0.07))
 	# Closed doors block enemies like the wall, but open for workers (layer 16 is in the
 	# enemies' and the nav bake's mask, not the players') — nobody gets shut outside
 	_door_body = StaticBody3D.new()
@@ -245,6 +281,71 @@ func _build_doors() -> void:
 	# Amber footing in the opening when the doors are today's work
 	_footing = _box_mesh(Vector3(OPENING.x, 0.04, 1.0), Vector3(0, 0.12, 0), TARGET_COLOR)
 	add_child(_footing)
+
+## Over the opening, from the same stone as the pillars: three lintel stones, a cornice
+## with dentils, an inscription plaque, the threshold flags and a torch bracket on each
+## pillar. Both faces are dressed (the foe's, -z, and the city's, +z).
+func _build_lintel() -> void:
+	_lintel = Node3D.new()
+	add_child(_lintel)
+	var stone: Array = []
+	var dark: Array = []
+	var fit: Array = []
+	var x := -LINTEL_SIZE.x * 0.5
+	var k := 0
+	for w: float in [1.1, 1.2, 1.1]:
+		_part(stone, Vector3(w - 0.03, LINTEL_SIZE.y, LINTEL_SIZE.z), Vector3(x + w * 0.5, LINTEL_Y + LINTEL_SIZE.y * 0.5, 0), _tone(STONE_COLOR, _jit(k)))
+		x += w
+		k += 1
+	# Coping over it in five stones, a shade darker than the lintel so it does not glare from above
+	for i in 5:
+		_part(stone, Vector3(0.74, 0.12, LINTEL_SIZE.z + 0.12), Vector3(-1.6 + i * 0.8, LINTEL_Y + LINTEL_SIZE.y + 0.06, 0), _tone(STONE_COLOR, -0.05 + _jit(i + 10) * 0.6))
+	for face: float in [-1.0, 1.0]:
+		for i in 10:
+			_part(stone, Vector3(0.15, 0.1, 0.06), Vector3(-1.5 + i * (3.0 / 9.0), LINTEL_Y + LINTEL_SIZE.y - 0.06, face * (LINTEL_SIZE.z * 0.5 + 0.02)), _tone(STONE_COLOR, 0.05 + _jit(i + 20) * 0.5))
+		_part(dark, Vector3(0.8, 0.26, 0.04), Vector3(0, LINTEL_Y + 0.27, face * (LINTEL_SIZE.z * 0.5 + 0.005)), Palette.STONE_JOINT)
+		_part(stone, Vector3(0.17, 0.17, 0.03), Vector3(0, LINTEL_Y + 0.27, face * (LINTEL_SIZE.z * 0.5 + 0.03)), _tone(STONE_COLOR, 0.04), Basis(Vector3.BACK, PI * 0.25))
+	# Threshold flags, worn a shade darker down the middle where the carts run
+	for i in 5:
+		var worn := 0.045 if absi(i - 2) <= 1 else 0.0
+		_part(stone, Vector3(0.62, 0.18, LINTEL_SIZE.z), Vector3(-1.2 + i * 0.6, 0.08, 0), _tone(STONE_COLOR, _jit(i + 40) - worn - 0.03))
+	# Torch brackets on the city face of each pillar: an iron arm, a cup, a wrapped brand
+	for side: float in [-1.0, 1.0]:
+		var tx := side * 1.95
+		var tz := LINTEL_SIZE.z * 0.5
+		_part(fit, Vector3(0.05, 0.05, 0.26), Vector3(tx, 1.95, tz + 0.12), IRON_COLOR)
+		_part(fit, Vector3(0.16, 0.06, 0.16), Vector3(tx, 1.9, tz + 0.26), IRON_COLOR)
+		_part(fit, Vector3(0.07, 0.4, 0.07), Vector3(tx, 2.1, tz + 0.26), BAR_COLOR.darkened(0.1))
+		_part(fit, Vector3(0.11, 0.14, 0.11), Vector3(tx, 2.33, tz + 0.26), Color(0.16, 0.12, 0.09))
+	_blocks(_lintel, stone, Chunky.stone_material(0.05))
+	_blocks(_lintel, dark, Chunky.material(0.0, false, 0.0))
+	_blocks(_lintel, fit, Chunky.material(0.015, false, 0.3))
+
+## Append one block (size, centre, colour, optional rotation) to a parts list
+func _part(parts: Array, size: Vector3, pos: Vector3, color: Color, rot := Basis.IDENTITY) -> void:
+	parts.append([Transform3D(rot * Basis.from_scale(size), pos), color])
+
+func _tone(c: Color, v: float) -> Color:
+	return Color(c.r + v, c.g + v, c.b + v)
+
+## A fixed shade off true for stone number `k`, so every gate is cut the same
+func _jit(k: int) -> float:
+	return (hash(Vector2(k, 5)) % 9) * 0.012 - 0.05
+
+## A multimesh of unit blocks, one instance per part. Instances show in the order given.
+func _blocks(parent: Node3D, parts: Array, mat: Material) -> void:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = Chunky.unit_block()
+	mm.instance_count = parts.size()
+	for i in parts.size():
+		mm.set_instance_transform(i, parts[i][0])
+		mm.set_instance_color(i, parts[i][1])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = mat
+	parent.add_child(mmi)
 
 func _box_mesh(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()

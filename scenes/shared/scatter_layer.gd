@@ -1162,12 +1162,17 @@ func _house(body: StaticBody3D, c: Vector3, w: float, d: float, faces_north: boo
 			var jar := c + Vector3(door_x + 0.7 + i * 0.4, 0.1, face * (d * 0.5 + 0.35))
 			_jar(jar, _rng.randf_range(0.8, 1.1) * 0.75)
 	# Details from their own RNG (the layout's draws stay as they were)
+	var stair_span := Vector2.ZERO   # x span of the stair on the +z face, from the middle of the house
 	if faces_north and not upper and w > 3.6 and _deco.randf() < 0.6:
 		# Up the back wall, the +z face the camera sees (the door is round the front)
-		_stair(body, c + Vector3(0, 0, d * 0.5), w, h, 1.0 if _deco.randf() < 0.5 else -1.0)
+		var sx := 1.0 if _deco.randf() < 0.5 else -1.0
+		_stair(body, c + Vector3(0, 0, d * 0.5), w, h, sx)
+		var edge := sx * (w * 0.5 - 0.1)
+		stair_span = Vector2(minf(edge, edge - sx * minf(w * 0.55, h * 1.05)), maxf(edge, edge - sx * minf(w * 0.55, h * 1.05)))
 	_roof_life(c, w, d, h, rug_at, rug_half, upper, ux, uw)
 	_chimney(c, w, d, h)
 	_weathering(c, w, h, d, tint)
+	_facade(c, w, h, d, tint, stair_span, door_x if face > 0.0 else INF)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(w, top, d)
@@ -1186,6 +1191,11 @@ func _roof(c: Vector3, w: float, d: float, h: float, tint: Color) -> void:
 		_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.14, 0.34, T)), c + Vector3(0, h + 0.1, sz * (d * 0.5 + 0.07 - T * 0.5))), lip)
 	for sx: float in [-1.0, 1.0]:
 		_add("block", Transform3D(Basis.from_scale(Vector3(T, 0.34, d - 0.26)), c + Vector3(sx * (w * 0.5 + 0.07 - T * 0.5), h + 0.1, 0)), lip)
+	# Corner posts standing proud of the parapet on some roofs: a broken skyline, not a lidded box
+	if fposmod(sin(c.x * 4.1 + c.z * 9.7 + w) * 43758.5453, 1.0) < 0.6:
+		for sx: float in [-1.0, 1.0]:
+			for sz: float in [-1.0, 1.0]:
+				_add("block", Transform3D(Basis.from_scale(Vector3(0.32, 0.5, 0.32)), c + Vector3(sx * (w * 0.5 - 0.09), h + 0.2, sz * (d * 0.5 - 0.09))), lip.lightened(0.05))
 
 # Rain splashes mud up the foot of the lime-washed walls the camera sees
 func _plaster(c: Vector3, w: float, h: float, d: float, tint: Color) -> void:
@@ -1216,6 +1226,178 @@ func _weathering(c: Vector3, w: float, h: float, d: float, tint: Color) -> void:
 		var run := minf(h * 0.55, _deco.randf_range(0.9, 1.5))
 		_add("wash", Transform3D(Basis.from_scale(Vector3(0.16, run, 0.02)), at + Vector3(0, -run * 0.5 - 0.06, 0.012)), tint.lerp(Color(0.55, 0.48, 0.40), 0.22))
 		_add("wash", Transform3D(Basis.from_scale(Vector3(0.07, run * 0.55, 0.022)), at + Vector3(0.03, -run * 0.3 - 0.06, 0.014)), tint.lerp(Color(0.48, 0.42, 0.36), 0.3))
+
+# The faces the camera sees were bare lime-wash between the beam ends: hand-plastered
+# patches, a string course, quoins up one corner, windows with a shutter flung back, what
+# people hang or lean on a back wall, and patched mud on the roof. Its own RNG, seeded from
+# where the house stands, so the layout's draws and the other details stay as they were.
+# `stair` is the x span the back stair takes, `door_x` where the door is when it is on this
+# face (INF when it is round the front).
+func _facade(c: Vector3, w: float, h: float, d: float, tint: Color, stair: Vector2, door_x: float) -> void:
+	var t := RandomNumberGenerator.new()
+	t.seed = hash(Vector2i(roundi(c.x * 10.0), roundi(c.z * 10.0)))
+	var taken: Array[Vector2] = []
+	if stair != Vector2.ZERO:
+		taken.append(stair)
+	if door_x != INF:
+		taken.append(Vector2(door_x - 1.1, door_x + 1.1))
+	var xf := w * 0.5
+	var zf := d * 0.5
+	# Plaster put on by hand: patches a shade lighter or darker than the wall
+	for i in t.randi_range(3, 5):
+		var pw := t.randf_range(0.6, 1.5)
+		var ph := t.randf_range(0.35, 0.8)
+		var x := t.randf_range(-xf + pw * 0.5 + 0.2, xf - pw * 0.5 - 0.2)
+		var y := t.randf_range(0.7, h - 0.8)
+		var shade := tint.lightened(0.04) if t.randf() < 0.5 else tint.darkened(0.045)
+		_add("patch", Transform3D(Basis(Vector3.RIGHT, PI * 0.5) * Basis.from_scale(Vector3(pw, 1.0, ph)), c + Vector3(x, y, zf + 0.004 + 0.0015 * i)), shade)
+	for i in t.randi_range(2, 3):
+		var pw := t.randf_range(0.5, 1.1)
+		var ph := t.randf_range(0.35, 0.8)
+		var z := t.randf_range(-zf + pw * 0.5 + 0.2, zf - pw * 0.5 - 0.2)
+		var y := t.randf_range(0.7, h - 0.8)
+		var shade := tint.lightened(0.04) if t.randf() < 0.5 else tint.darkened(0.045)
+		_add("patch", Transform3D(Basis(Vector3.BACK, -PI * 0.5) * Basis.from_scale(Vector3(ph, 1.0, pw)), c + Vector3(xf + 0.004 + 0.0015 * i, y, z)), shade)
+	# String course under the beam ends
+	var band := tint.lightened(0.06)
+	_add("block", Transform3D(Basis.from_scale(Vector3(w + 0.06, 0.1, 0.07)), c + Vector3(0, h - 0.62, zf + 0.02)), band)
+	_add("block", Transform3D(Basis.from_scale(Vector3(0.07, 0.1, d + 0.06)), c + Vector3(xf + 0.02, h - 0.62, 0)), band)
+	# Dressed corner stones, long and short in turn, up the near-left corner
+	if t.randf() < 0.75 and _span_free(taken, -xf + 0.25, 0.3):
+		var y := 0.5
+		var i := 0
+		while y < h - 0.4:
+			var qw := 0.46 if i % 2 == 0 else 0.3
+			var qh := t.randf_range(0.26, 0.34)
+			_add("block", Transform3D(Basis.from_scale(Vector3(qw, qh, 0.09)), c + Vector3(-xf + qw * 0.5 - 0.03, y + qh * 0.5, zf + 0.03)), FOOTING.lightened(t.randf_range(0.0, 0.08)))
+			y += qh + 0.02
+			i += 1
+	# Windows: one or two on a wide house, none on some
+	var wins := 0
+	if w >= 3.4 and t.randf() > 0.2:
+		wins = 1 if (w < 4.4 or t.randf() < 0.4) else 2
+	for i in wins:
+		var x := w * (-0.27 + 0.54 * i) if wins == 2 else w * t.randf_range(-0.28, 0.28)
+		if _span_free(taken, x, 0.5):
+			taken.append(Vector2(x - 0.5, x + 0.5))
+			_window_z(c + Vector3(x, h * 0.58, zf), t, tint)
+	# A string of onions or peppers hung from a nail under the roof
+	if t.randf() < 0.4:
+		var x := t.randf_range(-w * 0.3, w * 0.3)
+		if _span_free(taken, x, 0.3):
+			taken.append(Vector2(x - 0.3, x + 0.3))
+			var top := h - 0.42
+			_add("block", Transform3D(Basis.from_scale(Vector3(0.02, 0.8, 0.02)), c + Vector3(x, top - 0.4, zf + 0.07)), Color(0.34, 0.27, 0.18))
+			var crop: Color = [Color(0.72, 0.55, 0.34), Color(0.70, 0.22, 0.12), Color(0.86, 0.82, 0.68)][t.randi() % 3]
+			for k in 5:
+				_add("blob", Transform3D(Basis.from_scale(Vector3.ONE * t.randf_range(0.13, 0.17)), c + Vector3(x + (k % 2 - 0.5) * 0.05, top - 0.14 - k * 0.14, zf + 0.09)), crop.darkened(t.randf_range(0.0, 0.1)))
+	# A ladder to the roof where there is no stair
+	if stair == Vector2.ZERO and w > 3.0 and t.randf() < 0.3:
+		var x := t.randf_range(-w * 0.3, w * 0.3)
+		if _span_free(taken, x, 0.45):
+			taken.append(Vector2(x - 0.45, x + 0.45))
+			_ladder(c + Vector3(x, 0, zf), h, t)
+	# What is kept against a back wall (the door is on the other face)
+	if door_x == INF:
+		for k in 2:
+			var x := t.randf_range(-w * 0.38, w * 0.38)
+			var kind := t.randi() % 6
+			if kind == 3 and w < 3.8:
+				kind = 0
+			if not _span_free(taken, x, 0.6):
+				continue
+			taken.append(Vector2(x - 0.6, x + 0.6))
+			_wall_prop(c + Vector3(x, 0, zf), kind, t, tint)
+	# Patched mud on the roof, a shade lighter or darker than the rest
+	var mud := tint.lerp(Color(0.72, 0.60, 0.45), 0.45)
+	for i in t.randi_range(2, 4):
+		var pw := t.randf_range(0.7, 1.6)
+		var pd := t.randf_range(0.5, 1.2)
+		var at := c + Vector3(t.randf_range(-xf + pw * 0.5 + 0.35, xf - pw * 0.5 - 0.35), h + 0.09 + 0.002 * i, t.randf_range(-zf + pd * 0.5 + 0.35, zf - pd * 0.5 - 0.35))
+		_add("patch", Transform3D(Basis(Vector3.UP, t.randf_range(-0.6, 0.6)).scaled_local(Vector3(pw, 1.0, pd)), at), mud.lightened(0.05) if t.randf() < 0.5 else mud.darkened(0.06))
+
+## `x` ± `half` clear of every span already taken on a wall face
+func _span_free(taken: Array[Vector2], x: float, half: float) -> bool:
+	for s: Vector2 in taken:
+		if x + half > s.x and x - half < s.y:
+			return false
+	return true
+
+# Window on the +z face: dark recess, plastered reveal, lintel, sill, a pair of grille bars and
+# one shutter swung back against the wall
+func _window_z(at: Vector3, t: RandomNumberGenerator, tint: Color) -> void:
+	var ww := t.randf_range(0.42, 0.55)
+	var wh := t.randf_range(0.52, 0.66)
+	_add("opening", Transform3D(Basis.from_scale(Vector3(ww, wh, 0.1)), at + Vector3(0, 0, 0.02)), OPENING)
+	var frame := tint.lightened(0.08)
+	for sx: float in [-1.0, 1.0]:
+		_add("block", Transform3D(Basis.from_scale(Vector3(0.07, wh + 0.14, 0.07)), at + Vector3(sx * (ww * 0.5 + 0.035), 0, 0.03)), frame)
+	_add("block", Transform3D(Basis.from_scale(Vector3(ww + 0.28, 0.07, 0.07)), at + Vector3(0, wh * 0.5 + 0.035, 0.03)), frame)
+	_add("timber", Transform3D(Basis.from_scale(Vector3(ww + 0.36, 0.1, 0.12)), at + Vector3(0, wh * 0.5 + 0.13, 0.05)), BEAM_COLOR.lightened(t.randf_range(0.0, 0.06)))
+	_add("block", Transform3D(Basis.from_scale(Vector3(ww + 0.22, 0.07, 0.16)), at + Vector3(0, -wh * 0.5 - 0.035, 0.07)), FOOTING.lightened(t.randf_range(0.0, 0.06)))
+	for dx: float in [-ww * 0.2, ww * 0.2]:
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.035, wh, 0.035)), at + Vector3(dx, 0, 0.06)), BEAM_COLOR.darkened(0.1))
+	# The shutter, hinged on one side and standing out from the wall
+	var side := 1.0 if t.randf() < 0.5 else -1.0
+	var leaf: Color = DOOR_COLORS[t.randi() % DOOR_COLORS.size()]
+	var leaf_w := ww * 0.62
+	var swing := 1.15
+	var dir := Vector3(-side * cos(swing), 0, sin(swing))
+	var hinge := at + Vector3(side * (ww * 0.5 + 0.07), 0, 0.08)
+	var yaw := Basis(Vector3.UP, atan2(-dir.z, dir.x))
+	_add("opening", Transform3D(yaw.scaled_local(Vector3(leaf_w, wh + 0.04, 0.04)), hinge + dir * (leaf_w * 0.5)), leaf)
+	_add("opening", Transform3D(yaw.scaled_local(Vector3(leaf_w, 0.05, 0.05)), hinge + dir * (leaf_w * 0.5) + Vector3(0, wh * 0.28, 0)), leaf.darkened(0.2))
+	_add("opening", Transform3D(yaw.scaled_local(Vector3(leaf_w, 0.05, 0.05)), hinge + dir * (leaf_w * 0.5) + Vector3(0, -wh * 0.28, 0)), leaf.darkened(0.2))
+
+# A ladder of two rails and rungs, its foot out from the wall, its head over the parapet
+func _ladder(foot: Vector3, h: float, t: RandomNumberGenerator) -> void:
+	var top := h + 0.25
+	var out := 0.42
+	var ang := atan2(out, top)
+	var length := Vector2(top, out).length()
+	var wood := BEAM_COLOR.lightened(t.randf_range(0.0, 0.08))
+	var lean := Basis(Vector3.RIGHT, -ang)
+	for sx: float in [-1.0, 1.0]:
+		_add("timber", Transform3D(lean.scaled_local(Vector3(0.07, length, 0.07)), foot + Vector3(sx * 0.21, top * 0.5, out * 0.5 + 0.03)), wood)
+	var n := int(top / 0.34)
+	for k in n:
+		var f := (k + 0.6) / (n + 0.4)
+		_add("timber", Transform3D(Basis.from_scale(Vector3(0.44, 0.045, 0.05)), foot + Vector3(0, top * f, out * (1.0 - f) + 0.03)), wood.darkened(0.06))
+
+# One thing kept against a back wall: jars, a stack of firewood, sacks, a bread oven, a basket
+# of produce, a mud bench. `at` is on the wall face.
+func _wall_prop(at: Vector3, kind: int, t: RandomNumberGenerator, tint: Color) -> void:
+	match kind:
+		0:
+			_clay(at + Vector3(0, 0, 0.35), 1.0, CLAY_COLOR.darkened(t.randf_range(0.0, 0.12)))
+			_clay(at + Vector3(0.42, 0, 0.5), 0.8, CLAY_COLOR.lightened(t.randf_range(0.0, 0.1)))
+		1:
+			for i in 6:
+				var log_b := Basis(Vector3.BACK, PI * 0.5)
+				_add("trunk", Transform3D(log_b * Basis.from_scale(Vector3(0.75, 1.3, 0.75)), at + Vector3(0, 0.1 + (i / 3) * 0.19, 0.25 + (i % 3) * 0.22 + (i / 3) * 0.1)), OLIVE_TRUNK.lightened(t.randf_range(-0.04, 0.08)))
+		2:
+			var col := Palette.UNDYED.darkened(0.08 + t.randf_range(0.0, 0.05))
+			for p: Vector3 in [Vector3(-0.28, 0, 0.35), Vector3(0.28, 0, 0.38), Vector3(0, 0.38, 0.36)]:
+				_add("blob", Transform3D(Basis(Vector3.UP, t.randf() * TAU).scaled(Vector3(0.5, 0.55, 0.45)), at + p + Vector3(0, 0.3, 0)), col.darkened(t.randf_range(0.0, 0.06)))
+		3:
+			# A bread oven: clay dome on a low base, a dark mouth toward the camera, soot over it
+			var clay := CLAY_COLOR.lerp(Palette.UNDYED, 0.35)
+			_add("block", Transform3D(Basis.from_scale(Vector3(1.0, 0.18, 0.95)), at + Vector3(0, 0.09, 0.55)), FOOTING.darkened(0.04))
+			_add("blob", Transform3D(Basis.from_scale(Vector3(0.9, 0.8, 0.9)), at + Vector3(0, 0.46, 0.55)), clay)
+			_add("opening", Transform3D(Basis.from_scale(Vector3(0.3, 0.22, 0.1)), at + Vector3(0, 0.36, 0.97)), OPENING)
+			_add("wash", Transform3D(Basis.from_scale(Vector3(0.38, 0.16, 0.02)), at + Vector3(0, 0.55, 0.96)), clay.darkened(0.3))
+			_add("drum", Transform3D(Basis.from_scale(Vector3(0.14, 0.12, 0.14)), at + Vector3(0, 0.88, 0.55)), clay.darkened(0.1))
+		4:
+			var straw := STRAW_COLOR.darkened(0.12)
+			_add("drum", Transform3D(Basis.from_scale(Vector3(0.5, 0.3, 0.5)), at + Vector3(0, 0.15, 0.4)), straw)
+			_add("drum", Transform3D(Basis.from_scale(Vector3(0.56, 0.06, 0.56)), at + Vector3(0, 0.31, 0.4)), straw.darkened(0.15))
+			var produce: Color = [Color(0.40, 0.24, 0.26), Color(0.55, 0.62, 0.30), Color(0.78, 0.60, 0.30)][t.randi() % 3]
+			for k in 4:
+				_add("blob", Transform3D(Basis.from_scale(Vector3.ONE * 0.17), at + Vector3(t.randf_range(-0.12, 0.12), 0.36, 0.4 + t.randf_range(-0.12, 0.12))), produce.lightened(t.randf_range(0.0, 0.1)))
+		5:
+			var mud := tint.darkened(0.08)
+			_add("block", Transform3D(Basis.from_scale(Vector3(1.3, 0.4, 0.45)), at + Vector3(0, 0.2, 0.3)), mud)
+			_add("block", Transform3D(Basis.from_scale(Vector3(1.36, 0.06, 0.5)), at + Vector3(0, 0.43, 0.3)), mud.lightened(0.08))
 
 # Stone steps built against the +z face, from the ground at one end up to the roof at
 # the `sx` corner
@@ -1446,7 +1628,9 @@ func _valance(c: Vector3, w: float, d: float, cloth: Color, slope := 0.0) -> voi
 
 # Clay water jar: round belly, narrow neck, a lip
 func _jar(at: Vector3, sc: float) -> void:
-	var col := _vary(CLAY_COLOR, 0.05)
+	_clay(at, sc, _vary(CLAY_COLOR, 0.05))
+
+func _clay(at: Vector3, sc: float, col: Color) -> void:
 	_add("jar", Transform3D(Basis.from_scale(Vector3(1.25, 1.1, 1.25) * sc), at + Vector3(0, 0.28 * sc, 0)), col)
 	_add("drum", Transform3D(Basis.from_scale(Vector3(0.2, 0.2, 0.2) * sc), at + Vector3(0, 0.6 * sc, 0)), col.darkened(0.05))
 	_add("drum", Transform3D(Basis.from_scale(Vector3(0.3, 0.06, 0.3) * sc), at + Vector3(0, 0.71 * sc, 0)), col.lightened(0.08))
@@ -1503,6 +1687,8 @@ func _banner(at: Vector3) -> void:
 # ── Batching ──────────────────────────────────────────────────
 
 const CAMP_CLEARED := ["pebble", "tuft", "tuft_b", "bush", "boulder", "chip"]
+## Rocks come in three cuts, picked from where each lies: the layout's draws never change
+const ROCK_CUTS := ["", "_b", "_c"]
 
 func _add(kind: String, xf: Transform3D, color: Color) -> void:
 	# Ground cover stays out of the enemy camps (it's placed before them, from the layout RNG)
@@ -1510,6 +1696,8 @@ func _add(kind: String, xf: Transform3D, color: Color) -> void:
 		for r: Rect2 in CAMP_CLEAR:
 			if r.has_point(Vector2(xf.origin.x, xf.origin.z)):
 				return
+	if kind == "boulder" or kind == "pebble":
+		kind += ROCK_CUTS[absi(hash(Vector2i(roundi(xf.origin.x * 7.0), roundi(xf.origin.z * 7.0)))) % ROCK_CUTS.size()]
 	xf.origin.y += Terrain.height(xf.origin.x, xf.origin.z)
 	if not _batches.has(kind):
 		_batches[kind] = [[] as Array[Transform3D], [] as Array[Color]]
@@ -1520,7 +1708,7 @@ func _flush() -> void:
 	for kind: String in _batches:
 		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
 		# Ground-hugging bits: shadows cost more than they add
-		if kind in ["pebble", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash", "sheep_wool"]:
+		if kind in ["pebble", "pebble_b", "pebble_c", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash", "sheep_wool"]:
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_batches.clear()
 	_build_lamps()
@@ -1629,13 +1817,15 @@ func _material_for(kind: String) -> Material:
 		"bush", "leaf", "olive_sprig", "myrtle_sprig", "palm_frond": return Chunky.foliage_material()
 		"tuft", "tuft_b":   return _grass_material()
 		"water", "water_disc": return water_material()
-		"boulder", "pebble": return Chunky.material(0.0, true, 0.0)
+		"boulder", "boulder_b", "boulder_c", "pebble", "pebble_b", "pebble_c": return Chunky.material(0.0, true, 0.0)
 	return Chunky.material(0.0, false, 0.0)
 
 func _mesh_for(kind: String) -> Mesh:
 	match kind:
 		"block", "slab", "opening", "chip", "timber": return Chunky.unit_block()
-		"pebble":  return _sphere(0.13, 0.10, 5, 2)
+		"pebble":   return _rock_mesh(51, 5, 2, 0.13, 0.05, 0.28, 0.9)
+		"pebble_b": return _rock_mesh(63, 6, 2, 0.13, 0.055, 0.36, 0.6)
+		"pebble_c": return _rock_mesh(77, 5, 2, 0.12, 0.05, 0.3, 0.85)
 		"tuft":    return _tuft_mesh(7)
 		"tuft_b":  return _tuft_mesh(31)
 		"bush":    return _sphere(0.42, 0.62, 12, 6)
@@ -1646,7 +1836,9 @@ func _mesh_for(kind: String) -> Mesh:
 		"palm_frond": return _palm_frond_mesh()
 		"palm_scale": return Chunky.unit_block()
 		"date": return _sphere(0.5, 1.0, 8, 4)
-		"boulder": return _sphere(0.6, 0.9, 6, 3)
+		"boulder":   return _rock_mesh(11, 7, 4, 0.6, 0.45, 0.2, 1.0)    # rounded, weathered
+		"boulder_b": return _rock_mesh(23, 5, 3, 0.58, 0.46, 0.32, 0.85)   # broken, angular
+		"boulder_c": return _rock_mesh(37, 8, 3, 0.62, 0.42, 0.14, 0.4)    # a slab with a flat top
 		"jar":     return _sphere(0.22, 0.5, 8, 4)
 		"blob":    return _sphere(0.5, 1.0, 12, 6)
 		"ember":   return _sphere(0.5, 1.0, 8, 3)
@@ -1689,6 +1881,74 @@ func _blocked(p: Vector2) -> bool:
 		if r.has_point(p):
 			return true
 	return false
+# A rock: a lumpy ovoid of `segs` sides and `rings` bands, each vertex pushed in or out by up
+# to `jitter`, the top cut flat at `flat_top` of its height. Each band a little darker than the
+# one above it, in alternating shades like bedded limestone, the foot darkest where it sits in
+# the dirt. Flat-shaded by the material, so the facets come out as hand-knocked faces.
+static func _rock_mesh(seed: int, segs: int, rings: int, rx: float, ry: float, jitter: float, flat_top: float) -> ArrayMesh:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var grid: Array = []
+	var cols: Array = []
+	for i in rings + 1:
+		var phi := PI * i / rings
+		var rowv := PackedVector3Array()
+		var rowc := PackedColorArray()
+		var pole := Vector3.ZERO
+		for j in segs:
+			var a := TAU * j / segs + (rng.randf() - 0.5) * 0.3
+			var r := 1.0 + rng.randf_range(-jitter, jitter)
+			var v := Vector3(cos(a) * sin(phi) * rx * r, cos(phi) * ry * (1.0 + rng.randf_range(-jitter, jitter) * 0.5), sin(a) * sin(phi) * rx * r)
+			if i == 0 or i == rings:
+				if j == 0:
+					pole = v
+				v = Vector3(0.0, pole.y, 0.0)
+			v.y = minf(v.y, ry * flat_top)
+			var t := clampf(v.y / ry * 0.5 + 0.5, 0.0, 1.0)
+			var shade := 0.82 + 0.18 * t - 0.06 * (floori(t * 4.0) % 2)
+			rowv.append(v)
+			rowc.append(Color(shade, shade, shade * 0.97))
+		grid.append(rowv)
+		cols.append(rowc)
+	var flip := false
+	for attempt in 2:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for i in rings:
+			for j in segs:
+				var j2 := (j + 1) % segs
+				# Clockwise seen from outside (Godot's front face), top left to bottom right
+				var tl: Array = [i, j2]
+				var tr: Array = [i, j]
+				var bl: Array = [i + 1, j2]
+				var br: Array = [i + 1, j]
+				var tris: Array = [[tl, tr, br], [tl, br, bl]]
+				for tri: Array in tris:
+					if flip:
+						tri = [tri[0], tri[2], tri[1]]
+					# Skip the sliver a pole's ring collapses to
+					var pts: Array[Vector3] = []
+					for q: Array in tri:
+						pts.append(grid[q[0]][q[1]])
+					if (pts[1] - pts[0]).cross(pts[2] - pts[0]).length_squared() < 1e-9:
+						continue
+					for q: Array in tri:
+						st.set_color(cols[q[0]][q[1]])
+						st.add_vertex(grid[q[0]][q[1]])
+		st.generate_normals()
+		var mesh := st.commit()
+		# A mesh built inside out (the winding assumption wrong) is turned once and rebuilt
+		var arr := mesh.surface_get_arrays(0)
+		var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+		var outward := 0.0
+		for k in vs.size():
+			outward += vs[k].normalized().dot(ns[k])
+		if outward >= 0.0 or attempt == 1:
+			return mesh
+		flip = true
+	return null
+
 # Small pointed leaves on fine twigs. One mesh instance is a complete sprig, so the
 # crowns stay detailed without creating a node or draw call for every leaf.
 static func _sprig_mesh(count: int) -> ArrayMesh:
