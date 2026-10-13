@@ -234,6 +234,13 @@ func _corselet(metal: Color) -> void:
 		var g := _tunic_girth(0.93)
 		collar.append(Vector3(cos(a) * (g.x + 0.02), 0.10 + 0.93 * 0.48, sin(a) * (g.y + 0.02)))
 	_part(torso, _tube("corselet_collar", collar, 0.02, 6), LEATHER, Vector3.ZERO, 2.0)
+	# Pauldrons: two overlapping lames over each shoulder, the lower one wider, each tipped down
+	# at its outer edge. They ride the torso, so the arms swing under them, and give the foe a
+	# broad, armoured outline at a distance. Two, not more: each part is a node in a crowd.
+	for side: float in [-1.0, 1.0]:
+		for k in 2:
+			_oval(torso, Vector3(0.34 + k * 0.08, 0.15, 0.34 + k * 0.05), metal.darkened(0.06 * k),
+				Vector3(side * (0.36 + k * 0.05), 0.60 - k * 0.1, 0.0), 7.0, Vector3(0, 0, -side * (0.30 + k * 0.15)))
 
 ## A cloak pinned at the throat, falling down the back from a gathered fold over the
 ## shoulders. The pivot is the rig's cape, so it streams behind a run

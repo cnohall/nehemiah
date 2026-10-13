@@ -337,17 +337,34 @@ func _myrtle(at: Vector3, tree := false) -> void:
 			for petal in 3:
 				var flower := tip + Vector3(rng.randf_range(-0.3, 0.3), 0.22, rng.randf_range(-0.3, 0.3))
 				_add("blossom", Transform3D(Basis.from_scale(Vector3.ONE * (1.0 if tree else 0.8)), flower), Color(0.96, 0.92, 0.79))
+	if not tree:
+		# A skirt of low crowns round the foot, so the bush is a mound on the ground and not a
+		# set of crowns on stalks (the stems showed in its shadow); stems still rise through it
+		for i in 5:
+			var a := TAU * i / 5.0 + rng.randf_range(-0.3, 0.3)
+			var r := rng.randf_range(0.28, 0.5)
+			var col := MYRTLE_LEAF.lerp(SCRUB_LEAF, rng.randf_range(0.2, 0.5)).darkened(rng.randf_range(0.08, 0.2))
+			_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(0.82, 0.46, 0.72) * rng.randf_range(0.85, 1.05)), at + Vector3(cos(a) * r, rng.randf_range(0.16, 0.26), sin(a) * r)), col)
 
+# Dry summer scrub: a low spray of wiry twigs and small grey-green and straw-coloured leaves,
+# more dead wood than leaf. Built from sprigs (spreading fans of pointed leaves) rather than
+# round crowns: crowns read as a lollipop on a stalk, then as a cactus or a mossy stone.
 func _dry_scrub(at: Vector3) -> void:
 	bush_spots.append(Vector2(at.x, at.z))
 	var rng := _plant_rng(at, 419)
-	for stem in 7:
-		var a := TAU * stem / 7.0 + rng.randf_range(-0.3, 0.3)
-		var tip := at + Vector3(cos(a) * rng.randf_range(0.3, 0.7), rng.randf_range(0.55, 1.05), sin(a) * rng.randf_range(0.3, 0.7))
-		_wood_between(at + Vector3(0, 0.06, 0), tip, 0.055, OLIVE_TRUNK.lightened(0.1))
-		if stem % 3 != 0:
-			_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(0.32, 0.26, 0.3)), tip), SCRUB_LEAF.darkened(0.1))
-			_add("myrtle_sprig", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(0.32, 0.24, 0.3)), tip), SCRUB_LEAF.lightened(rng.randf_range(-0.08, 0.06)))
+	var straw := Color(0.74, 0.66, 0.44)
+	var wood := OLIVE_TRUNK.lightened(0.2)
+	for i in 6:
+		var a := TAU * i / 6.0 + rng.randf_range(-0.35, 0.35)
+		var r := rng.randf_range(0.12, 0.42)
+		var tip := at + Vector3(cos(a) * r, rng.randf_range(0.28, 0.5), sin(a) * r)
+		_wood_between(at + Vector3(0, 0.04, 0), tip, 0.04, wood.darkened(rng.randf_range(0.0, 0.1)))
+		var col := SCRUB_LEAF.lightened(rng.randf_range(0.0, 0.12))
+		if rng.randf() < 0.45:
+			col = col.lerp(straw, rng.randf_range(0.5, 0.9))
+		_add("myrtle_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(0.85, rng.randf_range(0.6, 0.85), 0.85)), tip + Vector3(0, 0.02, 0)), col)
+		if i % 2 == 0:
+			_add("myrtle_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(0.8, 0.7, 0.8)), at + Vector3(cos(a) * r * 1.5, 0.12, sin(a) * r * 1.5)), col.darkened(0.08))
 
 static func _plant_rng(at: Vector3, salt: int) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
@@ -357,7 +374,14 @@ static func _plant_rng(at: Vector3, salt: int) -> RandomNumberGenerator:
 func _wood_between(a: Vector3, b: Vector3, width: float, color: Color) -> void:
 	var delta := b - a
 	var basis := Basis(Quaternion(Vector3.UP, delta.normalized()))
-	_add("timber", Transform3D(basis.scaled(Vector3(width, delta.length(), width)), (a + b) * 0.5), color)
+	# scaled_local: width and length along the beam's own axes (scaled() sheared tilted ones into spikes)
+	_add("timber", Transform3D(basis.scaled_local(Vector3(width, delta.length(), width)), (a + b) * 0.5), color)
+
+## A round, tapering limb between two points (`s` 1.0 is a 0.4 m trunk at the foot, thinning to 0.24 m)
+func _limb_between(a: Vector3, b: Vector3, s: float, color: Color) -> void:
+	var delta := b - a
+	var basis := Basis(Quaternion(Vector3.UP, delta.normalized()))
+	_add("trunk", Transform3D(basis.scaled_local(Vector3(s, delta.length(), s)), (a + b) * 0.5), color)
 
 # ── Outside ───────────────────────────────────────────────────
 
@@ -382,31 +406,46 @@ func _build_groves() -> void:
 func _olive(at: Vector3) -> void:
 	var rng := _plant_rng(at, 211)
 	var old := rng.randf() < 0.4
-	var h := rng.randf_range(1.4, 1.8) if old else rng.randf_range(1.55, 2.0)
-	var crown := 1.3 if old else 1.0
-	var base := at + Vector3(0, 0.06, 0)
-	var fork := at + Vector3(rng.randf_range(-0.12, 0.12), h, rng.randf_range(-0.12, 0.12))
-	var wood := OLIVE_TRUNK.lightened(0.08)
-	# Split, twisting trunks make the old trees distinct from the younger single stems.
+	var h := rng.randf_range(1.1, 1.45) if old else rng.randf_range(1.3, 1.7)
+	var spread := 1.25 if old else 1.0
+	var bark := OLIVE_TRUNK.lerp(Color(0.52, 0.48, 0.43), 0.4)   # grey, fissured bark
+	var lean := Vector3(rng.randf_range(-0.18, 0.18), 0.0, rng.randf_range(-0.18, 0.18))
+	var fork := at + lean + Vector3(0, h, 0)
+	# Roots flaring out over the ground
+	for i in 3:
+		var a := TAU * i / 3.0 + rng.randf_range(-0.4, 0.4)
+		_limb_between(at + Vector3(cos(a) * 0.1, 0.18, sin(a) * 0.1), at + Vector3(cos(a) * 0.36, 0.0, sin(a) * 0.36), 0.5, bark.darkened(0.08))
 	if old:
+		# Two stems twisting round one another, the way a very old tree grows
 		for i in 2:
 			var side := -1.0 if i == 0 else 1.0
-			var bend := at + Vector3(side * 0.23, h * 0.55, side * 0.11)
-			_wood_between(base + Vector3(side * 0.12, 0, 0), bend, 0.4, wood.darkened(0.07 * i))
-			_wood_between(bend, fork + Vector3(side * 0.16, 0, 0), 0.29, wood.lightened(0.07))
+			var mid := at + lean * 0.5 + Vector3(side * 0.2, h * 0.5, -side * 0.1)
+			_limb_between(at + Vector3(side * 0.1, 0, 0), mid, 0.95, bark.darkened(0.06 * i))
+			_limb_between(mid, fork + Vector3(side * 0.14, 0, 0), 0.7, bark.lightened(0.04))
 	else:
-		_wood_between(base, fork, 0.34, wood)
-	for i in 9:
-		var a := TAU * i / 9.0 + rng.randf_range(-0.23, 0.23)
-		var reach := rng.randf_range(0.9, 1.5) * crown
-		var end := fork + Vector3(cos(a) * reach, rng.randf_range(0.36, 1.1), sin(a) * reach)
-		_wood_between(fork + Vector3(0, 0.05, 0), end, 0.17 if old else 0.12, wood)
-		var foliage := OLIVE_LEAF.lerp(Color(0.68, 0.69, 0.52), rng.randf_range(0.45, 0.75))
-		_add("leaf", Transform3D(Basis(Vector3.UP, a).scaled(Vector3(1.12, 0.58, 0.88)), end + Vector3(0, 0.18, 0)), foliage.darkened(0.11))
-		for j in 6:
-			var pos := end + Vector3(rng.randf_range(-0.3, 0.3), rng.randf_range(-0.16, 0.24), rng.randf_range(-0.3, 0.3))
-			var s := Vector3(rng.randf_range(0.55, 0.75), rng.randf_range(0.28, 0.4), rng.randf_range(0.5, 0.7))
-			_add("olive_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(s), pos + Vector3(0, 0.34, 0)), foliage.lightened(rng.randf_range(0.05, 0.2)))
+		var mid := at + lean * 0.5 + Vector3(rng.randf_range(-0.12, 0.12), h * 0.5, rng.randf_range(-0.12, 0.12))
+		_limb_between(at, mid, 1.0, bark)
+		_limb_between(mid, fork, 0.75, bark.lightened(0.04))
+	# The canopy: a ring of rounded clouds on spreading limbs, a taller one over the fork, the
+	# whole much wider than high. Grey-green, lighter on the sprigs (the leaves show their silver
+	# undersides in the wind), darker clouds in the shade between.
+	var silver := Color(0.58, 0.64, 0.50)
+	var centres: Array[Vector3] = [fork + Vector3(0, 0.62, 0)]
+	for i in 6:
+		var a := TAU * i / 6.0 + rng.randf_range(-0.25, 0.25)
+		var reach := rng.randf_range(0.8, 1.2) * spread
+		centres.append(fork + Vector3(cos(a) * reach, rng.randf_range(0.1, 0.45), sin(a) * reach))
+	for k in centres.size():
+		var c := centres[k]
+		if k > 0:
+			_limb_between(fork + Vector3(0, 0.05, 0), c - Vector3(0, 0.12, 0), 0.42, bark)
+		var col := silver.lerp(OLIVE_LEAF, rng.randf_range(0.0, 0.2)).darkened(rng.randf_range(0.08, 0.22))
+		var size := Vector3(rng.randf_range(1.0, 1.25), rng.randf_range(0.82, 1.0), rng.randf_range(0.9, 1.15)) * (spread if k > 0 else 0.9)
+		_add("leaf", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(size), c), col)
+		for j in 4:
+			var pos := c + Vector3(rng.randf_range(-0.5, 0.5), rng.randf_range(0.15, 0.42), rng.randf_range(-0.5, 0.5))
+			var sc := Vector3(rng.randf_range(0.34, 0.46), rng.randf_range(0.22, 0.3), rng.randf_range(0.34, 0.46))
+			_add("olive_sprig", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(sc), pos), Color(0.58, 0.66, 0.48).lerp(OLIVE_LEAF, rng.randf_range(0.0, 0.25)).lightened(rng.randf_range(0.0, 0.05)))
 
 func _date_palm(at: Vector3) -> void:
 	var rng := _plant_rng(at, 617)
@@ -1830,7 +1869,7 @@ func _mesh_for(kind: String) -> Mesh:
 		"tuft_b":  return _tuft_mesh(31)
 		"bush":    return _sphere(0.42, 0.62, 12, 6)
 		"leaf":    return _sphere(0.6, 1.0, 14, 7)
-		"olive_sprig": return _sprig_mesh(9)
+		"olive_sprig": return _sprig_mesh(9, true)
 		"myrtle_sprig": return _sprig_mesh(7)
 		"blossom": return _sphere(0.085, 0.05, 6, 2)
 		"palm_frond": return _palm_frond_mesh()
@@ -1951,7 +1990,7 @@ static func _rock_mesh(seed: int, segs: int, rings: int, rx: float, ry: float, j
 
 # Small pointed leaves on fine twigs. One mesh instance is a complete sprig, so the
 # crowns stay detailed without creating a node or draw call for every leaf.
-static func _sprig_mesh(count: int) -> ArrayMesh:
+static func _sprig_mesh(count: int, lit_from_above := false) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in count:
@@ -1964,8 +2003,13 @@ static func _sprig_mesh(count: int) -> ArrayMesh:
 		var left := mid - side * 0.12
 		var right := mid + side * 0.12
 		for p in [root, left, tip, root, tip, right, tip, left, root, right, tip, root]:
+			if lit_from_above:
+				# Both faces of a leaf take the light from the sky: half of them no longer shade
+				# black with their normals turned away from it (silvery foliage)
+				st.set_normal((Vector3.UP * 0.55 + d * 0.45).normalized())
 			st.add_vertex(p)
-	st.generate_normals()
+	if not lit_from_above:
+		st.generate_normals()
 	return st.commit()
 
 # A curved midrib with paired, narrow leaflets. The downward outer arc makes the

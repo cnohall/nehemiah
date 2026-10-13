@@ -1338,9 +1338,19 @@ func _build(look: Dictionary) -> void:
 			_part(_spear, _soft(Vector3(0.07, 2.2, 0.07), 0.015), Color(0.42, 0.28, 0.16), Vector3(0, 0.55, 0))
 			_part(_spear, _cyl(0.0, 0.08, 0.28), Color(0.62, 0.60, 0.56), Vector3(0, 1.78, 0))
 		"dagger":
+			# A curved knife the length of a forearm: a grip, a crossguard, a blade in four short
+			# lengths bending away from the body and tapering to the point. Long enough to read
+			# against the scout's spear from across the yard.
 			var d := _pivot(hands[1], Vector3(0, -0.05, 0.05))
-			_part(d, _soft(Vector3(0.06, 0.34, 0.03), 0.01), Color(0.72, 0.70, 0.66), Vector3(0, -0.2, 0))
-			_part(d, _soft(Vector3(0.17, 0.05, 0.06), 0.015), Color(0.55, 0.42, 0.22), Vector3(0, -0.02, 0))
+			_part(d, _soft(Vector3(0.05, 0.16, 0.05), 0.015), Color(0.30, 0.20, 0.13), Vector3(0, -0.04, 0))
+			_part(d, _soft(Vector3(0.20, 0.05, 0.07), 0.015), Color(0.55, 0.42, 0.22), Vector3(0, -0.13, 0))
+			var tip := Vector3(0, -0.15, 0)
+			for k in 4:
+				var bend := 0.11 + k * 0.24
+				var dir := Vector3(-sin(bend), -cos(bend), 0)
+				var w := 0.09 - k * 0.012
+				_part(d, _soft(Vector3(w, 0.16, 0.03), 0.01), Color(0.76, 0.74, 0.70).darkened(0.04 * k), tip + dir * 0.08, Vector3(0, 0, PI - bend))
+				tip += dir * 0.15
 	if look.has("sack"):
 		var sack := _pivot(_torso, Vector3(0, 0.38, -0.3))
 		sack.rotation.x = 0.25

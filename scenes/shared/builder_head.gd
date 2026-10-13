@@ -4,6 +4,7 @@ extends RefCounted
 # Curved, tapered locks and shaped cross sections are authored in model space;
 # meshes are cached across gameplay rigs and the live crew portraits.
 const BODY := preload("res://scenes/shared/builder_body.gd")
+const CREST := Color(0.50, 0.12, 0.09)   # horsehair on a captain's helmet, oxblood like the foes' rim
 static var _cache: Dictionary = {}
 static var _material: ShaderMaterial
 static var _metal_material: ShaderMaterial
@@ -220,6 +221,13 @@ func _helmet(metal: Color) -> void:
 		_lock("helmet_rib%s" % side, [Vector3(side * 0.35, 0.47, 0.0), Vector3(side * 0.31, 0.68, 0.0), Vector3(side * 0.19, 0.86, 0.0), Vector3(side * 0.03, 1.01, 0.0)], 0.022, 0.016, metal.lightened(0.06), Vector3(side, 0, 0))
 	_metal(_rig._soft(Vector3(0.06, 0.24, 0.05), 0.015), metal.darkened(0.12), Vector3(0, 0.36, 0.36))
 	_add(_rig._ellipsoid(Vector3(0.72, 0.30, 0.22), true), Color(0.30, 0.19, 0.12), Vector3(0, 0.32, -0.29), Vector3(0.2, 0, 0))
+	# A finial on the point and a horsehair crest streaming back from it, the mark of a captain
+	_metal(_rig._ellipsoid(Vector3(0.1, 0.1, 0.1), true), metal.lightened(0.2), Vector3(0, 1.04, 0.0))
+	for i in 5:
+		var t := i / 4.0
+		var s := lerpf(0.28, 0.15, t)
+		_add(_rig._ellipsoid(Vector3(s * 0.5, s * 0.95, s * 1.7), true), CREST.darkened(0.07 * (i % 2)),
+			Vector3(0, 0.99 + 0.17 * sin(t * PI * 0.8) - 0.1 * t * t, -0.02 - 0.40 * t), Vector3(0.55 * t, 0, 0))
 
 func _metal(mesh: Mesh, color: Color, pos := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
 	if _metal_material == null:
