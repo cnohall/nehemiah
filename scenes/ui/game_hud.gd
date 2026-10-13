@@ -318,6 +318,7 @@ func _log_session() -> void:
 	if _logged or GameState.attract or GameState.free_play() or "--script" in OS.get_cmdline_args():
 		return
 	_logged = true
+	Telemetry.event("leave")   # the web build's own sessions.log: tab closes never get here
 	var f := FileAccess.open(SESSION_LOG, FileAccess.READ_WRITE) if FileAccess.file_exists(SESSION_LOG) \
 		else FileAccess.open(SESSION_LOG, FileAccess.WRITE)
 	if f == null:

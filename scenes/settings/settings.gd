@@ -65,6 +65,8 @@ var trade := -1
 # early. Skill depth stays (true shot, turning the blow, mending, the well, posts).
 # Host's choice, synced (GameState.simple)
 var simple_game := false
+# Anonymous play stats from the web build (Telemetry): where a game stops, how it runs
+var share_stats := true
 # Experimental (GDD §5.21), off by default; the host's choice rules the crew like difficulty
 var exp_forecast := false    # wave forecast: how many and what, ~22 s ahead, spot ringed on the ground
 var exp_call_early := false  # [Horn] brings the next wave forward for a short work boost
@@ -139,6 +141,7 @@ func _ready() -> void:
 		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
 		simple_game = cfg.get_value("general", "simple_game", simple_game)
+		share_stats = cfg.get_value("general", "share_stats", share_stats)
 		exp_forecast = cfg.get_value("experimental", "forecast", exp_forecast)
 		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
 	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
@@ -320,6 +323,7 @@ func save() -> void:
 	cfg.set_value("general", "difficulty", difficulty)
 	cfg.set_value("general", "trade", trade)
 	cfg.set_value("general", "simple_game", simple_game)
+	cfg.set_value("general", "share_stats", share_stats)
 	cfg.set_value("experimental", "forecast", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)

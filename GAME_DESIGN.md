@@ -19,6 +19,7 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | Experimental: wave forecast, call early (Thronefall-inspired) | 5.21 | Settings → Experimental (off by default) | pending |
 | The well: drink to mend | 5.22 | `--no-well` | pending |
 | Simple game (depth without load) | 5.23 | Settings → Game → Simple (host's choice, `GameState.simplified()`) | built 6 Oct 2026; test `tools/simple_game_test.gd --day=34`; needs playtest 4 |
+| Play stats from the web build (where sessions stop) | 5.24 | Settings → Advanced → Play stats (web only, on by default) | built 13 Oct 2026; test `tools/telemetry_test.gd`; Worker side in `web-port` (`worker/src/stats.js`), not deployed |
 | Choice before each stretch (boons) | 6.5 | `--boon=<key>` | pending |
 | Section beats | 6.4 | `--no-beats` | pending |
 | Explore Jerusalem, dedication choirs | 5.8, 5.19 | n/a | **frozen** (side mode) |
@@ -564,7 +565,18 @@ Posts are open from section 4 (`GameState.posts_open`), the saboteur from 8. Cut
 3. **Fix the confusions playtest 3 named regardless of mode:** the choice card says "the crew votes — you can change your vote until everyone is ready"; the scattered pile's twist card before the saboteur's first day
 4. **Simple as the default for a first run?** If playtest 4 shows new players happier in Simple and the dev circle bored, ship Simple as the default "Story" setting and the full game as "Full crew" — not a difficulty, a depth choice
 
-**Playtest 4:** run A (Sheep → Fish, new players) in Simple, run B in Full with a different group. Compare: "what do I do?" ticks, Fellowship ticks, would they play the next stretch.
+**Playtest 4:** run A (Sheep → Fish, new players) in Simple, run B in Full with a different group. Compare: "what do I do?" ticks, Fellowship ticks, would they play the next stretch. Plan, observer sheet and pre-set decision thresholds: `PLAYTEST_4.md`.
+
+### 5.24 Where do sessions stop? Anonymous play stats — ◐ built 13 Oct 2026, not deployed
+**Gap found (engagement review, 13 Oct 2026):** `sessions.log` is written only on this machine, and a closed browser tab never reaches the code that writes it. Every playtest so far was verbal; the retention question ("fun for 2–3 stretches, then no pull") had no numbers behind it.
+**Kind:** instrumentation, not a mechanic. The players never see it, so it adds nothing to learn.
+**Built:**
+- `Telemetry` (autoload, `scenes/telemetry/telemetry.gd`): on the **web build only**, a small beacon (`navigator.sendBeacon('/t')`, same origin) at every phase change, every 30 s while open, when the tab is hidden or shown, on the first frame and on leaving a game. Each says where on the circuit the session is (stretch, day, phase, pieces standing, breaches, crew, mode, Simple or Full, frame rate, language). Nothing else. On the title (the bot crew behind the menu) it says nothing about the game
+- **Privacy:** no name, account, address or user agent is read or kept; no id outlives a page load (a fresh 12-character session id each time, kept nowhere). So a returning player cannot be recognised: retention comes from the 48 h follow-up in `PLAYTEST_4.md`, not from the stats. Settings → Advanced → Play stats turns it off (web only; the row isn't built on desktop, where nothing is sent). The site's privacy page needs one line before this ships
+- Worker (`web-port`: `worker/src/stats.js`, `stats_core.js`): `POST /t` keeps the beacon in a SQLite Durable Object after checking every field against an allow-list (unknown keys dropped, numbers clamped, another site's Origin refused), capped per session (1000) and per day (60 000), kept 120 days. `GET /t/report?days=N` with `Authorization: Bearer <STATS_KEY>` returns the funnel, where sessions stopped, Full vs Simple, solo vs company, recent sessions, frame rate. Off until `wrangler secret put STATS_KEY`. `node report.mjs` prints it as tables
+- **Tests:** `tools/telemetry_test.gd` (no browser: allow-list, off switch, caps, modes, attract mode, the settings row); `worker`: `npm test` (row validation, the report). Checked once against the real web export in headless Chrome and `wrangler dev`: open, heartbeat and tab-hidden beacons arrived and the report counted them. Real play through the browser wasn't driven (headless Chrome ran ~1 fps); phase beacons share the tested `event()` path
+**Not built:** a persistent id (needs consent wording, and the follow-up message does the job); desktop / Steam stats (a different promise to players); per-stretch time and death counts (add only if the funnel says where to look).
+**Kill rule:** if the report is never opened between playtests, remove it. If a tester or a player objects to it, make it opt-in.
 
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |

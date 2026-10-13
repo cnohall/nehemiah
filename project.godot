@@ -29,6 +29,7 @@ Sfx="*res://scenes/sfx/sfx.gd"
 Settings="*res://scenes/settings/settings.gd"
 InputMode="*res://scenes/input_mode/input_mode.gd"
 SteamAchievements="*res://scenes/achievements/achievements.gd"
+Telemetry="*res://scenes/telemetry/telemetry.gd"
 
 [debug]
 

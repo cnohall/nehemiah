@@ -40,6 +40,8 @@ const EXPERIMENTS := [
 var _exp_btns := {}         # Settings property → [Off, On]
 var _full_game: Button
 var _simple_game: Button
+var _stats_on: Button
+var _stats_off: Button
 var _rumble_on: Button
 var _world_hud: Button
 var _plaque_hud: Button
@@ -146,6 +148,9 @@ func open() -> void:
 	_toggle_mode.button_pressed  = Settings.toggle_charge
 	_full_game.button_pressed     = not Settings.simple_game
 	_simple_game.button_pressed   = Settings.simple_game
+	if _stats_on != null:
+		_stats_on.button_pressed  = Settings.share_stats
+		_stats_off.button_pressed = not Settings.share_stats
 	for key: String in _exp_btns:
 		_exp_btns[key][0].button_pressed = not Settings.get(key)
 		_exp_btns[key][1].button_pressed = Settings.get(key)
@@ -295,6 +300,8 @@ func _build_advanced_rows() -> void:
 	_heading("Rules")
 	_build_game_row()
 	_build_experimental_rows()
+	if Telemetry.available():
+		_build_stats_row()
 	_target = _grid
 
 ## A small section heading across the page's label column
@@ -316,6 +323,22 @@ func _build_game_row() -> void:
 	var note := Label.new()
 	note.theme_type_variation = &"Caption"
 	note.text = "Host's choice. Simple keeps the wall, the fight and each stretch's new twist; it drops trades, the saboteur, the choice before each stretch, hungry households, and the life in the streets."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(300, 0)
+	_target.add_child(note)
+
+# Anonymous play stats (Telemetry), web only: where a game stops and how smoothly it ran
+func _build_stats_row() -> void:
+	_heading("Privacy")
+	var pair := _segment_row("Play stats", "On", "Off")
+	_stats_on = pair[0]
+	_stats_off = pair[1]
+	_stats_on.pressed.connect(_toggle.bind("share_stats", true))
+	_stats_off.pressed.connect(_toggle.bind("share_stats", false))
+	_add_label("")
+	var note := Label.new()
+	note.theme_type_variation = &"Caption"
+	note.text = "Anonymous: where a game stops and how it runs. No name, no account, nothing kept on your device."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size = Vector2(300, 0)
 	_target.add_child(note)
