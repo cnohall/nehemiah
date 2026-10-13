@@ -137,11 +137,15 @@ func _process(delta: float) -> bool:
 				var pile := _pile_for(need)
 				_deliver_to = _site
 				if pile == null and need == "mortar":
-					# "mixing" twist: feed the trough lime and water, wait, then carry the mortar
+					# "mixing" twist: feed the trough lime and water, stir, then carry the mortar
 					var trough := _trough()
 					var feed: String = trough.next_need() if trough != null else ""
 					if feed.is_empty():
-						_wait = 0.3   # mixing
+						if trough != null and trough.can_build():
+							_goto(trough)
+							_press()
+							_state = "stir"
+						_wait = 0.3
 						return false
 					pile = _pile_for(feed)
 					_deliver_to = trough
@@ -177,6 +181,14 @@ func _process(delta: float) -> bool:
 			_press()
 			_state = "after_deliver" if _deliver_to == _site else "next"
 			_wait = 0.3
+		"stir":
+			var t := _trough()
+			if t == null or not t.can_build():
+				_state = "next"
+			elif _player._work_site == null:
+				_goto(t)   # let go (a hit, a slow frame): take the paddle again
+				_press()
+				_wait = 0.3
 		"after_deliver":
 			if not gs.active_build or not _site.can_build() or _player._work_site == null:
 				_state = "next"

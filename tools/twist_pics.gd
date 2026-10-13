@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stages a twist in the real game and saves the pictures TwistCard shows, one per panel:
 #   Godot --path . --script res://tools/twist_pics.gd -- --nostory --day=<a day of the twist> <twist>
-# Day per twist: doors 1, ruins 9, beams 5, salvage 9, thick 13, mixing 18, horn 24, haul 30,
+# Day per twist: doors 1, ruins 42, beams 9, salvage 42, thick 13, mixing 34, horn 24, haul 30,
 # spring 34, night 37, cramped 42, schemes 48 (tools/twist_pics.ps1 runs them all).
 # Writes res://art/twist/<twist>_<n>.png, cropped to the plate's picture (440:238). Then
 # `Godot --path . --headless --import`, so the card picks the new files up.
@@ -303,7 +303,7 @@ func _stage(twist: String, i: int) -> Dictionary:
 			return { "look": _o(t.global_position, 0, 1.0), "size": 9.0,
 				"crew": [[_o(t.global_position, -2.2, 1.6), "right", ""]],
 				"setup": func(): _trough(t, true, true, false),
-				"hold": func(): t.mix_left = 3.0 }
+				"hold": func(): t.work().progress = 0.5 }
 		"mixing2":
 			var t := _sup("Trough")
 			var s := _section("Section3")
@@ -421,7 +421,7 @@ func _trough(t: Node3D, lime: bool, water: bool, ready: bool) -> void:
 	t.has_lime = lime
 	t.has_water = water
 	t.mortar_ready = ready
-	t.mix_left = 0.0
+	t.work().progress = 0.0
 
 func _horn(at: Vector3) -> void:
 	_main.get_node("Horn")._sound(at, Color(0.86, 0.58, 0.22))

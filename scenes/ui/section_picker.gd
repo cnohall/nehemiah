@@ -11,7 +11,7 @@ signal chosen(section_index: int)
 signal closed
 
 const TWIST_NAMES := {
-	"doors": "Doors", "beams": "Beams", "salvage": "Salvage", "mixing": "Mortar mixing",
+	"doors": "Doors", "mortar": "Mortar", "posts": "Watch posts", "beams": "Beams", "salvage": "Salvage", "mixing": "Mortar mixing",
 	"thick": "Double-thick wall", "ruins": "Old and burned", "horn": "The horn",
 	"haul": "Long haul", "spring": "The spring", "night": "Night watch", "cramped": "Narrow lanes",
 	"schemes": "Schemes",

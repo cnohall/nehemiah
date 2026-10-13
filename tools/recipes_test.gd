@@ -1,7 +1,7 @@
 extends SceneTree
 
-# Per-unit recipes (Jeshanah: old + burned units) and the Broad Wall's two faces, offline:
-#   Godot --headless --path . --script res://tools/recipes_test.gd -- --nostory --day=9
+# Per-unit recipes (Horse Gate: old + burned units) and the Broad Wall's two faces, offline:
+#   Godot --headless --path . --script res://tools/recipes_test.gd -- --nostory --day=42
 #   Godot --headless --path . --script res://tools/recipes_test.gd -- --nostory --day=13
 # Exit code 0 = every check passed.
 
@@ -29,12 +29,12 @@ func _process(delta: float) -> bool:
 		_main.get_node("WaveManager").stop()
 		gs.sun_left = 999.0
 		match gs.current_section_index:
-			2:
+			9:
 				_jeshanah()
 			3:
 				_broad_wall()
 			_:
-				_fail("run with --day=9 or --day=13")
+				_fail("run with --day=42 or --day=13")
 		print("recipes_test: ", "FAIL" if _fails > 0 else "PASS")
 		quit(1 if _fails > 0 else 0)
 		return true

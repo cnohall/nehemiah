@@ -4,7 +4,7 @@ extends SceneTree
 #   Godot --path . --script res://tools/twist_card_shots.gd -- <out_dir>
 
 const HOLD := 120
-const TWISTS := ["doors", "beams", "salvage", "mixing", "thick", "ruins", "horn", "haul", "spring", "night", "cramped", "schemes"]
+const TWISTS := ["doors", "mortar", "posts", "beams", "salvage", "mixing", "thick", "ruins", "horn", "haul", "spring", "night", "cramped", "schemes"]
 
 var _out := ""
 var _story: CanvasLayer

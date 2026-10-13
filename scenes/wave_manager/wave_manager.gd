@@ -14,8 +14,8 @@ const INTERVAL_DAY52      := 2.0     # …tightening linearly to day 52
 const INTERVAL_JITTER     := 0.3
 const MAX_ALIVE_BASE      := 5
 const MAX_ALIVE_CAP       := 24      # also a performance ceiling
-const BRUTE_UNLOCK_DAY    := 8
-const RAIDER_UNLOCK_DAY   := 20
+const BRUTE_UNLOCK_DAY    := 7      # first brute on day 8, the Fish Gate's last: a new foe once the stretch's lesson is known
+const RAIDER_UNLOCK_DAY   := 16     # first raider on day 17, the Broad Wall's last
 const MID_BRUTE_CHANCE    := 0.25    # P(brute) days 9–20; rest scout
 # Late-game spawn weights: 45% scout, 25% brute, 30% raider
 const LATE_SCOUT_CAP      := 0.45
@@ -58,9 +58,10 @@ const NEIGHBOUR_CHANCE    := 0.34
 const NEIGHBOURS_PER_DAY  := 2
 
 # Saboteur (GDD §5.9): comes quietly with the trickle, never in a pack, on his own timer.
-# One at a time through day 20; from day 21, two with a crew of three or more.
+# One at a time through day 20; from day 21, two with a crew of three or more. Only from the
+# Water Gate: the torch that answers him is that stretch's own lesson.
 # Not scaled by section pressure; difficulty's pace scales the interval.
-const SABOTEUR_DAY        := 6       # the Fish Gate's second day: beams get a day to themselves
+const SABOTEUR_SECTION    := 8       # the Water Gate (night)
 const SABOTEUR_FIRST      := 22.0
 const SABOTEUR_EVERY      := 50.0
 const SABOTEUR_PAIR_DAY   := 21
@@ -329,7 +330,7 @@ func _warn_surge(at: Vector3, horn: bool, warn: float) -> void:
 	get_tree().call_group("watchmen", "warn_wave", at, horn)
 
 func _tick_saboteurs(delta: float) -> void:
-	if not GameState.saboteur_on() or _day < SABOTEUR_DAY:
+	if not GameState.saboteur_on() or GameState.current_section_index < SABOTEUR_SECTION:
 		return
 	_sab_timer -= delta
 	if _sab_timer > 0.0:

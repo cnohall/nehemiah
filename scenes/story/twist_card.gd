@@ -36,9 +36,11 @@ func _ready() -> void:
 static func captions(t: String) -> Array:
 	match t:
 		"doors": return ["Raise both pillars of the gate", "Then bring timber to the gap", "Hang the doors: the crew walks through, the foe can't"]
+		"mortar": return ["Stone alone does not hold a wall", "Bring mortar from the pile and work it in", "A battered wall can be mended with mortar before it falls"]
+		"posts": return ["Raise a watch post behind the wall: timber builds it", "Bring it sling stones: it fires on its own while they last", "Keep it stocked. The night can bring them over the wall"]
 		"beams": return ["A beam dragged alone goes slowly", "A friend takes the other end [%s]" % "interact", "Carry it together to the wall"]
 		"salvage": return ["No stone pile here", "Dig the stone out of the rubble heaps", "Heaps outside the wall hold twice as much, if you dare"]
-		"mixing": return ["Lime and water into the trough", "It mixes by itself. Wait a moment", "Carry the mortar to the wall"]
+		"mixing": return ["Lime and water into the trough", "Then someone stirs it [%s]" % "interact", "Carry the mortar to the wall"]
 		"thick": return ["The Broad Wall is built in two faces", "Outer face first, then the inner: four hands at the work", "Filled and mortared, it takes half the blows"]
 		"ruins": return ["Some stretches still stand: only the mortar is wanted", "Some are burned: pull the charred timbers down [%s]" % "interact", "Then build as usual"]
 		"horn": return ["They come up the valley in surges", "Sound the horn [%s]: a ring marks the spot" % "horn", "Gather in the ring: blows land harder there"]
@@ -121,6 +123,30 @@ func _panel(i: int, r: Rect2, k: float) -> void:
 			_worker(Vector2(cx - 12 * k, g), u * 0.8, 2, "")
 			_foe(Vector2(cx + 100 * k, g), u)
 			_cross(Vector2(cx + 100 * k, g - u * 2.6), 10 * k)
+		"mortar0":
+			_wall(Rect2(cx - 60 * k, g - u * 1.3, 100 * k, u * 1.3), 2)
+			_stack(Vector2(cx + 100 * k, g), k, MORTAR)
+		"mortar1":
+			_wall(Rect2(cx + 30 * k, g - u * 1.3, 70 * k, u * 1.3), 2)
+			_worker(Vector2(cx - 40 * k, g), u, 0, "mortar")
+			_arrow(Vector2(cx - 20 * k, g - u * 2.0), Vector2(cx + 30 * k, g - u * 2.0), UiStyle.TERRACOTTA, 3 * k)
+		"mortar2":
+			_wall(Rect2(cx - 50 * k, g - u * 1.7, 100 * k, u * 1.7), 3)
+			_foe(Vector2(cx + 110 * k, g), u * 0.9)
+			_worker(Vector2(cx - 90 * k, g), u, 1, "mortar")
+		"posts0":
+			_wall(Rect2(cx - 110 * k, g - u * 1.4, 70 * k, u * 1.4), 3)
+			_post(Vector2(cx + 40 * k, g), u, false)
+			_worker(Vector2(cx - 10 * k, g), u, 0, "wood")
+		"posts1":
+			_post(Vector2(cx + 20 * k, g), u, true)
+			_worker(Vector2(cx - 60 * k, g), u, 1, "stone")
+			_arrow(Vector2(cx - 40 * k, g - u * 1.8), Vector2(cx, g - u * 1.8), UiStyle.TERRACOTTA, 3 * k)
+		"posts2":
+			_wall(Rect2(cx - 110 * k, g - u * 1.4, 70 * k, u * 1.4), 3)
+			_post(Vector2(cx - 5 * k, g), u, true)
+			_foe(Vector2(cx + 90 * k, g), u * 0.9)
+			draw_line(Vector2(cx + 8 * k, g - u * 2.2), Vector2(cx + 70 * k, g - u * 1.2), Color(INK, 0.6), 2 * k)
 		"beams0":
 			var ub := 54.0 * k
 			_worker(Vector2(cx - 70 * k, g), ub, 0, "")
@@ -162,8 +188,9 @@ func _panel(i: int, r: Rect2, k: float) -> void:
 			_trough(Vector2(cx + 50 * k, g), k, 0.0)
 			_arrow(Vector2(cx - 30 * k, g - 30 * k), Vector2(cx + 20 * k, g - 30 * k), UiStyle.TERRACOTTA, 3 * k)
 		"mixing1":
-			_trough(Vector2(cx, g), k, 0.6)
-			_sand_glass(Vector2(cx, g - 90 * k), k)
+			_trough(Vector2(cx + 20 * k, g), k, 0.6)
+			_worker(Vector2(cx - 60 * k, g), u, 0, "")
+			_hand(Vector2(cx - 40 * k, g - u * 0.9), u)
 		"mixing2":
 			_trough(Vector2(cx - 80 * k, g), k, 1.0)
 			_worker(Vector2(cx, g), u, 2, "mortar")
@@ -388,6 +415,17 @@ func _trough(at: Vector2, k: float, full: float) -> void:
 	draw_rect(r, INK, false, 1.5)
 	if full > 0.0 and full < 1.0:
 		draw_line(at + Vector2(10 * k, -20 * k), at + Vector2(30 * k, -60 * k), TIMBER, 4 * k)
+
+## A watch post: a timber stand with a deck; `manned` adds a slinger on top
+func _post(at: Vector2, u: float, manned: bool) -> void:
+	for dx: float in [-0.4, 0.4]:
+		draw_line(at + Vector2(dx * u, 0), at + Vector2(dx * u, -u * 1.5), TIMBER, 4.0)
+	draw_rect(Rect2(at + Vector2(-0.6 * u, -u * 1.55), Vector2(1.2 * u, 0.12 * u)), TIMBER)
+	draw_rect(Rect2(at + Vector2(-0.6 * u, -u * 1.55), Vector2(1.2 * u, 0.12 * u)), INK, false, 1.5)
+	draw_line(at + Vector2(-0.4 * u, 0), at + Vector2(0.4 * u, -u * 1.5), Color(TIMBER, 0.8), 3.0)
+	draw_line(at + Vector2(0.4 * u, 0), at + Vector2(-0.4 * u, -u * 1.5), Color(TIMBER, 0.8), 3.0)
+	if manned:
+		draw_circle(at + Vector2(0, -u * 1.95), 0.22 * u, ROBE[2])
 
 func _sand_glass(at: Vector2, k: float) -> void:
 	var s := 16 * k

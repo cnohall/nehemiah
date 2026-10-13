@@ -6,7 +6,7 @@ extends SceneTree
 # - timber and stone piles only (no mortar); no watch posts
 # - frames cost timber, courses stone, the finish stone; walls start bare
 # - a battered finished wall is mended with stone
-# Fish Gate: mortar and the watch posts are out, the finish and mending take mortar.
+# Fish Gate: mortar is out (posts wait for the Tower of the Ovens), the finish and mending take mortar.
 # Exit code 0 = every check passed.
 
 var _main: Node3D
@@ -68,15 +68,21 @@ func _run() -> void:
 	w.health = w.MAX_HEALTH * 0.5
 	_check(w.repairing() and w.needs("stone") and not w.needs("mortar"), "mending takes stone")
 
-	# The Fish Gate: mortar and posts come in
+	# The Fish Gate: mortar comes in, the posts do not (one new thing a stretch)
 	_gs._apply(5, 1, _gs.Phase.WORK, 0, 0, 0)
 	for _i in 5:
 		await process_frame
 	_check(not _gs.first_stretch(), "Fish Gate is not")
 	_check("mortar" in _kinds(), "mortar out at the Fish Gate (%s)" % [_kinds()])
-	_check(_posts().all(func(p): return p.visible), "watch posts at the Fish Gate")
+	_check(_posts().all(func(p): return not p.visible), "still no watch posts at the Fish Gate")
 	var f: Node = _walls()[0]
 	_check(f.cost_for(f.Stage.MORTARED).has("mortar"), "the finish takes mortar again")
+
+	# The Tower of the Ovens: the posts arrive with the ambush's stretch
+	_gs._apply(18, 4, _gs.Phase.WORK, 0, 0, 0)
+	for _i in 5:
+		await process_frame
+	_check(_posts().all(func(p): return p.visible), "watch posts at the Tower of the Ovens")
 	_finish()
 
 func _check(ok: bool, what: String) -> void:

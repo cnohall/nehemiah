@@ -1,7 +1,7 @@
 extends SceneTree
 
 # The choice card before a new stretch (GDD §6.4), offline:
-#   Godot --path . --script res://tools/choice_test.gd -- --day=9 <out_dir> [pick]
+#   Godot --path . --script res://tools/choice_test.gd -- --day=24 <out_dir> [pick]
 # Plays the story to its last card, shoots it, picks an option (left / right from "Keep to
 # the plan"; default one left = "Work on till the stars") and checks the boon in play.
 # Exit code 0 = every check passed.

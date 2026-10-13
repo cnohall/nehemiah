@@ -1,12 +1,13 @@
 extends StaticBody3D
 
 # Mortar trough ("mixing" twist, GDD §6 — the Overcooked "cooking" step). Workers bring
-# one load of lime and one of water; the trough mixes them by itself over MIX_TIME,
-# then holds one load of mortar for anyone to take to the wall.
+# one load of lime and one of water; then someone has to stir (BuildWork, the same hands-on
+# work as the wall: progress kept, more hands quicker). Stirred, it holds one load of mortar
+# for anyone to take to the wall. A trough with nobody at it stays a trough of wet lime.
 # Plays two roles for players: a build site (accepts lime / water) and, once mixed, a
 # supply pile of kind "mortar". Server owns the state; clients mirror it via Sync.
 
-const MIX_TIME   := 4.0
+const MIX_TIME   := 3.0   # seconds for one worker to stir a batch
 const LABEL_RANGE := 6.0
 const STONE      := Color(0.66, 0.60, 0.52)
 const WATER      := Color(0.36, 0.48, 0.52)
@@ -24,7 +25,6 @@ var has_water := false:
 	set(value):
 		has_water = value
 		_refresh()
-var mix_left := 0.0      # > 0 while mixing
 var mortar_ready := false:
 	set(value):
 		if value and not mortar_ready and is_node_ready():
@@ -32,31 +32,37 @@ var mortar_ready := false:
 		mortar_ready = value
 		_refresh()
 
+var _last_progress := 0.0
 var _lime_layer: MeshInstance3D
 var _water_layer: MeshInstance3D
 var _paste: MeshInstance3D
 var _paddle: Node3D
-var _bar: HealthBar
+var _work: BuildWork
 var _label: WorldTag
 
 func _ready() -> void:
 	_build_visuals()
+	_work = BuildWork.new()
+	_work.name = "Work"
+	_work.work_time = MIX_TIME
+	_work.position.y = 1.5
+	add_child(_work)
+	_work.progress_changed.connect(_stir)
 	_build_sync()
 	GameState.section_changed.connect(_refresh.unbind(1))
 	_refresh()
 
-func _process(delta: float) -> void:
-	var mixing := has_lime and has_water and not mortar_ready
-	if mixing:
-		_paddle.rotation.y += delta * 3.0
-		if multiplayer.is_server():
-			mix_left = maxf(0.0, mix_left - delta)
-			if mix_left == 0.0:
-				has_lime = false
-				has_water = false
-				mortar_ready = true
-		_bar.show_value(1.0 - mix_left / (MIX_TIME * GameState.mod("mix")), BAR_COLOR)
-	_label.visible = _active() and not mixing and _local_player_near()
+func _process(_delta: float) -> void:
+	_label.visible = _active() and not _work_ready() and _local_player_near()
+
+## The paddle turns with the stirring: every peer sees the progress, so every peer sees it move
+func _stir(value: float) -> void:
+	if _paddle != null and value > _last_progress:
+		_paddle.rotation.y += (value - _last_progress) * TAU * 3.0
+	_last_progress = value
+
+func _work_ready() -> bool:
+	return has_lime and has_water and not mortar_ready
 
 # ── Build-site side: takes lime and water ──────────────────
 
@@ -77,22 +83,27 @@ func deposit(material: String, _amount: int) -> bool:
 		has_lime = true
 	else:
 		has_water = true
-	if has_lime and has_water:
-		mix_left = MIX_TIME * GameState.mod("mix")
+	_work.work_time = MIX_TIME * GameState.mod("mix")
 	return true
 
+## Lime and water are in: it wants stirring
 func can_build() -> bool:
-	return false
+	return _active() and _work_ready()
 
+## BuildWork finished the stirring (server)
 func try_build() -> bool:
-	return false
+	if not multiplayer.is_server() or not can_build():
+		return false
+	has_lime = false
+	has_water = false
+	mortar_ready = true
+	return true
 
 func is_complete() -> bool:
 	return true
 
-## Mixing runs by itself — there's no hands-on work here (see BuildWork)
 func work() -> BuildWork:
-	return null
+	return _work
 
 func work_material() -> String:
 	return ""
@@ -128,9 +139,7 @@ func _refresh() -> void:
 	_lime_layer.visible = has_lime and not has_water
 	_water_layer.visible = has_water and not has_lime
 	_paste.visible = (has_lime and has_water) or mortar_ready
-	_paddle.visible = has_lime and has_water and not mortar_ready
-	if not (has_lime and has_water and not mortar_ready):
-		_bar.visible = false
+	_paddle.visible = _work_ready()
 	_update_label()
 
 func _set_group(group: String, on: bool) -> void:
@@ -142,6 +151,8 @@ func _set_group(group: String, on: bool) -> void:
 func _update_label() -> void:
 	if mortar_ready:
 		_label.text = "Mortar ready"
+	elif _work_ready():
+		_label.text = "Stir the mortar"
 	else:
 		_label.text = "Trough  ·  Lime %d/1  Water %d/1" % [int(has_lime), int(has_water)]
 
@@ -169,9 +180,6 @@ func _build_visuals() -> void:
 	var handle := _box(Vector3(0.06, 0.9, 0.06), Vector3(0.25, 0.3, 0), Color(0.45, 0.33, 0.20))
 	handle.reparent(_paddle, false)
 	handle.rotation.z = 0.35
-	_bar = HealthBar.new(0.9, 0.09)
-	_bar.position = Vector3(0, 1.5, 0)
-	add_child(_bar)
 	_label = WorldTag.make(WorldTag.Kind.SITE)
 	_label.position = Vector3(0, 1.8, 0)
 	_label.visible = false
@@ -193,4 +201,4 @@ func _box(size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 # ── Networking ─────────────────────────────────────────────
 
 func _build_sync() -> void:
-	NetworkManager.add_sync(self, [^".:has_lime", ^".:has_water", ^".:mix_left", ^".:mortar_ready"])
+	NetworkManager.add_sync(self, [^".:has_lime", ^".:has_water", ^".:mortar_ready", ^"Work:progress"])

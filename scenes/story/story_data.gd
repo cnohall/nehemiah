@@ -201,12 +201,14 @@ static func slides_for_day(day: int) -> Array:
 		})
 	return slides
 
-## The last card before a new stretch asks how the crew will meet it (campaign only)
+## The last card before a new stretch asks how the crew will meet it (campaign only, from the
+## Valley Gate: the first five stretches each bring one new thing, and a choice is another)
+const CHOICES_FROM := 5
 static func choice_offered(section_index: int) -> bool:
-	return section_index > 0 and not GameState.is_replay() and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
+	return section_index >= CHOICES_FROM and not GameState.is_replay() and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
 
 const TWIST_TITLES := {
-	"doors": "Hang the doors", "beams": "Beams take two", "salvage": "Stone from the rubble",
+	"doors": "Hang the doors", "mortar": "Mortar", "posts": "The watch", "beams": "Beams take two", "salvage": "Stone from the rubble",
 	"mixing": "Mix the mortar", "thick": "The Broad Wall", "ruins": "Old stones, burned timbers", "horn": "Sound the horn",
 	"haul": "The long haul", "spring": "By the pool", "night": "The night watch",
 	"cramped": "Narrow lanes", "schemes": "Come down to Ono",

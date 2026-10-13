@@ -57,9 +57,9 @@ Three types, unlocked over the campaign (`wave_manager.gd`). Spawn rate and max 
 | Type | Unlocks | Speed | Health | Damage | Notes |
 |---|---|---|---|---|---|
 | Scout | Day 1 | 3.5 | 40 | 5 | ~50% go for the wall ("wreckers"), rest run for gaps |
-| Brute | Day 9 (25% of spawns) | 2.5 | 100 | 15 | Always a wrecker — slow, batters walls |
-| Raider | Day 21 (~30% late mix) | 4.0 | 60 | 8 | Fast; ~50% wreckers |
-| Saboteur (§5.9) | Day 6 (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
+| Brute | Day 8 (25% of spawns), the Fish Gate's last day | 2.5 | 100 | 15 | Always a wrecker — slow, batters walls |
+| Raider | Day 17 (~30% late mix), the Broad Wall's last day | 4.0 | 60 | 8 | Fast; ~50% wreckers |
+| Saboteur (§5.9) | Water Gate on (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
 
 All but the saboteur attack nearby workers first. A wrecker that knocks a section back to bare foundation pours through the breach.
 Debug: run with `-- --day=N` (debug builds) to start at a later day and see brutes/raiders.
@@ -71,7 +71,7 @@ Debug: run with `-- --day=N` (debug builds) to start at a later day and see brut
 1. **Wall units** (`WallSection`) — stages: framing (timber; beams on beam stretches) → courses (stone) → mortar. Each stage: deliver the loads, then work it up by hand (§5.4). Enemies batter them back down a stage at a time. Broad Wall's are double-thick (§6.3)
 2. **Gates** (`Gate`) — two pillars built like wall units, then the **doors step**: deliver timber, work it → doors hang and close the gap. Workers pass through hung doors, enemies don't. Stretches with no gate seal the opening with stone instead
 3. **Watch posts** (`WatchPost`, §5.6) — two behind the wall; raise with timber, feed with stone for the slinger on top. Bare again each new stretch
-4. **Mortar trough** (`Trough`, mixing stretches) — not built: lime + water in → mortar out after 4 s
+4. **Mortar trough** (`Trough`, mixing stretches) — built: lime + water in, then a worker stirs it (BuildWork, 3 s for one worker, the paddle turns while it is worked) → one load of mortar out. Left alone it stays wet lime; bots stir it like any wall
 
 Supply: stockpiles in the yard (timber, stone, mortar; per stretch some are replaced by rubble heaps, lime bins and water jars — §6.3). Dropped loads stay on the ground.
 
@@ -235,7 +235,7 @@ Three rules, each on by default and each switched off from the command line to A
 |---|---|---|---|
 | 4.2 (fastest) | 30 (2 sling hits, 2 sword cuts, 4 post shots) | 0 | 1.2 (light) |
 
-**Unlock and count:** day 6, the second day of the Fish Gate, so beams (the section's twist) get one day to themselves. At most **1 alive**, and at most one every 50 s, through day 20. From day 21, 2 alive with 3–4 workers. Not scaled by section pressure; difficulty *pace* scales the interval. Water Gate (night watch): he comes out of the dark like the rest, and a torch by the yard is the answer.
+**Unlock and count:** from the Water Gate (day 37, `WaveManager.SABOTEUR_SECTION`), so night and the saboteur are one lesson: what comes out of the dark, and a torch by the yard is the answer. At most **1 alive**, and at most one every 50 s, through day 40. From day 41 (the Water Gate's last day), 2 alive with 3–4 workers. Not scaled by section pressure; difficulty *pace* scales the interval.
 
 **Readability:**
 - Silhouette: slim, crouched run, dark hood, an empty sack over one shoulder, no spear or shield. Same goat-hair cloth + oxblood outline as the other foes (`CharacterRig` look "saboteur")
@@ -535,9 +535,28 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 
 **Simple game** (`Settings.simple_game` → `GameState.simplified()`, `trades_on()`, `saboteur_on()`): plain workers at the base work times (2 / 3 / 2 s, trades' ×1.6 gone), no saboteur and nothing to tidy (the ambush no longer strews the yard), no choice card, no rumour, no households, jars, birds or townsfolk, sheep standing still, two marks, the stretch-end tally moves on by itself after 11 s, no call early. Host's choice, synced on change. Practice and Explore Jerusalem are never simplified. The full game is unchanged, apart from the first stretch below, which both games share.
 
-**The first stretch, in both games** (`GameState.first_stretch()`, playtest 3: "first level just stones?"; 6 Oct 2026): the Sheep Gate has **timber and stone only** and **no watch posts**. Frames go up in timber, courses in stone, the finish and any mending take stone; mortar and the posts arrive with the Fish Gate. Replaces the day-1 stone-only rule (which needed pre-built frames and timber appearing mid-stretch for the doors — more to explain, not less). Test `tools/first_stretch_test.gd -- --nostory [--simple]`. **Watch:** the Fish Gate now brings beams, mortar and posts at once (and the saboteur on day 6 in the full game) — if playtest 4 shows that stretch overwhelming, move posts to the Jeshanah Gate.
+**The first stretch, in both games** (`GameState.first_stretch()`, playtest 3: "first level just stones?"; 6 Oct 2026): the Sheep Gate has **timber and stone only** and **no watch posts**. Frames go up in timber, courses in stone, the finish and any mending take stone; mortar and the posts arrive with the Fish Gate. Replaces the day-1 stone-only rule (which needed pre-built frames and timber appearing mid-stretch for the doors — more to explain, not less). Test `tools/first_stretch_test.gd -- --nostory [--simple]`. **Watch:** see the concept ladder below, which spreads the rest out.
 
 **Rule from now on:** a new system says which kind it is. Mastery and twists are welcome; a mandatory rule must replace one, not add to the pile; an invisible modifier is either made ≥25% and visible, or not built.
+
+**The concept ladder (13 Oct 2026, built): one new concept a stretch, both games.** The first dozen days taught mortar, beams, posts, the saboteur and a choice card at once; now each stretch brings one thing, and a new foe only walks in on a stretch's last day, once its lesson is known.
+
+| Stretch | New | Notes |
+|---|---|---|
+| 1 Sheep | wall, doors, scouts | timber and stone only, no posts |
+| 2 Fish | **mortar** | brute on day 8 |
+| 3 Jeshanah | **beams** | |
+| 4 Broad Wall | **thick wall** | raider on day 17 |
+| 5 Ovens | **watch posts** | the ambush (day 20) tests them |
+| 6 Valley | **horn** | answers the ambush; the choice card starts here (`StoryData.CHOICES_FROM`) |
+| 7 Ash Heaps | **long haul** | |
+| 8 Fountain | **mixing by hand** | doubles up with the households (Neh. 5, full game); pressure 0.55 carries it |
+| 9 Water | **night + saboteur** | one idea: what comes out of the dark |
+| 10 Horse | **rubble: salvage, old and burned units** | the dig / shore pair lives here |
+| 11 East | **schemes** | |
+| 12 Miphkad | nothing new | every ingredient at once |
+
+Posts are open from section 4 (`GameState.posts_open`), the saboteur from 8. Cut: the Fish / Jeshanah / Broad Wall / Ovens choice pairs (porters, market, rush, pack, hot, bank). Not yet done: trades are still offered from the start; the Fountain's two cards (mixing, spring); the ruins and salvage cards' in-game pictures and the mixing one need re-shooting (`tools/twist_pics.ps1`); the new mortar and posts cards use drawn pictograms.
 
 **For the full game (proposed, not built — decide after playtest 4 compares the two):**
 1. **Stagger, don't stack.** The full game's extras arrive one at a time, like twists: trades offered from the 3rd stretch (Jeshanah), the saboteur from the Broad Wall with its own twist card, boons from the Tower of the Ovens. The first two stretches play as the simple game
@@ -570,15 +589,15 @@ Done and removed from the table: healing → the well (§5.22), wall damage (§5
 | # | Section (Neh 3) | Days | New ingredient | Grounded in | Pressure |
 |---|---|---|---|---|---|
 | 1 | **Sheep Gate** (3:1) | 1–4 | Core loop. Gates end with a **doors step**: hang the doors, fit bolts and bars — a recurring finale for every gate section | "set up its doors, its bolts and its bars" (3:3, 3:6, 3:13…) | Low — scouts only |
-| 2 | **Fish Gate** (3:3) | 5–8 | **Beams** — long timbers that need **two workers** to carry | "they laid its beams" (3:3, 3:6) | Low |
-| 3 | **Jeshanah (Old) Gate** (3:6) | 9–12 | **Salvage** — no stone stockpile; stone comes from rubble heaps scattered across the site. **Old and burned units** (`ruins`, §6.4): one unit's courses still stand, another's charred framing must be pulled down first (5 s of work), then its timbers — 3 to 5 charred loads, slower to carry — hauled to the tip past the inner face before any stage opens (Oct 2 2026, untested in play; `tools/debris_test.gd`) | Sanballat: will they revive the stones from the heaps of rubbish, burned as they are? (4:2) | Brutes arrive |
+| 2 | **Fish Gate** (3:3) | 5–8 | **Mortar** — the courses are laid in it and a battered wall is mended with it (the Sheep Gate has timber and stone only). The first brute walks in on day 8 | "their ... mortar" the wall is joined (4:6); mortar is the first thing a builder asks for | Low |
+| 3 | **Jeshanah (Old) Gate** (3:6) | 9–12 | **Beams** — long timbers that need **two workers** to carry | "they laid its beams" (3:6; also 3:3) | Low |
 | 4 | **Broad Wall** (3:8) | 13–17 | **Double-thick, two-face wall** — outer face, inner face, rubble core (§6.3); four hands per unit | Built by goldsmiths and ointment makers — craftsmen, not masons (3:8) | Mockery beat (4:3) as the section intro |
-| 5 | **Tower of the Ovens** (3:11) | 18–23 | **Mortar mixing** — carry lime + water to a trough, mix, then deliver. The Overcooked "cooking" step | Ovens / lime burning; mortar was made on site | Rising |
+| 5 | **Tower of the Ovens** (3:11) | 18–23 | **Watch posts** — raise one behind the wall in timber, keep it stocked with sling stones. Two days to learn them, then the ambush (4:11) on day 20 is what a stocked post holds off | "we set a watch against them day and night" (4:9) | Rising |
 | 6 | **Valley Gate** (3:13) | 24–29 | **The horn** — a worker can sound it to call everyone to a spot; enemies come in surges from the valley | "At the place where you hear the horn, gather to us" (4:20); half worked, half held spears (4:16) | **Peak #1** — conspiracy (4:7-8); raiders from day 21 |
 | 7 | **Gate of the Ash Heaps** (3:14) | 30–33 | **Long haul** — the site is far from the supply yard; chains of drops and hand-offs pay off | 1,000 cubits of wall up to the Gate of the Ash Heaps (3:13) | Medium |
-| 8 | **Fountain Gate** (3:15) | 34–36 | **Breather** — short, beautiful: the Pool of Shelah, the King's Garden, stairs down from the City of David. Water is close (fast mortar) | 3:15 | **Low** — deliberate rest |
+| 8 | **Fountain Gate** (3:15) | 34–36 | **Mortar mixing** — lime and water into the trough, then **someone stirs it** (hands-on work, one batch, more hands quicker). Lime burning: the Ovens' own craft, learned in the gentlest stretch. A breather too — short, beautiful: the Pool of Shelah, the King's Garden, stairs down from the City of David. Water is close (fast mortar) | 3:15 | **Low** — deliberate rest |
 | 9 | **Water Gate** (3:26) | 37–41 | **Night watch** — some days end in darkness; torches light small areas, enemies come out of the dark | Guards at night, work by day (4:22-23) | Rising |
-| 10 | **Horse Gate** (3:28) | 42–47 | **Cramped streets** — each priest builds "in front of his own house": tight lanes, little room to pass (the Overcooked "small kitchen") | 3:28 | High |
+| 10 | **Horse Gate** (3:28) | 42–47 | **Salvage + old and burned units** (`ruins`, §6.4): no stone stockpile, stone comes from rubble heaps; one unit's courses still stand, another's charred framing must be pulled down. Also **cramped streets** — each priest builds "in front of his own house": tight lanes, little room to pass (the Overcooked "small kitchen") | 3:28 | High |
 | 11 | **East Gate** (3:29) | 48–50 | **Schemes** — messengers appear with invitations "to the plain of Ono"; while one talks at a worker, their work slows; [E] answers him. Neighbours with warnings come too: tell friend from foe (§6.7) | 6:1-4 (four times, the same answer) | **Peak #2** — Geshem's raiders from the east |
 | 12 | **Inspection (Miphkad) Gate** (3:31) | 51–52 | **Finale** — close the circuit back to the Sheep Gate (3:32). All ingredients at once. When the last section is complete, the enemies lose heart and withdraw | 6:15-16 | Highest, then release |
 

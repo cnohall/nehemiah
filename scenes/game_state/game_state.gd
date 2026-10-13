@@ -14,17 +14,17 @@ extends Node
 const DEFAULT_YARD := Vector2(0.0, 10.0)
 const SECTIONS: Array = [
 	{ "name": "Sheep Gate",     "ref": "Neh. 3:1",  "days": [1,2,3,4],           "twists": ["doors"],                     "yard": Vector2(0, 10),  "terrain": "sheepfold" },
-	{ "name": "Fish Gate",      "ref": "Neh. 3:3",  "days": [5,6,7,8],           "twists": ["doors", "beams"],            "yard": Vector2(-9, 10), "terrain": "fish_market", "choices": ["porters", "market"] },
-	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams", "salvage", "ruins"], "yard": Vector2(0, 11),  "terrain": "ruins", "choices": ["dig", "shore"],
-		"recipes": { "Section1": "old", "Section3": "burned" } },
-	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "choices": ["rush", "pack"], "gate": false },
-	{ "name": "Tower of the Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
-	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
+	{ "name": "Fish Gate",      "ref": "Neh. 3:3",  "days": [5,6,7,8],           "twists": ["doors", "mortar"],           "yard": Vector2(-9, 10), "terrain": "fish_market" },
+	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams"],            "yard": Vector2(0, 11),  "terrain": "ruins" },
+	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "gate": false },
+	{ "name": "Tower of the Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["posts"],                     "yard": Vector2(9, 10),  "terrain": "ovens", "gate": false },
+	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "horn"],             "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
 	{ "name": "Gate of the Ash Heaps",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
 	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55, "choices": ["table", "fields"],
 		"piles": { "StockWater": Vector2(-11.5, 4.5) } },
 	{ "name": "Water Gate",     "ref": "Neh. 3:26", "days": [37,38,39,40,41],    "twists": ["doors", "night"],            "yard": Vector2(6, 11),  "terrain": "ophel" },
-	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped"],          "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1 },
+	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped", "salvage", "ruins"], "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1, "choices": ["dig", "shore"],
+		"recipes": { "Section1": "old", "Section3": "burned" } },
 	{ "name": "East Gate",      "ref": "Neh. 3:29", "days": [48,49,50],          "twists": ["doors", "schemes"],          "yard": Vector2(4, 10),  "terrain": "kidron", "pressure": 1.2 },
 	{ "name": "Miphkad Gate",   "ref": "Neh. 3:31", "days": [51,52],             "twists": ["doors", "beams", "salvage", "mixing", "horn", "schemes", "ruins"],
 		"yard": Vector2(0, 10), "terrain": "market", "pressure": 1.3, "recipes": { "Section1": "burned", "Section4": "old" } },
@@ -44,14 +44,8 @@ const SECTIONS: Array = [
 const BOONS := {
 	"build": { "title": "Press the work", "ref": "Neh. 4:6", "mods": { "work": 1.2, "harm": 1.25 } },
 	"guard": { "title": "Hold the line", "ref": "Neh. 4:13", "mods": { "work": 0.9, "harm": 0.75 }, "posts": true },
-	"porters": { "title": "Practised porters", "ref": "Neh. 3:3", "mods": { "beam_solo": 1.9, "pressure": 1.15 } },
-	"market": { "title": "Watch the market side", "ref": "Neh. 4:9", "mods": { "work": 0.9, "pressure": 0.8 }, "posts": true },
 	"dig": { "title": "Dig out the rubble", "ref": "Neh. 4:2", "mods": { "clear": 2.0, "work": 1.1, "pressure": 1.2 } },
 	"shore": { "title": "Shore up the old courses", "ref": "Neh. 3:6", "mods": { "harm": 0.7, "clear": 0.6 } },
-	"rush": { "title": "Rush the faces", "ref": "Neh. 3:8", "mods": { "work": 1.3, "harm": 1.4 } },
-	"pack": { "title": "Pack the core", "ref": "Neh. 4:6", "mods": { "harm": 0.6, "work": 0.85 } },
-	"hot": { "title": "Fire the ovens high", "ref": "Neh. 3:11", "mods": { "mix": 0.5, "pressure": 1.2 } },
-	"bank": { "title": "Bank the ovens", "ref": "Neh. 3:11", "mods": { "mix": 1.5, "pressure": 0.8 }, "posts": true },
 	"terraces": { "title": "Work the terraces", "ref": "Neh. 3:13", "mods": { "work": 1.2, "harm": 1.3 } },
 	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "pressure": 0.75, "work": 0.9 }, "posts": true },
 	"bundles": { "title": "Carry in bundles", "ref": "Neh. 3:14", "mods": { "carry": 1.25, "harm": 1.25 } },
@@ -79,9 +73,11 @@ signal boon_changed
 # Shown under the dawn banner the first time a section uses a twist
 const TWIST_INTRO := {
 	"doors": "Finish the gate: hang its doors, bolts and bars",
+	"mortar": "Mortar from here on: the courses are laid in it, and a finished wall is mended with it",
 	"beams": "The beams are heavy. Carry them in pairs",
+	"posts": "A watch post: raise it behind the wall with timber, then keep it stocked with sling stones. It fires on its own",
 	"salvage": "No quarry stone here. Salvage it from the burned rubble; heaps outside the wall hold twice as much",
-	"mixing": "Make the mortar: lime and water into the trough, then to the wall",
+	"mixing": "Make the mortar: lime and water into the trough, then someone stirs it, then to the wall",
 	"ruins": "Not every stretch starts bare: old courses still stand in places, and burned timbers must be pulled down before anything is built",
 	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between. Room for four at the work, and it takes half the blows",
 	"horn": "They come up the valley in surges. {horn} sounds the horn: gather in its ring and your blows land harder",
@@ -518,6 +514,12 @@ func wall_finished() -> bool:
 ## before anything else (playtest 2026-10-04)
 func first_stretch() -> bool:
 	return current_section_index == 0 and not attract and not free_play()
+
+## Watch posts stand from the Tower of the Ovens (Neh. 4:9 is the ambush there), and in a
+## practice. Before that the crew has learned the wall, mortar, beams and the thick wall.
+const POSTS_FROM_SECTION := 4
+func posts_open() -> bool:
+	return free_play() or current_section_index >= POSTS_FROM_SECTION
 
 ## A practice or the festival: no waves, no story, nothing saved
 func free_play() -> bool:

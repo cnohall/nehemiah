@@ -31,7 +31,8 @@ const VERSE_HOLD := 6.5
 #   at     — "gate" | "flank" (one end) | "both" (both ends) | "east" (the end that faces
 #            east on the real ring) | "yard" (the end nearest the supply yard)
 #   leader — for Leaders: "sanballat" | "tobiah" | "geshem" | "all" | ""
-# Only foes already unlocked on those days (brutes from day 9, raiders from 21).
+# Only foes already unlocked on those days (brutes from day 8, raiders from 17, the saboteur
+# from the Water Gate: WaveManager).
 const S := Enemy.Type.SCOUT
 const B := Enemy.Type.BRUTE
 const R := Enemy.Type.RAIDER
@@ -46,7 +47,7 @@ const BEATS := {
 		"half": { "call": "Both ends at once. Split up!", "pack": [[S, 2]], "at": "both" },
 		"last": { "call": "A rush at the gate!", "pack": [[S, 4]], "at": "gate" },
 	},
-	2: {   # Jeshanah Gate — brutes arrive
+	2: {   # Jeshanah Gate — brutes in force (the first one walked in on the Fish Gate's last day)
 		"half": { "call": "Brutes, for the new stones!", "pack": [[B, 2], [S, 1]], "at": "flank" },
 		"last": { "call": "They're at the gate! Hold it!", "pack": [[B, 1], [S, 3]], "at": "gate" },
 	},
@@ -62,7 +63,7 @@ const BEATS := {
 			"pack": [[S, 4], [B, 2]], "at": "flank", "leader": "tobiah" },
 		"last": { "call": "Quiet ones, after the yard!",
 			"verse": ["They will not know or see, until we come in among them and kill them, and cause the work to cease.", "Neh. 4:11"],
-			"pack": [[SAB, 1], [S, 3]], "at": "flank" },
+			"pack": [[S, 3]], "at": "yard" },
 	},
 	5: {   # Valley Gate — peak one
 		"half": { "call": "Raiders up both sides of the valley!", "pack": [[R, 2], [S, 1]], "at": "both" },
