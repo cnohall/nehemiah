@@ -92,7 +92,7 @@ adjustment_saturation = 1.2
 code = "shader_type canvas_item;
 
 // Screen-space finishing pass: tilt-shift blur (top/bottom of screen, sampled from
-// the screen texture's mip chain — far cheaper than the 3D DOF pass) + warm vignette.
+// the screen texture's mip chain — far cheaper than the 3D DOF pass) + warm vignette + dither.
 
 uniform float vignette_strength = 0.22;
 uniform vec3 tint = vec3(0.30, 0.24, 0.20);
@@ -115,7 +115,11 @@ void fragment() {
 	vec2 uv = SCREEN_UV - 0.5;
 	uv.x *= SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;
 	float v = smoothstep(0.35, 0.95, length(uv) * 1.1);
-	COLOR = vec4(mix(col, col * tint * 2.2, v * vignette_strength), 1.0);
+	col = mix(col, col * tint * 2.2, v * vignette_strength);
+	// Interleaved-gradient dither, under one 8-bit step: breaks up banding in the pale
+	// ground and the vignette falloff
+	col += (fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
+	COLOR = vec4(col, 1.0);
 }
 "
 

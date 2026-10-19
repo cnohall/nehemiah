@@ -2,7 +2,7 @@ extends SceneTree
 
 # Stages a twist in the real game and saves the pictures TwistCard shows, one per panel:
 #   Godot --path . --script res://tools/twist_pics.gd -- --nostory --day=<a day of the twist> <twist>
-# Day per twist: doors 1, ruins 42, beams 9, salvage 42, thick 13, mixing 34, horn 24, haul 30,
+# Day per twist: doors 1, mortar 5, posts 18, ruins 42, beams 9, salvage 42, thick 13, mixing 34, horn 24, haul 30,
 # spring 34, night 37, cramped 42, schemes 48 (tools/twist_pics.ps1 runs them all).
 # Writes res://art/twist/<twist>_<n>.png, cropped to the plate's picture (440:238). Then
 # `Godot --path . --headless --import`, so the card picks the new files up.
@@ -188,6 +188,9 @@ func _mat() -> Node3D:
 			return c
 	return null
 
+func _post(n: String) -> Node3D:
+	return _main.get_node("Posts/" + n)
+
 func _sup(n: String) -> Node3D:
 	return _main.get_node("Supplies/" + n)
 
@@ -222,6 +225,64 @@ func _stage(twist: String, i: int) -> Dictionary:
 				"crew": [[gp + Vector3(0, 0, 1.0), "down", ""]],
 				"foes": [[E.SCOUT, gp + Vector3(0, 0.1, -2.6)]],
 				"setup": func(): _pillars(g, 3, true) }
+		# Fish Gate: stacked stone with open joints, mortar worked in, a battered wall mended
+		"mortar0":
+			var s := _section("Section3")
+			var at: Vector3 = s.global_position
+			return { "look": at + Vector3(0, 0.5, -0.2), "size": 10.0,
+				"crew": [[_o(at, -1.4, 2.2), "up", "stone"]],
+				"setup": func(): _wall(s, 2, 0) }
+		"mortar1":
+			var s := _section("Section3")
+			var at: Vector3 = s.global_position
+			return { "look": at + Vector3(0, 0.5, -0.2), "size": 10.0,
+				"crew": [[_o(at, 0.4, 1.8), "up", ""], [_o(at, -3.2, 2.4), "right", "mortar"]],
+				"setup": func(): _wall(s, 2, 0),
+				"hold": func(): s.work().progress = 0.5 }
+		"mortar2":
+			var s := _section("Section3")
+			var at: Vector3 = s.global_position
+			return { "look": at + Vector3(0, 0.5, -0.8), "size": 11.0,
+				"crew": [[_o(at, -1.0, 2.2), "up", "mortar"]],
+				"foes": [[E.BRUTE, _o(at, 1.0, -2.4)]],
+				"setup": func():
+					_wall(s, 3, 0)
+					s.health = s.MAX_HEALTH * 0.35 }
+		# Tower of the Ovens: a post raised with timber, fed sling stones, firing in the dark
+		"posts0":
+			var p := _post("PostWest")
+			var at: Vector3 = p.global_position
+			return { "look": at + Vector3(0, 0.9, 0.2), "size": 9.5,
+				"crew": [[_o(at, 2.0, 1.2), "left", "wood"]],
+				"setup": func():
+					_walls_near(at)
+					p.built = false
+					p.pending = 1
+					p.ammo = 0 }
+		"posts1":
+			var p := _post("PostWest")
+			var at: Vector3 = p.global_position
+			return { "look": at + Vector3(0, 1.4, 0.2), "size": 9.5,
+				"crew": [[_o(at, 2.0, 1.2), "left", "stone"]],
+				"setup": func():
+					_walls_near(at)
+					p.built = true
+					p.ammo = 0,
+				"hold": func(): p._cd = 99.0 }
+		"posts2":
+			var p := _post("PostWest")
+			var at: Vector3 = p.global_position
+			return { "look": _o(at, 1.4, 0.6) + Vector3(0, 1.0, 0), "size": 10.0, "night": true,
+				"crew": [[_o(at, -0.2, 2.6), "right", ""]],
+				"foes": [[E.SCOUT, _o(at, 2.6, 1.6)]],
+				"setup": func():
+					_walls_near(at)
+					p.built = true
+					p.ammo = p.MAX_AMMO,
+				"hold": func():
+					p._cd = 99.0
+					if _frame == SETTLE - 4 and not _foes.is_empty() and is_instance_valid(_foes[0]):
+						p._throw(_foes[0].get_path()) }
 		# Fish Gate: a beam dragged alone, a friend takes the other end, both carry it
 		"beams0":
 			return { "look": _bm(-0.6), "size": 8.5,
@@ -297,12 +358,16 @@ func _stage(twist: String, i: int) -> Dictionary:
 			return { "look": _o(t.global_position, 0, 1.5), "size": 10.0,
 				"crew": [[_o(t.global_position, -3.0, 2.0), "right", "lime"],
 					[_o(t.global_position, 1.0, 3.6), "up", "water"]],
-				"setup": func(): _trough(t, false, false, false) }
+				"setup": func():
+					_clear_trees()
+					_trough(t, false, false, false) }
 		"mixing1":
 			var t := _sup("Trough")
 			return { "look": _o(t.global_position, 0, 1.0), "size": 9.0,
-				"crew": [[_o(t.global_position, -2.2, 1.6), "right", ""]],
-				"setup": func(): _trough(t, true, true, false),
+				"crew": [[_o(t.global_position, -1.3, 1.0), "right", ""]],
+				"setup": func():
+					_clear_trees()
+					_trough(t, true, true, false),
 				"hold": func(): t.work().progress = 0.5 }
 		"mixing2":
 			var t := _sup("Trough")
@@ -311,6 +376,7 @@ func _stage(twist: String, i: int) -> Dictionary:
 			return { "look": at + Vector3(0, 0.5, 0.8), "size": 10.0,
 				"crew": [[_o(at, -1.0, 2.6), "up", "mortar"]],
 				"setup": func():
+					_clear_trees()
 					_trough(t, false, false, true)
 					_wall(s, 2, 0) }
 		# Valley Gate: surges, the horn, the gathering
@@ -353,7 +419,8 @@ func _stage(twist: String, i: int) -> Dictionary:
 		"spring1":
 			var t := _sup("Trough")
 			return { "look": _o(t.global_position, -1.8, 0.4), "size": 9.0,
-				"crew": [[_o(t.global_position, -3.4, 1.4), "right", "water"]] }
+				"crew": [[_o(t.global_position, -3.4, 1.4), "right", "water"]],
+				"setup": _clear_trees }
 		"spring2":
 			var pool := _sup("StockWater")
 			var at: Vector3 = pool.global_position
@@ -416,6 +483,19 @@ func _pillars(g: Node3D, stage: int, doors: bool) -> void:
 func _wall(s: Node3D, stage: int, face: int) -> void:
 	s.stage = stage
 	s.face = face
+
+## The Fountain Gate's garden (olives, myrtle, palms) stands between the camera and the
+## trough: out of the picture for the close-ups. Tall terrain only; the pool rim stays.
+func _clear_trees() -> void:
+	for g in _main.get_node("SectionTerrain").find_children("*", "GeometryInstance3D", true, false):
+		if g.get_aabb().size.y > 0.8:
+			g.visible = false
+
+## Finished wall along the stretch behind a spot (a post stands behind a built wall)
+func _walls_near(at: Vector3, reach := 9.0) -> void:
+	for s in _main.get_node("Wall").get_children():
+		if "face" in s and s.global_position.distance_to(at) < reach:
+			_wall(s, 3, 0)
 
 func _trough(t: Node3D, lime: bool, water: bool, ready: bool) -> void:
 	t.has_lime = lime

@@ -999,7 +999,7 @@ func _set_carried(kind: String) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	carried_kind = kind
-	_rebuild_carry_prop()
+	_rebuild_carry_prop(true)
 	if multiplayer.is_server() and kind != "beam":
 		_release_helper()
 	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
@@ -1952,7 +1952,8 @@ func _glint() -> void:
 
 # ── Carried prop ───────────────────────────────────────────
 
-func _rebuild_carry_prop() -> void:
+## `pop`: a fresh pickup, so the load lands in the arms squashed and springs to shape
+func _rebuild_carry_prop(pop := false) -> void:
 	for c in _carry_prop.get_children():
 		c.queue_free()
 	if is_instance_valid(_carry_front):
@@ -1971,6 +1972,10 @@ func _rebuild_carry_prop() -> void:
 		else:
 			prop.scale = Vector3.ONE * CARRY_SCALE
 			_carry_prop.add_child(prop)
+		if pop:
+			var s := prop.scale
+			prop.scale = Vector3(s.x * 1.2, s.y * 0.65, s.z * 1.2)
+			prop.create_tween().tween_property(prop, "scale", s, 0.22) 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # ── Helpers ────────────────────────────────────────────────
 
