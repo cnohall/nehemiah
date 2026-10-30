@@ -3,7 +3,7 @@ extends Node
 
 # Bots already know the twists. The first time in a section that one does something the
 # section brings new (holds the far end of a beam, carries lime or water to the trough,
-# digs stone out of the rubble), point at it: "Watch the carpenter — two to a beam".
+# digs stone out of the rubble), point at it: "Watch the carpenter: two to a beam".
 # People learn by copying the crew (Overcooked's own trick); this points them at it.
 # Local only: reads state every peer already has.
 
@@ -30,7 +30,7 @@ func _process(_delta: float) -> void:
 		for p: Player in get_tree().get_nodes_in_group("players"):
 			if p.is_bot() and not p.downed and _shows[twist][0].call(p):
 				_shown[twist] = true
-				_point_at(p, tr("Watch the %s — %s") % [tr(p.trade_name()).to_lower(), tr(_shows[twist][1])])
+				_point_at(p, tr("Watch the %s: %s") % [tr(p.trade_name()).to_lower(), tr(_shows[twist][1])])
 				break
 
 func _point_at(bot: Player, line: String) -> void:

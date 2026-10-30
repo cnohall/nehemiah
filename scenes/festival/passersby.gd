@@ -108,6 +108,9 @@ func _setup() -> void:
 		_show(w)
 
 func _process(delta: float) -> void:
+	if GameState.simplified():   # the simple game keeps the streets still: nothing moving off the work
+		visible = false
+		return
 	var out: bool = _day != null and (_day.evening > GO_INDOORS or _day.darkness > 0.2)
 	visible = not out and not _walkers.is_empty()
 	_tick(delta)

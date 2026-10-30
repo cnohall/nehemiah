@@ -58,6 +58,11 @@ const WHIRL_SPIN_MAX   := 24.0    # …and at full charge
 const STAGGER_TIME    := 0.2
 const DOWNED_TIME     := 8.0      # self-revive, only when nobody is left standing to help
 const REVIVE_HEALTH   := 1.0
+# Drinking at the well (GDD §5.22): hold still at the lip and health climbs, 2.5 s from nothing to full
+const DRINK_RATE      := 40.0     # health per second
+const DRINK_TICK      := 0.1      # s between health updates sent to the crew
+const DRINK_SPLASH    := 0.7      # s between sips
+const WELL_HINT_BELOW := 0.5      # first time health drops under this, say where the well is
 # Climbing over a standing wall ([E] against it, nothing else to do)
 const CLIMB_CLEAR     := 0.9      # metres past the far face
 const CLIMB_HEIGHT    := 2.6
@@ -150,6 +155,11 @@ var _approach: MeshInstance3D   # owner: the ring that closes on the aim ring be
 var _arc_dots: Array[MeshInstance3D] = []
 static var _true_told := false  # the "let go as it glints" hint, once a session
 static var _riposte_told := false   # the "cut as he draws back" hint, once a session
+static var _well_told := false      # the "drink at the well" hint, once a session
+var _drink_well: Node3D             # owner: the well we're drinking at
+var drinking_well: Node3D           # server: the same, and the one that heals
+var _drink_sync := 0.0
+var _drink_sip := 0.0
 var _hp_bar: HealthBar
 var _dash_time := 0.0
 var _dash_cd := 0.0
@@ -234,6 +244,7 @@ func _ready() -> void:
 	GameState.phase_changed.connect(_on_phase_changed)
 
 func _process(delta: float) -> void:
+	_tick_drink(delta)
 	_update_beam()
 	if carried_kind == "beam" or helping_id != 0:
 		_sprite.hold = "beam"
@@ -270,7 +281,7 @@ func _update_raise_tag() -> void:
 		_raise_tag.visible = shown
 		_raise_tag.pulse = shown
 		if shown:
-			_raise_tag.text = "Help up  [%s]" % InputMode.key("interact")
+			_raise_tag.text = tr("Help up") + "  [%s]" % InputMode.key("interact")
 
 func _exit_tree() -> void:
 	if local == self:
@@ -289,37 +300,49 @@ func set_slot(slot: int, c: Color, trade_index := -1) -> void:
 	_refresh_pip()
 	_rebuild_carry_prop()   # a new rig means a new chest anchor
 
-## "Carpenter" etc. — untranslated (callers tr() it)
-func trade_name() -> String:
-	return CharacterRig.TRADES[trade]
+## A place per worker round the respawn point (shifted along to this stretch's supply yard), so the crew doesn't start stacked
+static func start_spot(slot: int) -> Vector3:
+	return RESPAWN_POS + Vector3(GameState.yard_center().x, 0.0, 0.0) \
+		+ (Vector3.ZERO if slot == 0 else Vector3(1.3, 0, 0).rotated(Vector3.UP, slot * TAU / 4.0 - PI / 4.0))
 
-# Small diamond in the player's colour over the head — who's who in a busy crew.
-# Only with company; pulses while downed so teammates see who needs help.
+## Back to the start spot (a new stretch of wall); each peer moves its own workers
+func to_start() -> void:
+	global_position = start_spot(_slot)
+	velocity = Vector3.ZERO
+
+## "Carpenter" etc. — untranslated (callers tr() it). With no trades in play (the simple
+## game, `--no-trades`) everyone is a plain builder (Neh. 4:18, "the builders")
+func trade_name() -> String:
+	return CharacterRig.TRADES[trade] if GameState.trades_on() else "Builder"
+
+# Small mark in the player's colour over the head — who's who in a busy crew. Each slot
+# has its own shape too (CrewMark: diamond, circle, triangle, square), so it doesn't
+# rest on colour alone. Only with company; pulses while downed so teammates see who
+# needs help.
 var _pip: MeshInstance3D
 var _pip_tween: Tween
+var _pip_slot := -1
 
 func _build_pip() -> void:
-	var gem := SphereMesh.new()   # 4 segments × 2 rings = a diamond
-	gem.radius = 0.16
-	gem.height = 0.42
-	gem.radial_segments = 4
-	gem.rings = 1
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.no_depth_test = true
 	mat.render_priority = 1
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED   # the shape's outline, front on
+	mat.billboard_keep_scale = true                         # the downed pulse
 	_pip = MeshInstance3D.new()
-	_pip.mesh = gem
 	_pip.material_override = mat
 	_pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_pip.position.y = PIP_Y
-	_pip.rotation.y = PI / 4   # a face toward the iso camera
 	add_child(_pip)
 	_refresh_pip()
 
 func _refresh_pip() -> void:
 	if _pip == null:
 		return
+	if _pip_slot != _slot:
+		_pip_slot = _slot
+		_pip.mesh = CrewMark.pip_mesh(_slot)
 	_pip.visible = GameState.crew_size > 1 and not GameState.attract
 	(_pip.material_override as StandardMaterial3D).albedo_color = slot_color
 	if _pip_tween:
@@ -360,6 +383,13 @@ func _physics_process(delta: float) -> void:
 		else:
 			velocity = Vector3.ZERO
 			return
+	if _drink_well != null:
+		if _wants_to_stop_work():
+			_stop_drink()
+		else:
+			velocity = Vector3.ZERO
+			_update_anim()
+			return
 	if _climbing:
 		velocity = Vector3.ZERO   # the hop's tween moves us, through the wall's collision
 		return
@@ -369,8 +399,11 @@ func _physics_process(delta: float) -> void:
 	if not _is_busy:
 		_handle_interact()
 		_handle_attack(delta)
-		if _consume("horn") and GameState.has_twist("horn"):
-			_server_horn.rpc_id(1, global_position)
+		if _consume("horn"):
+			if GameState.has_twist("horn"):
+				_server_horn.rpc_id(1, global_position)
+			else:   # experimental call-early (GDD §5.21); the host decides if it counts
+				_server_call_early.rpc_id(1)
 	_update_anim()
 
 # ── Movement ───────────────────────────────────────────────
@@ -611,7 +644,7 @@ func _dash_fx() -> void:
 ## What [E] acts on from `at`, in priority order: [Act, target]. The one rule for both
 ## the focus ring (owner, from replicated state — Overcooked's counter highlight) and
 ## _server_interact, so the ring always shows exactly what the press will do.
-enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK, TIDY }
+enum Act { NONE, REVIVE, LET_GO, HELP, DELIVER, MESSENGER, WORK, TAKE_ITEM, TAKE_PILE, CLIMB, TALK, TIDY, DRINK }
 
 func _interact_choice(at: Vector3) -> Array:
 	# Helping a fallen teammate comes first
@@ -663,6 +696,10 @@ func _interact_choice(at: Vector3) -> Array:
 		return [Act.TAKE_ITEM, item]
 	if pile != null:
 		return [Act.TAKE_PILE, pile]
+	# Hurt, hands free, at the well (GDD §5.22)
+	var well := _nearest_in_reach("wells", at, func(_w): return health < MAX_HEALTH and can_drink_now())
+	if well != null:
+		return [Act.DRINK, well]
 	# Last resort: over a standing wall, so nobody is shut out when the stretch closes
 	var wall := _wall_to_climb(at)
 	if wall != null:
@@ -792,7 +829,7 @@ func _server_interact(at: Vector3) -> void:
 		Act.HELP:
 			_set_helping.rpc(target.worker_id())
 			_sfx.rpc("pickup")
-			_tell("Holding the other end — {interact} to let go")
+			_tell("Holding the other end. {interact} to let go")
 		Act.DELIVER:
 			_deliver(target, at)
 		Act.TALK:
@@ -806,6 +843,8 @@ func _server_interact(at: Vector3) -> void:
 				_action.rpc("halfslash")
 		Act.TIDY:
 			_start_work(target)
+		Act.DRINK:
+			_start_drink(target)
 		Act.TAKE_ITEM:
 			var kind: String = target.kind
 			if target.take():
@@ -868,11 +907,13 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 # [message, material for its {need}]
 func _why_not_needed(at: Vector3) -> PackedStringArray:
 	if carried_kind == "debris":
-		return ["Rubbish — carry it clear of the footing, then {drop}", ""]
+		return ["Rubbish: carry it clear of the footing, then {drop}", ""]
 	var wall := _nearest_in_reach("build_sites", at, func(_s): return true)
 	if wall == null:
+		if health < MAX_HEALTH and _nearest_in_reach("wells", at, func(_w): return true) != null:
+			return ["Set it down first: {drop}, then {interact} to drink", ""]
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
-			return ["Hands full — deliver it, or {drop} to drop", ""]
+			return ["Hands full: deliver it, or {drop} to drop", ""]
 		return ["Bring it to a wall", ""]
 	if wall.has_method("refusal"):   # a watch post explains itself
 		return [wall.refusal(carried_kind), ""]
@@ -881,7 +922,7 @@ func _why_not_needed(at: Vector3) -> PackedStringArray:
 		return ["Needs {need} first", need]
 	if wall.can_build():
 		# Every load for this stage is in; it only wants working before the next material
-		return ["Build this stage first — {drop} to drop, then {interact} to work", ""]
+		return ["Build this stage first: {drop} to drop, then {interact} to work", ""]
 	return ["This wall is finished", ""]
 
 @rpc("any_peer", "call_local", "reliable")
@@ -946,7 +987,7 @@ func _drop_carried(at: Vector3) -> void:
 				item.position = Vector3(slot.x, GROUND_Y, slot.z)
 				if not RelayMat.told:
 					RelayMat.told = true
-					_tell("Left on the relay mat — the porter carries it to the wall")
+					_tell("Left on the relay mat: the porter carries it to the wall")
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
 	items.add_child(item, true)
@@ -958,13 +999,13 @@ func _set_carried(kind: String) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	carried_kind = kind
-	_rebuild_carry_prop()
+	_rebuild_carry_prop(true)
 	if multiplayer.is_server() and kind != "beam":
 		_release_helper()
 	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
-		_toast("Heavy — a partner can take the other end {interact}")
+		_toast("Heavy: a partner can take the other end {interact}")
 	elif not kind.is_empty() and is_multiplayer_authority() and Trade.carry_mult(trade) > 1.0:
-		_knack("Your trade — quicker with a load")
+		_knack("Your trade: quicker with a load")
 	# Pick up → squashed under the load; put down → spring back up
 	_sprite.squash(Vector2(1.08, 0.92) if not kind.is_empty() else Vector2(0.95, 1.05))
 
@@ -1056,7 +1097,7 @@ func release_throw() -> void:
 		if true_shot and brain == null:
 			InputMode.rumble(0.2, 0.0, 0.06)
 		if Trade.hit_mult(trade) > 1.0:
-			_knack("Your trade — your blows land harder")
+			_knack("Your trade: your blows land harder")
 
 # ── Sword ──────────────────────────────────────────────────
 
@@ -1093,7 +1134,7 @@ func _swing_sword(foe: Node3D) -> void:
 		return   # knocked out of the swing before it landed
 	_server_sword.rpc_id(1, global_position, aim_yaw)
 	if Trade.hit_mult(trade) > 1.0 and is_instance_valid(foe) and foe.is_in_group("enemies"):   # not a jar
-		_knack("Your trade — your blows land harder")
+		_knack("Your trade: your blows land harder")
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_sword(at: Vector3, yaw: float) -> void:
@@ -1114,8 +1155,6 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 		if turn:
 			enemy.knock_down(Vector3(to.x, 0.0, to.y), RIPOSTE_KNOCK)
 			turned.append(enemy.global_position)
-		else:
-			enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
 		hit = true
 	var pots := get_tree().get_first_node_in_group("breakable_set")
 	if pots and pots.smash_arc(at, fwd, SWORD_REACH + 0.4, SWORD_ARC_DEG):
@@ -1189,7 +1228,7 @@ func _riposte_hint() -> void:
 		if String(enemy.anim).begins_with("brace") and Vector2(enemy.global_position.x - global_position.x,
 				enemy.global_position.z - global_position.z).length() < SWORD_REACH:
 			_riposte_told = true
-			_toast("Cut as he draws back — turn the blow")
+			_toast("Cut as he draws back: turn the blow")
 			return
 
 # Turn toward a ground point: exact yaw for the rig, nearest 4-way facing for the rest
@@ -1403,6 +1442,7 @@ func take_damage(amount: float) -> void:
 	if building_site != null:
 		building_site.work().remove_builder(self)
 		stop_building_from_server()
+	stop_drinking_from_server()
 	var new_health := clampf(health - amount, 0.0, MAX_HEALTH)
 	_on_hurt.rpc(new_health)
 	if new_health <= 0.0:
@@ -1422,6 +1462,7 @@ func _on_hurt(new_health: float) -> void:
 		Sfx.play("hurt", global_position)
 	if is_multiplayer_authority():
 		_jolt(0.35, 0.4, 0.2, 0.15)
+		_well_hint()
 	if is_multiplayer_authority() and not _is_busy and new_health > 0.0:
 		# Short stagger — "collapse" is kept for downed
 		_is_busy = true
@@ -1442,7 +1483,7 @@ func _set_downed(value: bool) -> void:
 		if is_multiplayer_authority():
 			_jolt(0.6, 0.3, 0.8, 0.35)
 		if multiplayer.is_server() and not _nobody_to_raise():
-			bark("I've fallen — help me up!", true)
+			bark("I've fallen! Help me up!", true)
 	else:
 		health = MAX_HEALTH * REVIVE_HEALTH
 	if is_multiplayer_authority():
@@ -1526,7 +1567,7 @@ func _set_working(site_path: NodePath) -> void:
 		anim = "build_" + _facing
 		_sprite.squash(Vector2(1.06, 0.94))
 		if Trade.prefers(trade, site.work_material()):
-			_knack("Your trade — quicker hands at this work")
+			_knack("Your trade: quicker hands at this work")
 	elif not downed and not _is_busy:
 		anim = "idle_" + _facing
 
@@ -1555,6 +1596,93 @@ func _on_strike() -> void:
 	if is_multiplayer_authority() and brain == null:
 		InputMode.rumble(0.15, 0.0, 0.05)
 
+# ── Drinking at the well (GDD §5.22) ───────────────────────
+
+## Health only comes back by day's work: dusk and the cards between are no time to drink
+static func can_drink_now() -> bool:
+	return GameState.phase == GameState.Phase.WORK or GameState.phase == GameState.Phase.DAWN
+
+func is_drinking() -> bool:
+	return _drink_well != null
+
+# Server: begin drinking at `well`; walking off, a blow or full health ends it
+func _start_drink(well: Node3D) -> void:
+	drinking_well = well
+	_drink_sync = 0.0
+	_drink_sip = 0.0
+	_set_drinking.rpc_id(get_multiplayer_authority(), well.get_path())
+
+## Server: we were hit, fell, finished or the day moved on
+func stop_drinking_from_server() -> void:
+	if drinking_well == null:
+		return
+	drinking_well = null
+	_set_drinking.rpc_id(get_multiplayer_authority(), NodePath())
+
+# Server, every frame: mend while the well is under our hands
+func _tick_drink(delta: float) -> void:
+	if drinking_well == null or not multiplayer.is_server():
+		return
+	if downed or not is_instance_valid(drinking_well) or not can_drink_now() or health >= MAX_HEALTH \
+			or drinking_well.distance_to_point(global_position) > INTERACT_REACH + 0.5:
+		stop_drinking_from_server()
+		return
+	health = minf(MAX_HEALTH, health + DRINK_RATE * delta)
+	_drink_sip -= delta
+	if _drink_sip <= 0.0:
+		_drink_sip = DRINK_SPLASH
+		_sfx.rpc("splash")
+	_drink_sync -= delta
+	if _drink_sync <= 0.0 or health >= MAX_HEALTH:
+		_drink_sync = DRINK_TICK
+		_set_health.rpc(health)
+	if health >= MAX_HEALTH:
+		stop_drinking_from_server()
+
+@rpc("any_peer", "call_local", "reliable")
+func _set_health(hp: float) -> void:
+	if multiplayer.get_remote_sender_id() == 1:
+		health = hp
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_stop_drink() -> void:
+	if _from_owner():
+		drinking_well = null
+
+# Server → owner: stand at the well / step away
+@rpc("any_peer", "call_local", "reliable")
+func _set_drinking(well_path: NodePath) -> void:
+	if multiplayer.get_remote_sender_id() != 1 or not is_multiplayer_authority():
+		return
+	var well: Node3D = get_node_or_null(well_path) if not well_path.is_empty() else null
+	if well == _drink_well:
+		return
+	_drink_well = well
+	_sprite.speed_scale = 1.0
+	if well != null:
+		_cancel_charge()
+		_dash_time = 0.0
+		_facing = CharAnim.dir_from_velocity(well.global_position - global_position, _facing)
+		anim = "idle_" + _facing
+		_sprite.squash(Vector2(1.06, 0.94))
+	elif not downed and not _is_busy:
+		anim = "idle_" + _facing
+
+# Owner: walking off, dashing, dropping or reaching for the sling (_wants_to_stop_work) ends it
+func _stop_drink() -> void:
+	_drink_well = null
+	_server_stop_drink.rpc_id(1)
+	if not _is_busy:
+		anim = "idle_" + _facing
+
+# Owner: the first time this session health falls under WELL_HINT_BELOW, say where the cure is
+func _well_hint() -> void:
+	if _well_told or self != local or brain != null or health <= 0.0 or health / MAX_HEALTH >= WELL_HINT_BELOW \
+			or get_tree().get_first_node_in_group("wells") == null:
+		return
+	_well_told = true
+	_toast("Hurt? Drink at the well")
+
 # ── Horn ("horn" twist) ────────────────────────────────────
 
 ## What standing in a horn ring does for this worker (1 anywhere else): Horn.rally_*
@@ -1571,6 +1699,15 @@ func _server_horn(at: Vector3) -> void:
 		_action.rpc("halfslash")
 	else:
 		_tell("The horn was just sounded")
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_call_early() -> void:
+	if not _from_owner() or downed or is_led():
+		return
+	var waves := get_node_or_null("../../WaveManager")
+	if waves != null and waves.call_early():
+		_action.rpc("halfslash")
+		_tell("Wave called in early: the crew is spurred")
 
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 
@@ -1811,11 +1948,12 @@ func _glint() -> void:
 	SlingStone.flash(get_tree().current_scene, _whirl_stone.global_position, 0.9, 0.2)
 	if self == local and brain == null and not _true_told:
 		_true_told = true
-		_toast("Let go as it glints — a true shot")
+		_toast("Let go as it glints: a true shot")
 
 # ── Carried prop ───────────────────────────────────────────
 
-func _rebuild_carry_prop() -> void:
+## `pop`: a fresh pickup, so the load lands in the arms squashed and springs to shape
+func _rebuild_carry_prop(pop := false) -> void:
 	for c in _carry_prop.get_children():
 		c.queue_free()
 	if is_instance_valid(_carry_front):
@@ -1834,6 +1972,10 @@ func _rebuild_carry_prop() -> void:
 		else:
 			prop.scale = Vector3.ONE * CARRY_SCALE
 			_carry_prop.add_child(prop)
+		if pop:
+			var s := prop.scale
+			prop.scale = Vector3(s.x * 1.2, s.y * 0.65, s.z * 1.2)
+			prop.create_tween().tween_property(prop, "scale", s, 0.22) 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # ── Helpers ────────────────────────────────────────────────
 

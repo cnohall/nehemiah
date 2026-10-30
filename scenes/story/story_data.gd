@@ -33,7 +33,7 @@ const SECTION_LINES := [
 	"Eliashib the high priest and his brothers the priests take up the work at the Sheep Gate.",
 	"The sons of Hassenaah build the Fish Gate and lay its beams.",
 	"Joiada and Meshullam repair the Gate of the Old City. Its stone lies in the burned rubble.",
-	"Goldsmiths and ointment makers — craftsmen, not masons — repair the wall as far as the Broad Wall.",
+	"Goldsmiths and ointment makers (craftsmen, not masons) repair the wall as far as the Broad Wall.",
 	"Malchijah and Hasshub repair another section, and the Tower of the Bake Ovens.",
 	"Hanun and the people of Zanoah rebuild the Valley Gate and a thousand cubits of wall.",
 	"Malchijah son of Rechab repairs the Gate of the Ash Heaps, far from where the stone is stacked.",
@@ -162,7 +162,7 @@ const ENDING := [
 
 ## Campaign won: the ending plays before the end screen (not after a replay)
 static func plays_ending() -> bool:
-	return not GameState.is_replay() and not disabled()
+	return not GameState.is_replay() and not disabled() and not GameState.is_demo()
 
 ## Slides to play before `day` starts; empty when the day has no story
 static func slides_for_day(day: int) -> Array:
@@ -201,12 +201,14 @@ static func slides_for_day(day: int) -> Array:
 		})
 	return slides
 
-## The last card before a new stretch asks how the crew will meet it (campaign only)
+## The last card before a new stretch asks how the crew will meet it (campaign only, from the
+## Valley Gate: the first five stretches each bring one new thing, and a choice is another)
+const CHOICES_FROM := 5
 static func choice_offered(section_index: int) -> bool:
-	return section_index > 0 and not GameState.is_replay() and not GameState.free_play() and not GameState.attract
+	return section_index >= CHOICES_FROM and not GameState.is_replay() and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
 
 const TWIST_TITLES := {
-	"doors": "Hang the doors", "beams": "Beams take two", "salvage": "Stone from the rubble",
+	"doors": "Hang the doors", "mortar": "Mortar", "posts": "The watch", "beams": "Beams take two", "salvage": "Stone from the rubble",
 	"mixing": "Mix the mortar", "thick": "The Broad Wall", "ruins": "Old stones, burned timbers", "horn": "Sound the horn",
 	"haul": "The long haul", "spring": "By the pool", "night": "The night watch",
 	"cramped": "Narrow lanes", "schemes": "Come down to Ono",

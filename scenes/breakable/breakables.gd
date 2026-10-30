@@ -36,6 +36,7 @@ var _touching := {}  # every peer: piece → {mover: RIM/CORE}, so it rocks as t
 func _ready() -> void:
 	add_to_group("breakable_set")
 	_terrain.rebuilt.connect(_rebuild)
+	GameState.rules_changed.connect(_rebuild)   # the simple game has none
 	GameState.phase_changed.connect(_on_phase_changed)
 	_rebuild()
 
@@ -51,6 +52,8 @@ func _rebuild() -> void:
 		c.queue_free()
 	_pieces.clear()
 	_touching.clear()
+	if GameState.simplified():
+		return
 	var index := GameState.current_section_index
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7000 + index

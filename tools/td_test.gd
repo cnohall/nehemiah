@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Checks the tower-defence layer (GDD §5.6) offline:
-#   Godot --path . --script res://tools/td_test.gd -- --nostory [--day=N] <out_dir>
+#   Godot --path . --script res://tools/td_test.gd -- --nostory --day=5 <out_dir>   (the Sheep Gate has no posts)
 # - posts: timber raises a watch post, stone feeds it, the slinger throws at an enemy
 #   in range and the ammo runs down
 # - waves: a warned wave comes in as a pack
@@ -65,6 +65,9 @@ func _process(delta: float) -> bool:
 			for e in _main.get_node("Enemies").get_children():
 				e.queue_free()
 			var posts := get_nodes_in_group("watch_posts")
+			if _gs.first_stretch():   # the first stretch has no posts
+				_check(posts.is_empty(), "no watch posts on the first stretch (run with --day=5 for the post checks)")
+				return _finish()
 			_check(posts.size() == 2, "two watch posts (%d)" % posts.size())
 			_post = posts[0]
 			_check(_post.needs("wood") and not _post.needs("stone"), "bare post wants timber")

@@ -24,6 +24,7 @@ var _men: Array[Dictionary] = []
 var _poll := 0.0
 var _wall_called := {}     # wall instance id → msec
 var _seen_today := {}      # enemy type → true, the first of each type called once a day
+var _scatter_called := {}  # pile instance id → true while it stays scattered
 var _last_breaches := 0
 var _sun_called := false
 
@@ -47,6 +48,7 @@ func _process(delta: float) -> void:
 	_poll = POLL
 	_watch_walls()
 	_watch_newcomers()
+	_watch_scatter()
 	if not _sun_called and GameState.sun_low():
 		_sun_called = true
 		_call(_nearest_man(Player.local.global_position.x if Player.local else 0.0),
@@ -59,7 +61,7 @@ func warn_wave(at: Vector3, horn: bool) -> void:
 	var where := tr("straight at the gate")
 	if absf(at.x) > 6.0:
 		where = RingCompass.quarter(GameState.current_section_index, Vector3(signf(at.x), 0.0, -1.0))
-	var line := (tr("Up the valley — %s!") if horn else tr("They're coming — %s!")) % where
+	var line := (tr("Up the valley: %s!") if horn else tr("They're coming: %s!")) % where
 	_call(_nearest_man(at.x), line, true)
 
 func _watch_walls() -> void:
@@ -76,8 +78,24 @@ func _watch_walls() -> void:
 			if e.get("type") == Enemy.Type.BRUTE and wall.distance_to_point(e.global_position) < BRUTE_NEAR:
 				brute = true
 		_call(_nearest_man(wall.global_position.x),
-			tr("A brute at the wall — bring him down!") if brute else tr("They're battering the wall!"), true)
+			tr("A brute at the wall! Bring him down!") if brute else tr("They're battering the wall!"), true)
 		return   # one call at a time
+
+## A pile just went dead (saboteur or night raid): say which, and what to do
+func _watch_scatter() -> void:
+	var now: Dictionary = {}
+	for pile: Node3D in get_tree().get_nodes_in_group("scattered_piles"):
+		var id := pile.get_instance_id()
+		now[id] = true
+		if _scatter_called.has(id):
+			continue
+		_scatter_called[id] = true
+		var mat: String = tr({"beam": "beams"}.get(pile.kind, pile.kind))
+		_call(_nearest_man(pile.global_position.x), tr("He's scattered the %s pile! Gather it up!") % mat, false)
+		return   # one call at a time
+	for id: int in _scatter_called.keys():
+		if not now.has(id):
+			_scatter_called.erase(id)
 
 func _watch_newcomers() -> void:
 	for e: Node3D in get_tree().get_nodes_in_group("enemies"):
@@ -88,8 +106,8 @@ func _watch_newcomers() -> void:
 			continue   # called when he's over, not while he's still sneaking up
 		_seen_today[t] = true
 		var line := tr("A brute! He'll batter the wall") if t == Enemy.Type.BRUTE \
-			else (tr("One's slipped in — the yard! He's after the piles") if t == Enemy.Type.SABOTEUR \
-			else tr("Raiders — quick ones, mind the gaps!"))
+			else (tr("One's slipped into the supply yard! He'll scatter the piles") if t == Enemy.Type.SABOTEUR \
+			else tr("Raiders! Quick ones, mind the gaps!"))
 		_call(_nearest_man(e.global_position.x), line, false)
 		return
 
@@ -101,9 +119,13 @@ func _on_breaches(count: int) -> void:
 	var left := GameState.MAX_BREACHES - count
 	var line := tr("One got into the city!  %d of %d") % [count, GameState.MAX_BREACHES]
 	if left <= 3:
-		line = tr_n("One got in — %d more and the city falls!", "One got in — %d more and the city falls!", left) % left
+		line = tr_n("One got in. %d more and the city falls!", "One got in. %d more and the city falls!", left) % left
 	var x := Player.local.global_position.x if Player.local else 0.0
 	_call(_nearest_man(x), line, true)
+
+## Main, at a close call: the nearer watchman to this player calls it
+func call_out(line: String) -> void:
+	_call(_nearest_man(Player.local.global_position.x if Player.local else 0.0), line, true)
 
 func _nearest_man(x: float) -> Dictionary:
 	return _men[0] if x < 0.0 else _men[1]

@@ -31,7 +31,8 @@ const VERSE_HOLD := 6.5
 #   at     — "gate" | "flank" (one end) | "both" (both ends) | "east" (the end that faces
 #            east on the real ring) | "yard" (the end nearest the supply yard)
 #   leader — for Leaders: "sanballat" | "tobiah" | "geshem" | "all" | ""
-# Only foes already unlocked on those days (brutes from day 9, raiders from 21).
+# Only foes already unlocked on those days (brutes from day 8, raiders from 17, the saboteur
+# from the Water Gate: WaveManager).
 const S := Enemy.Type.SCOUT
 const B := Enemy.Type.BRUTE
 const R := Enemy.Type.RAIDER
@@ -43,12 +44,12 @@ const BEATS := {
 		"last": { "call": "They'll try the gate before its doors hang!", "pack": [[S, 3]], "at": "gate" },
 	},
 	1: {   # Fish Gate
-		"half": { "call": "Both ends at once — split up!", "pack": [[S, 2]], "at": "both" },
+		"half": { "call": "Both ends at once. Split up!", "pack": [[S, 2]], "at": "both" },
 		"last": { "call": "A rush at the gate!", "pack": [[S, 4]], "at": "gate" },
 	},
-	2: {   # Jeshanah Gate — brutes arrive
+	2: {   # Jeshanah Gate — brutes in force (the first one walked in on the Fish Gate's last day)
 		"half": { "call": "Brutes, for the new stones!", "pack": [[B, 2], [S, 1]], "at": "flank" },
-		"last": { "call": "They're at the gate — hold it!", "pack": [[B, 1], [S, 3]], "at": "gate" },
+		"last": { "call": "They're at the gate! Hold it!", "pack": [[B, 1], [S, 3]], "at": "gate" },
 	},
 	3: {   # Broad Wall — the wall at half height, and their anger (Neh. 4:6-7)
 		"half": { "call": "Half its height! And they've heard of it…",
@@ -60,13 +61,13 @@ const BEATS := {
 		"half": { "call": "They've all come together!",
 			"verse": ["and they all conspired together to come and fight against Jerusalem, and to cause confusion among us.", "Neh. 4:8"],
 			"pack": [[S, 4], [B, 2]], "at": "flank", "leader": "tobiah" },
-		"last": { "call": "Quiet ones — after the yard!",
+		"last": { "call": "Quiet ones, after the yard!",
 			"verse": ["They will not know or see, until we come in among them and kill them, and cause the work to cease.", "Neh. 4:11"],
-			"pack": [[SAB, 1], [S, 3]], "at": "flank" },
+			"pack": [[S, 3]], "at": "yard" },
 	},
 	5: {   # Valley Gate — peak one
 		"half": { "call": "Raiders up both sides of the valley!", "pack": [[R, 2], [S, 1]], "at": "both" },
-		"last": { "call": "Everything they have — to the gate!",
+		"last": { "call": "Everything they have, to the gate!",
 			"verse": ["Wherever you hear the sound of the trumpet, rally there to us. Our God will fight for us.", "Neh. 4:20"],
 			"pack": [[B, 2], [R, 2], [S, 3]], "at": "gate", "leader": "sanballat" },
 	},
@@ -81,24 +82,24 @@ const BEATS := {
 			"verse": ["They said, “Let’s rise up and build.” So they strengthened their hands for the good work.", "Neh. 2:18"] },
 	},
 	8: {   # Water Gate — out of the dark
-		"half": { "call": "Out of the dark — both ends!", "pack": [[R, 2], [S, 2]], "at": "both" },
+		"half": { "call": "Out of the dark, both ends!", "pack": [[R, 2], [S, 2]], "at": "both" },
 		"last": { "call": "At the gate! Torches!", "pack": [[B, 2], [S, 2]], "at": "gate" },
 	},
 	9: {   # Horse Gate — the lanes
 		"half": { "call": "Brutes for the priests' houses!", "pack": [[B, 3]], "at": "gate" },
-		"last": { "call": "Both ends — mind the lanes!", "pack": [[R, 2], [B, 1]], "at": "both" },
+		"last": { "call": "Both ends. Mind the lanes!", "pack": [[R, 2], [B, 1]], "at": "both" },
 	},
 	10: {   # East Gate — Geshem's men from the east; the answer to Ono (6:3, 6:9)
 		"half": { "call": "Geshem's raiders, from the east!",
 			"verse": ["I am doing a great work, so that I can’t come down.", "Neh. 6:3"],
 			"pack": [[R, 4]], "at": "east", "leader": "geshem" },
-		"last": { "call": "The last of it — hold on!",
+		"last": { "call": "The last of it. Hold on!",
 			"verse": ["But now, strengthen my hands.", "Neh. 6:9"],
 			"pack": [[B, 2], [R, 2], [S, 2]], "at": "both" },
 	},
 	11: {   # Miphkad Gate — the finale
 		"half": { "call": "They're all coming!", "pack": [[B, 2], [R, 2], [S, 2]], "at": "both" },
-		"last": { "call": "The last stone — all of them at once!",
+		"last": { "call": "The last stone! All of them at once!",
 			"verse": ["So we did the work. Half of the people held the spears from the rising of the morning until the stars appeared.", "Neh. 4:21"],
 			"pack": [[B, 3], [R, 3], [S, 3]], "at": "both", "leader": "all" },
 	},
@@ -202,7 +203,7 @@ func _pack(pack: Array, spots: Array) -> Array:
 	var pace: float = Settings.diff()["pace"]
 	for entry: Array in pack:
 		var type: Enemy.Type = entry[0]
-		if type == Enemy.Type.SABOTEUR and not GameState.saboteur:
+		if type == Enemy.Type.SABOTEUR and not GameState.saboteur_on():
 			continue
 		var n: int = entry[1]
 		if type != Enemy.Type.SABOTEUR:

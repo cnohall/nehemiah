@@ -474,6 +474,8 @@ func _note_for(c: Dictionary) -> PackedStringArray:
 		lines.append(tr("none got in"))
 	if c["nightfalls"] > 0:
 		lines.append(tr("worked till the stars"))
+	elif c.get("close", false):   # older saves have no "close"
+		lines.append(tr("by a hair"))
 	elif c["spare"] > 0:
 		lines.append(tr_n("%d day to spare", "%d days to spare", c["spare"]) % c["spare"])
 	elif c["knocked"] > 0:

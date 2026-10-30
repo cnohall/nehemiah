@@ -1,7 +1,8 @@
 extends SceneTree
 
 # Mending a battered wall (GDD §5.17):
-#   Godot --path . --script res://tools/repair_test.gd
+#   Godot --path . --script res://tools/repair_test.gd -- --nostory --day=5 [<out_dir>]
+# (the Fish Gate: the first stretch has no mortar, GameState.first_stretch())
 # Forces a finished wall down to low health, then plays it like a player: take mortar,
 # deliver it, work it. Exit 0 = health rose by REPAIR_GAIN and the mortar was used up.
 

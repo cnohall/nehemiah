@@ -14,17 +14,17 @@ extends Node
 const DEFAULT_YARD := Vector2(0.0, 10.0)
 const SECTIONS: Array = [
 	{ "name": "Sheep Gate",     "ref": "Neh. 3:1",  "days": [1,2,3,4],           "twists": ["doors"],                     "yard": Vector2(0, 10),  "terrain": "sheepfold" },
-	{ "name": "Fish Gate",      "ref": "Neh. 3:3",  "days": [5,6,7,8],           "twists": ["doors", "beams"],            "yard": Vector2(-9, 10), "terrain": "fish_market", "choices": ["porters", "market"] },
-	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams", "salvage", "ruins"], "yard": Vector2(0, 11),  "terrain": "ruins", "choices": ["dig", "shore"],
-		"recipes": { "Section1": "old", "Section3": "burned" } },
-	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "choices": ["rush", "pack"], "gate": false },
-	{ "name": "Tower of the Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["mixing"],                    "yard": Vector2(9, 10),  "terrain": "ovens", "choices": ["hot", "bank"], "gate": false },
-	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "mixing", "horn"],   "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
+	{ "name": "Fish Gate",      "ref": "Neh. 3:3",  "days": [5,6,7,8],           "twists": ["doors", "mortar"],           "yard": Vector2(-9, 10), "terrain": "fish_market" },
+	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams"],            "yard": Vector2(0, 11),  "terrain": "ruins" },
+	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "gate": false },
+	{ "name": "Tower of the Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["posts"],                     "yard": Vector2(9, 10),  "terrain": "ovens", "gate": false },
+	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "horn"],             "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
 	{ "name": "Gate of the Ash Heaps",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
 	{ "name": "Fountain Gate",  "ref": "Neh. 3:15", "days": [34,35,36],          "twists": ["doors", "mixing", "spring"], "yard": Vector2(-4, 9),  "terrain": "garden", "pressure": 0.55, "choices": ["table", "fields"],
 		"piles": { "StockWater": Vector2(-11.5, 4.5) } },
 	{ "name": "Water Gate",     "ref": "Neh. 3:26", "days": [37,38,39,40,41],    "twists": ["doors", "night"],            "yard": Vector2(6, 11),  "terrain": "ophel" },
-	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped"],          "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1 },
+	{ "name": "Horse Gate",     "ref": "Neh. 3:28", "days": [42,43,44,45,46,47], "twists": ["doors", "cramped", "salvage", "ruins"], "yard": Vector2(-3, 12), "terrain": "priests", "pressure": 1.1, "choices": ["dig", "shore"],
+		"recipes": { "Section1": "old", "Section3": "burned" } },
 	{ "name": "East Gate",      "ref": "Neh. 3:29", "days": [48,49,50],          "twists": ["doors", "schemes"],          "yard": Vector2(4, 10),  "terrain": "kidron", "pressure": 1.2 },
 	{ "name": "Miphkad Gate",   "ref": "Neh. 3:31", "days": [51,52],             "twists": ["doors", "beams", "salvage", "mixing", "horn", "schemes", "ruins"],
 		"yard": Vector2(0, 10), "terrain": "market", "pressure": 1.3, "recipes": { "Section1": "burned", "Section4": "old" } },
@@ -44,14 +44,8 @@ const SECTIONS: Array = [
 const BOONS := {
 	"build": { "title": "Press the work", "ref": "Neh. 4:6", "mods": { "work": 1.2, "harm": 1.25 } },
 	"guard": { "title": "Hold the line", "ref": "Neh. 4:13", "mods": { "work": 0.9, "harm": 0.75 }, "posts": true },
-	"porters": { "title": "Practised porters", "ref": "Neh. 3:3", "mods": { "beam_solo": 1.9, "pressure": 1.15 } },
-	"market": { "title": "Watch the market side", "ref": "Neh. 4:9", "mods": { "work": 0.9, "pressure": 0.8 }, "posts": true },
 	"dig": { "title": "Dig out the rubble", "ref": "Neh. 4:2", "mods": { "clear": 2.0, "work": 1.1, "pressure": 1.2 } },
 	"shore": { "title": "Shore up the old courses", "ref": "Neh. 3:6", "mods": { "harm": 0.7, "clear": 0.6 } },
-	"rush": { "title": "Rush the faces", "ref": "Neh. 3:8", "mods": { "work": 1.3, "harm": 1.4 } },
-	"pack": { "title": "Pack the core", "ref": "Neh. 4:6", "mods": { "harm": 0.6, "work": 0.85 } },
-	"hot": { "title": "Fire the ovens high", "ref": "Neh. 3:11", "mods": { "mix": 0.5, "pressure": 1.2 } },
-	"bank": { "title": "Bank the ovens", "ref": "Neh. 3:11", "mods": { "mix": 1.5, "pressure": 0.8 }, "posts": true },
 	"terraces": { "title": "Work the terraces", "ref": "Neh. 3:13", "mods": { "work": 1.2, "harm": 1.3 } },
 	"heights": { "title": "Lookouts on the heights", "ref": "Neh. 4:20", "mods": { "pressure": 0.75, "work": 0.9 }, "posts": true },
 	"bundles": { "title": "Carry in bundles", "ref": "Neh. 3:14", "mods": { "carry": 1.25, "harm": 1.25 } },
@@ -79,18 +73,26 @@ signal boon_changed
 # Shown under the dawn banner the first time a section uses a twist
 const TWIST_INTRO := {
 	"doors": "Finish the gate: hang its doors, bolts and bars",
-	"beams": "The beams are heavy — carry them in pairs",
-	"salvage": "No quarry stone here — salvage it from the burned rubble; heaps outside the wall hold twice as much",
-	"mixing": "Make the mortar: lime and water into the trough, then to the wall",
-	"ruins": "Not every stretch starts bare — old courses still stand in places, and burned timbers must be pulled down before anything is built",
-	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between — room for four at the work, and it takes half the blows",
-	"horn": "They come up the valley in surges — {horn} sounds the horn: gather in its ring and your blows land harder",
-	"haul": "A long haul from the yard — leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
-	"spring": "A quiet stretch by the Pool of Shelah — the water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
-	"night": "Night falls on the work — keep to the torchlight, they come out of the dark",
-	"cramped": "Each priest builds in front of his own house — mind the narrow lanes",
-	"schemes": "Messengers will call you down to Ono — answer them and keep working",
+	"mortar": "Mortar from here on: the courses are laid in it, and a finished wall is mended with it",
+	"beams": "The beams are heavy. Carry them in pairs",
+	"posts": "A watch post: raise it behind the wall with timber, then keep it stocked with sling stones. It fires on its own",
+	"salvage": "No quarry stone here. Salvage it from the burned rubble; heaps outside the wall hold twice as much",
+	"mixing": "Make the mortar: lime and water into the trough, then someone stirs it, then to the wall",
+	"ruins": "Not every stretch starts bare: old courses still stand in places, and burned timbers must be pulled down before anything is built",
+	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between. Room for four at the work, and it takes half the blows",
+	"horn": "They come up the valley in surges. {horn} sounds the horn: gather in its ring and your blows land harder",
+	"haul": "A long haul from the yard: leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
+	"spring": "A quiet stretch by the Pool of Shelah. The water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
+	"spring_simple": "A quiet stretch by the Pool of Shelah. The water is close at hand: the mortar comes quickly",
+	"night": "Night falls on the work. Keep to the torchlight; they come out of the dark",
+	"cramped": "Each priest builds in front of his own house. Mind the narrow lanes",
+	"schemes": "Messengers will call you down to Ono. Answer them and keep working",
 }
+## A twist's dawn line; the simple game's own where it leaves part of the twist out
+func twist_intro(twist: String) -> String:
+	var key := twist + "_simple"
+	return TWIST_INTRO.get(key if simplified() and TWIST_INTRO.has(key) else twist, "")
+
 ## A verse reference in the player's language: short ("Neh. 3:1") for plaques, long
 ## ("Nehemiah 3:1") for cards and quotes. Takes either English form.
 func short_ref(ref: String) -> String:
@@ -107,6 +109,17 @@ static func _verse_of(ref: String) -> String:
 const NIGHT_FROM_DAY_IN_SECTION := 1
 
 const TOTAL_DAYS   := 52
+
+# Demo build (GDD §7.1 #2): export feature "demo", or `-- --demo` on the command line.
+# Days 1-9, ending at the dusk of the first day brutes come (WaveManager forces one).
+# Only the first DEMO_SECTIONS stretches open on the map. Wishlist link: fill in the
+# store page once the Steam App ID exists; the end-card button stays hidden while empty.
+const DEMO_LAST_DAY := 9
+const DEMO_SECTIONS := 2
+const DEMO_WISHLIST_URL := ""
+
+static func is_demo() -> bool:
+	return OS.has_feature("demo") or "--demo" in OS.get_cmdline_user_args()
 # Hands-on building (GDD §5.4): delivered materials wait until workers stand at the
 # wall and raise it. Debug builds: `-- --instant-build` for the old deliver-and-done
 # rule, to A/B the two in playtests.
@@ -136,6 +149,9 @@ var tell: bool = "--no-tell" not in OS.get_cmdline_user_args()
 var true_shot: bool = "--no-true-shot" not in OS.get_cmdline_user_args()
 # `-- --no-riposte`: a sword cut in a foe's draw only knocks the strike aside, like any hit
 var riposte: bool = "--no-riposte" not in OS.get_cmdline_user_args()
+# Simple game (Settings.simple_game): the host's pick, as clients last heard it. Read it
+# through simplified()
+var simple := false
 signal rules_changed
 
 # Sun clock ("from the rising of the morning till the stars appeared", Neh. 4:21): the
@@ -239,6 +255,33 @@ func get_section_for_day(day: int) -> Dictionary:
 func get_current_section() -> Dictionary:
 	return get_section_for_day(current_day)
 
+## The simple game (Settings.simple_game) is in play: the host reads its own setting live,
+## clients what the host sent. Never in the practice or Explore Jerusalem
+func simplified() -> bool:
+	if tutorial or festival:
+		return false
+	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
+		return Settings.simple_game
+	return simple
+
+## Trades in play (GDD §5.10): the rule, and not the simple game (every worker plain)
+func trades_on() -> bool:
+	return trades and not simplified()
+
+## The saboteur in play (GDD §5.9): the rule, and not the simple game
+func saboteur_on() -> bool:
+	return saboteur and not simplified()
+
+## The marks a stretch can earn: the simple game has no "In good time"
+func marks_in_play() -> Array:
+	return [Mark.CLEAN, Mark.SOUND] if simplified() else MARKS
+
+## Server: the host changed a rule mid-session (the simple game) — tell everyone
+func share_rules() -> void:
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_rules.rpc(waves, sun, posts, trades, saboteur, tell, true_shot, riposte, simplified())
+	rules_changed.emit()
+
 ## "In good time": days a stretch must have left over when its last unit stands — one for
 ## a short stretch, two from five days up (the sun clock already spreads par over the days)
 func pace_spare_needed(section_index := current_section_index) -> int:
@@ -265,13 +308,22 @@ func pressure() -> float:
 
 ## The boon's modifier `key` for this stretch (1 = none)
 func mod(key: String) -> float:
-	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) else 1.0
+	var plain := simplified()   # no boons, no rumour: no hidden modifiers in the simple game
+	var v: float = BOONS[boon]["mods"].get(key, 1.0) if BOONS.has(boon) and not plain else 1.0
 	if key == "work":
 		v *= 1.0 + HOUSEHOLD_WORK * households_fed
 		v *= 1.0 - HUNGRY_WORK * hungry_left
-		if rumour:
+		if rumour and not plain:
 			v *= RUMOUR_WORK
+		if Time.get_ticks_msec() < spur_until:
+			v *= SPUR_WORK
 	return v
+
+## Experimental call-early (GDD §5.21): a wave called in early spurs the whole crew. Every
+## peer sets its own clock from WaveManager's rpc.
+const SPUR_WORK := 1.15
+const SPUR_SECONDS := 40.0
+var spur_until := 0
 
 ## Households fed this stretch (Neh. 5, Households): each family back at the wall adds to
 ## the work. Every peer counts its own; reset when the stretch changes.
@@ -429,6 +481,8 @@ const ALL_SECTIONS_OPEN := true
 ## Picked on the map: the first section is always open; each next one once the one
 ## before it has been finished (any marks). Debug builds: `-- --unlock-all`.
 func is_unlocked(section_index: int) -> bool:
+	if is_demo() and section_index >= DEMO_SECTIONS:
+		return false
 	if ALL_SECTIONS_OPEN or section_index == 0 or best_marks(section_index) >= 0 or best_marks(section_index - 1) >= 0:
 		return true
 	return OS.is_debug_build() and "--unlock-all" in OS.get_cmdline_user_args()
@@ -453,6 +507,19 @@ func built_sections() -> Array[bool]:
 ## The whole wall stands: Explore Jerusalem keeps the Festival of Booths
 func wall_finished() -> bool:
 	return not built_sections().has(false)
+
+## The first stretch of a real run (the Sheep Gate), in either game: timber and stone only.
+## The frames go up in timber and the courses in stone; there's no mortar (the finish and any
+## mending take stone) and no watch posts, so a new player meets two materials and the wall
+## before anything else (playtest 2026-10-04)
+func first_stretch() -> bool:
+	return current_section_index == 0 and not attract and not free_play()
+
+## Watch posts stand from the Tower of the Ovens (Neh. 4:9 is the ambush there), and in a
+## practice. Before that the crew has learned the wall, mortar, beams and the thick wall.
+const POSTS_FROM_SECTION := 4
+func posts_open() -> bool:
+	return free_play() or current_section_index >= POSTS_FROM_SECTION
 
 ## A practice or the festival: no waves, no story, nothing saved
 func free_play() -> bool:
@@ -586,7 +653,7 @@ func campaign_save() -> Dictionary:
 	if cfg.load(PROGRESS_PATH) != OK or not cfg.has_section("campaign"):
 		return {}
 	var day: int = cfg.get_value("campaign", "day", -1)
-	if day < 1 or day > TOTAL_DAYS:
+	if day < 1 or day > (DEMO_LAST_DAY if is_demo() else TOTAL_DAYS):
 		return {}
 	return { "day": day, "section": _section_index_for_day(day),
 		"marks": cfg.get_value("campaign", "marks", []), "chronicle": cfg.get_value("campaign", "chronicle", []) }
@@ -637,7 +704,7 @@ func apply_attract_start() -> void:
 
 ## Push full state to one peer (late join)
 func send_state_to(peer_id: int) -> void:
-	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot, riposte)
+	_sync_rules.rpc_id(peer_id, waves, sun, posts, trades, saboteur, tell, true_shot, riposte, simplified())
 	_sync_replay.rpc_id(peer_id, replay_section)
 	_sync.rpc_id(peer_id, current_day, current_section_index, phase, breaches, targets_done, targets_total)
 	_sync_crew.rpc_id(peer_id, crew_size, crew_weight)
@@ -680,7 +747,7 @@ func rate_section(section_index: int, mask: int) -> void:
 		_sync_marks.rpc(section_index, mask)
 
 @rpc("authority", "call_remote", "reliable")
-func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool, rp: bool) -> void:
+func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bool, rp: bool, sim: bool) -> void:
 	waves = w
 	sun = s
 	posts = p
@@ -689,6 +756,7 @@ func _sync_rules(w: bool, s: bool, p: bool, t: bool, sab: bool, tl: bool, ts: bo
 	tell = tl
 	true_shot = ts
 	riposte = rp
+	simple = sim
 	rules_changed.emit()
 
 @rpc("authority", "call_remote", "reliable")
@@ -714,7 +782,7 @@ func _apply_marks(section_index: int, mask: int) -> void:
 func _no_chronicle() -> Array:
 	var a := []
 	for i in SECTIONS.size():
-		a.append({ "breaches": 0, "knocked": 0, "nightfalls": 0, "days": 0, "done": false, "late": false, "spare": 0, "boon": "" })
+		a.append({ "breaches": 0, "knocked": 0, "nightfalls": 0, "days": 0, "done": false, "late": false, "spare": 0, "boon": "", "close": false })
 	return a
 
 ## Every peer, at each dusk (Main): the day goes into the chronicle
@@ -727,6 +795,7 @@ func chronicle_day(stats: Dictionary) -> void:
 		c["done"] = true
 		c["late"] = stats.get("spare", 0) < stats.get("pace_needed", 0)
 		c["spare"] = stats.get("spare", 0)
+		c["close"] = stats.has("close")   # stood by a hair (DayDirector._close_call)
 
 func _no_marks() -> Array:
 	var a := []

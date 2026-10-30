@@ -1,7 +1,7 @@
 extends SceneTree
 
-# Per-unit recipes (Jeshanah: old + burned units) and the Broad Wall's two faces, offline:
-#   Godot --headless --path . --script res://tools/recipes_test.gd -- --nostory --day=9
+# Per-unit recipes (Horse Gate: old + burned units) and the Broad Wall's two faces, offline:
+#   Godot --headless --path . --script res://tools/recipes_test.gd -- --nostory --day=42
 #   Godot --headless --path . --script res://tools/recipes_test.gd -- --nostory --day=13
 # Exit code 0 = every check passed.
 
@@ -29,12 +29,12 @@ func _process(delta: float) -> bool:
 		_main.get_node("WaveManager").stop()
 		gs.sun_left = 999.0
 		match gs.current_section_index:
-			2:
+			9:
 				_jeshanah()
 			3:
 				_broad_wall()
 			_:
-				_fail("run with --day=9 or --day=13")
+				_fail("run with --day=42 or --day=13")
 		print("recipes_test: ", "FAIL" if _fails > 0 else "PASS")
 		quit(1 if _fails > 0 else 0)
 		return true
@@ -54,7 +54,15 @@ func _jeshanah() -> void:
 	_check(not burned.cleared and burned.can_build(), "burned unit has charred framing to clear")
 	_check(not burned.needs("wood") and not burned.needs("beam") and not burned.needs("stone"), "burned unit takes no loads before it is cleared")
 	_check(burned.next_need() == "" and burned.work_material() == "wood", "clearing is pure work")
-	_check(burned.try_build() and burned.cleared and not burned.is_built(), "clearing it leaves bare footing")
+	# Pulled down, its charred timbers lie on the footing; hauled clear, the footing is bare
+	_check(burned.try_build() and burned.pulled and not burned.cleared and not burned.is_built(), "pulling it down strews its timbers")
+	var debris: Array = burned.debris_on_pad()
+	_check(not debris.is_empty(), "charred timbers on the footing (%d)" % debris.size())
+	_check(not burned.needs("wood") and not burned.needs("beam"), "no loads while timbers lie there")
+	for it: Node in debris:
+		it.free()
+	burned._process(1.0)
+	_check(burned.cleared and not burned.is_built(), "hauling them clear leaves bare footing")
 	_check(burned.needs("wood") or burned.needs("beam"), "a cleared unit is built as usual")
 	# A knocked-down old unit loses its courses like any other
 	burned.stage = burned.Stage.FRAMED

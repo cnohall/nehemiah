@@ -85,11 +85,11 @@ const FEASTS := {
 const OTHER_BOOTH := [Vector3(-12.5, 0.1, 11.0), "in a courtyard"]   # clear of every stretch's ground
 const OTHER_BRANCHES := Vector3(-8.0, 0.1, -10.0)
 const TOWNSFOLK := [
-	["The wall is finished — in fifty-two days!", "see Neh. 6:15"],
+	["The wall is finished in fifty-two days!", "see Neh. 6:15"],
 	["Have you been out to the mount for branches?", "see Neh. 8:15"],
 	["Every one of us on his own roof, in a shelter of boughs.", "see Neh. 8:16"],
 	["Not since the days of Joshua has it been kept like this.", "see Neh. 8:17"],
-	["Walk the whole wall round — every gate stands.", ""],
+	["Walk the whole wall round: every gate stands.", ""],
 ]
 # Before the wall is finished: on a stretch that stands, and on one still in ruins
 const BUILT_TALK := [
@@ -101,7 +101,7 @@ const BUILT_TALK := [
 const RUIN_TALK := [
 	["The wall of Jerusalem is broken down, and its gates are burned with fire.", "see Neh. 1:3"],
 	["Come, let's build up the wall of Jerusalem, that we won't be disgraced.", "Neh. 2:17"],
-	["There is so much rubble — how can we build the wall?", "see Neh. 4:10"],
+	["There is so much rubble. How can we build the wall?", "see Neh. 4:10"],
 ]
 
 var _main: Node
@@ -434,11 +434,11 @@ func _add_water_gate_people(root: Node3D) -> void:
 	levite.wander = 1.5
 	var meremoth := _folk(root, "Meremoth the priest", "priest", Palette.MUREX, Vector3(-19.0, 0.1, 11.0), [
 		["I repaired the wall from the door of Eliashib's house to its end.", "see Neh. 3:21"],
-		["They're building shelters in the courts of God's house too — round the wall at the Sheep Gate.", "see Neh. 8:16"],
+		["They're building shelters in the courts of God's house too, round the wall at the Sheep Gate.", "see Neh. 8:16"],
 	])
 	meremoth.wander = 2.0
 	_folk(root, "The gatekeeper", "man", Palette.INDIGO, Vector3(-9.0, 0.1, 2.6), [
-		["Out through the gate for branches — olive, myrtle, palm. Go to the mount.", "see Neh. 8:15"],
+		["Out through the gate for branches: olive, myrtle, palm. Go to the mount.", "see Neh. 8:15"],
 		["The gates stay open today. Nobody is coming to fight.", ""],
 	])
 	for i in 2:
@@ -468,7 +468,7 @@ func _add_temple_people(root: Node3D) -> void:
 	])
 	keeper.wander = 1.0
 	_folk(root, "", "priest", Palette.WELD, Vector3(33.6, 0.1, 13.8), [
-		["Go up into the court — there's a shelter to put up by the altar.", "see Neh. 8:16"],
+		["Go up into the court. There's a shelter to put up by the altar.", "see Neh. 8:16"],
 	]).wander = 2.0
 
 # A few people about the stretch, glad of the day
@@ -489,7 +489,7 @@ func _add_hungry(root: Node3D, key: String, at: Vector3, kind: String) -> void:
 	var f := Folk.new()
 	f.who = ""
 	f.hungry = not _fed.has(key)
-	f.fed_line = ["Blessings on you — the joy of Yahweh is our strength today.", "see Neh. 8:10"]
+	f.fed_line = ["Blessings on you. The joy of Yahweh is our strength today.", "see Neh. 8:10"]
 	f.look = Folk.look_for(kind, Palette.UNDYED.darkened(0.2), absi(key.hash()))
 	f.position = at
 	f.fed.connect(func(_f):
@@ -535,7 +535,7 @@ func _build_journal() -> void:
 	vb.add_child(title)
 	var sub := Label.new()
 	sub.theme_type_variation = &"Caption"
-	sub.text = "The wall is finished. No clock, no enemy — walk the city." if _feast 		else "The wall is not yet finished. The Festival of Booths waits for the last stone."
+	sub.text = "The wall is finished. No clock, no enemy. Walk the city." if _feast 		else "The wall is not yet finished. The Festival of Booths waits for the last stone."
 	if not _feast:
 		sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		sub.custom_minimum_size.x = 330
@@ -585,17 +585,17 @@ func _refresh() -> void:
 		hungry += f.get("hungry", []).size()
 	var met := _met.size()
 	var gates := GameState.SECTIONS.size()
-	_set_row("circuit", _seen.size() >= gates, tr("Walk the wall round — %d of %d gates") % [_seen.size(), gates])
+	_set_row("circuit", _seen.size() >= gates, tr("Walk the wall round: %d of %d gates") % [_seen.size(), gates])
 	if not _feast:
 		var standing := _built.count(true)
-		_set_row("built", false, tr("Stretches of wall standing — %d of %d") % [standing, gates])
+		_set_row("built", false, tr("Stretches of wall standing: %d of %d") % [standing, gates])
 		return
 	_set_row("hear", _heard, tr("Hear Ezra read the Law at the Water Gate"))
 	_set_row("booths", booths >= BOOTH_GOAL,
-		tr("Build booths with branches from the mount — %d of %d") % [mini(booths, BOOTH_GOAL), BOOTH_GOAL])
+		tr("Build booths with branches from the mount: %d of %d") % [mini(booths, BOOTH_GOAL), BOOTH_GOAL])
 	_set_row("portions", fed >= hungry,
-		tr("Send portions to those with nothing prepared — %d of %d") % [fed, hungry])
-	_set_row("people", met >= PEOPLE_GOAL, tr("Meet the people who built the wall — %d of %d") % [mini(met, PEOPLE_GOAL), PEOPLE_GOAL])
+		tr("Send portions to those with nothing prepared: %d of %d") % [fed, hungry])
+	_set_row("people", met >= PEOPLE_GOAL, tr("Meet the people who built the wall: %d of %d") % [mini(met, PEOPLE_GOAL), PEOPLE_GOAL])
 	_set_row("temple", _visited, tr("Go up to the house of God, by the Sheep Gate"))
 	var walked := _dedication != null and _dedication.done
 	_set_row("dedication", walked, tr("Walk the wall with a choir, from the Valley Gate to the temple") if _dedication == null or not _dedication.active

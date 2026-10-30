@@ -78,7 +78,15 @@ func _process(delta: float) -> bool:
 				_fail("no pile strewn in 60 s")
 				return _finish()
 		"shot_pile":
-			if _t - _mark > 0.5:
+			if _t - _mark > 1.0:
+				# The watchman calls the scatter, naming the pile's material
+				var said := ""
+				for man: Dictionary in _watch()._men:
+					if "scattered the" in man["shout"].text:
+						said = man["shout"].text
+				_check(said != "", "a watchman called the scatter (\"%s\")" % said)
+				_check(said == "" or _pile.kind in said, "the call names the %s" % _pile.kind)
+				_check(_watch()._scatter_called.has(_pile.get_instance_id()), "the pile is marked called")
 				root.get_texture().get_image().save_png(_out + "/strewn_pile.png")
 				_player.global_position = _pile.global_position + Vector3(1.5, 0, 0)
 				_mark = _t
@@ -95,10 +103,15 @@ func _process(delta: float) -> bool:
 				print("tidied in %.1f s" % (_t - _mark))
 				_check(_pile.is_in_group("supply_piles"), "tidied pile gives again")
 				_mark = _t
-				_state = "second"
+				_state = "recall"
 			elif _t - _mark > 8.0:
 				_fail("tidy never finished (progress %.2f)" % _pile.work().progress)
 				return _finish()
+		"recall":
+			# Gathered piles drop out of the called set, so a re-scatter is called again
+			if _t - _mark > 1.0:
+				_check(not _watch()._scatter_called.has(_pile.get_instance_id()), "a gathered pile can be called again")
+				_state = "second"
 		"second":
 			# He goes on to a second pile, then out
 			if not is_instance_valid(_sab) or _sab._escaping:
@@ -126,6 +139,9 @@ func _process(delta: float) -> bool:
 			_check(_sab.health <= 0.0, "two cuts fell him")
 			return _finish()
 	return false
+
+func _watch() -> Node:
+	return root.get_tree().get_first_node_in_group("watchmen")
 
 func _focus(at: Vector3) -> void:
 	var cam: Camera3D = _main.get_node("Camera3D")

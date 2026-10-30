@@ -24,6 +24,8 @@ const HUD_INTERVAL := 0.1
 # Dusk: the last stone lands in slow motion, the light turns gold, the camera leans in
 const DUSK_SLOWMO      := 0.3    # time scale…
 const DUSK_SLOWMO_TIME := 0.5    # …for this many real seconds
+const CLOSE_SLOWMO      := 0.12   # a close call holds it longer and deeper
+const CLOSE_SLOWMO_TIME := 1.1
 const DUSK_CAM_SIZE    := 15.5
 const DUSK_SUN_COLOR   := Color(1.0, 0.74, 0.5)
 const DUSK_SUN_ENERGY  := 1.45
@@ -66,6 +68,7 @@ var _hud_timer := 0.0
 var _day_sun_color: Color
 var _day_sun_energy: float
 var _mood_tween: Tween
+var _slowmo_gen := 0
 var _wall_cam: Tween
 var _carvings: Array[Label3D] = []   # names on their tablets
 var _look: LookPass
@@ -138,10 +141,14 @@ func _ready() -> void:
 	director.ready_changed.connect(story.set_ready_state)
 	director.ready_changed.connect(hud.set_ready_state)
 	hud.ready_pressed.connect(director.mark_ready)
+	hud.unready_pressed.connect(director.unmark_ready)
 	hud.begin_now_requested.connect(director.force_ready)
 	director.story_ended.connect(story.close)
 	story.finished.connect(_on_story_finished)
 	story.choice_made.connect(director.cast_choice)
+	story.unreadied.connect(director.unmark_ready)
+	story.slide_changed.connect(director.report_slide)
+	director.slides_changed.connect(story.set_slide_progress)
 	story.start_now_requested.connect(director.force_ready)
 	# After the ending story: the credits, then the end screen
 	credits = CreditsRoll.new()
@@ -157,6 +164,8 @@ func _ready() -> void:
 	camera.look_at(Vector3(0, 0, 2), Vector3.UP)
 	camera.make_current()
 
+	if not GameState.attract and "--no-well" not in OS.get_cmdline_user_args():
+		add_child(Well.new())   # the city well: where a hurt worker mends (GDD §5.22)
 	_spawn_player(multiplayer.get_unique_id())
 
 	if multiplayer.is_server():
@@ -407,12 +416,29 @@ func _on_story_finished() -> void:
 	else:
 		director.mark_ready()
 
-# The finishing blow lands heavy: a breath of slow motion, then back to speed
-func _slowmo() -> void:
-	Engine.time_scale = DUSK_SLOWMO
-	await get_tree().create_timer(DUSK_SLOWMO_TIME, true, false, true).timeout
-	if is_inside_tree():
+# The finishing blow lands heavy: a breath of slow motion, then back to speed. A newer
+# call (a close call deepening the dusk's) owns the time scale from then on.
+func _slowmo(scale := DUSK_SLOWMO, time := DUSK_SLOWMO_TIME) -> void:
+	_slowmo_gen += 1
+	var gen := _slowmo_gen
+	Engine.time_scale = scale
+	await get_tree().create_timer(time, true, false, true).timeout
+	if is_inside_tree() and gen == _slowmo_gen:
 		Engine.time_scale = 1.0
+
+# A close call (DayDirector._close_call): the stretch stood by a hair. Every peer holds its
+# breath a little longer, the watch calls it, and the reel and Steam's recording keep it.
+func _close_call(kind: String) -> void:
+	_slowmo(CLOSE_SLOWMO, CLOSE_SLOWMO_TIME)
+	Sfx.hold_breath(CLOSE_SLOWMO_TIME + 0.6)
+	shake(0.35)
+	var line := tr("By a hair! The stars are coming out!") if kind == "stars" \
+		else tr("Just in time! They were at the stones!")
+	for watch in get_tree().get_nodes_in_group("watchmen"):
+		watch.call_out(line)
+	var reel := get_node_or_null("Highlights") as Highlights
+	if reel:
+		reel.take("close", tr("Day %d · by a hair") % GameState.current_day, true, 0.0)
 
 func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
 	if _mood_tween:
@@ -428,6 +454,8 @@ func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
 
 func _on_day_tallied(stats: Dictionary) -> void:
 	GameState.chronicle_day(stats)
+	if stats.has("close") and not GameState.attract:
+		_close_call(stats["close"])
 	if stats.has("names") and not GameState.attract:
 		_play_wall_cam(stats["names"])
 
@@ -577,8 +605,7 @@ func _spawn_player(peer_id: int) -> void:
 	players_root.add_child(player)
 	# A small ring round the spawn point, a place per worker, so the crew doesn't start stacked
 	var slot := players_root.get_child_count() - 1
-	player.global_position = player.RESPAWN_POS \
-		+ (Vector3.ZERO if slot == 0 else Vector3(1.3, 0, 0).rotated(Vector3.UP, slot * TAU / 4.0 - PI / 4.0))
+	player.global_position = Player.start_spot(slot)
 	GameState.register_player(peer_id, "Bot" if bot else "Builder")
 	_assign_colors()
 	if multiplayer.is_server():

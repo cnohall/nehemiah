@@ -4,7 +4,7 @@ extends RefCounted
 # The four trades of the crew (GDD §5.10, Neh. 4): anyone can do any job, each trade
 # does one thing better. Hands-on work takes WORK_MULT longer than before; a trade's own
 # work runs PACE faster, which is the old pace. Water carriers walk loaded faster; the
-# overseer hits harder. Off with `-- --no-trades` (GameState.trades): every worker plain,
+# overseer hits harder. Off with `-- --no-trades` or in the simple game (GameState.trades_on()): every worker plain,
 # work at the old times.
 
 enum { BUILDER, WATER_CARRIER, CARPENTER, OVERSEER }
@@ -19,13 +19,13 @@ const HIT_MULT   := 1.6    # overseer: sword and sling (a full sling fells a sco
 const ABOUT := [
 	"Lays stone faster",
 	"Walks faster with a load",
-	"Works timber faster — frames, doors, watch posts",
+	"Works timber faster: frames, doors, watch posts",
 	"Sword and sling hit harder",
 ]
 
 ## How fast `trade` works up a stage of `material` (1 = anyone)
 static func work_pace(trade: int, material: String) -> float:
-	if not GameState.trades:
+	if not GameState.trades_on():
 		return 1.0
 	match trade:
 		BUILDER:
@@ -36,13 +36,13 @@ static func work_pace(trade: int, material: String) -> float:
 
 ## Seconds of work time are stretched by this (the festival keeps its own times)
 static func work_mult() -> float:
-	return WORK_MULT if GameState.trades and not GameState.festival else 1.0
+	return WORK_MULT if GameState.trades_on() and not GameState.festival else 1.0
 
 static func carry_mult(trade: int) -> float:
-	return CARRY_MULT if GameState.trades and trade == WATER_CARRIER else 1.0
+	return CARRY_MULT if GameState.trades_on() and trade == WATER_CARRIER else 1.0
 
 static func hit_mult(trade: int) -> float:
-	return HIT_MULT if GameState.trades and trade == OVERSEER else 1.0
+	return HIT_MULT if GameState.trades_on() and trade == OVERSEER else 1.0
 
 ## The work this trade is quicker at, for bots choosing a site ("" = none)
 static func prefers(trade: int, material: String) -> bool:
@@ -54,14 +54,28 @@ static func prefers(trade: int, material: String) -> bool:
 static func assign(chosen: Array, is_bot: Array) -> Array:
 	var out := []
 	var held := {}
+	out.resize(chosen.size())
+	out.fill(-1)
+	# Explicit picks first (the server allows one per trade; a clash falls through)
 	for i in chosen.size():
-		var t: int = chosen[i] if not is_bot[i] and chosen[i] >= 0 else i % NAMES.size()
-		out.append(t)
-		if not is_bot[i]:
-			held[t] = true
+		if not is_bot[i] and chosen[i] >= 0 and not held.has(chosen[i]):
+			out[i] = chosen[i]
+			held[chosen[i]] = true
+	# People without a pick: their slot's own trade, or the next free one
+	for i in chosen.size():
+		if is_bot[i] or out[i] >= 0:
+			continue
+		var t := i % NAMES.size()
+		for k in NAMES.size():
+			if not held.has((t + k) % NAMES.size()):
+				t = (t + k) % NAMES.size()
+				break
+		out[i] = t
+		held[t] = true
 	for i in chosen.size():
 		if not is_bot[i]:
 			continue
+		out[i] = i % NAMES.size()
 		for t in NAMES.size():
 			if not held.has(t):
 				out[i] = t

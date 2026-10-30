@@ -16,12 +16,17 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | Sling tell, true shot, riposte | 5.16 | `--no-tell` `--no-true-shot` `--no-riposte` | pending |
 | Mending | 5.17 | n/a | pending |
 | Solo with bots: crew weight, calls, cover | 5.20 | n/a | pending |
+| Experimental: wave forecast, call early (Thronefall-inspired) | 5.21 | Settings → Experimental (off by default) | pending |
+| The well: drink to mend | 5.22 | `--no-well` | pending |
+| Simple game (depth without load) | 5.23 | Settings → Game → Simple (host's choice, `GameState.simplified()`) | built 6 Oct 2026; test `tools/simple_game_test.gd --day=34`; needs playtest 4 |
+| Play stats from the web build (where sessions stop) | 5.24 | Settings → Advanced → Play stats (web only, on by default) | built 13 Oct 2026; test `tools/telemetry_test.gd`; Worker side in `web-port` (`worker/src/stats.js`), not deployed |
 | Choice before each stretch (boons) | 6.5 | `--boon=<key>` | pending |
 | Section beats | 6.4 | `--no-beats` | pending |
 | Explore Jerusalem, dedication choirs | 5.8, 5.19 | n/a | **frozen** (side mode) |
 | Road mini-game | 5.13 | n/a | **cut to cards** (not built) |
 | Held things | 5.18 | `--no-held` | spear rack only, after playtest 3 |
 | Polish: breakables, birds, flock, townsfolk, smoke | 5.8, 6.6 | n/a | **frozen**; web perf untested |
+| Close call, Steam Timeline, crew marks | 7.1 #6–7, 7 | n/a | built 9 Oct 2026; `tools/close_call_test.gd --day=8`, shots `tools/marks_shots.gd`; Timeline untested inside Steam's recorder |
 
 ---
 
@@ -53,9 +58,9 @@ Three types, unlocked over the campaign (`wave_manager.gd`). Spawn rate and max 
 | Type | Unlocks | Speed | Health | Damage | Notes |
 |---|---|---|---|---|---|
 | Scout | Day 1 | 3.5 | 40 | 5 | ~50% go for the wall ("wreckers"), rest run for gaps |
-| Brute | Day 9 (25% of spawns) | 2.5 | 100 | 15 | Always a wrecker — slow, batters walls |
-| Raider | Day 21 (~30% late mix) | 4.0 | 60 | 8 | Fast; ~50% wreckers |
-| Saboteur (§5.9) | Day 6 (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
+| Brute | Day 8 (25% of spawns), the Fish Gate's last day | 2.5 | 100 | 15 | Always a wrecker — slow, batters walls |
+| Raider | Day 17 (~30% late mix), the Broad Wall's last day | 4.0 | 60 | 8 | Fast; ~50% wreckers |
+| Saboteur (§5.9) | Water Gate on (1 at a time, own timer) | 4.2 | 30 | 0 | Goes for the yard, not the wall: scatters the pile the work needs, then flees |
 
 All but the saboteur attack nearby workers first. A wrecker that knocks a section back to bare foundation pours through the breach.
 Debug: run with `-- --day=N` (debug builds) to start at a later day and see brutes/raiders.
@@ -67,7 +72,7 @@ Debug: run with `-- --day=N` (debug builds) to start at a later day and see brut
 1. **Wall units** (`WallSection`) — stages: framing (timber; beams on beam stretches) → courses (stone) → mortar. Each stage: deliver the loads, then work it up by hand (§5.4). Enemies batter them back down a stage at a time. Broad Wall's are double-thick (§6.3)
 2. **Gates** (`Gate`) — two pillars built like wall units, then the **doors step**: deliver timber, work it → doors hang and close the gap. Workers pass through hung doors, enemies don't. Stretches with no gate seal the opening with stone instead
 3. **Watch posts** (`WatchPost`, §5.6) — two behind the wall; raise with timber, feed with stone for the slinger on top. Bare again each new stretch
-4. **Mortar trough** (`Trough`, mixing stretches) — not built: lime + water in → mortar out after 4 s
+4. **Mortar trough** (`Trough`, mixing stretches) — built: lime + water in, then a worker stirs it (BuildWork, 3 s for one worker, the paddle turns while it is worked) → one load of mortar out. Left alone it stays wet lime; bots stir it like any wall
 
 Supply: stockpiles in the yard (timber, stone, mortar; per stretch some are replaced by rubble heaps, lime bins and water jars — §6.3). Dropped loads stay on the ground.
 
@@ -169,7 +174,7 @@ Three rules, each on by default and each switched off from the command line to A
 
 **Waiting for players (one shared widget):**
 - ✅ **Tally card waits for everyone** (important). One ready check in `DayDirector` (`ready_changed`, `mark_ready`, `force_ready`) serves the story cards and the dusk tally. The tally stays up (after a 4 s minimum for the cheer) until every person in the scene is ready; the title screen's bot crew still moves on by itself after 9 s. At dusk [E] no longer picks things up. Still two screens at a section's end (tally, then the story); fold them together only if that still feels clunky
-- ✅ **Ready state** (`ReadyRow`): hold [E] / A (0.6 s, a bar fills) or click to say you're ready; with company, a chip per person (colour, "You" or their trade, a drawn tick when ready), "Waiting for N builders", and the host's "Begin now". In the story, with company, Esc reads "I'm ready" instead of "Skip" (the old skip-vs-continue confusion)
+- ✅ **Ready state** (`ReadyRow`): hold [E] / A (0.6 s, a bar fills) or click to say you're ready; with company, a chip per person (colour, "You" or their trade, a drawn tick when ready), "Waiting for N builders", and the host's "Begin now". In the story, with company, the last slide is the same hold (it confirms the pick on the choice card; a click still counts), E / Enter there only finish the typing, Esc skips to the last slide instead of past it, and E · ← / "Not ready yet" takes it back (6 Oct 2026)
 - ✅ **Loading panel**: `NetworkManager.crew_info` — the server keeps who's in the session (Steam name, still loading or in) and mirrors it to every peer; a client introduces itself on connect. The HUD shows "<name> is joining…" top centre while anyone loads; player cards and ready chips show Steam names (the trade when there's none) and a dimmed "joining" state
 
 **Flow:**
@@ -193,7 +198,7 @@ Three rules, each on by default and each switched off from the command line to A
 
 ### 5.8 The world tells it — ◐ first pass (29 Sep 2026), needs playtest 3
 - **Diegetic HUD** (Settings "Day info": *In the world* default, *Plaques* brings the old day/threat plaques back). The **sun** sinks from mid-morning (61°) to 22° and swings west as the daylight runs out — shadows lengthen toward the stars (`DayLight`). A **scribe** (`Scribe`) at a desk by the yard keeps the record on a scroll over his head: day and stretch, one block per piece (inked when it stands), red strokes for each one through, out of ten; he calls pieces standing or falling. Two **watchmen** (`Watchmen`) on timber stands at the ends of the stretch (Neh. 4:9) call waves and their side, a battered wall, the first brute/raider of the day, a breach, the sun low; a call from off-screen slides in from the edge (`Shout`, a `WorldTag` kind). The "Next:" line stays as an ink-rimmed caption low on screen. Watch: do new players still find the day count and breaches?
-- **Taunts** (`Taunts`): a herald of Sanballat's outside the wall calls the taunt across it (as his servant came with the open letter, 6:5) — at the start of the work and every 40 s until the stretch is half built; the call slides in from the screen edge. Sheep Gate (2:19), Jeshanah / Broad Wall / Tower of the Ovens (4:2-3), East Gate (Sanballat's letter, 6:6). (The line used to be daubed on the ground outside the wall too; cut Sep 29 2026, it read strangely)
+- **Taunts** (`Taunts`): a herald of Sanballat's outside the wall calls the taunt across it (as his servant came with the open letter, 6:5) — at the start of the work and every 40 s until the stretch is half built; the call slides in from the screen edge. Each call he walks up from beyond, calls and walks off, see-through like the leaders (Oct 6 2026: a still figure in the lane read as an unhittable foe). Sheep Gate (2:19), Jeshanah / Broad Wall / Tower of the Ovens (4:2-3), East Gate (Sanballat's letter, 6:6). (The line used to be daubed on the ground outside the wall too; cut Sep 29 2026, it read strangely)
 - **Wall cam**: when a stretch stands the camera runs along it (3.2 s) and a dedication tablet rises on each piece with the name of whoever carried most to it (Steam name, else the trade). Server credits each load to its unit (`DayDirector.note_load(peer, site)`); the tally waits for the run. Free trailer material
 - **Scribe's map** (`CircuitMap.aged`, `GameState.chronicle`): the circuit map on the story cards and the end screen wears with the run — edges darken with the days, folds at 4 and 8 sections, an ink blot where the enemy got in, a lamp-oil ring on stretches worked till the stars or past par, a margin note per stretch ("2 got in", "worked till the stars", "1 day to spare", "rebuilt what fell"). The end screen is the final map, words on a parchment column at left
 - **Explore Jerusalem** (`Festival`, title menu, solo offline, nothing saved): the Festival of Booths after the wall (Neh. 8) at the Water Gate. Ezra reads from a wooden platform (Lev. 23:40, 42; Neh. 8:15); fetch **branches** from the slopes outside and build five booths — broad place, courtyards, by the well, the temple court (8:15-16); carry **portions** to four with nothing prepared (8:10); talk to Nehemiah, a Levite, Shallum's daughters, Meremoth, a priest, the gatekeeper, children (`Folk`, [E]); go up to the **temple** (`Temple`: walled court, sanctuary facing east, altar with its fire). Journal ticks it off; all done → "There was very great gladness" (8:17). Not the Sabbath: Neh. 13:15-19 forbids carrying loads on it. Not the zero-menu start either — first launch should still meet the real loop (the practice); revisit if players want a gentler first minute
@@ -224,14 +229,14 @@ Three rules, each on by default and each switched off from the command line to A
 5. Scatters **two piles at most**, then flees back out the way he came (existing flee: `FLEE_SPEED`, off at `FLEE_Z`). Never counts as a breach: the harm he does is lost time
 6. **Doesn't fight.** He ignores workers (no aggro), doesn't batter walls, has no weapon. A worker in reach just gets dodged around
 
-**Tidying a scattered pile:** the Neh. 4:17 cost. Stand at the pile and press [E] / A ("Tidy [E]"), then work it like a wall stage (§5.4): 2 s for one worker, extra hands +70%, moving or a hit stops it, progress is kept. Tidied → the pile works again. A scattered pile's tag pulses "Scattered — tidy [E]" for everyone.
+**Gathering up a scattered pile:** the Neh. 4:17 cost. Stand at the pile and press [E] / A ("Gather up [E]"), then work it like a wall stage (§5.4): 2 s for one worker, extra hands +70%, moving or a hit stops it, progress is kept. Gathered up → the pile works again. A scattered pile's tag pulses "Scattered — gather up [E]" for everyone.
 
 **Stats:**
 | Speed | Health | Damage | Knockback felt |
 |---|---|---|---|
 | 4.2 (fastest) | 30 (2 sling hits, 2 sword cuts, 4 post shots) | 0 | 1.2 (light) |
 
-**Unlock and count:** day 6, the second day of the Fish Gate, so beams (the section's twist) get one day to themselves. At most **1 alive**, and at most one every 50 s, through day 20. From day 21, 2 alive with 3–4 workers. Not scaled by section pressure; difficulty *pace* scales the interval. Water Gate (night watch): he comes out of the dark like the rest, and a torch by the yard is the answer.
+**Unlock and count:** from the Water Gate (day 37, `WaveManager.SABOTEUR_SECTION`), so night and the saboteur are one lesson: what comes out of the dark, and a torch by the yard is the answer. At most **1 alive**, and at most one every 50 s, through day 40. From day 41 (the Water Gate's last day), 2 alive with 3–4 workers. Not scaled by section pressure; difficulty *pace* scales the interval.
 
 **Readability:**
 - Silhouette: slim, crouched run, dark hood, an empty sack over one shoulder, no spear or shield. Same goat-hair cloth + oxblood outline as the other foes (`CharacterRig` look "saboteur")
@@ -244,18 +249,18 @@ Three rules, each on by default and each switched off from the command line to A
 **Tutorial:** none. The watchman call, the pointer and the "Tidy [E]" tag teach it the first time (as the brute's first appearance does today).
 
 **Build notes:**
-- `SupplyPile`: `scattered` bool, synced like `count`; `request_pickup()` refuses while scattered; `tidy_progress` synced for the build-style bar. A strewn-loads mesh layer toggled on the pad
+- `SupplyPile`: `scattered` bool, synced like `count`; `request_pickup()` refuses while scattered; `tidy_progress` synced for the build-style bar. A scattered-loads mesh layer toggled on the pad
 - `enemy.gd`: a saboteur branch in `_pick_target` (pile, not player/wall), the climb as a timed state, `_fleeing` reused
 - `WaveManager`: its own timer for saboteurs, apart from the trickle and the waves
 - A/B switch `-- --no-saboteur`, like `--no-waves`. Debug `-- --day=6` to see one on day 1 of the run
-- Test `tools/saboteur_test.gd`: gets in through a gap, scatters the right pile, pickups refused, tidy restores, flees after two, climbs when there's no gap, knocked off by a hit
+- Test `tools/saboteur_test.gd`: gets in through a gap, scatters the right pile, pickups refused, gathering up restores, flees after two, climbs when there's no gap, knocked off by a hit
 - New strings English only at first; run the i18n extract for es / pt_BR / de / ko
 
-**Not in v1:** stealing dropped loads, tipping the mortar trough, setting fires (Neh 4:11 says "cause the work to cease", not burn it), tidying while carrying.
+**Not in v1:** stealing dropped loads, tipping the mortar trough, setting fires (Neh 4:11 says "cause the work to cease", not burn it), gathering up while carrying.
 
 **Watch in playtests:**
 - Does one person end up parked in the yard all day? (He should be something that interrupts you, not a post to stand at.) If so: longer interval, or he only comes in during waves
-- Is 2 s of tidying felt, or ignored? Is the climb readable enough to stop before he's over?
+- Is 2 s of gathering up felt, or ignored? Is the climb readable enough to stop before he's over?
 - Solo: is it a fair tax, or does it wreck the sun-clock par? Tune `sun_slack` against it, not him
 - Does it hide the archer's job (guarding builders) when both are in? Archer spec waits for this playtest
 
@@ -302,7 +307,7 @@ Three rules, each on by default and each switched off from the command line to A
 **Built (each part can be cut on its own after playtest 3):**
 - **Continue** (`GameState.campaign_save`): the run is saved at the dawn of each new stretch after the first, with its day, marks and chronicle, and cleared on the win. The title shows "Continue — Broad Wall, day 13" first, and Host becomes "New Game". "Try the stretch again" restores the marks and map the same way. A new run doesn't overwrite the save until it reaches its second stretch. Test: `tools/continue_test.gd`
 - **Twist cards** (`TwistCard`, a StoryData slide per twist new to the section, after its card): three drawn panels with a caption each, e.g. *a beam dragged alone goes slowly → a friend takes the other end [E] → carry it together*. They're part of the story, so the ready check makes the whole crew see them before the work starts. Shots: `tools/twist_card_shots.gd`
-- **What can I do here?** (`ActionLens`): hold [Tab] or View (rebindable `reveal`). Everything within 16 m that answers a press gets a chip (take stone, work it up, help up, take the other end, hand over, climb over, tidy, don't go with him), plus a chip on yourself for the other buttons. It's listed on the controls card
+- **What can I do here?** (`ActionLens`): hold [Tab] or View (rebindable `reveal`). Everything within 16 m that answers a press gets a chip (take stone, work it up, help up, take the other end, hand over, climb over, gather up, don't go with him), plus a chip on yourself for the other buttons. It's listed on the controls card
 - **Beam prompt:** while one worker drags a beam alone, its free end says "Take the other end [E]" on every other free worker's screen. Help reach went up from 2.0 to 3.2 m so the end itself is in reach
 - **Bot demo** (`BotDemo`): the first time in a section that a bot does something the section brought (holds a beam end, carries lime or water, digs rubble, uses the relay mat), it gets a callout "Watch the carpenter — two to a beam" and an edge pointer
 - **Saboteur**: built, spec and tests in §5.9
@@ -431,7 +436,8 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 - **Bots:** serve a battered wall like an unfinished one, even in a finished unit (`WorkFront` keeps battered parts open without using up the front's width).
 - **Cost is the limiter:** mortar is scarce on lime-and-water stretches, so mending competes with building. No per-day cap.
 - **Only finished walls** (mortared). A half-built wall hit down a stage is already rebuilt by the normal stages.
-- **Not built yet:** cracks on the stones; tune the numbers; a mend sound. Test: `tools/repair_test.gd -- --nostory`.
+- **Mend sound** (9 Oct 2026): `mend`, the stage-raise knock pitched lighter, on every peer when a mend's health lands during the work (not the overnight repair).
+- **Not built yet:** cracks on the stones; tune the numbers. Test: `tools/repair_test.gd -- --nostory --day=5` (the Sheep Gate has no mortar since §5.23).
 
 ### 5.18 Held things, not power-ups — 💡 idea (2 Oct 2026), spear rack only, after playtest 3
 **Question (user):** should the game have power-ups?
@@ -452,13 +458,13 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 | Thing | Anchor | Section it arrives | What it does | What it costs |
 |---|---|---|---|---|
 | **Spear from a rack** | "half of them held the spears" (4:16), "with one hand… and with the other held his weapon" (4:17) | Valley Gate (6), with the horn | Two-handed, **reach** (≈2× sword): a thrust holds a foe at arm's length, so one spear-holder can keep a gap or a ladder clear while builders work behind them. Every thrust shoves like a half-charged stone. It doesn't replace the sword's turned blow (§5.16); its job is to keep foes back, not to knock them down | Can't pick up loads or work the wall while holding it. Put it back on the rack (or drop it) to build. The crew splits into workers and guards, which is 4:16 as play |
-| **Donkey** | Nehemiah's animal on the night ride (2:12, 2:14) | Gate of the Ash Heaps (7), the long haul | A tethered donkey follows whoever leads it and carries 3 loads (any mix) in panniers. Unload it at the wall | Slow (≈60% walk speed). A raider or a horn blast spooks it: it bolts and spills its loads (the saboteur's scatter + tidy). Escort it or lose the trip. Only one donkey per section |
+| **Donkey** | Nehemiah's animal on the night ride (2:12, 2:14) | Gate of the Ash Heaps (7), the long haul | A tethered donkey follows whoever leads it and carries 3 loads (any mix) in panniers. Unload it at the wall | Slow (≈60% walk speed). A raider or a horn blast spooks it: it bolts and spills its loads (the saboteur's scatter + gather up). Escort it or lose the trip. Only one donkey per section |
 | **Daughters of Shallum** | "Shallum… repaired, he and his daughters" (3:12) | Tower of the Ovens (5), next to 3:12 | A **household helper** from the city: a call at the gate brings out one helper who works a single unit (bot work speed, no fighting) for the rest of the day | Foes go for helpers first, and a helper who is hit goes home. Someone has to stand guard. Ties into Fall 1 (4:10 weariness) as a rise |
 | **Water jar** | Fountain Gate water, the burden-bearers' weariness (4:10) | Fountain Gate (8) | Set the jar on a spot: crew within 4 m work ×1.25 for 30 s, then it is empty. Refill it at the pool | One trip from the pool. **Overlaps the horn** (a buff in a ring), so build it last, and only if the horn doesn't already fill this role |
 
 **Cut:** builder's tools as pickups (overlaps trades), medkits (§5.3 backlog; the water jar would replace that row if it is ever built), anything that lasts past one day.
 
-**Why these four:** each one already has a system to sit on. Spear = `Player` held-item state + a rack (watch post art); donkey = `Fox`/`Passersby` follow + `SupplyPile` scatter/tidy; helpers = bot worker + messenger "led away" pathing; water jar = horn rally ring. None of them needs new UI beyond a world label.
+**Why these four:** each one already has a system to sit on. Spear = `Player` held-item state + a rack (watch post art); donkey = `Fox`/`Passersby` follow + `SupplyPile` scatter/gather up; helpers = bot worker + messenger "led away" pathing; water jar = horn rally ring. None of them needs new UI beyond a world label.
 
 **Fun check:**
 - **Fantasy:** the crew of 4:16-17, half on the spear and half on the trowel; leading a loaded donkey up the long haul
@@ -485,6 +491,93 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 - **Cover** (`BotBrain` Job.COVER, Neh. 4:17): a person working a wall with a foe within 8 m gets the nearest bot not at work (a load in hand is fine, a beam isn't), one bot each; it stands within 2 m and slings at that foe first. Ranked right after reviving. Test `tools/cover_test.gd`
 - **Watch in playtests:** do the calls read as company or noise? Does cover make a solo player stop getting knocked off the work? Is 1 + Apprentice now clearly easier than alone?
 
+### 5.21 Borrowed from Thronefall — ◐ forecast + call early built behind Settings → Experimental (3 Oct 2026), off by default
+**Why Thronefall:** minimalist tower defence where the hero walks, the player always knows where and how big the next night is, and the only decisions are *where to be* and *what to spend on*. We already have the first half of the loop; we were missing the *information* and the *risk dial*. Both ideas below are off by default (Feature freeze, §0: nothing changes for playtest 3 unless a tester turns it on) and live under **Settings → Experimental**; the host's setting rules the crew, like difficulty.
+
+**Checked against the code (3 Oct 2026) before choosing:** difficulty tiers (`Settings.DIFFICULTIES`), marks per stretch (`GameState.MARK_NAMES`: In good time / None got through / The wall holds), a pair of boons before each stretch (§6.5), lamps at dusk and off-screen pointers already exist. Missing: any warning longer than the 5 s bell, any way to bring the enemy on early.
+
+- **Wave forecast** (`exp_forecast`): ~22 s before a wave the crew is told **how many and what** ("Wave in 18 s · 3 scouts, 1 brute") on a parchment chip under the day plaque, and the spot(s) it comes in at get a pulsing ground ring on the northern strip. The pack is rolled at forecast time and spawns exactly as told (the old roll happened at the bell). The neighbour from the villages (§6.7) still matters: he marks the spot far earlier than 22 s. **Why:** the crew has to decide *who* defends and *who* builds; today they find out 5 s ahead. **Kill rule:** testers ignore the chip, or the forecast makes every wave a solved problem (nobody ever caught out). **Later:** show it on Explore's map; hide the type for one-to-two days of the finale ("the enemy was not seen coming").
+- **Call the wave early** (`exp_call_early`): any worker presses **Horn** (the same key as the Valley Gate call, which keeps its rally there) to bring the next wave forward to its 5 s bell. The whole crew is **spurred** for 40 s after: ×1.15 work (`GameState.SPUR_WORK`). **Why:** a crew that is ahead has a way to spend it — risk for speed, which is the Overcooked itch — and the shared decision is a conversation in co-op. **Kill rule:** it's pressed once and never again (no tension), or a crew spams it and the day collapses; then cap it to once per stretch. **Tune:** every number is a guess; the log should print calls per stretch.
+- **Pack size and testing (4 Oct 2026):** the pack is `round((2 + day/10 + floor((crew-1)/2)) x pace x difficulty)`, crew counting a bot by its skill (`WaveManager._crew`), so a solo player with bots gets a bigger pack than alone. It is rolled at forecast time and the wave spawns exactly that many, of those types, even if the crew changed since. The chip counts down to the spawn. Found and fixed while testing: **Horn did nothing** (the call-early rpc was never wired to the key), the chip ran 3 s late, and the spawn count ignored the told pack. Tests: `tools/forecast_test.gd` (offline: off = unchanged, pack as told, call early + spur, refusal near the bell) and `tools/forecast_mp_test.gd` (host + client over LAN: the client keeps its own toggles off, still sees the chip and is spurred). Not covered: Steam / EOS / web transports, Continue mid-run.
+- **Not borrowed:** paying by standing on a spot (our hands-on carry and build *is* the hook), auto-attack, interest on savings (we have no coin).
+
+**Upgrade branches (A/B per structure) — thought through, not built.** Thronefall's version is "spend coin, pick one of two upgrades". We have no coin, and a wall unit is not a building the crew returns to. What *does* fit, in order of fit:
+1. **Finishing a wall unit with a choice of one hands-on extra** — after a unit stands, a second small job appears: *crown it* (a parapet: slings from the wall hit harder, foes hit the wall less) or *bar it* (gate doors: bolts and bars, Neh 3:3, more health, slower to open). The crew chooses by *what they carry there*: two items on the unit's yard, first delivered wins. It keeps the carry-build hook and gives each stretch a second decision. **Needs:** per-unit state in the work front (`WorkFront.UNIT_ORDER`), two new carried items, art for two finishes. Medium cost.
+2. **Watch post branches** (§5.6): the post already has ammo; a branch (more ammo vs. longer reach) is the cheapest place to prove the idea, one choice when the post is built. Low cost.
+3. **Trade-linked branches**: a trade (§5.10) picks one of two perks per stretch. It's a *person* branch, not a structure branch, and the choice before each stretch (§6.5) already does the job.
+**Verdict for now:** not before playtest 3. If testers say "the stretch plays the same every time", build #2 first as a probe, then #1.
+
+**Other ideas parked (checked 3 Oct 2026):** *difficulty marks* — a fourth mark per stretch for an opt-in modifier (burned units, fewer spare days, raiders only) on top of Hard; *dusk grade* — a sharper day/night palette shift on top of the lamps; *readability audit* — silhouettes and damaged-only health bars at 4 players. All three need playtest evidence first.
+
+### 5.22 The well — ◐ built 4 Oct 2026 (asked for outright, inside the §0 freeze), needs playtest
+**Problem:** health never came back. Only a revive restored it (to full), so a worker who took two hits carried them to the end of the stretch and every later hit downed them sooner. Medkits (§5.3) and the water jar (§5.18) were both cut for overlapping other things.
+**Rule:** the city well (`scenes/well`, at `ScatterLayer.WELL_POS`, the cross street ~24 m behind the wall) heals. Hands free and hurt, [E] at the lip starts a drink: **40 health/s** (2.5 s from nothing to full), the HP bar climbing is the progress. Walking off, dashing, dropping, reaching for the sling, a blow, full health or dusk ends it; what was drunk is kept. Work and dawn only. Same press-once-then-hold-still loop as working a wall (`_wants_to_stop_work`), no new button. **Why a place, not a pickup:** it costs a trip away from the wall (a real route choice, the Overcooked way) and does not compete with the carried loads for hands.
+**Telling the player (three layers):**
+1. **Hurt cue**: the first time health falls under half, a toast: "Hurt? Drink at the well" (once a session, `Player._well_told`).
+2. **Where**: a `WorldTag` over the well's frame, shown only to a worker under 80% health: "Well" from afar (it slides in from the screen edge when off-screen), breathing under 50%. Healthy workers never see it.
+3. **How**: within reach it reads "Drink [E]"; with a load in hand "Set the load down first", and a press says "Set it down first — {drop}, then {interact} to drink". While drinking no tag; the HP bar fills and a sip splashes (existing `splash` sound).
+**Bots** (`BotBrain` Job.DRINK): under 45% health, hands free, no foe within 5 m, they walk to the well and drink to full; they stay put while drinking. **Switch:** `--no-well`.
+**Not done:** a drinking pose (the worker just stands, facing the well); the trough is not a second drinking spot; the 24 m trip is a guess (a closer second well per section is the fix if it is too far).
+**Kill rule:** nobody uses it (deaths are fine without it, or the toast was missed), or the trek makes hurt workers sit out most of a wave. **Tune:** `Player.DRINK_RATE`, `Well.SHOW_BELOW`, `BotBrain.DRINK_BELOW`. Tests: `tools/well_test.gd` (tag states, load refusal, drink to full, a blow interrupts, hint once), `tools/bot_well_test.gd`.
+
+### 5.23 Depth without load: the simple game — ◐ built 6 Oct 2026, needs playtest 4
+**Playtest 3 (4 Oct 2026), what it said about load:** "overwhelming? too much going? perhaps too much at the same time". The specific confusions were all *rules everyone must learn*: scattered piles / tidying up (saboteur), whether the choice card is personal or the group's and why it can't be changed (boons), the character choice conflict (trades). Distractions: sheep, the busy city. Nobody named a missed skill mechanic.
+
+**The test for every system — which kind of depth is it?**
+| Kind | What it does to a new player | Systems | Simple game |
+|---|---|---|---|
+| **Mastery** (a high ceiling) | Nothing. Ignoring it still works; finding it is a reward | true shot, turning the blow, the tell, mending, the well, watch posts | **kept** |
+| **Section twist** (one new ingredient, Overcooked) | One thing to learn, taught by a twist card, then built on | beams, salvage, ruins, two faces, mixing, the horn, haul, night, lanes, messengers | **kept**: this *is* the campaign's depth |
+| **Story setback that is felt** | A visible loss with a visible answer | the ambush (piece knocked back, posts answer it), Shemaiah, the fox | **kept** |
+| **Mandatory rule on top** | Everyone must learn it, every stretch, on top of the twist | trades, saboteur + tidying up, boons, hungry households, call early | **off** |
+| **Invisible modifier** | Nothing, because nobody can feel it. Noise in the design, not depth | boons ±15–20%, rumour ×0.9, spur ×1.15, households ±6%, trades ×1.6 | **off** |
+| **Decoration that answers back / moves** | Draws the eye off the work (playtest 3: "the sheep, distraction") | jars, birds, townsfolk in the streets, wandering sheep | **off** (sheep stay, standing still) |
+| **Second screen / second goal** | One more thing to read | *In good time* mark (the sun already says it), the stretch-end tally's ready check | **off** |
+
+**Simple game** (`Settings.simple_game` → `GameState.simplified()`, `trades_on()`, `saboteur_on()`): plain workers at the base work times (2 / 3 / 2 s, trades' ×1.6 gone), no saboteur and nothing to tidy (the ambush no longer strews the yard), no choice card, no rumour, no households, jars, birds or townsfolk, sheep standing still, two marks, the stretch-end tally moves on by itself after 11 s, no call early. Host's choice, synced on change. Practice and Explore Jerusalem are never simplified. The full game is unchanged, apart from the first stretch below, which both games share.
+
+**The first stretch, in both games** (`GameState.first_stretch()`, playtest 3: "first level just stones?"; 6 Oct 2026): the Sheep Gate has **timber and stone only** and **no watch posts**. Frames go up in timber, courses in stone, the finish and any mending take stone; mortar and the posts arrive with the Fish Gate. Replaces the day-1 stone-only rule (which needed pre-built frames and timber appearing mid-stretch for the doors — more to explain, not less). Test `tools/first_stretch_test.gd -- --nostory [--simple]`. **Watch:** see the concept ladder below, which spreads the rest out.
+
+**Rule from now on:** a new system says which kind it is. Mastery and twists are welcome; a mandatory rule must replace one, not add to the pile; an invisible modifier is either made ≥25% and visible, or not built.
+
+**The concept ladder (13 Oct 2026, built): one new concept a stretch, both games.** The first dozen days taught mortar, beams, posts, the saboteur and a choice card at once; now each stretch brings one thing, and a new foe only walks in on a stretch's last day, once its lesson is known.
+
+| Stretch | New | Notes |
+|---|---|---|
+| 1 Sheep | wall, doors, scouts | timber and stone only, no posts |
+| 2 Fish | **mortar** | brute on day 8 |
+| 3 Jeshanah | **beams** | |
+| 4 Broad Wall | **thick wall** | raider on day 17 |
+| 5 Ovens | **watch posts** | the ambush (day 20) tests them |
+| 6 Valley | **horn** | answers the ambush; the choice card starts here (`StoryData.CHOICES_FROM`) |
+| 7 Ash Heaps | **long haul** | |
+| 8 Fountain | **mixing by hand** | doubles up with the households (Neh. 5, full game); pressure 0.55 carries it |
+| 9 Water | **night + saboteur** | one idea: what comes out of the dark |
+| 10 Horse | **rubble: salvage, old and burned units** | the dig / shore pair lives here |
+| 11 East | **schemes** | |
+| 12 Miphkad | nothing new | every ingredient at once |
+
+Posts are open from section 4 (`GameState.posts_open`), the saboteur from 8. Cut: the Fish / Jeshanah / Broad Wall / Ovens choice pairs (porters, market, rush, pack, hot, bank). Not yet done: trades are still offered from the start; the Fountain's two cards (mixing, spring); the ruins and salvage cards' in-game pictures and the mixing one need re-shooting (`tools/twist_pics.ps1`); the new mortar and posts cards use drawn pictograms.
+
+**For the full game (proposed, not built — decide after playtest 4 compares the two):**
+1. **Stagger, don't stack.** The full game's extras arrive one at a time, like twists: trades offered from the 3rd stretch (Jeshanah), the saboteur from the Broad Wall with its own twist card, boons from the Tower of the Ovens. The first two stretches play as the simple game
+2. **Make the modifiers felt or drop them.** Trades: a visible tool and a sound on your own work (or ×2 instead of ×1.6). Boons: each option must change something you *see* (e.g. "posts from dawn") rather than a percentage
+3. **Fix the confusions playtest 3 named regardless of mode:** the choice card says "the crew votes — you can change your vote until everyone is ready"; the scattered pile's twist card before the saboteur's first day
+4. **Simple as the default for a first run?** If playtest 4 shows new players happier in Simple and the dev circle bored, ship Simple as the default "Story" setting and the full game as "Full crew" — not a difficulty, a depth choice
+
+**Playtest 4:** run A (Sheep → Fish, new players) in Simple, run B in Full with a different group. Compare: "what do I do?" ticks, Fellowship ticks, would they play the next stretch. Plan, observer sheet and pre-set decision thresholds: `PLAYTEST_4.md`.
+
+### 5.24 Where do sessions stop? Anonymous play stats — ◐ built 13 Oct 2026, not deployed
+**Gap found (engagement review, 13 Oct 2026):** `sessions.log` is written only on this machine, and a closed browser tab never reaches the code that writes it. Every playtest so far was verbal; the retention question ("fun for 2–3 stretches, then no pull") had no numbers behind it.
+**Kind:** instrumentation, not a mechanic. The players never see it, so it adds nothing to learn.
+**Built:**
+- `Telemetry` (autoload, `scenes/telemetry/telemetry.gd`): on the **web build only**, a small beacon (`navigator.sendBeacon('/t')`, same origin) at every phase change, every 30 s while open, when the tab is hidden or shown, on the first frame and on leaving a game. Each says where on the circuit the session is (stretch, day, phase, pieces standing, breaches, crew, mode, Simple or Full, frame rate, language). Nothing else. On the title (the bot crew behind the menu) it says nothing about the game
+- **Privacy:** no name, account, address or user agent is read or kept; no id outlives a page load (a fresh 12-character session id each time, kept nowhere). So a returning player cannot be recognised: retention comes from the 48 h follow-up in `PLAYTEST_4.md`, not from the stats. Settings → Advanced → Play stats turns it off (web only; the row isn't built on desktop, where nothing is sent). The site's privacy page needs one line before this ships
+- Worker (`web-port`: `worker/src/stats.js`, `stats_core.js`): `POST /t` keeps the beacon in a SQLite Durable Object after checking every field against an allow-list (unknown keys dropped, numbers clamped, another site's Origin refused), capped per session (1000) and per day (60 000), kept 120 days. `GET /t/report?days=N` with `Authorization: Bearer <STATS_KEY>` returns the funnel, where sessions stopped, Full vs Simple, solo vs company, recent sessions, frame rate. Off until `wrangler secret put STATS_KEY`. `node report.mjs` prints it as tables
+- **Tests:** `tools/telemetry_test.gd` (no browser: allow-list, off switch, caps, modes, attract mode, the settings row); `worker`: `npm test` (row validation, the report). Checked once against the real web export in headless Chrome and `wrangler dev`: open, heartbeat and tab-hidden beacons arrived and the report counted them. Real play through the browser wasn't driven (headless Chrome ran ~1 fps); phase beacons share the tested `event()` path
+**Not built:** a persistent id (needs consent wording, and the follow-up message does the job); desktop / Steam stats (a different promise to players); per-stretch time and death counts (add only if the funnel says where to look).
+**Kill rule:** if the report is never opened between playtests, remove it. If a tester or a player objects to it, make it opt-in.
+
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |
 |---|---|---|
@@ -492,9 +585,8 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 | Civilians (women, children) inside the city | Raises stakes, fits Neh 4:13 | Adds AI work |
 | Prep days (gather materials, craft weapons) | Rhythm between sections | Slows pacing |
 | Stand on a tile to spawn builders/fighters (mobile-ad style) | Addictive progression hook | Can drift toward an idle game |
-| Medkits / healing | Survivability | Low priority |
 
-Done and removed from the table: wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6), player roles → trades (§5.10).
+Done and removed from the table: healing → the well (§5.22), wall damage (§5.2), brute + raider (§2), ballistas → watch posts (§5.6), player roles → trades (§5.10).
 
 **Suggested order:** playtest 3 first (everything in §0 is first pass) → keep/cut per kill rules → archer or spear rack (§5.18), one at a time → launch scope (§7)
 
@@ -509,15 +601,15 @@ Done and removed from the table: wall damage (§5.2), brute + raider (§2), ball
 | # | Section (Neh 3) | Days | New ingredient | Grounded in | Pressure |
 |---|---|---|---|---|---|
 | 1 | **Sheep Gate** (3:1) | 1–4 | Core loop. Gates end with a **doors step**: hang the doors, fit bolts and bars — a recurring finale for every gate section | "set up its doors, its bolts and its bars" (3:3, 3:6, 3:13…) | Low — scouts only |
-| 2 | **Fish Gate** (3:3) | 5–8 | **Beams** — long timbers that need **two workers** to carry | "they laid its beams" (3:3, 3:6) | Low |
-| 3 | **Jeshanah (Old) Gate** (3:6) | 9–12 | **Salvage** — no stone stockpile; stone comes from rubble heaps scattered across the site. **Old and burned units** (`ruins`, §6.4): one unit's courses still stand, another's charred framing must be pulled down first (5 s of work), then its timbers — 3 to 5 charred loads, slower to carry — hauled to the tip past the inner face before any stage opens (Oct 2 2026, untested in play; `tools/debris_test.gd`) | Sanballat: will they revive the stones from the heaps of rubbish, burned as they are? (4:2) | Brutes arrive |
+| 2 | **Fish Gate** (3:3) | 5–8 | **Mortar** — the courses are laid in it and a battered wall is mended with it (the Sheep Gate has timber and stone only). The first brute walks in on day 8 | "their ... mortar" the wall is joined (4:6); mortar is the first thing a builder asks for | Low |
+| 3 | **Jeshanah (Old) Gate** (3:6) | 9–12 | **Beams** — long timbers that need **two workers** to carry | "they laid its beams" (3:6; also 3:3) | Low |
 | 4 | **Broad Wall** (3:8) | 13–17 | **Double-thick, two-face wall** — outer face, inner face, rubble core (§6.3); four hands per unit | Built by goldsmiths and ointment makers — craftsmen, not masons (3:8) | Mockery beat (4:3) as the section intro |
-| 5 | **Tower of the Ovens** (3:11) | 18–23 | **Mortar mixing** — carry lime + water to a trough, mix, then deliver. The Overcooked "cooking" step | Ovens / lime burning; mortar was made on site | Rising |
+| 5 | **Tower of the Ovens** (3:11) | 18–23 | **Watch posts** — raise one behind the wall in timber, keep it stocked with sling stones. Two days to learn them, then the ambush (4:11) on day 20 is what a stocked post holds off | "we set a watch against them day and night" (4:9) | Rising |
 | 6 | **Valley Gate** (3:13) | 24–29 | **The horn** — a worker can sound it to call everyone to a spot; enemies come in surges from the valley | "At the place where you hear the horn, gather to us" (4:20); half worked, half held spears (4:16) | **Peak #1** — conspiracy (4:7-8); raiders from day 21 |
 | 7 | **Gate of the Ash Heaps** (3:14) | 30–33 | **Long haul** — the site is far from the supply yard; chains of drops and hand-offs pay off | 1,000 cubits of wall up to the Gate of the Ash Heaps (3:13) | Medium |
-| 8 | **Fountain Gate** (3:15) | 34–36 | **Breather** — short, beautiful: the Pool of Shelah, the King's Garden, stairs down from the City of David. Water is close (fast mortar) | 3:15 | **Low** — deliberate rest |
+| 8 | **Fountain Gate** (3:15) | 34–36 | **Mortar mixing** — lime and water into the trough, then **someone stirs it** (hands-on work, one batch, more hands quicker). Lime burning: the Ovens' own craft, learned in the gentlest stretch. A breather too — short, beautiful: the Pool of Shelah, the King's Garden, stairs down from the City of David. Water is close (fast mortar) | 3:15 | **Low** — deliberate rest |
 | 9 | **Water Gate** (3:26) | 37–41 | **Night watch** — some days end in darkness; torches light small areas, enemies come out of the dark | Guards at night, work by day (4:22-23) | Rising |
-| 10 | **Horse Gate** (3:28) | 42–47 | **Cramped streets** — each priest builds "in front of his own house": tight lanes, little room to pass (the Overcooked "small kitchen") | 3:28 | High |
+| 10 | **Horse Gate** (3:28) | 42–47 | **Salvage + old and burned units** (`ruins`, §6.4): no stone stockpile, stone comes from rubble heaps; one unit's courses still stand, another's charred framing must be pulled down. Also **cramped streets** — each priest builds "in front of his own house": tight lanes, little room to pass (the Overcooked "small kitchen") | 3:28 | High |
 | 11 | **East Gate** (3:29) | 48–50 | **Schemes** — messengers appear with invitations "to the plain of Ono"; while one talks at a worker, their work slows; [E] answers him. Neighbours with warnings come too: tell friend from foe (§6.7) | 6:1-4 (four times, the same answer) | **Peak #2** — Geshem's raiders from the east |
 | 12 | **Inspection (Miphkad) Gate** (3:31) | 51–52 | **Finale** — close the circuit back to the Sheep Gate (3:32). All ingredients at once. When the last section is complete, the enemies lose heart and withdraw | 6:15-16 | Highest, then release |
 
@@ -634,7 +726,7 @@ Borrow Overcooked's **structure and readability**, not its tone.
 Judge new work against this list. Not built unless marked.
 - **Platform and store:** Steam desktop first (app id 480 is a placeholder), store page + wishlist plan, trailer (`tools/trailer.ps1`, v1 exists), price/platform plan in the business notes. Studio: Takiko Games
 - **Steam features:** achievements (map to the marks: *In good time*, *None got through*, *The wall holds*, plus run-level ones), Steam Cloud for `progress.cfg` / campaign save, rich presence, controller glyphs (done via `InputMode`)
-- **Accessibility:** colourblind-safe player markers (the rings are colour-only today), text size option, subtitles for watchman calls and sung/story audio, full rebinding (partly: `reveal` is rebindable), reduce-screen-shake (done), hold-vs-toggle for the ready check
+- **Accessibility:** colourblind-safe player markers (done 9 Oct 2026: `CrewMark`, a shape per slot (diamond, circle, triangle, square) on the billboarded pip over each head, the HUD cards and the tally's crew chips; the ground rings stay colour-only), text size option, subtitles for watchman calls and sung/story audio, full rebinding (partly: `reveal` is rebindable), reduce-screen-shake (done), hold-vs-toggle for the ready check
 - **Networking robustness:** host drop mid-day (what happens?), client reconnect, late join mid-day (known gaps: households, night ride co-op), disconnect while holding a beam end. Crossplay stays parked (`crossplay_plan`)
 - **Performance:** web and low-end desktop budgets; web-untested list: flock, map look, landscape pass, birds draw calls
 - **Localisation:** es / pt_BR / de / ko drafts exist; every new string is English-only until the i18n extract is run. Native-speaker pass before launch
@@ -646,16 +738,16 @@ Measured against what §8 promises. New mechanics (marked *mech*) wait for the f
 | # | Gap | Why it matters | Cost / note |
 |---|---|---|---|
 | 1 | **Steam page not live**: `STEAM_APP_ID` still 480 | No wishlists, no Next Fest. Copy + capsules ready (`docs/steam/store_page.md`) | User-only: Steamworks login, App ID, review 3–5 days |
-| 2 | **No demo build** | Next Fest; days 1–9 ending on the first brute is the hook | Flag (e.g. `--demo` / export feature) that ends the run at day 9 + "Wishlist" end card |
+| 2 | **Demo build** (built 4 Oct 2026, uncommitted) | Next Fest; days 1–9 ending on the first brute is the hook | `GameState.is_demo()` = export feature `demo` or `-- --demo`. Ends at dusk of day 9 (a brute is forced), no ending/credits, only 2 stretches on the map, no WALL_DONE achievement. End card "The first brute" + wishlist button (set `DEMO_WISHLIST_URL`). Presets "Windows Demo" / "Web Demo" (local cfg). Test: `tools/demo_test.gd`. Still needs its own Steam demo App ID |
 | 3 | **No couch co-op / Remote Play Together** *(mech)* | Overcooked / PlateUp! sell on one screen, four pads; streamers; families on one PC (§8 audience 2) | Biggest item. Several local players, one shared camera (fixed crew-framing view exists). Decide after playtest 3 |
 | 4 | **No ping / quick-call wheel** *(mech)* | The pitch sells the crew shouting; online without voice has only the horn | "Stone here / Help / Gap" at a spot, reuse `offscreen_alerts` pointers. Kill rule: nobody uses it |
 | 5 | **First minute isn't chaos** | Trailer starts at the wall, game starts on prologue cards | Hauling stone under attack within ~60 s on first play. Story after, or shortened (§5.13 risk a) |
-| 6 | **No near-miss beat** *(mech)* | Clips are the main channel; last-second finishes aren't framed | Last unit closes with foes near the gap → brief slow-down / camera punch. Respect reduce-screen-shake |
-| 7 | **No Steam Timeline markers** | Lets players clip breaches, completions and close calls from Steam recording | Cheap if GodotSteam exposes the Timeline API. Check version |
+| 6 | ✅ **Close call** (9 Oct 2026) | Clips are the main channel; last-second finishes weren't framed | `DayDirector._close_call()`: the stretch stands on its last day with ≤ 12 s of light ("stars"), or with a runner (one that would have got through: not a wrecker, which late in a stretch is always at the wall, nor the saboteur) within 4 m of the piece that closed it ("gap"). Every peer: slow motion 0.12 for 1.1 s (the dusk's is 0.3 for 0.5 s), the mix drops behind a low-pass and opens up (`Sfx.hold_breath`), a shake (respects the setting), the nearer watchman calls it, the tally adds "By a hair: …", the reel keeps a still, the scribe's margin says "by a hair" (`chronicle[i].close`). No bouncy text (§6.2). Test `tools/close_call_test.gd -- --nostory --day=8` |
+| 7 | ✅ **Steam Timeline** (9 Oct 2026) | Lets players clip breaches, completions and close calls from Steam recording | `Highlights`: every reel moment is also a timeline marker (`TIMELINE`: built-in `steam_*` icons, priority, clip priority; the close call is *featured*); game mode follows the phase (gathering = staging, story/end = menus, the day = playing); a tooltip "Day N · stretch" each dawn. Off without Steam. Not yet seen in Steam's own recorder |
 | 8 | **Store copy out of date** | `store_page.md` says GDD v0.6, Defend line names only the sling, short description lacks the 4:17 hook | Text pass, sync with §8 and the site dictionaries |
 | 9 | **No faith-audience page on the site** | Second audience needs "is it accurate?" and a parents/teachers page | nehemiah-website. Keep apart from Steam copy |
 
-**Order:** 1 (user) → 2 → 8 → 6 + 7 → 4 → 5 → 3 (decide after playtest 3) → 9.
+**Order:** 1 (user) → 2 → 8 → ~~6 + 7~~ → 4 → 5 → 3 (decide after playtest 3) → 9.
 
 ---
 

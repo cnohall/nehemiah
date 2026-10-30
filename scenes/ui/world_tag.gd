@@ -182,6 +182,16 @@ func _build() -> void:
 		_panel.add_theme_stylebox_override("panel", bare)
 	else:
 		_panel.add_theme_stylebox_override("panel", sb)
+		if not _paper():
+			# A gilt line just inside the dark lacquer's edge, following its corners
+			var gilt := StyleBoxFlat.new()
+			gilt.draw_center = false
+			gilt.set_border_width_all(1)
+			gilt.border_color = Color(UiStyle.GOLD, 0.32)
+			gilt.set_corner_radius_all(maxi(sb.corner_radius_top_left - 3, 2))
+			gilt.anti_aliasing = true
+			_panel.draw.connect(func():
+				_panel.draw_style_box(gilt, Rect2(Vector2(3, 3.5), _panel.size - Vector2(6, 6.5))))
 	_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_root.add_child(_panel)
 	_box = VBoxContainer.new()

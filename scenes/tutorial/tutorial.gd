@@ -24,6 +24,7 @@ var _between := 0.0
 var _start_pos := Vector3.ZERO
 var _scout: Node3D
 var _fallen: Node3D
+var _stray: Node3D   # the scout that brings the crewmate down
 var _fell := false   # the crewmate has gone down (a beat after joining)
 var _saved_sun := true
 var _ping_t := 0.0
@@ -68,9 +69,9 @@ func _ready() -> void:
 		  "start": _send_scout,
 		  "goal": func(): return [_scout, "Sling it  {throw}"] if _scout_alive() else [],
 		  "done": func(): return not _scout_alive() },
-		{ "title": "Nobody gets up alone", "text": "Your crewmate is down. Go to them and press {interact} to help them up",
+		{ "title": "Nobody gets up alone", "text": "A crewmate runs in, a scout on their heels, and goes down. Drive it off, then press {interact} at them to help them up",
 		  "start": _fell_crewmate,
-		  "goal": func(): return [_fallen, "Help up  {interact}"] if _fell and is_instance_valid(_fallen) else [],
+		  "goal": func(): return _lift_goal(),
 		  "done": func(): return _fell and is_instance_valid(_fallen) and not _fallen.downed },
 		{ "title": "That's the work", "text": "Carry, build, guard, and lift each other up.\n“Let us rise up and build.” (Neh. 2:18)",
 		  "start": _finale,
@@ -216,6 +217,14 @@ func _pile() -> Node3D:
 		return any[0] if not any.is_empty() else null
 	return best
 
+# The stray first (it's on the player now), then the fallen crewmate
+func _lift_goal() -> Array:
+	if not _fell or not is_instance_valid(_fallen):
+		return []
+	if is_instance_valid(_stray) and _stray.get("health") > 0.0:
+		return [_stray, "Sling it  {throw}"]
+	return [_fallen, "Help up  {interact}"]
+
 func _scout_alive() -> bool:
 	return _scout != null and is_instance_valid(_scout) and _scout.get("health") > 0.0
 
@@ -231,8 +240,7 @@ func _any_built() -> bool:
 func _finale() -> void:
 	_leave.text = "Back to the title"
 	_leave.theme_type_variation = &"PrimaryButton"
-	_leave.focus_mode = Control.FOCUS_ALL
-	_leave.grab_focus()
+	_leave.focus_mode = Control.FOCUS_CLICK   # no grab: Space/A must keep dashing
 
 # One scout, a little way out beyond the wall from wherever the player is
 func _send_scout() -> void:
@@ -250,8 +258,21 @@ func _fell_crewmate() -> void:
 			_fallen = p
 	if _fallen == null:
 		return
-	_fallen.global_position = _me().global_position + Vector3(3.0, 0.0, 1.5)
-	await get_tree().create_timer(0.3).timeout
+	# Arrives on foot from the east edge of the view, then goes down near the player
+	var me := _me().global_position
+	_fallen.global_position = Vector3(clampf(me.x + 15.0, -14.0, 14.0), 0.0, clampf(me.z + 2.0, -6.0, 6.0))
+	# A stray scout chases them down; once it catches up they go down, and it turns on the player
+	_stray = load("res://scenes/enemy/enemy.tscn").instantiate()
+	_stray.type = 0
+	_stray.position = _fallen.global_position + Vector3(4.0, 0.1, -3.0)
+	_main.enemies_root.add_child(_stray, true)
+	_stray._target_player = _fallen
+	var t := 0.0
+	while t < 8.0 and is_instance_valid(_fallen) and is_instance_valid(_stray) \
+			and _stray.global_position.distance_to(_fallen.global_position) > 2.2:
+		_stray._target_player = _fallen
+		await get_tree().process_frame
+		t += get_process_delta_time()
 	if is_instance_valid(_fallen):
 		_fallen.take_damage(1000.0)
 		_fell = true

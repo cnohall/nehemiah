@@ -30,6 +30,8 @@ var _defs := {
 	"deposit_portion": [_n("impactSoft_medium_%03d", 0, 5), -4.0, 1.05, 1.2],
 	"work_branch":    [_n("impactWood_medium_%03d", 0, 5), -9.0, 1.3, 1.5],
 	"build":          [_n("impactPlank_medium_%03d", 0, 5), 0.0, 0.8, 0.95],
+	# A battered wall mended (WallSection.REPAIR_GAIN): the stage-raise knock, lighter
+	"mend":           [_n("impactPlank_medium_%03d", 0, 5), -2.0, 1.1, 1.22],
 	# One strike of the working loop, by what is being worked
 	"work_wood":      [_n("impactWood_medium_%03d", 0, 5), -8.0, 1.15, 1.35],
 	"work_beam":      [_n("impactWood_medium_%03d", 0, 5), -8.0, 1.0, 1.15],
@@ -131,6 +133,10 @@ var _music_mood := ""
 var _music_last := {}   # mood → index last played, so a mood never repeats back to back
 var _music_tween: Tween
 var _duck_tween: Tween
+const BREATH_LOW_HZ  := 450.0
+const BREATH_OPEN_HZ := 20000.0
+var _breath: AudioEffectLowPassFilter
+var _breath_tween: Tween
 
 var _streams := {}      # name → Array[AudioStream]
 var _last_played := {}  # name → msec
@@ -183,6 +189,8 @@ func _ready() -> void:
 
 # Let go of streams (and live playbacks) so shutdown doesn't report them leaked
 func _exit_tree() -> void:
+	if _breath:
+		_let_breath_go()
 	for p in _pool:
 		p.stop()
 		p.stream = null
@@ -255,6 +263,28 @@ func play_jingle(event: String) -> void:
 	_duck_tween.tween_method(func(db: float): AudioServer.set_bus_volume_db(bus, _music_bus_db() + db), 0.0, DUCK_DB, 0.3)
 	_duck_tween.tween_interval(maxf(length - 0.3, 0.2))
 	_duck_tween.tween_method(func(db: float): AudioServer.set_bus_volume_db(bus, _music_bus_db() + db), DUCK_DB, 0.0, 1.5)
+
+## A held breath (a close call, DayDirector.CLOSE_*): the whole mix drops behind a
+## low-pass, then opens back up over `time` real seconds, whatever the time scale
+func hold_breath(time: float) -> void:
+	if _breath_tween:
+		_breath_tween.kill()
+	if _breath == null:
+		_breath = AudioEffectLowPassFilter.new()
+		AudioServer.add_bus_effect(0, _breath)
+	_breath.cutoff_hz = BREATH_LOW_HZ
+	_breath_tween = create_tween().set_ignore_time_scale(true)
+	_breath_tween.tween_interval(time * 0.35)
+	_breath_tween.tween_property(_breath, "cutoff_hz", BREATH_OPEN_HZ, time * 0.65) \
+		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+	_breath_tween.tween_callback(_let_breath_go)
+
+func _let_breath_go() -> void:
+	for i in AudioServer.get_bus_effect_count(0):
+		if AudioServer.get_bus_effect(0, i) == _breath:
+			AudioServer.remove_bus_effect(0, i)
+			break
+	_breath = null
 
 func _on_phase(phase: int) -> void:
 	if GameState.attract:

@@ -101,8 +101,8 @@ func blocks_workers() -> bool:
 func refusal(kind: String) -> String:
 	if built:
 		return "This booth stands"
-	return "The booth wants branches — from the olive trees outside the wall" if kind != "branch" \
-		else "Branches enough — {interact} to build it"
+	return "The booth wants branches from the olive trees outside the wall" if kind != "branch" \
+		else "Branches enough. {interact} to build it"
 
 func work() -> BuildWork:
 	return _work

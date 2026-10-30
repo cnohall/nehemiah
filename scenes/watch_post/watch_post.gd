@@ -104,8 +104,9 @@ func _on_section_changed() -> void:
 		reset_slot()
 	_refresh()
 
+## Not before the Tower of the Ovens (GameState.posts_open): the wall comes first, posts when the ambush does
 func _enabled() -> bool:
-	return GameState.posts
+	return GameState.posts and GameState.posts_open()
 
 # Shown / in the groups only while the rule is on; solid only once it stands
 func _refresh() -> void:
@@ -233,7 +234,7 @@ func is_complete() -> bool:
 ## Player: why a load was refused here
 func refusal(kind: String) -> String:
 	if not built:
-		return "The post needs timber" if kind != "wood" else "Enough timber — {interact} to raise it"
+		return "The post needs timber" if kind != "wood" else "Enough timber. {interact} to raise it"
 	if kind != "stone":
 		return "The slinger wants stone for his sling"
 	return "The slinger has stones enough"
@@ -419,6 +420,9 @@ func _build_label() -> void:
 func _update_label() -> void:
 	if _label == null:
 		return
+	# Bare footing is flat on the ground: a short one-line sign low over it. Once the
+	# tower stands the sign rides above the deck.
+	_label.position.y = 0.5 if not built else DECK_Y + 1.9
 	var lines: PackedStringArray = [tr("Watch post") if not built else tr("Slinger")]
 	if not built:
 		lines.append("Build  [%s]" % InputMode.key("interact") if can_build() 			else "Wood %d/%d" % [mini(pending, _cost()), _cost()])
@@ -426,5 +430,6 @@ func _update_label() -> void:
 		if ammo == 0:
 			lines[0] = tr("Out of sling stones")
 		lines.append("Stone %d/%d" % [ceili(float(ammo) / SHOTS_PER_LOAD), MAX_AMMO / SHOTS_PER_LOAD])
-	_label.text = "
-".join(lines)
+	# A short name stacks to fit the narrow post; a long one would tower, so it stays a line
+	_label.stack_name = built and ammo > 0
+	_label.text = "\n".join(lines)

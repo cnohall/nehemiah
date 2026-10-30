@@ -11,7 +11,7 @@ extends SceneTree
 # interact like a player would, and prints how long each stage's work took.
 # Saves a screenshot mid-work. Exit code 0 = the day's first unit got fully built.
 
-const TIMEOUT := 150.0         # trades stretch the work (Trade.WORK_MULT)
+const TIMEOUT := 240.0         # trades stretch the work (Trade.WORK_MULT); a solo worker gets knocked down
 const HOST_LIFETIME := 140.0
 
 var _out := ""
@@ -110,6 +110,17 @@ func _process(delta: float) -> bool:
 	if _wait > 0.0:
 		return false
 	var gs = root.get_node("GameState")
+	# The scripted worker only builds, never fights: over a whole solo stretch ten foes
+	# could walk in and end the run (1 in 3 runs did). This tests the build loop, so the
+	# city doesn't fall here.
+	if _mode == "offline" and gs.phase == gs.Phase.WORK:
+		gs.breaches = 0
+	# Knocked down (alone, back up by itself after a few seconds): wait it out, then pick
+	# the loop up where it is
+	if _player != null and _player.downed and _state != "dusk":
+		_state = "next"
+		_wait = 0.5
+		return false
 	match _state:
 		"wait":
 			if gs.phase == gs.Phase.WORK:
@@ -149,11 +160,15 @@ func _process(delta: float) -> bool:
 				var pile := _pile_for(need)
 				_deliver_to = _site
 				if pile == null and need == "mortar":
-					# "mixing" twist: feed the trough lime and water, wait, then carry the mortar
+					# "mixing" twist: feed the trough lime and water, stir, then carry the mortar
 					var trough := _trough()
 					var feed: String = trough.next_need() if trough != null else ""
 					if feed.is_empty():
-						_wait = 0.3   # mixing
+						if trough != null and trough.can_build():
+							_goto(trough)
+							_press()
+							_state = "stir"
+						_wait = 0.3
 						return false
 					pile = _pile_for(feed)
 					_deliver_to = trough
@@ -189,6 +204,14 @@ func _process(delta: float) -> bool:
 			_press()
 			_state = "after_deliver" if _deliver_to == _site else "next"
 			_wait = 0.3
+		"stir":
+			var t := _trough()
+			if t == null or not t.can_build():
+				_state = "next"
+			elif _player._work_site == null:
+				_goto(t)   # let go (a hit, a slow frame): take the paddle again
+				_press()
+				_wait = 0.3
 		"after_deliver":
 			if not gs.active_build or not _site.can_build() or _player._work_site == null:
 				_state = "next"

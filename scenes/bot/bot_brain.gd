@@ -16,7 +16,7 @@ extends RefCounted
 # The horn (Horn): a bot with a pack on it sounds it; empty-handed bots not at the wall gather
 # in the ring while foes are about, where blows land harder. Haul relays fall back to the jobs above.
 
-enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY, RALLY, COVER }
+enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY, RALLY, COVER, DRINK }
 
 # Apprentice / Builder / Master builder. think = seconds between decisions; speed = stick
 # push (1 = full run); aim_err = metres off the enemy; charge = least wind-up;
@@ -58,6 +58,8 @@ const COVER_THREAT  := 8.0    # …with a foe this close to them
 const COVER_GAP     := 2.0    # where it stands: within this of them
 const SPACING       := 1.2    # workers don't collide: a bot edges away from any this close…
 const SPREAD_PUSH   := 0.6    # …this hard (stick units) when right on top of them
+const DRINK_BELOW   := 0.45   # hands free and hurt this badly: walk to the well (GDD §5.22)…
+const DRINK_CLEAR   := 5.0    # …unless a foe is this close — see to him first
 
 # Read by Player
 var move := Vector2.ZERO          # screen-space stick, like Input.get_vector
@@ -117,7 +119,7 @@ func think(delta: float) -> void:
 	_sling()
 	if _answer_visitor():
 		return
-	if _p._work_site != null:
+	if _p._work_site != null or _p._drink_well != null:
 		return
 	if _dawdle <= 0.0:
 		_act(delta)
@@ -137,6 +139,8 @@ func _decide() -> void:
 			_set_job(Job.GUARD, null)
 			_step_off()
 		return
+	if _p._drink_well != null:
+		return   # mending: stay till full (a blow or full health ends it)
 	if _p.helping_id != 0:
 		_set_job(Job.HELP_BEAM, _p._beam_partner())
 		return
@@ -197,6 +201,13 @@ func _decide() -> void:
 			_press("drop")   # nobody wants it (the wall moved on) — clear the hands
 			_set_job(Job.IDLE, null)
 		return
+	# Badly hurt, hands free, nobody on us: to the well
+	if _p.health < Player.MAX_HEALTH * DRINK_BELOW and Player.can_drink_now() \
+			and _foe_near(_p.global_position, DRINK_CLEAR) == null:
+		var well := _p.get_tree().get_first_node_in_group("wells") as Node3D
+		if well != null:
+			_set_job(Job.DRINK, well)
+			return
 	# The horn: gather to a standing call while there are foes to fight; with a pack of
 	# them on us and no call standing, sound it
 	if GameState.has_twist("horn"):
@@ -241,12 +252,12 @@ func _decide() -> void:
 		return
 	# Trades (Trade): the overseer is the first to stand guard when foes close on the work
 	var foes := _foes_near_work()
-	if _guards() < _guards_wanted() or (_p.trade == Trade.OVERSEER and GameState.trades \
+	if _guards() < _guards_wanted() or (_p.trade == Trade.OVERSEER and GameState.trades_on() \
 			and not foes.is_empty() and _guards() == 0):
 		_set_job(Job.GUARD, _site_facing(foes))
 		return
 	# …the water carrier would rather carry, while anything is wanted
-	if _p.trade == Trade.WATER_CARRIER and GameState.trades:
+	if _p.trade == Trade.WATER_CARRIER and GameState.trades_on():
 		var haul := _pick_fetch()
 		if haul != null:
 			_set_job(Job.FETCH, haul)
@@ -384,7 +395,7 @@ func _set_job(job: Job, target: Node3D) -> void:
 func _bark_for(job: Job, target: Node3D) -> void:
 	match job:
 		Job.REVIVE:
-			_p.bark("Hold on — I'm coming!")
+			_p.bark("Hold on, I'm coming!")
 		Job.COVER:
 			_p.bark("I've got your back!")
 		Job.CHASE:
@@ -459,7 +470,8 @@ func _missing(site: Node3D) -> Dictionary:
 				want[kind] = 1
 		return want
 	if site.has_method("repairing") and site.repairing():
-		return { "mortar": 1 } if site.needs("mortar") else {}
+		var mend_with: String = site.repair_material()
+		return { mend_with: 1 } if site.needs(mend_with) else {}
 	if site.has_method("cost_for") and site.get("pending") is Dictionary:
 		var out := {}
 		var cost: Dictionary = site.cost_for(site.stage + 1)
@@ -604,6 +616,8 @@ func _act(delta: float) -> void:
 				_walk_to(_target.global_position, delta, 0.8)
 		Job.TIDY:
 			_go_and_press(_target, Player.INTERACT_REACH - 0.6, Player.Act.TIDY, delta)
+		Job.DRINK:
+			_go_and_press(_target, Player.INTERACT_REACH - 0.6, Player.Act.DRINK, delta)
 		Job.RALLY:
 			if _flat(_target.global_position - _p.global_position).length() > 1.8:
 				_walk_to(_target.global_position, delta, 1.0)
