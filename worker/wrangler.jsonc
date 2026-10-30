@@ -4,10 +4,16 @@
   "main": "src/index.js",
   "compatibility_date": "2026-01-01",
   "durable_objects": {
-    "bindings": [{ "name": "LOBBY", "class_name": "Lobby" }]
+    "bindings": [
+      { "name": "LOBBY", "class_name": "Lobby" },
+      { "name": "STATS", "class_name": "Stats" }
+    ]
   },
-  // SQLite-backed so it runs on the free plan
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby"] }],
+  // SQLite-backed so they run on the free plan
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Lobby"] },
+    { "tag": "v2", "new_sqlite_classes": ["Stats"] }
+  ],
   "r2_buckets": [{ "binding": "GAME", "bucket_name": "nehemiah-game" }],
   // Apex nehemiahgame.com is the landing page (Vercel, repo nehemiah-website)
   "routes": [{ "pattern": "play.nehemiahgame.com", "custom_domain": true }],

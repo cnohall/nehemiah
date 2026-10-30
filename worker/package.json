@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "report": "node report.mjs",
+    "test": "node --test test/*.test.mjs",
     "upload:local": "node deploy.mjs --local",
     "deploy": "node deploy.mjs"
   },

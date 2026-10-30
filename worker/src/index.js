@@ -6,11 +6,16 @@
 // room and gets a 5-letter code; joiners send the code, and the Lobby relays
 // WebRTC offers/answers/ICE candidates between each joiner and the host.
 //
-// Bindings (wrangler.jsonc): LOBBY (Durable Object), GAME (R2 bucket with the web export)
+// Bindings (wrangler.jsonc): LOBBY (Durable Object), STATS (Durable Object, play stats),
+// GAME (R2 bucket with the web export)
 // Optional secrets for Cloudflare TURN (players behind strict NATs):
 //   TURN_KEY_ID, TURN_KEY_API_TOKEN
+// Optional secret to read the play stats (/t/report): STATS_KEY
 
 import { DurableObject } from "cloudflare:workers";
+
+// Anonymous play stats (stats.js): the web build's beacons in, a report out
+export { Stats } from "./stats.js";
 
 // Bump together with WebRtcOnline.PROTOCOL and server/server.js
 const PROTOCOL = 1;
@@ -31,6 +36,9 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === "/ws" || url.pathname === "/health") {
       return env.LOBBY.get(env.LOBBY.idFromName("lobby")).fetch(req);
+    }
+    if (url.pathname === "/t" || url.pathname === "/t/report") {
+      return env.STATS.get(env.STATS.idFromName("stats")).fetch(req);
     }
     // AI assistants look for these on whatever host they land on; the site keeps them
     if (url.pathname === "/llms.txt" || url.pathname === "/llms-full.txt") {
