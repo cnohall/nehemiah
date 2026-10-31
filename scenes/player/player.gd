@@ -404,6 +404,8 @@ func _physics_process(delta: float) -> void:
 				_server_horn.rpc_id(1, global_position)
 			else:   # experimental call-early (GDD §5.21); the host decides if it counts
 				_server_call_early.rpc_id(1)
+		if _consume("call"):
+			_server_call.rpc_id(1, _call_point())
 	_update_anim()
 
 # ── Movement ───────────────────────────────────────────────
@@ -422,7 +424,7 @@ func _buffer_input(delta: float) -> void:
 	if brain == null and InputMode.gameplay_blocked():
 		_buffered.clear()
 		return
-	for action: String in ["interact", "drop", "dash", "horn"]:
+	for action: String in ["interact", "drop", "dash", "horn", "call"]:
 		if brain.take_press(action) if brain != null else Input.is_action_just_pressed(action):
 			_buffered[action] = INPUT_BUFFER
 		elif _buffered.has(action):
@@ -1699,6 +1701,29 @@ func _server_horn(at: Vector3) -> void:
 		_action.rpc("halfslash")
 	else:
 		_tell("The horn was just sounded")
+
+# ── The call (GDD §5.25) ───────────────────────────────────
+
+const CALL_REACH     := 20.0   # mouse: the call goes where the cursor points, this far at most
+const CALL_PAD_REACH := 6.0    # pad: this far along the right stick, or where we stand
+
+## Owner: where a call points
+func _call_point() -> Vector3:
+	if brain != null:
+		return global_position
+	if InputMode.using_pad:
+		var stick := Input.get_vector("aim_west", "aim_east", "aim_north", "aim_south", STICK_DEADZONE)
+		return global_position + screen_to_ground(stick).normalized() * CALL_PAD_REACH if stick != Vector2.ZERO else global_position
+	var to := _cursor_on_ground() - global_position
+	return global_position + Vector3(to.x, 0.0, to.z).limit_length(CALL_REACH)
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_call(at: Vector3) -> void:
+	if not _from_owner() or downed or is_led():
+		return
+	var calls := get_tree().get_first_node_in_group("calls")
+	if calls != null:
+		calls.request(self, at)
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_call_early() -> void:
