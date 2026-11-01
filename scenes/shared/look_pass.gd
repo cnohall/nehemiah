@@ -26,14 +26,13 @@ var cycle_key := false
 var keep_film := false:
 	set(v):
 		keep_film = v
-		var m := material_override as ShaderMaterial
-		m.set_shader_parameter("film_white", env.tonemap_white if v and env else 0.0)
-		m.set_shader_parameter("film_exposure", _exposure)
+		_full.set_shader_parameter("film_white", env.tonemap_white if v and env else 0.0)
+		_full.set_shader_parameter("film_exposure", _exposure)
 ## 0..1 crayon grain and paper texture (litho)
 var grain := 1.0:
 	set(v):
 		grain = v
-		(material_override as ShaderMaterial).set_shader_parameter("grain_amount", v)
+		_full.set_shader_parameter("grain_amount", v)
 		(_rect.material as ShaderMaterial).set_shader_parameter("grain_amount", v)
 var whole_screen := false:
 	set(v):
@@ -57,7 +56,10 @@ var look := PLAIN:
 		var on := v != PLAIN
 		var screen := on and whole_screen
 		visible = on
-		(material_override as ShaderMaterial).set_shader_parameter("look", LINES if screen else v)
+		# Under the whole-screen look only the depth lines are drawn here, by a shader
+		# without the screen texture (declaring one copies the frame every frame)
+		material_override = _lines if screen else _full
+		_full.set_shader_parameter("look", v)
 		_layer.visible = screen
 		(_rect.material as ShaderMaterial).set_shader_parameter("look", v)
 		if env:
@@ -69,6 +71,8 @@ var _tonemap := Environment.TONE_MAPPER_FILMIC
 var _exposure := 1.0
 var _layer := CanvasLayer.new()
 var _rect := ColorRect.new()
+var _full := ShaderMaterial.new()    # map_look.gdshader: the whole drawn look, world only
+var _lines := ShaderMaterial.new()   # look_lines.gdshader: its depth lines alone
 
 func _init(environment: Environment = null) -> void:
 	env = environment
@@ -80,10 +84,11 @@ func _init(environment: Environment = null) -> void:
 	mesh = q
 	custom_aabb = AABB(Vector3.ONE * -1e5, Vector3.ONE * 2e5)
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var mat := ShaderMaterial.new()
-	mat.shader = load("res://scenes/story/map_look.gdshader")
-	mat.render_priority = 100
-	material_override = mat
+	_full.shader = load("res://scenes/story/map_look.gdshader")
+	_full.render_priority = 100
+	_lines.shader = load("res://scenes/shared/look_lines.gdshader")
+	_lines.render_priority = 100
+	material_override = _full
 	visible = false
 	_layer.layer = UNDER_HUD
 	_layer.visible = false

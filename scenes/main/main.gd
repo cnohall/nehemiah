@@ -78,6 +78,7 @@ func _on_art_style_changed() -> void:
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	CharacterRig.prewarm()   # while loading, not at the first brute's spawn
 	# Drawn looks over the world and its tags (under the HUD), on trial: Settings'
 	# art style; `-- --look=litho|cel` overrides, F10 cycles, F9 over the HUD too (debug)
 	var look := LookPass.new(($WorldEnvironment as WorldEnvironment).environment)

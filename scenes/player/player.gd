@@ -123,6 +123,7 @@ var anim := "idle_down":
 	set(value):
 		anim = value
 		if _sprite != null and _sprite.animation != value:
+			_sprite.stirring = value.begins_with("build_") and _at_trough() != null
 			_sprite.play(value)
 
 var health: float = MAX_HEALTH
@@ -1588,8 +1589,19 @@ func _stop_work() -> void:
 	if not _is_busy:
 		anim = "idle_" + _facing
 
+## Every peer: the trough we're working at, if the build stroke is a stir there (else null)
+func _at_trough() -> Node3D:
+	var site := _nearest_in_reach("build_sites", global_position, func(_s): return true)
+	return site if site != null and "mortar_ready" in site else null
+
+func is_stirring() -> bool:
+	return _sprite != null and _sprite.stirring and anim.begins_with("build_")
+
 # Every peer: one strike of the tool — a knock and a little dust off the wall
 func _on_strike() -> void:
+	if _sprite.stirring:
+		Sfx.play("work_mortar", global_position)   # a slap of wet lime, no dust
+		return
 	var site := _nearest_in_reach("build_sites", global_position, func(s): return not s.work_material().is_empty())
 	var mat: String = site.work_material() if site != null else "stone"
 	Sfx.play("work_" + mat, global_position)

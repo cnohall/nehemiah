@@ -33,6 +33,7 @@ const BUILD_TURN   := -0.65
 const BLEND_TIME   := 0.09     # cross-fade from the old pose when the animation changes
 const HOLD_TIME    := 0.1      # this long without motion and the figure counts as stopped
 const WINDUP_FULL  := 0.9      # wind-up reaches full tension (= Player.SLING_CHARGE_TIME)
+const SEEN_MARGIN  := 3.0      # metres past the view edge a figure still poses (its shadow, the next pan)
 
 # Rig dimensions (metres, before scale). Feet at y = 0.
 const HIP_Y      := 0.36
@@ -93,6 +94,8 @@ var aim_yaw := 0.0
 var hold_yaw := NAN
 ## Sling: angle of the whirling stone, so the hand circles in step with it
 var whirl_phase := 0.0
+## Working at the mortar trough: the build stroke swings a stirring paddle, not the mallet
+var stirring := false
 
 var _base := ""          # animation without the direction suffix
 var _dir := "down"
@@ -131,6 +134,7 @@ var _arm_r: Node3D
 var _leg_l: Node3D
 var _leg_r: Node3D
 var _tool: Node3D        # mallet, only while building
+var _paddle: Node3D      # stirring paddle, only while building at the trough
 var _spear: Node3D
 var _cape: Node3D
 var _carry_anchor: Node3D   # chest-front point where a carried load rides
@@ -242,6 +246,20 @@ static func enemy_look(kind: String) -> Dictionary:
 
 # ── Setup ──────────────────────────────────────────────────
 
+static var _warmed := false
+
+## Build each enemy once, off the tree, so the shared mesh caches are full before play:
+## the first brute or raider of a run filled its own (8-25 ms, more for the first figure
+## of all), a hitch right at its spawn. Once per run of the game; the caches are static.
+static func prewarm() -> void:
+	if _warmed:
+		return
+	_warmed = true
+	for kind in ["scout", "brute", "raider", "saboteur"]:
+		var rig := CharacterRig.new()
+		rig._build(enemy_look(kind))
+		rig.free()
+
 func setup(look: Dictionary, size_scale := 1.0) -> void:
 	_size = size_scale * BASE_SCALE
 	scale = Vector3.ONE * _size
@@ -265,6 +283,7 @@ func set_look(look: Dictionary) -> void:
 		c.free()
 	_parts.clear()
 	_tool = null
+	_paddle = null
 	_spear = null
 	_cape = null
 	_carry_anchor = null
@@ -393,10 +412,29 @@ func _process(delta: float) -> void:
 		else:
 			_set_frame(f % n)
 	_blend = minf(1.0, _blend + delta / BLEND_TIME)
+	if not _seen():
+		return
 	_update_facing(delta)
 	_apply_pose()
 	_secondary(delta)
 	posed.emit(delta)
+
+# Posing is most of a figure's frame (the script, then every part's moved transform):
+# skip it where nobody sees it. The clock above still runs, so footsteps, strikes and
+# animation_finished land as before. Unseen = hidden, in a SubViewport that isn't drawing
+# (a closed panel's trade figure), or off the ortho view by more than SEEN_MARGIN.
+func _seen() -> bool:
+	if not is_visible_in_tree():
+		return false
+	var vp := get_viewport()
+	if vp is SubViewport:
+		return (vp as SubViewport).render_target_update_mode != SubViewport.UPDATE_DISABLED
+	var cam := vp.get_camera_3d()
+	if cam == null or cam.projection != Camera3D.PROJECTION_ORTHOGONAL:
+		return true
+	var rect := vp.get_visible_rect()
+	var margin := SEEN_MARGIN * _size / BASE_SCALE * rect.size.y / cam.size
+	return rect.grow(margin).has_point(cam.unproject_position(global_position))
 
 func _set_frame(f: int) -> void:
 	if f == frame:
@@ -914,6 +952,8 @@ func _apply_pose() -> void:
 	_tool_visible()
 	if _tool != null:
 		_tool.rotation.x = tool_rx
+	if _paddle != null:
+		_paddle.rotation.x = tool_rx
 	if _sword != null:
 		_sword.rotation.x = -1.45   # blade out ahead of the fist
 	# Ease out of the previous animation's pose instead of snapping to the new one
@@ -1045,7 +1085,9 @@ static func _spring(s: Vector2, target: float, stiff: float, damp: float, delta:
 
 func _tool_visible() -> void:
 	if _tool != null:
-		_tool.visible = _base == "build"
+		_tool.visible = _base == "build" and not stirring
+	if _paddle != null:
+		_paddle.visible = _base == "build" and stirring
 	if _belt_tool != null:
 		_belt_tool.visible = _base != "build" and not _look.get("sculpted_body", false)
 	if _sword != null:
@@ -1378,6 +1420,10 @@ func _build(look: Dictionary) -> void:
 		_part(_tool, _soft(Vector3(0.07, 0.56, 0.07), 0.018), Color(0.50, 0.34, 0.20), Vector3(0, -0.24, 0))
 		_part(_tool, _soft(Vector3(0.09, 0.08, 0.09), 0.02), LEATHER, Vector3(0, -0.06, 0))
 		_part(_tool, _bbox(Vector3(0.36, 0.22, 0.22), 0.05), Color(0.58, 0.57, 0.58), Vector3(0, -0.54, 0))
+		# The trough's paddle: a long pole with a flat blade, crusted pale with lime
+		_paddle = _pivot(hands[1], Vector3(0, -0.02, 0.02))
+		_part(_paddle, _soft(Vector3(0.06, 0.95, 0.06), 0.016), Color(0.45, 0.33, 0.20), Vector3(0, -0.4, 0))
+		_part(_paddle, _bbox(Vector3(0.24, 0.3, 0.05), 0.02), Color(0.78, 0.75, 0.68), Vector3(0, -0.95, 0))
 		if look.get("tool_always", false) and not look.get("sculpted_body", false):
 			# Between strokes it hangs from the belt at the hip, head up
 			_belt_tool = _pivot(_torso, Vector3(-0.36, 0.2, 0.08))
