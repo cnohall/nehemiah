@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Steam store + library art, written into store/steam/capsules/:
+// Steam store + library art, written into store/steam/capsules/ (itch.io cover + banner into store/itch/):
 //   node store/steam/render.mjs [key_art.png]
 //
 // Input: a 3840x2160 no-HUD render (default store/steam/key_art.png) from
@@ -17,6 +17,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const GAME = path.join(HERE, "..", "..");
 const OUT = path.join(HERE, "capsules");
+const ITCH = path.join(HERE, "..", "itch");
 const ART = path.resolve(process.argv[2] ?? path.join(HERE, "key_art.png"));
 const CHROME = [
   "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -94,6 +95,13 @@ const JOBS = [
       html,body{background:transparent}
       body{width:1280px;height:720px;display:flex;align-items:center;justify-content:center}
     </style>${title(200, "center")}` },
+  // itch.io: cover (shown in browse grids) and the page banner, into store/itch/
+  { file: "cover.png", dir: ITCH, w: 630, h: 500, html: capsule({
+      w: 630, h: 500, pos: "56% 42%", titleSize: 64, place: "left:34px;bottom:34px",
+      wash: "linear-gradient(35deg,rgba(27,17,11,.8) 0%,rgba(27,17,11,.3) 38%,transparent 60%)" }) },
+  { file: "banner.png", dir: ITCH, w: 960, h: 300, html: capsule({
+      w: 960, h: 300, pos: "50% 40%", titleSize: 72, place: "left:0;right:0;top:50%;transform:translateY(-50%)", align: "center",
+      wash: "rgba(27,17,11,.5)" }) },
 ];
 
 function render(html, out, w, h, transparent) {
@@ -110,7 +118,8 @@ function render(html, out, w, h, transparent) {
 }
 
 fs.mkdirSync(OUT, { recursive: true });
+fs.mkdirSync(ITCH, { recursive: true });
 for (const j of JOBS) {
-  render(j.html, path.join(OUT, j.file), j.w, j.h, j.transparent);
+  render(j.html, path.join(j.dir ?? OUT, j.file), j.w, j.h, j.transparent);
   console.log(`${j.file} ${j.w}x${j.h}`);
 }

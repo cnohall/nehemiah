@@ -879,12 +879,14 @@ func _build_vote(won: bool, vb: Control) -> void:
 	if _wishlist_btn:
 		_wishlist_btn.queue_free()
 		_wishlist_btn = null
-	if won and GameState.is_demo() and not GameState.is_replay() and not GameState.DEMO_WISHLIST_URL.is_empty():
+	if won and GameState.is_demo() and not GameState.is_replay():
+		var steam := not GameState.DEMO_WISHLIST_URL.is_empty()
+		var url := GameState.DEMO_WISHLIST_URL if steam else GameState.DEMO_NEWS_URL
 		_wishlist_btn = Button.new()
-		_wishlist_btn.text = "Wishlist on Steam"
+		_wishlist_btn.text = "Wishlist on Steam" if steam else "Get launch news"
 		_wishlist_btn.custom_minimum_size.x = 220
 		_wishlist_btn.theme_type_variation = &"PrimaryButton"
-		_wishlist_btn.pressed.connect(func(): OS.shell_open(GameState.DEMO_WISHLIST_URL))
+		_wishlist_btn.pressed.connect(func(): OS.shell_open(url))
 		buttons.add_child(_wishlist_btn)
 		buttons.move_child(_wishlist_btn, 0)
 		for b in _vote_buttons.values():
