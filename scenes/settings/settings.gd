@@ -67,9 +67,12 @@ var trade := -1
 var simple_game := false
 # Anonymous play stats from the web build (Telemetry): where a game stops, how it runs
 var share_stats := true
-# Experimental (GDD §5.21), off by default; the host's choice rules the crew like difficulty
-var exp_forecast := false    # wave forecast: how many and what, ~22 s ahead, spot ringed on the ground
-var exp_call_early := false  # [Horn] brings the next wave forward for a short work boost
+# Experimental (GDD §5.21); the host's choice rules the crew like difficulty
+# Wave forecast: how many and what, ~22 s ahead, spot ringed and route drawn on the ground.
+# On by default when one person plays (bots or not): information is worth most alone (§5.25)
+enum { FORECAST_OFF, FORECAST_SOLO, FORECAST_ALWAYS }
+var exp_forecast := FORECAST_SOLO
+var exp_call_early := false  # off by default: [Horn] brings the next wave forward for a short work boost
 
 # pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
 # harm: multiplies every enemy blow, on workers and on the wall
@@ -142,12 +145,16 @@ func _ready() -> void:
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
 		simple_game = cfg.get_value("general", "simple_game", simple_game)
 		share_stats = cfg.get_value("general", "share_stats", share_stats)
-		exp_forecast = cfg.get_value("experimental", "forecast", exp_forecast)
+		# "forecast" was an on/off bool before Nov 2026: on stays on, off takes the new default
+		var old_forecast: bool = cfg.get_value("experimental", "forecast", false)
+		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode",
+			FORECAST_ALWAYS if old_forecast else exp_forecast), FORECAST_OFF, FORECAST_ALWAYS)
 		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
 	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
 	if "--script" in OS.get_cmdline_args():
 		simple_game = "--simple" in OS.get_cmdline_user_args()
 		tall_figures = "--tall" in OS.get_cmdline_user_args()   # likewise the figures' build
+		exp_forecast = FORECAST_OFF   # the default game as it was: tests switch it on themselves
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -324,7 +331,7 @@ func save() -> void:
 	cfg.set_value("general", "trade", trade)
 	cfg.set_value("general", "simple_game", simple_game)
 	cfg.set_value("general", "share_stats", share_stats)
-	cfg.set_value("experimental", "forecast", exp_forecast)
+	cfg.set_value("experimental", "forecast_mode", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)
 

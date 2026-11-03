@@ -47,6 +47,13 @@ const WAVE_TRICKLE_MULT   := 2.0
 # pulls the bell forward and spurs the crew (GameState.SPUR_*)
 const FORECAST_LEAD       := 22.0
 const CALL_EARLY_MIN      := 12.0    # a call this close to the bell isn't worth a spur
+# The forecast's route (Thronefall's night paths): dashes from the ring to just inside the
+# wall, drawn out from the spot, and the pack's count over where it meets the wall
+const ROUTE_END_Z         := 3.0
+const ROUTE_DASH          := 0.9     # metres from one dash to the next
+const ROUTE_FROM_RING     := 3.8     # the first dash just outside the ring (radius 3.5 m)
+const ROUTE_DRAW_TIME     := 1.4
+const ROUTE_TAG_Z         := -3.0    # the count stands on the route here, outside the wall
 
 # "schemes" twist: messengers to Ono, "four times" a day (Neh. 6:4), one at a time
 const MESSENGER_FIRST     := 12.0
@@ -85,6 +92,7 @@ var _warned_early := false  # a neighbour already told where the next pack comes
 var _sab_timer := 0.0
 var _pack: Array[int] = []   # the forecast pack's types, spawned as told
 var _forecasted := false
+var _forecast_marks: Array[Node] = []   # every peer: ring, route, tag of the told wave
 var _demo_brute := false   # demo: the day's first brute has been sent
 
 
@@ -192,7 +200,7 @@ func _tick_surges(delta: float) -> void:
 	var warn := SURGE_WARN if horn else WAVE_WARN
 	var was := _surge_timer
 	_surge_timer -= delta
-	if Settings.exp_forecast and not horn and not _forecasted and _surge_timer <= FORECAST_LEAD:
+	if _forecast_on() and not horn and not _forecasted and _surge_timer <= FORECAST_LEAD:
 		_forecast()
 	if was > warn and _surge_timer <= warn:
 		if not _warned_early:
@@ -220,6 +228,15 @@ func _next_type() -> Enemy.Type:
 
 # ── Experimental: forecast and call early (GDD §5.21) ──────
 
+## The host's forecast setting: Solo counts the people playing (bots aside)
+func _forecast_on() -> bool:
+	match Settings.exp_forecast:
+		Settings.FORECAST_ALWAYS:
+			return true
+		Settings.FORECAST_SOLO:
+			return players_root.get_children().filter(func(p): return p.brain == null).size() == 1
+	return false
+
 ## Server: roll the coming pack and its spots now and tell every peer what and where
 func _forecast() -> void:
 	_forecasted = true
@@ -235,7 +252,31 @@ func _tell_forecast(called: bool) -> void:
 	var counts := [0, 0, 0]
 	for t: int in _pack:
 		counts[t] += 1
-	_show_forecast.rpc(_surge_at.duplicate(), counts, _surge_timer, called)
+	var routes := []
+	for at in _surge_at:
+		routes.append(_route(at))
+	_show_forecast.rpc(_surge_at.duplicate(), routes, counts, _surge_timer, called)
+
+## Server: the way the pack will walk, from its spot to just inside the wall. Most of a
+## pack heads for the stockpiles (Enemy._goal) through whatever gap the nav mesh leaves
+func _route(at: Vector3) -> PackedVector3Array:
+	var goal := Vector3(clampf(at.x, -Enemy.GOAL_X_SPREAD, Enemy.GOAL_X_SPREAD), 0.0, Enemy.GOAL_Z)
+	var path := PackedVector3Array()
+	var map := enemies_root.get_world_3d().navigation_map
+	if NavigationServer3D.map_get_iteration_id(map) != 0:
+		path = NavigationServer3D.map_get_path(map, NavigationServer3D.map_get_closest_point(map, at),
+			NavigationServer3D.map_get_closest_point(map, goal), true)
+	if path.size() < 2:
+		path = PackedVector3Array([at, goal])   # not baked (tests): straight at it
+	var out := PackedVector3Array([path[0]])
+	for i in range(1, path.size()):
+		var a := out[out.size() - 1]
+		if path[i].z <= ROUTE_END_Z:
+			out.append(path[i])
+			continue
+		out.append(a.lerp(path[i], clampf((ROUTE_END_Z - a.z) / maxf(0.001, path[i].z - a.z), 0.0, 1.0)))
+		break
+	return out
 
 ## Server: a worker calls the next wave in. False when it isn't allowed or isn't worth it.
 func call_early() -> bool:
@@ -254,7 +295,7 @@ func _spur() -> void:
 	GameState.spur_until = Time.get_ticks_msec() + int(GameState.SPUR_SECONDS * 1000.0)
 
 @rpc("authority", "call_local", "reliable")
-func _show_forecast(spots: Array, counts: Array, seconds: float, called: bool) -> void:
+func _show_forecast(spots: Array, routes: Array, counts: Array, seconds: float, called: bool) -> void:
 	var parts: PackedStringArray = []
 	if counts[0] > 0:
 		parts.append(tr_n("%d scout", "%d scouts", counts[0]) % counts[0])
@@ -262,15 +303,90 @@ func _show_forecast(spots: Array, counts: Array, seconds: float, called: bool) -
 		parts.append(tr_n("%d brute", "%d brutes", counts[1]) % counts[1])
 	if counts[2] > 0:
 		parts.append(tr_n("%d raider", "%d raiders", counts[2]) % counts[2])
-	var what := ", ".join(parts)
-	if called:
-		what += tr(" · the crew is spurred")
+	var pack := ", ".join(parts)
+	var what := pack + (tr(" · the crew is spurred") if called else "")
 	get_tree().call_group("forecast_chip", "show_forecast", what, seconds, called)
-	for at: Vector3 in spots:
-		_ring_spot(at, seconds + 3.0)
+	# A wave called early is told again: its marks replace the first ones
+	for n in _forecast_marks:
+		if is_instance_valid(n):
+			n.queue_free()
+	_forecast_marks.clear()
+	for i in spots.size():
+		_forecast_marks.append(_ring_spot(spots[i], seconds + 3.0))
+		if i < routes.size() and routes[i].size() >= 2:
+			_forecast_marks.append(_draw_route(routes[i], seconds + 3.0))
+			# Split waves: each spot's count is a share of the pack, so the tag only on one
+			if spots.size() == 1:
+				_forecast_marks.append(_route_tag(routes[i], pack, seconds + 3.0))
+
+# Dashes along the pack's way in, drawn out from the ring toward the wall
+func _draw_route(points: PackedVector3Array, seconds: float) -> Node3D:
+	var at: Array[Transform3D] = []
+	var carry := ROUTE_FROM_RING
+	for i in range(1, points.size()):
+		var a := points[i - 1]
+		var seg := Vector3(points[i].x - a.x, 0.0, points[i].z - a.z)
+		var length := seg.length()
+		if length < 0.001:
+			continue
+		var dir := seg / length
+		var basis := Basis.looking_at(dir, Vector3.UP)
+		var d := carry
+		while d < length:
+			var p := a + dir * d
+			at.append(Transform3D(basis, Vector3(p.x, maxf(p.y, 0.1) + 0.05, p.z)))
+			d += ROUTE_DASH
+		carry = d - length
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	var dash := QuadMesh.new()
+	dash.orientation = PlaneMesh.FACE_Y
+	dash.size = Vector2(0.22, 0.55)
+	mm.mesh = dash
+	mm.instance_count = at.size()
+	for i in at.size():
+		mm.set_instance_transform(i, at[i])
+	mm.visible_instance_count = 0
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_color = Color(SURGE_COLOR, 0.8)
+	var line := MultiMeshInstance3D.new()
+	line.multimesh = mm
+	line.material_override = mat
+	line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(line)
+	line.create_tween().tween_method(func(v: float): mm.visible_instance_count = int(v),
+		0.0, float(at.size()), ROUTE_DRAW_TIME)
+	get_tree().create_timer(seconds).timeout.connect(line.queue_free)
+	return line
+
+# The pack's count, standing on its route where it meets the wall: where the crew looks
+func _route_tag(points: PackedVector3Array, text: String, seconds: float) -> Node3D:
+	var spot := points[points.size() - 1]
+	for i in range(1, points.size()):
+		if points[i].z >= ROUTE_TAG_Z:
+			var a := points[i - 1]
+			spot = a.lerp(points[i], clampf((ROUTE_TAG_Z - a.z) / maxf(0.001, points[i].z - a.z), 0.0, 1.0))
+			break
+	var tag := Label3D.new()
+	tag.text = text
+	tag.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # already translated
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.no_depth_test = true
+	tag.pixel_size = 0.012   # read from the play camera, not up close like a call's words
+	tag.font_size = 40
+	tag.outline_size = 14
+	tag.modulate = Color(0.98, 0.93, 0.78)
+	tag.outline_modulate = Color(0.16, 0.11, 0.08)
+	add_child(tag)
+	tag.global_position = Vector3(spot.x, 1.2, spot.z)
+	get_tree().create_timer(seconds).timeout.connect(tag.queue_free)
+	return tag
 
 # A pulsing ring on the ground where the pack comes in
-func _ring_spot(at: Vector3, seconds: float) -> void:
+func _ring_spot(at: Vector3, seconds: float) -> Node3D:
 	var ring := MeshInstance3D.new()
 	var quad := QuadMesh.new()
 	quad.orientation = PlaneMesh.FACE_Y
@@ -290,6 +406,7 @@ func _ring_spot(at: Vector3, seconds: float) -> void:
 	pulse.tween_property(ring, "scale", Vector3.ONE * 1.12, 0.45).set_trans(Tween.TRANS_SINE)
 	pulse.tween_property(ring, "scale", Vector3.ONE * 0.9, 0.45).set_trans(Tween.TRANS_SINE)
 	get_tree().create_timer(seconds).timeout.connect(ring.queue_free)
+	return ring
 
 func _pick_surge_spots(horn: bool) -> void:
 	_surge_at.clear()

@@ -63,7 +63,7 @@ func _process(delta: float) -> bool:
 			if _gs.phase != _gs.Phase.WORK:
 				return false
 			if _mode == "host":
-				_set.exp_forecast = true
+				_set.exp_forecast = 2   # Always: two people play
 				_set.exp_call_early = true
 				var wm: Node = _main.get_node("WaveManager")
 				wm._surge_left = 0
@@ -91,6 +91,9 @@ func _process(delta: float) -> bool:
 				_check(chip.text.begins_with("Wave in") and chip.text.contains("scout"), "client: chip shows '%s'" % chip.text)
 				var n := _secs(chip.text)
 				_check(n > 0 and n <= 23, "client: countdown is %d s" % n)
+				var marks: Array = _main.get_node("WaveManager")._forecast_marks
+				_check(marks.any(func(m): return m is MultiMeshInstance3D and m.multimesh.instance_count >= 8),
+					"client: route drawn from the host's path")
 				_mark = _t
 				_state = "client_spur"
 			elif _t - _mark > 40.0:

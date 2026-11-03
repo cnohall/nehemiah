@@ -33,11 +33,11 @@ const KEY_ROWS := [
 
 # Settings property → row label (GDD §5.21)
 const EXPERIMENTS := [
-	["exp_forecast", "Wave forecast"],
 	["exp_call_early", "Call waves early"],
 ]
 
 var _exp_btns := {}         # Settings property → [Off, On]
+var _forecast_btns: Array[Button]   # indexed by Settings.FORECAST_*
 var _full_game: Button
 var _simple_game: Button
 var _stats_on: Button
@@ -151,6 +151,7 @@ func open() -> void:
 	if _stats_on != null:
 		_stats_on.button_pressed  = Settings.share_stats
 		_stats_off.button_pressed = not Settings.share_stats
+	_forecast_btns[Settings.exp_forecast].button_pressed = true
 	for key: String in _exp_btns:
 		_exp_btns[key][0].button_pressed = not Settings.get(key)
 		_exp_btns[key][1].button_pressed = Settings.get(key)
@@ -347,13 +348,19 @@ func _set_simple(on: bool) -> void:
 	_toggle("simple_game", on)
 	GameState.share_rules()
 
-# Ideas being tried with playtesters (GDD §5.21): off unless switched on, the host's pick rules
+# Ideas being tried with playtesters (GDD §5.21): the host's pick rules
 func _build_experimental_rows() -> void:
 	_add_label("Experimental")
 	var note := Label.new()
 	note.theme_type_variation = &"Caption"
-	note.text = "Host's choice. Ideas on trial; off is the game as designed."
+	note.text = "Host's choice. Ideas on trial."
 	_target.add_child(note)
+	# Solo (the default): on when one person plays, with or without bots
+	_forecast_btns = _choice_row("Wave forecast", ["Off", "Solo", "Always"], 100)
+	for i in _forecast_btns.size():
+		_forecast_btns[i].pressed.connect(func():
+			Settings.exp_forecast = i
+			Settings.save())
 	for row: Array in EXPERIMENTS:
 		var pair := _segment_row(row[1], "Off", "On")
 		_exp_btns[row[0]] = pair
