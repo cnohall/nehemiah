@@ -5,6 +5,8 @@ extends RefCounted
 # meshes are cached across gameplay rigs and the live crew portraits.
 const BODY := preload("res://scenes/shared/builder_body.gd")
 const CREST := Color(0.50, 0.12, 0.09)   # horsehair on a captain's helmet, oxblood like the foes' rim
+const BEARD_AT := Vector3(0, 0.18, 0.28)   # the beard is drawn smaller toward here (the mouth)
+const BEARD_SCALE := 0.88
 static var _cache: Dictionary = {}
 static var _material: ShaderMaterial
 static var _metal_material: ShaderMaterial
@@ -17,6 +19,7 @@ var _beard_kind := ""
 var _hat := "band"
 var _style := "short"
 var _clustered_builder := false
+var _foe := false   # outlined figures (enemies) scowl; the crew goes without an outline
 
 func build(rig: Node3D, head: Node3D, look: Dictionary) -> void:
 	_rig = rig
@@ -28,6 +31,7 @@ func build(rig: Node3D, head: Node3D, look: Dictionary) -> void:
 	_hat = look.get("hat", "band")
 	_style = look.get("hair_style", "short")
 	_clustered_builder = _style == "short" and look.get("basket_stones", false)
+	_foe = not look.get("no_outline", false)
 	if _material == null:
 		_material = ShaderMaterial.new()
 		_material.shader = preload("res://assets/shaders/builder_sculpt.gdshader")
@@ -70,15 +74,22 @@ func _face() -> void:
 		# One flattened ear and one shallow inset, with no small helix details.
 		_oval(Vector3(0.13, 0.19, 0.115), _skin, Vector3(side * 0.326, 0.315, 0.005))
 		_oval(Vector3(0.032, 0.105, 0.065), _skin.darkened(0.17), Vector3(side * 0.387, 0.32, 0.028))
-		# Small eyes set deep under the brow: big bright whites read as a cartoon
-		var eye := Vector3(side * 0.135, 0.336, 0.222)
-		_oval(Vector3(0.100, 0.068, 0.070), Color(0.84, 0.78, 0.70), eye)
-		_oval(Vector3(0.056, 0.060, 0.024), Color(0.19, 0.11, 0.07), eye + Vector3(-side * 0.007, -0.002, 0.030))
-		_oval(Vector3(0.030, 0.042, 0.012), Color(0.045, 0.029, 0.024), eye + Vector3(-side * 0.007, -0.002, 0.041))
-		# The upper lid: a crease of shadow over each eye, so it sits under the brow
-		_lock("lid%s" % side, [Vector3(side * 0.078, 0.360, 0.262), Vector3(side * 0.110, 0.378, 0.284), Vector3(side * 0.160, 0.378, 0.276), Vector3(side * 0.192, 0.358, 0.248)], 0.016, 0.012, _skin.darkened(0.22))
-		# Thin and level: a heavy slanted bar is a cartoon scowl
-		_lock("brow%s" % side, [Vector3(side * 0.045, 0.392, 0.312), Vector3(side * 0.100, 0.402, 0.340), Vector3(side * 0.174, 0.420, 0.320), Vector3(side * 0.240, 0.405, 0.262)], 0.034, 0.020, _brow)
+		# Big bright eyes with a catchlight: cartoony on purpose (GDD §6.2), and the face
+		# reads at play zoom
+		var eye := Vector3(side * 0.135, 0.330, 0.248)
+		var look_at := eye + Vector3(-side * 0.008, -0.004, 0.0)
+		_oval(Vector3(0.118, 0.098, 0.074), Color(0.97, 0.95, 0.90), eye)
+		_oval(Vector3(0.070, 0.078, 0.026), Color(0.22, 0.13, 0.08), look_at + Vector3(0, 0, 0.031))
+		_oval(Vector3(0.040, 0.052, 0.014), Color(0.045, 0.029, 0.024), look_at + Vector3(0, 0, 0.043))
+		_oval(Vector3(0.020, 0.020, 0.008), Color(1.0, 1.0, 0.97), look_at + Vector3(side * 0.012, 0.016, 0.050))
+		if _foe:
+			# The upper lid: a crease of shadow over each eye, so it sits under the brow
+			_lock("lid%s" % side, [Vector3(side * 0.074, 0.362, 0.286), Vector3(side * 0.110, 0.382, 0.308), Vector3(side * 0.160, 0.382, 0.300), Vector3(side * 0.198, 0.360, 0.270)], 0.018, 0.012, _skin.darkened(0.22))
+			# Slanted down to the nose: a foe reads as one at a glance
+			_lock("brow_foe%s" % side, [Vector3(side * 0.045, 0.372, 0.296), Vector3(side * 0.100, 0.392, 0.322), Vector3(side * 0.174, 0.424, 0.300), Vector3(side * 0.240, 0.432, 0.240)], 0.044, 0.024, _brow)
+		else:
+			# Lifted in the middle: open and friendly
+			_lock("brow_up%s" % side, [Vector3(side * 0.045, 0.428, 0.290), Vector3(side * 0.100, 0.446, 0.318), Vector3(side * 0.174, 0.442, 0.298), Vector3(side * 0.240, 0.410, 0.240)], 0.040, 0.022, _brow)
 	# One broad bridge and rounded tip, projecting beyond the eyes in profile.
 	_add(_profile("nose", [Vector4(0.220, 0.033, 0.308, 0.25),
 		Vector4(0.248, 0.072, 0.375, 0.25), Vector4(0.280, 0.093, 0.408, 0.25),
@@ -89,25 +100,29 @@ func _beard() -> void:
 	if _beard_kind.is_empty():
 		return
 	var short := _beard_kind == "short"
+	# One rounded shape with a few broad locks, drawn a little smaller toward the mouth:
+	# a cartoon beard (GDD §6.2), not a bunch of grapes over half the face
+	_into = _rig._pivot(_head, BEARD_AT)
+	_into.scale = Vector3.ONE * BEARD_SCALE
 	# The wrap is one closed cheek-to-cheek volume. Its front top dips under
 	# the mouth; the sides rise into the sideburns.
 	_add(_beard_mass(short), _hair)
 	for side: float in [-1.0, 1.0]:
-		# Two large cheek locks per side, overlapping the broad mass.
-		_lock("cheek_upper%s" % side, [Vector3(side * 0.275, 0.260, 0.160), Vector3(side * 0.355, 0.228, 0.242), Vector3(side * 0.350, 0.142, 0.294), Vector3(side * 0.263, 0.103, 0.283)], 0.088, 0.038, _hair.lightened(0.020), Vector3(side, 0, 0))
+		# One cheek lock per side, overlapping the broad mass.
 		_lock("cheek_lower%s" % side, [Vector3(side * 0.258, 0.172, 0.248), Vector3(side * 0.330, 0.132, 0.312), Vector3(side * 0.270, 0.008, 0.327), Vector3(side * 0.175, -0.045, 0.260)], 0.078, 0.041, _hair.lightened(0.010), Vector3.FORWARD)
 		# Moustache remains two separate curved wedges above the beard.
 		_lock("moustache%s" % side, [Vector3(side * 0.018, 0.200, 0.338), Vector3(side * 0.070, 0.222, 0.386), Vector3(side * 0.132, 0.194, 0.370), Vector3(side * 0.190, 0.177, 0.313)], 0.050, 0.035, _hair.lightened(0.025))
-	# Four chunky chin locks, with their tips defining a soft scalloped edge.
-	for i in 4:
-		var x := (i - 1.5) * 0.108
-		var central := i == 1 or i == 2
-		var tip_y := (-0.070 if central else -0.050) if short else (-0.138 if central else -0.092)
-		_lock("chin_%s_%s" % ["short" if short else "full", i], [Vector3(x, 0.103, 0.313), Vector3(x + 0.022, 0.068, 0.388), Vector3(x + 0.014, -0.050, 0.375), Vector3(x * 0.82, tip_y, 0.215)], 0.082 if central else 0.064, 0.056, _hair.lightened(0.009 * (i % 3)))
+	# Three broad chin locks, their tips a soft scalloped edge.
+	for i in 3:
+		var x := (i - 1) * 0.13
+		var central := i == 1
+		var tip_y := (-0.070 if central else -0.045) if short else (-0.138 if central else -0.088)
+		_lock("chin3_%s_%s" % ["short" if short else "full", i], [Vector3(x, 0.103, 0.313), Vector3(x + 0.022, 0.068, 0.388), Vector3(x + 0.014, -0.050, 0.375), Vector3(x * 0.82, tip_y, 0.215)], 0.10 if central else 0.085, 0.056, _hair.lightened(0.009 * i))
 	if _beard_kind == "long":
 		for i in 3:
 			var x := (i - 1) * 0.115
 			_lock("long%s" % i, [Vector3(x, -0.06, 0.25), Vector3(x * 1.15, -0.15, 0.36), Vector3(x * 0.8, -0.30, 0.32), Vector3(x * 0.45, -0.39 + absf(x) * 0.5, 0.20)], 0.077, 0.055, _hair.lightened(0.012 * i))
+	_into = null
 
 func _haircut() -> void:
 	if _hat == "wrap" or _hat == "hood" or _hat == "helmet":

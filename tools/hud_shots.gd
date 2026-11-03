@@ -12,8 +12,6 @@ var _frame := 0
 
 const SCRIPT := [
 	[0.5, "begin"],
-	[1.5, "goto", Vector3(-6, 0.1, -3)],
-	[3.0, "shot", "taunts"],
 	[3.1, "goto", Vector3(0, 0.1, 8)],
 	[6.5, "shot", "work_start"],
 	[6.6, "wave"],

@@ -73,13 +73,12 @@ func _init() -> void:
 	holder.add_child(_rig)
 	_rig.rebuilt.connect(_frame)
 
-# Three-quarter view of the face (idle_down faces +x +z), head and shoulders, framed for
-# the figure's build (CharacterRig.build): the face, not the belt, at the centre
+# Three-quarter view of the face (idle_down faces +x +z), head and shoulders: the face,
+# not the belt, at the centre
 func _frame() -> void:
-	var g := CharacterRig.build
-	_cam.size = lerpf(1.45, 1.12, g)
-	var aim := Vector3(0, lerpf(1.55, 1.84, g), 0)
-	var eye := aim + Vector3(2.3, 0.55 + 0.07 * g, 1.1)
+	_cam.size = 1.45
+	var aim := Vector3(0, 1.55, 0)
+	var eye := aim + Vector3(2.3, 0.55, 1.1)
 	_cam.transform = Transform3D.IDENTITY.looking_at(aim - eye).translated(eye)
 
 func set_worker(slot: int, color: Color) -> void:

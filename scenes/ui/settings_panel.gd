@@ -58,8 +58,6 @@ var _adv_btn: Button
 var _adv_page: VBoxContainer
 var _adv_grid: GridContainer
 var _target: GridContainer   # the grid rows are being added to
-var _short_figures: Button
-var _tall_figures: Button
 var _key_buttons := {}      # action → Button
 var _reset: Button
 var _language: OptionButton
@@ -142,8 +140,6 @@ func open() -> void:
 	_fixed_cam.button_pressed    = Settings.fixed_camera
 	_game_view.button_pressed    = not Settings.turn_to_map
 	_map_view.button_pressed     = Settings.turn_to_map
-	_short_figures.button_pressed = not Settings.tall_figures
-	_tall_figures.button_pressed  = Settings.tall_figures
 	_hold.button_pressed         = not Settings.toggle_charge
 	_toggle_mode.button_pressed  = Settings.toggle_charge
 	_full_game.button_pressed     = not Settings.simple_game
@@ -293,11 +289,6 @@ func _build_advanced_rows() -> void:
 		_style_btns[i].pressed.connect(func():
 			Settings.art_style = i
 			Settings.save())
-	pair = _segment_row("Figures", "Short", "Tall")
-	_short_figures = pair[0]
-	_tall_figures = pair[1]
-	_short_figures.pressed.connect(_toggle.bind("tall_figures", false))
-	_tall_figures.pressed.connect(_toggle.bind("tall_figures", true))
 	_heading("Rules")
 	_build_game_row()
 	_build_experimental_rows()
