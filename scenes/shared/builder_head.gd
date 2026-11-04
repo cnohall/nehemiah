@@ -78,10 +78,14 @@ func _face() -> void:
 		# reads at play zoom
 		var eye := Vector3(side * 0.135, 0.330, 0.248)
 		var look_at := eye + Vector3(-side * 0.008, -0.004, 0.0)
+		# Each eye on its own pivot, a little below its middle: the rig blinks it shut there
+		_into = _rig._pivot(_head, eye + Vector3(0, -0.012, 0))
+		_rig._eyes.append(_into)
 		_oval(Vector3(0.118, 0.098, 0.074), Color(0.97, 0.95, 0.90), eye)
 		_oval(Vector3(0.070, 0.078, 0.026), Color(0.22, 0.13, 0.08), look_at + Vector3(0, 0, 0.031))
 		_oval(Vector3(0.040, 0.052, 0.014), Color(0.045, 0.029, 0.024), look_at + Vector3(0, 0, 0.043))
 		_oval(Vector3(0.020, 0.020, 0.008), Color(1.0, 1.0, 0.97), look_at + Vector3(side * 0.012, 0.016, 0.050))
+		_into = null
 		if _foe:
 			# The upper lid: a crease of shadow over each eye, so it sits under the brow
 			_lock("lid%s" % side, [Vector3(side * 0.074, 0.362, 0.286), Vector3(side * 0.110, 0.382, 0.308), Vector3(side * 0.160, 0.382, 0.300), Vector3(side * 0.198, 0.360, 0.270)], 0.018, 0.012, _skin.darkened(0.22))

@@ -153,6 +153,13 @@ var _elbows: Array[Node3D] = []
 var _tails: Array[Node3D] = []    # head-band / scarf ends (BuilderHead)
 var _veil: Node3D                 # a head-cloth's fall down the back (BuilderHead)
 var _skirt: Node3D                # the tunic below the belt (BuilderBody)
+var _eyes: Array[Node3D] = []     # each eye's pivot, squeezed shut to blink (BuilderHead)
+var _blink_in := 0.0              # seconds to the next blink
+var _blink_t := -1.0              # seconds into the blink going on (< 0: none)
+var _blinks_left := 0             # a quick second blink after this one
+var _since_blink := 0.0
+var _shut := 0.0                  # eyes held shut by the pose (down on the ground)
+var _sec_head := Vector2.ZERO
 var _sec_tail := Vector2.ZERO
 var _sec_tail_roll := Vector2.ZERO
 var _sec_cape := Vector2.ZERO
@@ -260,6 +267,7 @@ func setup(look: Dictionary, size_scale := 1.0) -> void:
 	_size = size_scale * BASE_SCALE
 	scale = Vector3.ONE * _size
 	_seed = randf() * 100.0
+	_blink_in = randf_range(0.5, 4.0)
 	add_to_group(&"character_rigs")
 	_build(look)
 	_build_marker()
@@ -289,6 +297,7 @@ func set_look(look: Dictionary) -> void:
 	_belt_sword = null
 	_veil = null
 	_skirt = null
+	_eyes.clear()
 	_hands.clear()
 	_knees.clear()
 	_ankles.clear()
@@ -348,6 +357,7 @@ func is_playing() -> bool:
 	return _playing
 
 func hit_flash() -> void:
+	blink()   # flinching
 	if _flash_tween:
 		_flash_tween.kill()
 	_set_flash(1.0)
@@ -371,6 +381,10 @@ func recoil(amount: float) -> void:
 	_recoil = amount
 	_recoil_tween = create_tween()
 	_recoil_tween.tween_property(self, "_recoil", 0.0, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## Shut the eyes for a moment, now rather than on the figure's own clock
+func blink() -> void:
+	_blink_t = 0.0
 
 ## Squash & stretch (x, y factors), springing back. Feet stay planted.
 func squash(amount: Vector2) -> void:
@@ -537,6 +551,7 @@ func _apply_pose() -> void:
 	var spear_z := 0.0
 	var tool_rx := -1.35                                # the wrist: hammer head led forward off the hand
 	var moving := smoothstep(0.3, 1.5, _move_speed)
+	_shut = 0.0
 	match _base:
 		"idle":
 			# At ease: the weight drifts from foot to foot every few seconds, the chest rises
@@ -751,7 +766,7 @@ func _apply_pose() -> void:
 			spear_rx = PI * 0.5 * e
 			spear_z = -0.3 * e
 			if k >= 1.0:
-				var shake := sin(Time.get_ticks_msec() * 0.06) * 0.02
+				var shake := sin(Time.get_ticks_msec() * 0.06 + _seed) * 0.02   # each on his own tremble
 				lean += shake
 				twist += shake
 		"reel":
@@ -778,6 +793,7 @@ func _apply_pose() -> void:
 			else:
 				c = 1.0 - ease((k - 0.62) / 0.38, 0.6)
 			plant = false
+			_shut = c
 			body_rx = -1.3 * c
 			body_y = 0.13 * c
 			al = Vector3(-0.3 - 1.2 * c, 0, 0.14 + c * 0.9)
@@ -867,6 +883,7 @@ func _apply_pose() -> void:
 			var buckle := ease(minf(1.0, k * 2.5), 0.6)
 			var fall := ease(clampf((k - 0.25) / 0.75, 0.0, 1.0), 2.2)
 			plant = fall < 0.05
+			_shut = maxf(buckle * 0.5, fall)   # screwed up as the knees go, shut once he's down
 			kl = 0.06 + 0.9 * buckle * (1.0 - fall * 0.6)
 			kr = 0.06 + 0.7 * buckle * (1.0 - fall * 0.6)
 			ll = -0.4 * buckle * (1.0 - fall * 0.5)
@@ -1055,6 +1072,11 @@ func _secondary(delta: float) -> void:
 	var by := _body.position.y
 	_body_vy = lerpf(_body_vy, (by - _prev_body_y) / delta, clampf(delta * 20.0, 0.0, 1.0))
 	_prev_body_y = by
+	# The big head rides the neck a beat behind the body: it nods as the body drops onto a
+	# foot or a landing, tips back as it rises, and settles with a little bob
+	_sec_head = _spring(_sec_head, clampf(-_body_vy * 0.1, -0.15, 0.15), 150.0, 10.0, delta)
+	_head.rotation.x += _sec_head.x
+	_blink(delta)
 	var lean: float = _last_pose.get("lean", 0.0)
 	var moving: float = _last_pose.get("moving", 0.0)
 	var ph: float = _last_pose.get("ph", 0.0)
@@ -1082,6 +1104,37 @@ func _secondary(delta: float) -> void:
 		# Room for the knees: the hem flares fore and aft as the legs open
 		var open := absf(float(_last_pose.get("ll", 0.0)) - float(_last_pose.get("lr", 0.0)))
 		_skirt.scale = Vector3(1.0, 1.0, 1.0 + clampf(open * 0.22, 0.0, 0.3))
+
+const BLINK_TIME := 0.15
+
+# Every few seconds the eyes shut for a moment (now and then twice), on a sharp turn of the
+# head too; the pose can hold them shut. The eye squeezes flat on its pivot, under the lid
+func _blink(delta: float) -> void:
+	if _eyes.is_empty():
+		return
+	_since_blink += delta
+	_blink_in -= delta
+	if _blink_t < 0.0 and (_blink_in <= 0.0 or (absf(_turn_rate) > 8.0 and _since_blink > 1.2)):
+		_blink_t = 0.0
+		if _since_blink > 0.5:   # not the second of a pair
+			_blinks_left = 1 if randf() < 0.18 else 0
+	var shut := 0.0
+	if _blink_t >= 0.0:
+		if _blink_t == 0.0:
+			_since_blink = 0.0
+			_blink_in = randf_range(2.2, 5.5)
+		_blink_t += delta
+		# Down fast, up a little slower
+		var u := _blink_t / BLINK_TIME
+		shut = smoothstep(0.0, 0.3, u) * (1.0 - smoothstep(0.45, 1.0, u))
+		if u >= 1.0:
+			_blink_t = -1.0
+			if _blinks_left > 0:
+				_blinks_left -= 1
+				_blink_in = 0.09
+	shut = maxf(shut, _shut)
+	for e in _eyes:
+		e.scale.y = lerpf(1.0, 0.1, shut)
 
 static func _spring(s: Vector2, target: float, stiff: float, damp: float, delta: float) -> Vector2:
 	var v := s.y + (-stiff * (s.x - target) - damp * s.y) * delta

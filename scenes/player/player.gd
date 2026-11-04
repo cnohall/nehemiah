@@ -1463,6 +1463,9 @@ func _on_hurt(new_health: float) -> void:
 	_sprite.hit_flash()
 	if new_health > 0.0:
 		Sfx.play("hurt", global_position)
+		# Rocked by the blow, as a foe is: the flash alone was lost in a crowd
+		_sprite.recoil(0.22)
+		_sprite.squash(Vector2(1.08, 0.93))
 	if is_multiplayer_authority():
 		_jolt(0.35, 0.4, 0.2, 0.15)
 		_well_hint()

@@ -42,6 +42,9 @@ var text := "":
 	set(value):
 		if value == text:
 			return
+		# A count moved (a load delivered): the tag gives a little hop to say so
+		if kind == Kind.SITE and "/" in text and "/" in value:
+			_bump = 1.0
 		text = value
 		_dirty = true
 var modulate := Color.WHITE
@@ -65,6 +68,9 @@ var _box: VBoxContainer
 var _pointer: Control
 var _dirty := true
 var _see_through := 0.0   # 0 → solid, 1 → a player is behind the tag
+var _bump := 0.0          # 1 → 0 through the hop after a count changes
+const BUMP_TIME := 0.3
+const BUMP_AMOUNT := 0.16
 
 static func make(k: Kind, t := "") -> WorldTag:
 	var w := WorldTag.new()
@@ -141,8 +147,12 @@ func _process(_delta: float) -> void:
 	var covers := _covers_player(cam, Rect2(at, sz).grow(4.0))
 	_see_through = move_toward(_see_through, 1.0 if covers else 0.0, _delta * SEE_THROUGH_SPEED)
 	_root.modulate = modulate * Color(1, 1, 1, lerpf(1.0, SEE_THROUGH_ALPHA, _see_through))
-	if pulse:
-		var k := 1.0 + PULSE_AMOUNT * (0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.005))
+	_bump = maxf(0.0, _bump - _delta / BUMP_TIME)
+	if pulse or _bump > 0.0:
+		var k := 1.0 + (PULSE_AMOUNT * (0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.005)) if pulse else 0.0)
+		# Up quick, dipping a hair under on the way back
+		var u := 1.0 - _bump
+		k += BUMP_AMOUNT * sin(u * PI * 1.6) * (1.0 - u)
 		_root.pivot_offset = Vector2(sz.x * 0.5, sz.y)
 		_root.scale = Vector2(k, k)
 	elif _root.scale != Vector2.ONE:
