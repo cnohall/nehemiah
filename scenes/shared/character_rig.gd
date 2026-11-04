@@ -1661,7 +1661,7 @@ func _bake_web() -> void:
 	var merged: Array[GeometryInstance3D] = []
 	for g in order.size():
 		var key: Array = order[g]
-		var cache_key := "%d|%.3f|%d" % [look_hash, _grown, g]
+		var cache_key := "%d|%d" % [look_hash, g]
 		if not _baked.has(cache_key):
 			_baked[cache_key] = _merge_parts(groups[key])
 		var mi := MeshInstance3D.new()
