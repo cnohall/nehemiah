@@ -9,7 +9,7 @@ extends Node
 # the work (Neh. 4:7, "they heard that the repairing… went forward… they were very
 # angry"). Each fires once per stretch, never twice at once.
 # Server decides and spawns (through WaveManager); every peer hears the call and sees the
-# pointer, and gets beat_fired (Leaders shows the named foes on it).
+# pointer, and gets beat_fired.
 # `-- --no-beats` to play without them.
 
 signal beat_fired(section_index: int, key: String, beat: Dictionary)
@@ -30,7 +30,6 @@ const VERSE_HOLD := 6.5
 #   pack   — [[Enemy.Type, count], …] (none = just the call)
 #   at     — "gate" | "flank" (one end) | "both" (both ends) | "east" (the end that faces
 #            east on the real ring) | "yard" (the end nearest the supply yard)
-#   leader — for Leaders: "sanballat" | "tobiah" | "geshem" | "all" | ""
 # Only foes already unlocked on those days (brutes from day 8, raiders from 17, the saboteur
 # from the Water Gate: WaveManager).
 const S := Enemy.Type.SCOUT
@@ -54,13 +53,13 @@ const BEATS := {
 	3: {   # Broad Wall — the wall at half height, and their anger (Neh. 4:6-7)
 		"half": { "call": "Half its height! And they've heard of it…",
 			"verse": ["So we built the wall; and all the wall was joined together to half its height, for the people had a mind to work.", "Neh. 4:6"],
-			"pack": [[S, 2], [B, 1]], "at": "both", "leader": "sanballat" },
+			"pack": [[S, 2], [B, 1]], "at": "both" },
 		"last": { "call": "They want the last gap!", "pack": [[B, 2], [S, 2]], "at": "gate" },
 	},
 	4: {   # Tower of the Ovens — the conspiracy, and the plan to stop the work (4:8, 4:11)
 		"half": { "call": "They've all come together!",
 			"verse": ["and they all conspired together to come and fight against Jerusalem, and to cause confusion among us.", "Neh. 4:8"],
-			"pack": [[S, 4], [B, 2]], "at": "flank", "leader": "tobiah" },
+			"pack": [[S, 4], [B, 2]], "at": "flank" },
 		"last": { "call": "Quiet ones, after the yard!",
 			"verse": ["They will not know or see, until we come in among them and kill them, and cause the work to cease.", "Neh. 4:11"],
 			"pack": [[S, 3]], "at": "yard" },
@@ -69,7 +68,7 @@ const BEATS := {
 		"half": { "call": "Raiders up both sides of the valley!", "pack": [[R, 2], [S, 1]], "at": "both" },
 		"last": { "call": "Everything they have, to the gate!",
 			"verse": ["Wherever you hear the sound of the trumpet, rally there to us. Our God will fight for us.", "Neh. 4:20"],
-			"pack": [[B, 2], [R, 2], [S, 3]], "at": "gate", "leader": "sanballat" },
+			"pack": [[B, 2], [R, 2], [S, 3]], "at": "gate" },
 	},
 	6: {   # Gate of the Ash Heaps — the long haul
 		"half": { "call": "Raiders on the haul road!", "pack": [[R, 3]], "at": "yard" },
@@ -92,7 +91,7 @@ const BEATS := {
 	10: {   # East Gate — Geshem's men from the east; the answer to Ono (6:3, 6:9)
 		"half": { "call": "Geshem's raiders, from the east!",
 			"verse": ["I am doing a great work, so that I can’t come down.", "Neh. 6:3"],
-			"pack": [[R, 4]], "at": "east", "leader": "geshem" },
+			"pack": [[R, 4]], "at": "east" },
 		"last": { "call": "The last of it. Hold on!",
 			"verse": ["But now, strengthen my hands.", "Neh. 6:9"],
 			"pack": [[B, 2], [R, 2], [S, 2]], "at": "both" },
@@ -101,7 +100,7 @@ const BEATS := {
 		"half": { "call": "They're all coming!", "pack": [[B, 2], [R, 2], [S, 2]], "at": "both" },
 		"last": { "call": "The last stone! All of them at once!",
 			"verse": ["So we did the work. Half of the people held the spears from the rising of the morning until the stars appeared.", "Neh. 4:21"],
-			"pack": [[B, 3], [R, 3], [S, 3]], "at": "both", "leader": "all" },
+			"pack": [[B, 3], [R, 3], [S, 3]], "at": "both" },
 	},
 }
 
@@ -220,7 +219,7 @@ func _pack(pack: Array, spots: Array) -> Array:
 	return placed
 
 # Every peer: the watchman nearest the danger calls it (and the verse), the bell rings,
-# a pointer shows each spot; Leaders and the like hear beat_fired
+# a pointer shows each spot; listeners hear beat_fired
 @rpc("authority", "call_local", "reliable")
 func _announce(section_index: int, key: String, spots: Array) -> void:
 	var beat: Dictionary = beats_for(section_index).get(key, {})

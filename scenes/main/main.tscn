@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://scenes/birds/birds.gd" id="41_birds"]
 [ext_resource type="Script" path="res://scenes/day_light/day_light.gd" id="13_daylight"]
 [ext_resource type="Script" path="res://scenes/horn/horn.gd" id="14_horn"]
+[ext_resource type="Script" path="res://scenes/calls/calls.gd" id="60_calls"]
 [ext_resource type="PackedScene" path="res://scenes/watch_post/watch_post.tscn" id="15_post"]
 [ext_resource type="Script" path="res://scenes/shared/ground_mesh.gd" id="16_groundmesh"]
 [ext_resource type="Script" path="res://scenes/shared/breeze.gd" id="17_breeze"]
@@ -323,6 +324,9 @@ script = ExtResource("18_passersby")
 
 [node name="Horn" type="Node3D" parent="."]
 script = ExtResource("14_horn")
+
+[node name="Calls" type="Node3D" parent="."]
+script = ExtResource("60_calls")
 
 [node name="Visitors" type="Node3D" parent="."]
 

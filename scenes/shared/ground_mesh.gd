@@ -6,12 +6,77 @@ extends MeshInstance3D
 
 const FLOOR_TOP := 0.1   # y of the flat slab's top face (the collider)
 const NORMAL_EPS := 0.2
+# The ground shader's static noise, baked once (ground_bake.gdshader `layer` 0-3): coarse
+# and feature fields at 2 texels a metre, fine at 4, over the whole ground (ground.gdshader
+# bake_origin/bake_extent), and one tile of grit (GRIT_CELLS cells at 20 texels each)
+const BAKE_SIZES: Array[Vector2i] = [Vector2i(440, 360), Vector2i(440, 360), Vector2i(880, 720), Vector2i(960, 960)]
+const BAKE_PARAMS: Array[String] = ["noise_coarse", "noise_feature", "noise_fine", "noise_grit"]
+
+## Shared by every ground this run (the noise never changes); empty until baked
+static var _noise: Array[Texture2D] = []
+static var _baking := false
 
 var _built := -1
 
 func _ready() -> void:
 	GameState.section_changed.connect(_rebuild.unbind(1))
 	_rebuild()
+	_use_noise()
+
+# Point the ground at the baked noise, baking it first if this is the run's first ground.
+# Headless has nothing to read back, so the ground keeps working the noise out per pixel.
+func _use_noise() -> void:
+	if _noise.is_empty():
+		if _baking or DisplayServer.get_name() == "headless":
+			return
+		_baking = true
+		var baked := await _bake()
+		_baking = false
+		if baked.is_empty():
+			return
+		_noise = baked
+	if not is_inside_tree():
+		return
+	var mat := get_surface_override_material(0) as ShaderMaterial
+	for i in BAKE_PARAMS.size():
+		mat.set_shader_parameter(BAKE_PARAMS[i], _noise[i])
+	mat.set_shader_parameter("baked", true)
+
+func _bake() -> Array[Texture2D]:
+	var shader: Shader = load("res://assets/shaders/ground_bake.gdshader")
+	var scale: Variant = (get_surface_override_material(0) as ShaderMaterial).get_shader_parameter("scale")
+	var ports: Array[SubViewport] = []
+	for layer in BAKE_SIZES.size():
+		var vp := SubViewport.new()
+		vp.size = BAKE_SIZES[layer]
+		vp.transparent_bg = true
+		vp.use_debanding = false
+		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+		var rect := ColorRect.new()
+		rect.size = Vector2(vp.size)
+		var m := ShaderMaterial.new()
+		m.shader = shader
+		m.set_shader_parameter("layer", layer)
+		if scale != null:
+			m.set_shader_parameter("scale", scale)
+		rect.material = m
+		vp.add_child(rect)
+		add_child(vp)
+		ports.append(vp)
+	await RenderingServer.frame_post_draw
+	var out: Array[Texture2D] = []
+	for vp in ports:
+		vp.queue_free()   # deferred: the images are still there to read below
+	for layer in ports.size():
+		var img := ports[layer].get_texture().get_image()
+		if img == null or img.is_empty():
+			return []
+		if layer >= 2:   # fine and grit fill two channels
+			img.convert(Image.FORMAT_RG8)
+		if layer == 3:
+			img.generate_mipmaps()
+		out.append(ImageTexture.create_from_image(img))
+	return out
 
 func _rebuild() -> void:
 	var index := GameState.current_section_index

@@ -646,6 +646,39 @@ func _on_work_progress(value: float) -> void:
 			_:
 				_preview_skip = 0
 	BuildWork.reveal(_preview, value, _preview_skip)
+	_rise_core()
+
+# The dark core behind the joints rises with the courses laid in front of it. Shown whole
+# from the first stone, it stood over the half-laid wall as a finished slab of shadow.
+func _rise_core() -> void:
+	var core := _preview.get_child(0) as MeshInstance3D
+	if core == null or not core.mesh is BoxMesh or not core.visible:
+		return
+	var courses: MultiMeshInstance3D = null
+	for c in _preview.get_children():
+		if c is MultiMeshInstance3D:
+			courses = c
+			break
+	if courses == null:
+		return
+	if not core.has_meta("y"):
+		core.set_meta("y", core.position.y)
+	var h: float = (core.mesh as BoxMesh).size.y
+	var bottom: float = core.get_meta("y") - h * 0.5
+	var mm := courses.multimesh
+	var shown := mm.instance_count if mm.visible_instance_count < 0 else mm.visible_instance_count
+	# Up to the last course laid end to end (the one going up has nothing behind it yet),
+	# sunk under the stones' tops
+	var top := bottom
+	if shown > 0:
+		var last := mm.get_instance_transform(shown - 1)
+		var half := last.basis.y.length() * 0.5
+		var row_done := shown == mm.instance_count or mm.get_instance_transform(shown).origin.y > last.origin.y + 0.01
+		top = last.origin.y + (half if row_done else -half) - 0.05
+	var f := clampf((top - bottom) / h, 0.0, 1.0)
+	core.visible = f > 0.02
+	core.scale.y = f
+	core.position.y = bottom + h * f * 0.5
 
 func _clear_preview() -> void:
 	if _preview != null:
@@ -666,8 +699,11 @@ func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
 			if _clearing() and not pulled:
 				_add_charred(rng)
 		Stage.FRAMED:
-			_add_box(Vector3(_size.x - 0.1, minf(COURSE_H, _size.y) - 0.04, _size.z - 0.14),
-				Vector3(_center.x, 0.12 + minf(COURSE_H, _size.y) * 0.5, _center.z), Palette.STONE_JOINT)
+			# Its top under the stones' (theirs is a half joint below the course line): level
+			# with them, the dark showed as a slab over the whole course
+			var core_h := minf(COURSE_H, _size.y) - 0.1
+			_add_box(Vector3(_size.x - 0.1, core_h, _size.z - 0.14),
+				Vector3(_center.x, 0.14 + core_h * 0.5, _center.z), Palette.STONE_JOINT)
 			_add_courses(rng, minf(COURSE_H, _size.y), GAP_ROUGH)
 			_add_scaffold(rng)
 			if thick and face > 0:

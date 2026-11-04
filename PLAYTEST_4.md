@@ -34,6 +34,8 @@
 
 Three stretches (days 1–12: Sheep Gate, Fish Gate, Jeshanah Gate) is about 25 minutes at par. If a group is still happily going at 45 minutes, that is a good sign: write it down and let them finish the stretch.
 
+**Solo track (GDD §5.25, the call):** 1–2 people alone, one person + 2 Builder bots, Full game, same 45 minutes. Tell them nothing about the call; the controls card and the Tab view list it. Fill the "Alone" block in §2.
+
 **Unobserved track (optional, costs nothing):** send the plain link, no flags, to a few people who will play without you. The play stats (§5) show where they stopped; ask the follow-up question (§4) a day or two later.
 
 ---
@@ -74,6 +76,13 @@ Tally marks plus a clock reading ("T+4:30" from the first day's work). Time-stam
 - [ ] A run lost: stretch ____ , breaches at the end ____ / 10, and did they say "it was that earlier stretch"?
 - [ ] The breach counter noticed before it got to 7 or 8?
 - [ ] "Try the stretch again": did they use it, or leave?
+
+**Alone** (solo track only)
+- [ ] First call: T+____ (found it on their own, or never)
+- [ ] Calls a bot to a spot after a watchman call or a battered wall (triage: good) — tally: ______
+- [ ] Stands and watches the bots work (passenger: bad) — tally: ______
+- [ ] More than one call a minute for several minutes (micromanaging)
+- [ ] Says "they" / "my crew" about the bots, or thanks one
 
 **Feel**
 - [ ] Stutter or lag (web): when, how bad
@@ -126,6 +135,7 @@ Fill this in right after the last session. **The thresholds below are proposed n
 | 2. A peak in the first ten minutes | The first laugh / shout / near-miss timestamps | at least 5 of 6 groups have a Fellowship moment inside 6 minutes | |
 | 3. Simple vs Full | "What do I do?" ticks, Fellowship ticks, groups reaching stretch 3 | Simple wins if its "what do I do?" ticks per group are at most half of Full's **and** its Fellowship ticks are at least 70% of Full's | |
 | 4. The breach rule | Runs lost with an early stretch blamed, breaches noticed late | 2 or more such runs: make breaches per stretch, or give a way to win them back | |
+| 5. Fun alone (the call) | "Alone" block: triage calls vs passenger ticks, still calling after stretch 1 | keep if every solo player calls after stretch 1 on their own and triage ticks outnumber passenger ticks; cut if nobody calls after stretch 1 | |
 
 **What each result does:**
 - *Pull fails, Simple is calmer, Fellowship holds* → ship Simple as the default ("Story"), Full as "Full crew" (GDD §5.23 point 4); the problem is then pace and variety, not rules.

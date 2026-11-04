@@ -9,9 +9,8 @@ extends Node3D
 # so gameplay beats — sling release, build strike, footsteps — land on the same frames.
 #
 # Proportions: built chibi (head ~40% of height), short and stubby, reads at gameplay zoom.
-# Settings → Advanced → Figures can take it taller (`build`: the head shrunk and the legs,
-# torso and arms stretched to a grown man of about five and a half heads). The player colour
-# is the head-band; the head is what the iso camera sees most, so it stays light and bright.
+# The player colour is the head-band; the head is what the iso camera sees most, so it
+# stays light and bright.
 
 const BUILDER_BODY := preload("res://scenes/shared/builder_body.gd")
 const BUILDER_HEAD := preload("res://scenes/shared/builder_head.gd")
@@ -36,6 +35,7 @@ const BUILD_TURN   := -0.65
 const BLEND_TIME   := 0.09     # cross-fade from the old pose when the animation changes
 const HOLD_TIME    := 0.1      # this long without motion and the figure counts as stopped
 const WINDUP_FULL  := 0.9      # wind-up reaches full tension (= Player.SLING_CHARGE_TIME)
+const SEEN_MARGIN  := 3.0      # metres past the view edge a figure still poses (its shadow, the next pan)
 
 # Rig dimensions (metres, before scale). Feet at y = 0.
 const HIP_Y      := 0.36
@@ -43,15 +43,17 @@ const SHOULDER_Y := 0.86
 const NECK_Y     := 0.98
 const HEAD_R     := 0.34
 const ARM_X      := 0.4
-# The figure's build (Settings.tall_figures): 0 short and stubby, 1 tall. Taller shrinks the
-# head and stretches the legs (the legs' pivots too, and the torso lifted to match, so the
-# figure keeps roughly its height); the feet are pressed back to their own height
-# (_flatten_feet). Read when a figure is built; Settings rebuilds every figure on a change.
-static var build := 0.0
-const TALL_HEAD    := 0.56
-const TALL_LEG     := 1.82
-const TALL_TORSO   := 1.1
-const TALL_ARM     := 1.14   # hands to mid-thigh, not the belt
+# Proportions on top of the authored parts: the head scaled, the legs stretched (their
+# pivots too, and the torso lifted to match), the feet pressed back to their own height
+# (_flatten_feet), the hands kept their size on a stretched arm. Cartoony on purpose (GDD
+# §6.2): a bigger head on shorter legs
+const HEAD_SCALE    := 1.15
+# The middle of the closed fist, in the hand's own space (BuilderBody's fist): what it holds
+# runs through here along the hand's x
+const FIST_GRIP     := Vector3(0, -0.02, 0.02)
+const LEG_STRETCH   := 0.85
+const TORSO_STRETCH := 1.0
+const ARM_STRETCH   := 1.0
 
 # Screen directions of the "<anim>_<dir>" suffixes (iso camera looks down -x -z)
 const DIR_VEC := {
@@ -81,7 +83,7 @@ signal strike            # tool meets stone in the "build" loop
 signal frame_changed
 signal animation_finished
 signal posed(delta: float)   # after each frame's pose, so props can follow the hands
-signal rebuilt               # set_look built the figure anew (a new look, or a new build)
+signal rebuilt               # set_look built the figure anew (a new look)
 
 var animation := ""
 var frame := 0
@@ -96,6 +98,8 @@ var aim_yaw := 0.0
 var hold_yaw := NAN
 ## Sling: angle of the whirling stone, so the hand circles in step with it
 var whirl_phase := 0.0
+## Working at the mortar trough: the build stroke swings a stirring paddle, not the mallet
+var stirring := false
 
 var _base := ""          # animation without the direction suffix
 var _dir := "down"
@@ -136,7 +140,9 @@ var _arm_r: Node3D
 var _leg_l: Node3D
 var _leg_r: Node3D
 var _tool: Node3D        # mallet, only while building
+var _paddle: Node3D      # stirring paddle, only while building at the trough
 var _spear: Node3D
+var _dagger: Node3D
 var _cape: Node3D
 var _carry_anchor: Node3D   # chest-front point where a carried load rides
 var _belt_tool: Node3D      # the builder's hammer hung at the hip between strokes
@@ -152,6 +158,13 @@ var _elbows: Array[Node3D] = []
 var _tails: Array[Node3D] = []    # head-band / scarf ends (BuilderHead)
 var _veil: Node3D                 # a head-cloth's fall down the back (BuilderHead)
 var _skirt: Node3D                # the tunic below the belt (BuilderBody)
+var _eyes: Array[Node3D] = []     # each eye's pivot, squeezed shut to blink (BuilderHead)
+var _blink_in := 0.0              # seconds to the next blink
+var _blink_t := -1.0              # seconds into the blink going on (< 0: none)
+var _blinks_left := 0             # a quick second blink after this one
+var _since_blink := 0.0
+var _shut := 0.0                  # eyes held shut by the pose (down on the ground)
+var _sec_head := Vector2.ZERO
 var _sec_tail := Vector2.ZERO
 var _sec_tail_roll := Vector2.ZERO
 var _sec_cape := Vector2.ZERO
@@ -165,12 +178,6 @@ var _seed := 0.0            # each figure's idle drifts on its own clock
 var _last_pose: Dictionary = {}
 var _dip := 0.0             # knees giving under a load picked up, a landing, a blow (squash)
 var _dip_tween: Tween
-# This figure's build, fixed when it was built (`build`)
-var _grown := 0.0
-var _head_scale := 1.0
-var _leg_stretch := 1.0
-var _torso_stretch := 1.0
-var _arm_stretch := 1.0
 var _hand_items: Array[Node3D] = []   # things put in the right hand from outside (attach_to_hand)
 
 static var _meshes: Dictionary = {}
@@ -222,7 +229,7 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 ## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type
 static func enemy_look(kind: String) -> Dictionary:
 	var base := {
-		"skin": Color(0.60, 0.40, 0.27), "trim": Color(0.12, 0.09, 0.08), "hair": Color(0.10, 0.08, 0.07),
+		"skin": Color(0.60, 0.40, 0.27), "trim": Color(0.12, 0.09, 0.08), "hair": Color(0.19, 0.12, 0.08),
 		"band": Color(0.10, 0.08, 0.07), "brows": true, "outline": Color(0.36, 0.07, 0.05),
 		"bare_arms": false,
 	}
@@ -248,10 +255,25 @@ static func enemy_look(kind: String) -> Dictionary:
 
 # ── Setup ──────────────────────────────────────────────────
 
+static var _warmed := false
+
+## Build each enemy once, off the tree, so the shared mesh caches are full before play:
+## the first brute or raider of a run filled its own (8-25 ms, more for the first figure
+## of all), a hitch right at its spawn. Once per run of the game; the caches are static.
+static func prewarm() -> void:
+	if _warmed:
+		return
+	_warmed = true
+	for kind in ["scout", "brute", "raider", "saboteur"]:
+		var rig := CharacterRig.new()
+		rig._build(enemy_look(kind))
+		rig.free()
+
 func setup(look: Dictionary, size_scale := 1.0) -> void:
 	_size = size_scale * BASE_SCALE
 	scale = Vector3.ONE * _size
 	_seed = randf() * 100.0
+	_blink_in = randf_range(0.5, 4.0)
 	add_to_group(&"character_rigs")
 	_build(look)
 	_build_marker()
@@ -273,7 +295,9 @@ func set_look(look: Dictionary) -> void:
 	_part_colors.clear()
 	_web_mats.clear()
 	_tool = null
+	_paddle = null
 	_spear = null
+	_dagger = null
 	_cape = null
 	_carry_anchor = null
 	_belt_tool = null
@@ -281,6 +305,7 @@ func set_look(look: Dictionary) -> void:
 	_belt_sword = null
 	_veil = null
 	_skirt = null
+	_eyes.clear()
 	_hands.clear()
 	_knees.clear()
 	_ankles.clear()
@@ -295,11 +320,6 @@ func set_look(look: Dictionary) -> void:
 	for n: Node3D in held:
 		attach_to_hand(n)
 	rebuilt.emit()
-
-## Built anew at the current `build` (Settings.tall_figures changed)
-func refresh_build() -> void:
-	if not _look.is_empty():
-		set_look(_look)
 
 ## Put `n` in the right fist (kept there through a rebuild)
 func attach_to_hand(n: Node3D) -> void:
@@ -345,6 +365,7 @@ func is_playing() -> bool:
 	return _playing
 
 func hit_flash() -> void:
+	blink()   # flinching
 	if _flash_tween:
 		_flash_tween.kill()
 	_set_flash(1.0)
@@ -368,6 +389,10 @@ func recoil(amount: float) -> void:
 	_recoil = amount
 	_recoil_tween = create_tween()
 	_recoil_tween.tween_property(self, "_recoil", 0.0, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## Shut the eyes for a moment, now rather than on the figure's own clock
+func blink() -> void:
+	_blink_t = 0.0
 
 ## Squash & stretch (x, y factors), springing back. Feet stay planted.
 func squash(amount: Vector2) -> void:
@@ -401,10 +426,29 @@ func _process(delta: float) -> void:
 		else:
 			_set_frame(f % n)
 	_blend = minf(1.0, _blend + delta / BLEND_TIME)
+	if not _seen():
+		return
 	_update_facing(delta)
 	_apply_pose()
 	_secondary(delta)
 	posed.emit(delta)
+
+# Posing is most of a figure's frame (the script, then every part's moved transform):
+# skip it where nobody sees it. The clock above still runs, so footsteps, strikes and
+# animation_finished land as before. Unseen = hidden, in a SubViewport that isn't drawing
+# (a closed panel's trade figure), or off the ortho view by more than SEEN_MARGIN.
+func _seen() -> bool:
+	if not is_visible_in_tree():
+		return false
+	var vp := get_viewport()
+	if vp is SubViewport:
+		return (vp as SubViewport).render_target_update_mode != SubViewport.UPDATE_DISABLED
+	var cam := vp.get_camera_3d()
+	if cam == null or cam.projection != Camera3D.PROJECTION_ORTHOGONAL:
+		return true
+	var rect := vp.get_visible_rect()
+	var margin := SEEN_MARGIN * _size / BASE_SCALE * rect.size.y / cam.size
+	return rect.grow(margin).has_point(cam.unproject_position(global_position))
 
 func _set_frame(f: int) -> void:
 	if f == frame:
@@ -515,6 +559,7 @@ func _apply_pose() -> void:
 	var spear_z := 0.0
 	var tool_rx := -1.35                                # the wrist: hammer head led forward off the hand
 	var moving := smoothstep(0.3, 1.5, _move_speed)
+	_shut = 0.0
 	match _base:
 		"idle":
 			# At ease: the weight drifts from foot to foot every few seconds, the chest rises
@@ -729,7 +774,7 @@ func _apply_pose() -> void:
 			spear_rx = PI * 0.5 * e
 			spear_z = -0.3 * e
 			if k >= 1.0:
-				var shake := sin(Time.get_ticks_msec() * 0.06) * 0.02
+				var shake := sin(Time.get_ticks_msec() * 0.06 + _seed) * 0.02   # each on his own tremble
 				lean += shake
 				twist += shake
 		"reel":
@@ -756,6 +801,7 @@ func _apply_pose() -> void:
 			else:
 				c = 1.0 - ease((k - 0.62) / 0.38, 0.6)
 			plant = false
+			_shut = c
 			body_rx = -1.3 * c
 			body_y = 0.13 * c
 			al = Vector3(-0.3 - 1.2 * c, 0, 0.14 + c * 0.9)
@@ -845,6 +891,7 @@ func _apply_pose() -> void:
 			var buckle := ease(minf(1.0, k * 2.5), 0.6)
 			var fall := ease(clampf((k - 0.25) / 0.75, 0.0, 1.0), 2.2)
 			plant = fall < 0.05
+			_shut = maxf(buckle * 0.5, fall)   # screwed up as the knees go, shut once he's down
 			kl = 0.06 + 0.9 * buckle * (1.0 - fall * 0.6)
 			kr = 0.06 + 0.7 * buckle * (1.0 - fall * 0.6)
 			ll = -0.4 * buckle * (1.0 - fall * 0.5)
@@ -898,8 +945,11 @@ func _apply_pose() -> void:
 				twist *= 0.3
 				lean -= 0.04   # leaning back against the weight
 	if _spear != null and _base in ["idle", "walk"]:
-		ar = Vector3(-0.35, 0, -0.3)   # hand on the shaft
-		er = 0.75
+		ar = Vector3(-0.2, 0, -0.15)   # forearm forward, the shaft upright in the fist
+		er = 1.35
+	elif _dagger != null and _base in ["idle", "walk"]:
+		ar = Vector3(-0.3, 0, -0.12)   # the knife held up and ready, not hanging
+		er = 1.1
 	# Moving: lean into a start, sit back into a stop, bank into a turn; a blow buckles the
 	# knees a little
 	if _base in ["idle", "walk", "run", "windup"] and plant:
@@ -922,6 +972,8 @@ func _apply_pose() -> void:
 	_tool_visible()
 	if _tool != null:
 		_tool.rotation.x = tool_rx
+	if _paddle != null:
+		_paddle.rotation.x = tool_rx
 	if _sword != null:
 		_sword.rotation.x = -1.45   # blade out ahead of the fist
 	# Ease out of the previous animation's pose instead of snapping to the new one
@@ -983,12 +1035,21 @@ func _apply_pose() -> void:
 	_last_pose = { "lean": lean, "body_y": body_y, "moving": moving, "ph": ph, "ll": ll, "lr": lr }
 
 ## The spear's shaft through the right fist, a third of the way up it, at the angle the
-## pose gave it (it hangs on the torso, so the hand alone can't carry its angle)
+## pose gave it (it hangs on the torso, so the hand alone can't carry its angle). The fist
+## turns to close round it: its grip runs along the hand's x, thumb toward the head, and
+## its y stays as near the forearm as it can
 func _grip_spear() -> void:
 	if _hand_r == null or not _hand_r.is_inside_tree() or not _torso.is_inside_tree():
 		return
 	const GRIP := 0.2
-	var fist := _torso.to_local(_hand_r.global_position + _hand_r.global_basis.y * -0.02)
+	var shaft := (_torso.global_basis * _spear.basis).y.normalized()
+	var hb := _hand_r.global_basis
+	var y := hb.y - shaft * hb.y.dot(shaft)
+	if y.length_squared() > 0.0001:
+		y = y.normalized()
+		var s := hb.get_scale()
+		_hand_r.global_basis = Basis(shaft * s.x, y * s.y, shaft.cross(y) * s.z)
+	var fist := _torso.to_local(_hand_r.global_transform * FIST_GRIP)
 	_spear.position = fist - _spear.basis * Vector3(0, GRIP, 0)
 
 ## Knee bend through a stride at leg phase `p` (thigh forward at p = π/2): folded high
@@ -1003,12 +1064,12 @@ static func _gait_knee(p: float, run: bool) -> float:
 ## How far below the hip a leg reaches with the thigh at `thigh` and the knee at `knee`
 ## (rig units, before the rig's scale)
 func _leg_reach(thigh: float, knee: float) -> float:
-	var upper := -BUILDER_BODY.KNEE_Y * _leg_stretch
+	var upper := -BUILDER_BODY.KNEE_Y * LEG_STRETCH
 	var lower := _leg_rest() - upper
 	return upper * cos(thigh) + lower * cos(thigh + knee)
 
 func _leg_rest() -> float:
-	return HIP_Y * _leg_stretch
+	return HIP_Y * LEG_STRETCH
 
 ## What hangs off the figure follows it: head-band ends stream back with speed and swing
 ## out on a turn, a head-cloth and a cloak lift behind a run, the tunic's skirt lags a step
@@ -1019,6 +1080,11 @@ func _secondary(delta: float) -> void:
 	var by := _body.position.y
 	_body_vy = lerpf(_body_vy, (by - _prev_body_y) / delta, clampf(delta * 20.0, 0.0, 1.0))
 	_prev_body_y = by
+	# The big head rides the neck a beat behind the body: it nods as the body drops onto a
+	# foot or a landing, tips back as it rises, and settles with a little bob
+	_sec_head = _spring(_sec_head, clampf(-_body_vy * 0.1, -0.15, 0.15), 150.0, 10.0, delta)
+	_head.rotation.x += _sec_head.x
+	_blink(delta)
 	var lean: float = _last_pose.get("lean", 0.0)
 	var moving: float = _last_pose.get("moving", 0.0)
 	var ph: float = _last_pose.get("ph", 0.0)
@@ -1047,13 +1113,46 @@ func _secondary(delta: float) -> void:
 		var open := absf(float(_last_pose.get("ll", 0.0)) - float(_last_pose.get("lr", 0.0)))
 		_skirt.scale = Vector3(1.0, 1.0, 1.0 + clampf(open * 0.22, 0.0, 0.3))
 
+const BLINK_TIME := 0.15
+
+# Every few seconds the eyes shut for a moment (now and then twice), on a sharp turn of the
+# head too; the pose can hold them shut. The eye squeezes flat on its pivot, under the lid
+func _blink(delta: float) -> void:
+	if _eyes.is_empty():
+		return
+	_since_blink += delta
+	_blink_in -= delta
+	if _blink_t < 0.0 and (_blink_in <= 0.0 or (absf(_turn_rate) > 8.0 and _since_blink > 1.2)):
+		_blink_t = 0.0
+		if _since_blink > 0.5:   # not the second of a pair
+			_blinks_left = 1 if randf() < 0.18 else 0
+	var shut := 0.0
+	if _blink_t >= 0.0:
+		if _blink_t == 0.0:
+			_since_blink = 0.0
+			_blink_in = randf_range(2.2, 5.5)
+		_blink_t += delta
+		# Down fast, up a little slower
+		var u := _blink_t / BLINK_TIME
+		shut = smoothstep(0.0, 0.3, u) * (1.0 - smoothstep(0.45, 1.0, u))
+		if u >= 1.0:
+			_blink_t = -1.0
+			if _blinks_left > 0:
+				_blinks_left -= 1
+				_blink_in = 0.09
+	shut = maxf(shut, _shut)
+	for e in _eyes:
+		e.scale.y = lerpf(1.0, 0.1, shut)
+
 static func _spring(s: Vector2, target: float, stiff: float, damp: float, delta: float) -> Vector2:
 	var v := s.y + (-stiff * (s.x - target) - damp * s.y) * delta
 	return Vector2(s.x + v * delta, v)
 
 func _tool_visible() -> void:
 	if _tool != null:
-		_tool.visible = _base == "build"
+		_tool.visible = _base == "build" and not stirring
+	if _paddle != null:
+		_paddle.visible = _base == "build" and stirring
 	if _belt_tool != null:
 		_belt_tool.visible = _base != "build" and not _look.get("sculpted_body", false)
 	if _sword != null:
@@ -1095,11 +1194,6 @@ func _set_flash(v: float) -> void:
 
 func _build(look: Dictionary) -> void:
 	_look = look
-	_grown = clampf(build, 0.0, 1.0)
-	_head_scale = lerpf(1.0, TALL_HEAD, _grown)
-	_leg_stretch = lerpf(1.0, TALL_LEG, _grown)
-	_torso_stretch = lerpf(1.0, TALL_TORSO, _grown)
-	_arm_stretch = lerpf(1.0, TALL_ARM, _grown)
 	if _part_mat == null:
 		_part_mat = ShaderMaterial.new()
 		_part_mat.shader = PART_SHADER
@@ -1350,19 +1444,20 @@ func _build(look: Dictionary) -> void:
 			_part(_spear, _soft(Vector3(0.07, 2.2, 0.07), 0.015), Color(0.42, 0.28, 0.16), Vector3(0, 0.55, 0))
 			_part(_spear, _cyl(0.0, 0.08, 0.28), Color(0.62, 0.60, 0.56), Vector3(0, 1.78, 0))
 		"dagger":
-			# A curved knife the length of a forearm: a grip, a crossguard, a blade in four short
-			# lengths bending away from the body and tapering to the point. Long enough to read
-			# against the scout's spear from across the yard.
-			var d := _pivot(hands[1], Vector3(0, -0.05, 0.05))
+			# A straight knife the length of a forearm: a grip, a crossguard, one plain blade and
+			# its point. Long enough to read against the scout's spear from across the yard. The grip runs through the fist
+			# (along the hand's x, FIST_GRIP), the hand turned thumb-up so the blade rises out
+			# of the top of it
+			hands[1].rotation.y = -PI * 0.5
+			var d := _pivot(hands[1], FIST_GRIP)
+			d.rotation = Vector3(-PI * 0.5, 0, PI * 0.5)   # the flat of the blade toward the camera
+			_dagger = d
 			_part(d, _soft(Vector3(0.05, 0.16, 0.05), 0.015), Color(0.30, 0.20, 0.13), Vector3(0, -0.04, 0))
 			_part(d, _soft(Vector3(0.20, 0.05, 0.07), 0.015), Color(0.55, 0.42, 0.22), Vector3(0, -0.13, 0))
-			var tip := Vector3(0, -0.15, 0)
-			for k in 4:
-				var bend := 0.11 + k * 0.24
-				var dir := Vector3(-sin(bend), -cos(bend), 0)
-				var w := 0.09 - k * 0.012
-				_part(d, _soft(Vector3(w, 0.16, 0.03), 0.01), Color(0.76, 0.74, 0.70).darkened(0.04 * k), tip + dir * 0.08, Vector3(0, 0, PI - bend))
-				tip += dir * 0.15
+			var steel := Color(0.76, 0.74, 0.70)
+			_part(d, _soft(Vector3(0.085, 0.46, 0.03), 0.01), steel, Vector3(0, -0.38, 0))
+			# The point: a diamond capping the blade
+			_part(d, _soft(Vector3(0.06, 0.06, 0.03), 0.008), steel.darkened(0.06), Vector3(0, -0.61, 0), Vector3(0, 0, PI * 0.25))
 	if look.has("sack"):
 		var sack := _pivot(_torso, Vector3(0, 0.38, -0.3))
 		sack.rotation.x = 0.25
@@ -1390,6 +1485,10 @@ func _build(look: Dictionary) -> void:
 		_part(_tool, _soft(Vector3(0.07, 0.56, 0.07), 0.018), Color(0.50, 0.34, 0.20), Vector3(0, -0.24, 0))
 		_part(_tool, _soft(Vector3(0.09, 0.08, 0.09), 0.02), LEATHER, Vector3(0, -0.06, 0))
 		_part(_tool, _bbox(Vector3(0.36, 0.22, 0.22), 0.05), Color(0.58, 0.57, 0.58), Vector3(0, -0.54, 0))
+		# The trough's paddle: a long pole with a flat blade, crusted pale with lime
+		_paddle = _pivot(hands[1], Vector3(0, -0.02, 0.02))
+		_part(_paddle, _soft(Vector3(0.06, 0.95, 0.06), 0.016), Color(0.45, 0.33, 0.20), Vector3(0, -0.4, 0))
+		_part(_paddle, _bbox(Vector3(0.24, 0.3, 0.05), 0.02), Color(0.78, 0.75, 0.68), Vector3(0, -0.95, 0))
 		if look.get("tool_always", false) and not look.get("sculpted_body", false):
 			# Between strokes it hangs from the belt at the hip, head up
 			_belt_tool = _pivot(_torso, Vector3(-0.36, 0.2, 0.08))
@@ -1419,21 +1518,21 @@ func _build(look: Dictionary) -> void:
 func _proportions() -> void:
 	if _head != null:
 		# Under the stretched torso: divide it back out so the head stays round
-		_head.scale = Vector3(_head_scale, _head_scale / _torso_stretch, _head_scale)
+		_head.scale = Vector3(HEAD_SCALE, HEAD_SCALE / TORSO_STRETCH, HEAD_SCALE)
 	for leg: Node3D in [_leg_l, _leg_r]:
 		if leg != null:
-			leg.scale.y = _leg_stretch
-			leg.position.y *= _leg_stretch
+			leg.scale.y = LEG_STRETCH
+			leg.position.y *= LEG_STRETCH
 			_flatten_feet(leg)
 	if _torso != null:
-		_torso.position.y *= _leg_stretch
-		_torso.scale.y = _torso_stretch
+		_torso.position.y *= LEG_STRETCH
+		_torso.scale.y = TORSO_STRETCH
 	# Longer upper and forearm; the hands (and what they hold) keep their size
 	for arm: Node3D in [_arm_l, _arm_r]:
 		if arm != null:
-			arm.scale.y = _arm_stretch
+			arm.scale.y = ARM_STRETCH
 	for hand in _hands:
-		hand.scale.y = 1.0 / _arm_stretch
+		hand.scale.y = 1.0 / ARM_STRETCH
 
 ## The leg stretch is for shins, not feet: press everything below the ankle back to its
 ## authored height, sole still on the ground (y' = -HIP + (y + HIP) / stretch)
@@ -1444,8 +1543,8 @@ func _flatten_feet(leg: Node3D) -> void:
 		var knee := _knees[i]
 		var ankle_pivot := _ankles[i]
 		var ya := knee.position.y + ankle_pivot.position.y
-		ankle_pivot.position.y = ya / _leg_stretch - HIP_Y + HIP_Y / _leg_stretch - knee.position.y
-		ankle_pivot.scale.y = 1.0 / _leg_stretch
+		ankle_pivot.position.y = ya / LEG_STRETCH - HIP_Y + HIP_Y / LEG_STRETCH - knee.position.y
+		ankle_pivot.scale.y = 1.0 / LEG_STRETCH
 		return
 	var ankle := -HIP_Y + 0.16
 	for c: Node in leg.get_children():
@@ -1458,8 +1557,8 @@ func _flatten_feet(leg: Node3D) -> void:
 			top = n.position.y + (box.position.y + box.size.y) * n.scale.y
 		if top > ankle:
 			continue
-		n.scale.y /= _leg_stretch
-		n.position.y = n.position.y / _leg_stretch - HIP_Y + HIP_Y / _leg_stretch
+		n.scale.y /= LEG_STRETCH
+		n.position.y = n.position.y / LEG_STRETCH - HIP_Y + HIP_Y / LEG_STRETCH
 
 # Hair by style: a cap over the crown and down the back, chunky locks on top
 func _hair(style: String, hair: Color, hc: Vector3, hw: float, hh: float, hd: float, hat: String) -> void:

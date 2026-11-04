@@ -111,7 +111,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 150
-theme_override_constants/margin_top = 96
+theme_override_constants/margin_top = 64
 theme_override_constants/margin_right = 80
 theme_override_constants/margin_bottom = 150
 
@@ -155,7 +155,7 @@ texture = SubResource("Tex_rule")
 expand_mode = 1
 
 [node name="MenuGap" type="Control" parent="Content/Column"]
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 mouse_filter = 2
 
@@ -199,7 +199,7 @@ theme_override_font_sizes/font_size = 18
 text = "Quit"
 
 [node name="StatusGap" type="Control" parent="Content/Column"]
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 mouse_filter = 2
 

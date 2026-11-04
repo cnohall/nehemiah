@@ -37,14 +37,6 @@ var fixed_camera := false
 # Turn the view on every stretch so north sits up-screen, the wall lying as it does on the
 # map (as Explore Jerusalem does) — off keeps the game's one view, outside always far
 var turn_to_map := false
-# The figures' build (CharacterRig.build): short and stubby, or tall (on trial). Every figure
-# on screen is rebuilt at once
-var tall_figures := false:
-	set(v):
-		tall_figures = v
-		CharacterRig.build = 1.0 if v else 0.0
-		if is_inside_tree():
-			get_tree().call_group(&"character_rigs", "refresh_build")
 var rumble := true
 var toggle_charge := false   # sling: press to start, press again to throw (instead of hold)
 # Keyboard / mouse rebinds: action → {"key": physical keycode} or {"mouse": button index}.
@@ -68,9 +60,12 @@ var trade := -1
 var simple_game := false
 # Anonymous play stats from the web build (Telemetry): where a game stops, how it runs
 var share_stats := true
-# Experimental (GDD §5.21), off by default; the host's choice rules the crew like difficulty
-var exp_forecast := false    # wave forecast: how many and what, ~22 s ahead, spot ringed on the ground
-var exp_call_early := false  # [Horn] brings the next wave forward for a short work boost
+# Experimental (GDD §5.21); the host's choice rules the crew like difficulty
+# Wave forecast: how many and what, ~22 s ahead, spot ringed and route drawn on the ground.
+# On by default when one person plays (bots or not): information is worth most alone (§5.25)
+enum { FORECAST_OFF, FORECAST_SOLO, FORECAST_ALWAYS }
+var exp_forecast := FORECAST_SOLO
+var exp_call_early := false  # off by default: [Horn] brings the next wave forward for a short work boost
 
 # pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
 # harm: multiplies every enemy blow, on workers and on the wall
@@ -110,7 +105,7 @@ const KR_REGULAR := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Medium-subset.tt
 const KR_BOLD    := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Bold-subset.ttf"
 
 const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
-	"interact", "drop", "dash", "throw_charge", "horn", "reveal"]
+	"interact", "drop", "dash", "throw_charge", "horn", "call", "reveal"]
 
 func _ready() -> void:
 	if OS.has_feature("web") or OS.has_feature("mobile"):
@@ -132,7 +127,6 @@ func _ready() -> void:
 		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
 		fixed_camera = cfg.get_value("display", "fixed_camera", fixed_camera)
 		turn_to_map = cfg.get_value("display", "turn_to_map", turn_to_map)
-		tall_figures = cfg.get_value("display", "tall_figures", tall_figures)
 		rumble = cfg.get_value("controls", "rumble", rumble)
 		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
@@ -143,12 +137,15 @@ func _ready() -> void:
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
 		simple_game = cfg.get_value("general", "simple_game", simple_game)
 		share_stats = cfg.get_value("general", "share_stats", share_stats)
-		exp_forecast = cfg.get_value("experimental", "forecast", exp_forecast)
+		# "forecast" was an on/off bool before Nov 2026: on stays on, off takes the new default
+		var old_forecast: bool = cfg.get_value("experimental", "forecast", false)
+		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode",
+			FORECAST_ALWAYS if old_forecast else exp_forecast), FORECAST_OFF, FORECAST_ALWAYS)
 		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
 	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
 	if "--script" in OS.get_cmdline_args():
 		simple_game = "--simple" in OS.get_cmdline_user_args()
-		tall_figures = "--tall" in OS.get_cmdline_user_args()   # likewise the figures' build
+		exp_forecast = FORECAST_OFF   # the default game as it was: tests switch it on themselves
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -313,7 +310,6 @@ func save() -> void:
 	cfg.set_value("display", "diegetic_hud", diegetic_hud)
 	cfg.set_value("display", "fixed_camera", fixed_camera)
 	cfg.set_value("display", "turn_to_map", turn_to_map)
-	cfg.set_value("display", "tall_figures", tall_figures)
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
@@ -327,7 +323,7 @@ func save() -> void:
 	cfg.set_value("general", "trade", trade)
 	cfg.set_value("general", "simple_game", simple_game)
 	cfg.set_value("general", "share_stats", share_stats)
-	cfg.set_value("experimental", "forecast", exp_forecast)
+	cfg.set_value("experimental", "forecast_mode", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)
 
