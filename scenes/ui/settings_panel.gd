@@ -247,7 +247,7 @@ func _build_extra_rows() -> void:
 	_keys_btn.text = "Rebind keys…"
 	_keys_btn.theme_type_variation = &"GhostButton"
 	_keys_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	_keys_btn.pressed.connect(_show_page.bind(_keys_page))
+	_keys_btn.pressed.connect(func(): _show_page(_keys_page))   # built after this row: bind() would capture null
 	_grid.add_child(_keys_btn)
 	_build_language_row()
 	_add_label("More")

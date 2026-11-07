@@ -670,6 +670,10 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 		_tally_band.visible = with_tally
 	banner_title.text = title
 	banner_sub.text = sub
+	# Long lines (a stretch's twist intro) wrap inside the band, not off the screen's edges
+	banner_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	banner_sub.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	banner_sub.custom_minimum_size.x = minf(banner.get_viewport_rect().size.x * 0.84, 1100.0)
 	if _tally != null and not with_tally:
 		_tally.hide()
 	if not with_tally:
