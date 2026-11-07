@@ -3,7 +3,7 @@ Novedades de esta versión:
 • Sin tutorial aparte: el día 1 muestra a cada jugador nuevo su siguiente tarea
 • Constructores más amables y caricaturescos que parpadean y reaccionan
 • Llama a tus ayudantes: toca un lugar y un constructor libre va allí
-• El pronóstico de oleadas muestra de dónde viene el próximo ataque
+• El pronóstico muestra de dónde viene el próximo ataque
 • Casas, puertas, muros y templo con más detalle
 • Ajustes: página Avanzado y pistas del día 1
 • Rendimiento más fluido
