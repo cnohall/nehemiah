@@ -107,6 +107,9 @@ func _layout() -> void:
 	_horn = GameState.has_twist("horn")
 	if _horn:
 		_buttons.horn = { action = "horn", pos = br - Vector2(244, 40), r = 30.0, label = "Horn", icon = "horn" }
+	# The call (GDD §5.25): on a phone it marks where you stand; a free bot answers
+	if not GameState.festival:
+		_buttons.call = { action = "call", pos = br - Vector2(236, 136), r = 26.0, label = "Call", icon = "call" }
 	queue_redraw()
 
 # Display safe area (notch, rounded corners) mapped into viewport coordinates

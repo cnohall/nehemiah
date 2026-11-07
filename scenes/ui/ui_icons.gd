@@ -26,6 +26,8 @@ const _PATHS := {
 	# A stone falling to the ground
 	drop     = '<rect x="8" y="2.5" width="8" height="6.5" rx="1" fill="#FFF"/><path d="M12 11.5v5.5M9 14.5l3 3 3-3M4.5 21h15" stroke="#FFF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 	# Shofar: a ram's horn curling up from the mouthpiece to a flared bell
+	# A standard on its pole: the call's marker
+	call     = '<path d="M6 21.5V3" stroke="#FFF" stroke-width="2.4" stroke-linecap="round"/><path d="M7 3.8h11.5l-3 4 3 4H7z" fill="#FFF" stroke="#FFF" stroke-width="1.4" stroke-linejoin="round"/><path d="M3.5 21.5h5" stroke="#FFF" stroke-width="2.2" stroke-linecap="round"/>',
 	horn     = '<path d="M4 18.5c3.5 1 8 .2 11-3.3 1.6-1.9 2.5-4.3 2.6-7" stroke="#FFF" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M14.8 6.8 17.6 3l3.4 3.6z" fill="#FFF" stroke="#FFF" stroke-width="1.6" stroke-linejoin="round"/>',
 }
 

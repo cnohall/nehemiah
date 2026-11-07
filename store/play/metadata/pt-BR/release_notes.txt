@@ -1,7 +1,9 @@
 Novidades desta versão:
-• Ferido? Beba no poço da cidade para se curar
-• Construtores redesenhados: rostos, cabelos e porte novos
-• Um novo mapa de Jerusalém e uma tela inicial renovada
-• Configurações gráficas: qualidade e resolução 3D
-• Em teste nas Configurações: previsão de ondas e chamar ondas mais cedo
-• Correções vindas dos testes de jogo
+• Corrigido: construtores apareciam com o corpo branco no celular
+• Sem tutorial separado: no dia 1 cada jogador novo vê sua próxima tarefa
+• Construtores mais simpáticos e cartunescos, que piscam e reagem
+• Chame seus ajudantes: toque em um ponto e um construtor livre vai até lá
+• A previsão de ondas mostra de onde vem o próximo ataque
+• Casas, portões, muralhas e templo mais detalhados
+• Configurações: nova página Avançado e dicas do primeiro dia
+• Desempenho mais suave

@@ -1,7 +1,9 @@
 Neu in diesem Build:
-• Verletzt? Am Stadtbrunnen trinken, um zu heilen
-• Bauleute neu gestaltet: Gesichter, Haare und Statur
-• Eine neue Karte von Jerusalem und ein überarbeiteter Titelbildschirm
-• Grafikeinstellungen: Qualität und 3D-Auflösung
-• Zum Ausprobieren in den Einstellungen: Wellenvorschau und Wellen früher rufen
-• Korrekturen aus Spieltests
+• Behoben: Bauleute hatten auf Handys weiße Körper
+• Kein eigenes Tutorial mehr: Am ersten Tag sieht jeder neue Spieler seine nächste Aufgabe
+• Freundlichere, cartoonhafte Bauleute, die blinzeln und reagieren
+• Helfer rufen: Tippe auf eine Stelle, und ein freier Bauarbeiter geht hin
+• Die Wellenvorschau zeigt, woher der nächste Angriff kommt
+• Detailliertere Häuser, Tore, Mauern und Tempel
+• Einstellungen: neue Seite „Erweitert“ und Hinweise für den ersten Tag
+• Flüssigere Leistung

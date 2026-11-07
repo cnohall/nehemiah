@@ -1,7 +1,9 @@
 New in this build:
-• Hurt? Drink at the city well to heal
-• Builders redrawn: new faces, hair and build
-• A new map of Jerusalem and a refreshed title screen
-• Graphics settings: quality and 3D resolution
-• On trial in Settings: wave forecast and calling waves early
-• Fixes from playtesting
+• Fixed: builders showed white bodies on phones
+• No separate tutorial: day 1 shows each new player their next job
+• Friendlier, cartoony builders who blink and react
+• Call your helpers: tap a spot and a free builder goes there
+• Wave forecast shows where the next attack comes from
+• More detailed houses, gates, walls and temple
+• Settings: new Advanced page and first-day hints toggle
+• Smoother performance

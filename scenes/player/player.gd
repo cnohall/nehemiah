@@ -1813,6 +1813,8 @@ const CALL_PAD_REACH := 6.0    # pad: this far along the right stick, or where w
 func _call_point() -> Vector3:
 	if brain != null:
 		return global_position
+	if TouchControls.enabled() and not InputMode.using_pad:
+		return global_position   # the button sits under the thumb: call where we stand
 	if InputMode.using_pad:
 		var stick := Input.get_vector("aim_west", "aim_east", "aim_north", "aim_south", STICK_DEADZONE)
 		return global_position + screen_to_ground(stick).normalized() * CALL_PAD_REACH if stick != Vector2.ZERO else global_position

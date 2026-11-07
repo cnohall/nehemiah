@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Nehemiah: The Wall"
 config/description="Co-op 2-4 player HD-2D isometric action-strategy, 445 BC Jerusalem"
-config/version="0.1.4-beta"
+config/version="0.1.5-beta"
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/bg_color=Color(0.105, 0.068, 0.044, 1)

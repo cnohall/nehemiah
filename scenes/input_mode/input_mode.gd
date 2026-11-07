@@ -30,7 +30,7 @@ const MOUSE := { MOUSE_BUTTON_LEFT: "Click", MOUSE_BUTTON_RIGHT: "Right Click",
 const ACTION := { "throw": "throw_charge" }
 # Phones: the on-screen control that does it (TouchControls labels)
 const TOUCH := { "interact": "Use", "drop": "Drop", "dash": "Dash", "throw": "Sling",
-	"throw_charge": "Sling", "horn": "Horn", "pause": "Menu", "move": "Stick" }
+	"throw_charge": "Sling", "horn": "Horn", "call": "Call", "pause": "Menu", "move": "Stick" }
 
 var using_pad := false
 var pad_kind := Pad.XBOX
