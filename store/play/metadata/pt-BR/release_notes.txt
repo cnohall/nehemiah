@@ -1,5 +1,5 @@
 Novidades desta versão:
-• Corrigido: construtores apareciam com o corpo branco no celular
+• Corrigido: corpo branco dos construtores no celular
 • Sem tutorial separado: no dia 1 cada jogador novo vê sua próxima tarefa
 • Construtores mais simpáticos e cartunescos, que piscam e reagem
 • Chame seus ajudantes: toque em um ponto e um construtor livre vai até lá

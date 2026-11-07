@@ -1,9 +1,9 @@
 Neu in diesem Build:
-• Behoben: Bauleute hatten auf Handys weiße Körper
+• Behoben: weiße Körper der Bauleute auf Handys
 • Kein eigenes Tutorial mehr: Am ersten Tag sieht jeder neue Spieler seine nächste Aufgabe
 • Freundlichere, cartoonhafte Bauleute, die blinzeln und reagieren
 • Helfer rufen: Tippe auf eine Stelle, und ein freier Bauarbeiter geht hin
 • Die Wellenvorschau zeigt, woher der nächste Angriff kommt
 • Detailliertere Häuser, Tore, Mauern und Tempel
-• Einstellungen: neue Seite „Erweitert“ und Hinweise für den ersten Tag
+• Einstellungen: neue Seite „Erweitert“, Hinweise für Tag 1
 • Flüssigere Leistung
