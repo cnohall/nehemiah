@@ -172,6 +172,7 @@ var loss_reason := "overrun"
 # down; clients count along and are corrected now and then (sync_sun).
 var sun_total := 0.0
 var sun_left := 0.0
+var sun_held := false   # the clock waits (the first day, until the first load)
 signal sun_changed
 
 # Section rating (GDD §6.1): three marks, each earned on its own when the section's
@@ -238,13 +239,10 @@ var _debug_start := false
 # Title screen: the menu's live backdrop — bots play the real game behind it, and
 # like a `--day=N` run nothing it does is saved (no marks, met folk or achievements)
 var attract := false
-# "Learn the basics" from the title: a solo practice at the Sheep Gate walked through by
-# Tutorial — no waves, no story, no bots but the one that falls; nothing it does is saved.
-# Set by the menu, cleared when the menu opens again (outlives reset() like replay_section).
-var tutorial := false
 # "Explore Jerusalem" from the title: a solo sandbox, no enemy, no clock — the city as far
 # as this player's wall stands (built_sections), and once it all does, the Festival of
-# Booths (Neh. 8). Festival runs it. Set by the menu like `tutorial`; nothing it does is saved.
+# Booths (Neh. 8). Festival runs it. Set by the menu, cleared when the menu opens again
+# (outlives reset() like replay_section); nothing it does is saved.
 var festival := false
 const FESTIVAL_SECTION := 8   # the Water Gate: "the broad place before the water gate" (Neh. 8:1)
 var _met := {}             # Friends and Foes: key → true, loaded on first use
@@ -258,9 +256,9 @@ func get_current_section() -> Dictionary:
 	return get_section_for_day(current_day)
 
 ## The simple game (Settings.simple_game) is in play: the host reads its own setting live,
-## clients what the host sent. Never in the practice or Explore Jerusalem
+## clients what the host sent. Never in Explore Jerusalem
 func simplified() -> bool:
-	if tutorial or festival:
+	if festival:
 		return false
 	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
 		return Settings.simple_game
@@ -517,15 +515,15 @@ func wall_finished() -> bool:
 func first_stretch() -> bool:
 	return current_section_index == 0 and not attract and not free_play()
 
-## Watch posts stand from the Tower of the Ovens (Neh. 4:9 is the ambush there), and in a
-## practice. Before that the crew has learned the wall, mortar, beams and the thick wall.
+## Watch posts stand from the Tower of the Ovens (Neh. 4:9 is the ambush there), and at the
+## festival. Before that the crew has learned the wall, mortar, beams and the thick wall.
 const POSTS_FROM_SECTION := 4
 func posts_open() -> bool:
 	return free_play() or current_section_index >= POSTS_FROM_SECTION
 
-## A practice or the festival: no waves, no story, nothing saved
+## The festival: no waves, no story, nothing saved
 func free_play() -> bool:
-	return tutorial or festival
+	return festival
 
 func is_over() -> bool:
 	return phase == Phase.WON or phase == Phase.LOST
@@ -564,6 +562,16 @@ func set_sun(total: float, left: float) -> void:
 func _sync_sun(total: float, left: float) -> void:
 	_apply_sun(total, left)
 
+## Server: the first day's sun waits for the first load (DayDirector)
+func set_sun_held(held: bool) -> void:
+	sun_held = held
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		_sync_sun_held.rpc(held)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_sun_held(held: bool) -> void:
+	sun_held = held
+
 func _apply_sun(total: float, left: float) -> void:
 	sun_total = total
 	sun_left = left
@@ -571,7 +579,7 @@ func _apply_sun(total: float, left: float) -> void:
 
 # Every peer: the clock runs while the day's work does
 func _process(delta: float) -> void:
-	if sun_total > 0.0 and phase == Phase.WORK:
+	if sun_total > 0.0 and phase == Phase.WORK and not sun_held:
 		sun_left = maxf(0.0, sun_left - delta)
 
 func add_breach() -> void:
@@ -605,11 +613,12 @@ func reset() -> void:
 	loss_reason = "overrun"
 	sun_total = 0.0
 	sun_left = 0.0
+	sun_held = false
 	players.clear()
 	section_marks = _no_marks()
 	chronicle = _no_chronicle()
 	boon = ""
-	_debug_start = attract or tutorial or festival
+	_debug_start = attract or festival
 
 ## Server: a replay starts on its section's first day
 func apply_replay() -> void:
@@ -661,7 +670,7 @@ func campaign_save() -> Dictionary:
 		"marks": cfg.get_value("campaign", "marks", []), "chronicle": cfg.get_value("campaign", "chronicle", []) }
 
 func _saveable() -> bool:
-	return not (_debug_start or attract or tutorial or festival or is_replay())
+	return not (_debug_start or attract or festival or is_replay())
 
 ## This run is a campaign the save follows (the HUD says so in the pause menu)
 func saves_campaign() -> bool:
@@ -712,6 +721,7 @@ func send_state_to(peer_id: int) -> void:
 	_sync_crew.rpc_id(peer_id, crew_size, crew_weight)
 	_sync_boon.rpc_id(peer_id, boon)
 	_sync_sun.rpc_id(peer_id, sun_total, sun_left)
+	_sync_sun_held.rpc_id(peer_id, sun_held)
 	for i in section_marks.size():
 		if section_marks[i] >= 0:
 			_sync_marks.rpc_id(peer_id, i, section_marks[i])

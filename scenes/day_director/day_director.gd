@@ -140,6 +140,20 @@ func start() -> void:
 	GameState.apply_debug_start_day()
 	GameState.apply_restart()   # after --day=N: a restart picks its own day
 
+# The run's first day waits for a person's first load (FirstSteps' tags have the floor): no
+# foe and no sun until then, however long it takes up to this. A bot's load doesn't count.
+const FIRST_LOAD_WAIT := 45.0
+var _first_load_wait := 0.0
+
+func _holds_first_load() -> bool:
+	return Settings.hints and GameState.current_day == 1 and GameState.first_stretch() \
+		and not GameState.is_replay()
+
+func _end_first_load_wait() -> void:
+	_first_load_wait = 0.0
+	GameState.set_sun_held(false)
+	_waves.start(GameState.current_day)
+
 ## Server: host is ready — day 1 starts
 func begin() -> void:
 	if multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER:
@@ -153,8 +167,17 @@ func _process(delta: float) -> void:
 			if _timer <= 0.0:
 				GameState.set_phase(GameState.Phase.WORK)
 				_setback_at_dawn()
-				_waves.start(GameState.current_day)
+				if _holds_first_load():
+					_first_load_wait = FIRST_LOAD_WAIT
+					GameState.set_sun_held(true)
+				else:
+					_waves.start(GameState.current_day)
 		GameState.Phase.WORK:
+			if _first_load_wait > 0.0:
+				_first_load_wait -= delta
+				if _first_load_wait <= 0.0:
+					_end_first_load_wait()
+				return
 			_stats["time"] += delta
 			_section_time += delta
 			_tick_sun(delta)
@@ -383,6 +406,8 @@ func _tick_sun(delta: float) -> void:
 		_end_day(true)
 
 func _end_day(nightfall := false) -> void:
+	_first_load_wait = 0.0
+	GameState.set_sun_held(false)
 	_waves.stop()
 	_stats["unfinished"] = GameState.targets_total - GameState.targets_done if nightfall else 0
 	if GameState.sun_total > 0.0:
@@ -770,6 +795,8 @@ func _count(key: String, peer_id: int) -> void:
 func note_load(peer_id: int, site: Node = null) -> void:
 	if GameState.phase == GameState.Phase.WORK:
 		_count("loads", peer_id)
+		if _first_load_wait > 0.0 and not Player.is_bot_id(peer_id):
+			_end_first_load_wait()
 	for i in _units.size():
 		if site in _units[i]:
 			var by: Dictionary = _credit.get_or_add(i, {})

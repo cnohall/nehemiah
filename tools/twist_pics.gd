@@ -48,7 +48,7 @@ func _process(_delta: float) -> bool:
 		_main.set_process(false)
 		_main.set_physics_process(false)
 		for c in root.find_children("*", "CanvasLayer", true, false):
-			c.visible = false   # HUD, tutorial bubbles, everything flat
+			c.visible = false   # HUD, everything flat
 		_step = 0
 		_frame = 0
 	if _frame == 0:

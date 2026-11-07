@@ -109,6 +109,8 @@ func _ready() -> void:
 	relay.name = "RelayMat"       # same node path on every peer, for its trip RPC
 	add_child(relay)
 	add_child(Households.new())   # the hungry families of Neh. 5 (Fountain Gate)
+	if not GameState.attract and not GameState.free_play():
+		add_child(FirstSteps.new())   # the first day teaches the work (every peer, its own player)
 	if GameState.attract:
 		_start_attract()
 		return
@@ -169,10 +171,7 @@ func _ready() -> void:
 		for id in multiplayer.get_peers():
 			_spawn_player(id)
 		director.start()
-		if GameState.tutorial:
-			fit_bots(0)
-			add_child(Tutorial.new(self))
-		elif GameState.festival:
+		if GameState.festival:
 			fit_bots(0)
 			add_child(Festival.new(self))
 		else:

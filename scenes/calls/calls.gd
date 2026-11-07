@@ -35,7 +35,7 @@ func _ready() -> void:
 ## the order to the nearest free bot.
 func request(worker: Player, at: Vector3) -> void:
 	if not multiplayer.is_server() or not on or GameState.phase != GameState.Phase.WORK \
-			or GameState.tutorial or GameState.attract or GameState.festival:
+			or GameState.attract or GameState.festival:
 		return
 	var now := Time.get_ticks_msec()
 	if now < _ready_at.get(worker.worker_id(), 0):

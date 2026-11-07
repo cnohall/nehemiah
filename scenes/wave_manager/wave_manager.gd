@@ -98,7 +98,7 @@ var _demo_brute := false   # demo: the day's first brute has been sent
 
 func start(day: int) -> void:
 	if GameState.free_play():
-		return   # Tutorial sends its one scout itself
+		return   # no enemy at the festival
 	_day = day
 	_active = true
 	_timer = FIRST_SPAWN_DELAY

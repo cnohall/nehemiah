@@ -14,8 +14,8 @@ extends CanvasLayer
 # What there is to do, all from the chapter: hear the Law; go out for branches and build
 # booths (8:15-16); send portions to those for whom nothing is prepared (8:10); meet the
 # people; go up to the house of God. A journal ticks them off; progress holds from
-# stretch to stretch. Nothing is timed and nothing is saved. Solo, offline (like the
-# Tutorial): the game scene is its own server.
+# stretch to stretch. Nothing is timed and nothing is saved. Solo, offline: the
+# game scene is its own server.
 # Until this player has built the whole wall (GameState.built_sections) there is no feast:
 # the stretches built stand with their builders, the rest lie broken (Neh. 2:17), and the
 # walk opens at the first stretch still to build. The journal counts what stands.

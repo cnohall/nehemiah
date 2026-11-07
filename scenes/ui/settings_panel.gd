@@ -40,6 +40,8 @@ var _exp_btns := {}         # Settings property → [Off, On]
 var _forecast_btns: Array[Button]   # indexed by Settings.FORECAST_*
 var _full_game: Button
 var _simple_game: Button
+var _hints_on: Button
+var _hints_off: Button
 var _stats_on: Button
 var _stats_off: Button
 var _rumble_on: Button
@@ -144,6 +146,8 @@ func open() -> void:
 	_toggle_mode.button_pressed  = Settings.toggle_charge
 	_full_game.button_pressed     = not Settings.simple_game
 	_simple_game.button_pressed   = Settings.simple_game
+	_hints_on.button_pressed      = Settings.hints
+	_hints_off.button_pressed     = not Settings.hints
 	if _stats_on != null:
 		_stats_on.button_pressed  = Settings.share_stats
 		_stats_off.button_pressed = not Settings.share_stats
@@ -291,6 +295,7 @@ func _build_advanced_rows() -> void:
 			Settings.save())
 	_heading("Rules")
 	_build_game_row()
+	_build_hints_row()
 	_build_experimental_rows()
 	if Telemetry.available():
 		_build_stats_row()
@@ -315,6 +320,23 @@ func _build_game_row() -> void:
 	var note := Label.new()
 	note.theme_type_variation = &"Caption"
 	note.text = "Host's choice. Simple keeps the wall, the fight and each stretch's new twist; it drops trades, the saboteur, the choice before each stretch, hungry households, and the life in the streets."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(300, 0)
+	_target.add_child(note)
+
+# First-day hints (FirstSteps): turning them on shows every one again
+func _build_hints_row() -> void:
+	var pair := _segment_row("Hints", "On", "Off")
+	_hints_on = pair[0]
+	_hints_off = pair[1]
+	_hints_on.pressed.connect(func():
+		Settings.learned.clear()
+		_toggle("hints", true))
+	_hints_off.pressed.connect(_toggle.bind("hints", false))
+	_add_label("")
+	var note := Label.new()
+	note.theme_type_variation = &"Caption"
+	note.text = "A tag over your next job until you have done it once. Turning them on shows them all again."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size = Vector2(300, 0)
 	_target.add_child(note)

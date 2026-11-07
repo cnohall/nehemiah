@@ -159,7 +159,7 @@ Delivering the last load no longer raises a stage by itself: someone has to **st
 - Controls card shows keys or pad buttons, whichever is in use
 - Gamepad host starts the day from the pause menu ("Begin the work", focused)
 - Join: friends already in a lobby are listed with one-click Join; pause menu opens Steam's invite overlay
-- Playtest feedback (28 Sep 2026): "bit of a learning curve — can't see how to add bots, pause the game". Answer: with no other people connected (solo, or bots only), the menu really pauses and the controls card says "Pause · menu"; online it stays "Menu" and play goes on. The host's difficulty / bots / bot skill rows are in the pause menu too (pad-navigable, work mid-day). While gathering with no bots, the gather panel says "Short of hands? Add bots to the crew." Tutorial since built (§5.7 "Learn the Basics"); first-run prompts beyond it still open
+- Playtest feedback (28 Sep 2026): "bit of a learning curve — can't see how to add bots, pause the game". Answer: with no other people connected (solo, or bots only), the menu really pauses and the controls card says "Pause · menu"; online it stays "Menu" and play goes on. The host's difficulty / bots / bot skill rows are in the pause menu too (pad-navigable, work mid-day). While gathering with no bots, the gather panel says "Short of hands? Add bots to the crew." Answered by the first day teaching itself (§5.26)
 
 ### 5.6 Tower-defence layer — ◐ first pass, needs playtest
 Three rules, each on by default and each switched off from the command line to A/B it (`-- --no-waves`, `-- --no-sun`, `-- --no-posts`; the host's choice goes to everyone who joins). Test: `tools/td_test.gd` (run with `--day=4` for the last-day loss).
@@ -193,7 +193,7 @@ Three rules, each on by default and each switched off from the command line to A
 **Content:**
 - ✅ **Play again**: `Highlights` grabs a small still at the run's moments (a stretch standing, a wall knocked back, a breach, someone down or helped up, each dusk; 14 kept, the least worth keeping dropped first) and the end screen plays them as a captioned slideshow. Buttons: Try the stretch again (campaign loss: restarts at the lost stretch's first day) / Play again (campaign win) / Play it again + Next stretch (section replay). The host's pick decides, or a majority of the people; Return to Title stays personal. Every peer reloads the game scene together (`DayDirector._restart`); clients re-ask for the roster until the host's new scene answers. A true 3D replay would need recording and re-simulating everything: not now
 - ✅ **More dancing**: standing still at dusk or after the win, each worker dances, one per crew slot — dabke stomp, clapping step, arms-up sway (Neh 12:27, the dedication "with gladness… with singing")
-- ✅ **Optional tutorial**: "Learn the Basics" on the title — a solo practice at the Sheep Gate, the priests' stretch beside the temple (Neh 3:1), in 9 steps that each wait for the player: walk, dash, carry, deliver, build, the sling against one scout, help a fallen crewmate up, then "Let us rise up and build" (Neh 2:18). `GameState.tutorial`: no waves, no story, no sun clock, nothing saved
+- ~~**Optional tutorial**: "Learn the Basics" on the title, a 9-step solo practice at the Sheep Gate~~ Removed 4 Nov 2026: the real first day teaches itself (§5.26)
 
 **Later:**
 - ☐ **Cross-play** between web, mobile and Steam: look into it after the Steam launch. It needs one shared transport (WebRTC or a WebSocket relay via the existing Cloudflare DO); Steam/ENet/EOS don't talk to each other. Keep lobby code from blocking it
@@ -481,7 +481,7 @@ The dawn card after a setback is two lines + the reference ("Neh. 4:11"), and th
 ### 5.19 Closer to the record: the "next to him…" roll — ◐ first pass (2 Oct 2026)
 **Gap found (fidelity review):** Neh 3 is a list of names, ~30 times "next to him". The game used it for the circuit order but never showed the names. **Built:** `StoryData.BUILDERS` (one chain per stretch, picked from that stretch's verses) shown under the marks on the section-complete tally (`GameHud._builders_line`, `BUILDERS_H`). Names only, no stats. English only for now (i18n extract needed). Names checked against the WEB (bible-api.com, 2 Oct 2026); the Water Gate line trims 3:17-27 to the highlights.
 **Built (2 Oct 2026, first pass, needs a human playtest):**
-- **Journey + night ride cut (2 Oct 2026):** a prologue mode (road cards, then a lantern ride round the broken wall, 2:12-16) was built and dropped: the 3D diorama ride looked poor next to the story-card art. Learn the Basics goes straight to the practice; the campaign keeps its own Neh 1-2 cards. If revived: painted night stills with pans, not the diorama. `scenes/night_ride` stays a standalone POC.
+- **Journey + night ride cut (2 Oct 2026):** a prologue mode (road cards, then a lantern ride round the broken wall, 2:12-16) was built and dropped: the 3D diorama ride looked poor next to the story-card art. The campaign keeps its own Neh 1-2 cards. If revived: painted night stills with pans, not the diorama. `scenes/night_ride` stays a standalone POC.
 - **Dedication choirs** (`Dedication`, Explore Jerusalem, 12:27-43): at the Valley Gate (12:31) two companies stand — Ezra's (toward the Gate of the Ash Heaps, round via Fountain, Water, Horse, East, Miphkad) and Nehemiah's (Ovens, Broad Wall, Jeshanah, Fish) — talk to a leader and that company sets off round the ring; you walk with it (it waits if you fall behind, stops at the end of each stretch until you walk on). Both meet in the temple court at the Sheep Gate and rejoice (12:43). New journal row. They walk *beside* the wall, not on it. Test `tools/dedication_test.gd -- --unlock-all --choir=0|1`.
 - Neh 5 consequence stands as built (§5.15: −6% work per unfed household), not a lost worker slot.
 **Notes:** English only (i18n extract needed); singers' lines are paraphrases marked "see". Valley Gate leaders have no name tag — a player must find them by the journal row; consider a tag or a nudge if playtesters miss it.
@@ -650,6 +650,24 @@ Done and removed from the table: healing → the well (§5.22), wall damage (§5
 **Suggested order:** playtest 3 first (everything in §0 is first pass) → keep/cut per kill rules → archer or spear rack (§5.18), one at a time → launch scope (§7)
 
 ---
+
+### 5.26 The first day teaches itself — ◐ built 4 Nov 2026, needs playtest 4
+**Kind:** teaching, not a rule: nothing new to learn, and it goes away by itself. **Replaces** "Learn the Basics" (§5.7), now removed from the title with `Tutorial` and `GameState.tutorial`.
+
+**Why the practice went:** new players press New Game and skip it, the ones who most need it. It was solo, so in a crew at most the one person who found it had done it. And it stood outside the concept ladder (§5.23), the one lesson the campaign didn't teach by playing.
+
+**What happens now (`FirstSteps`, on every peer, for its own player):**
+- A pulsing tag over this player's next job until they have done it once: **Pick up** on the pile the wall needs, **Deliver** on the wall ("Not needed here" with the drop key when the load is wrong), **Build** on the wall, **Sling it** on a foe within 14 m, then "Aim and throw" while whirling. **Walk** only after 3 s standing still. An edge arrow when the spot is off-screen. The HUD's "next" line stays quiet while a tag speaks.
+- Each lesson is saved once done (`Settings.learned`), never by a bot's or a friend's doing. A veteran sees nothing, even beside a new friend. Someone who joins mid-campaign gets the lessons there. No pile for the need (a stretch's own material, the trough): no tag.
+- **Not lessons:** dash (the controls card; nothing on day 1 needs it). Help up (every downed worker already floats "Help up [E]").
+- **The first load (`DayDirector`, server):** on campaign day 1 the first foe and the sun both wait for a person's first delivered load, or 45 s (`FIRST_LOAD_WAIT`). A bot's load doesn't count. Time in the wait isn't counted against the day or the stretch. Applies to every run, including a veteran's: they deliver in seconds, so it costs nothing and needs no sync of who is new.
+- **Settings → Advanced → Hints:** off removes the tags and, for the host, the wait. Turning on (or pressing On again) shows every lesson again.
+
+**Given up:** the staged moment of a crewmate falling and being helped up. A solo player with no bots may never see it.
+
+**Watch in playtest 4:** "what do I do?" tally in the first two minutes. Do they follow the tags or ignore them? Does anyone stand and wait for the next tag once they stop? Does the first scout, about 4 s after the first load, land too soon? Tune `FIRST_LOAD_WAIT`, `WaveManager.FIRST_SPAWN_DELAY`.
+**Kill rule:** none for the idea; if the tags crowd the first minute, drop to pile + wall only and leave the rest to the HUD line.
+Test: `tools/first_steps_test.gd` (offline, hints off, all learned, wait runs out, host + client).
 
 ## 6. The Twelve Sections — one twist each
 

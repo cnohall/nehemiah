@@ -886,6 +886,14 @@ func _climb_over(dest: Vector3) -> void:
 		_climbing = false
 		_sprite.squash(Vector2(1.1, 0.9))
 
+## Owner's count of loads this worker has delivered (FirstSteps)
+var loads_brought := 0
+
+@rpc("any_peer", "call_local", "reliable")
+func _note_brought() -> void:
+	if multiplayer.get_remote_sender_id() == 1:
+		loads_brought += 1
+
 # Server: hand the carried load to `dest` (null = nothing near wants it)
 func _deliver(dest: Node3D, at: Vector3) -> void:
 	if dest == null or not dest.deposit(carried_kind, 1):
@@ -893,6 +901,8 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 		_tell(why[0], why[1])
 		return
 	get_tree().call_group("day_director", "note_load", worker_id(), dest)
+	if not is_bot():
+		_note_brought.rpc_id(get_multiplayer_authority())
 	_sfx.rpc("deposit_" + carried_kind)
 	_set_carried.rpc("")
 	if dest.can_build():
@@ -1501,7 +1511,7 @@ func _set_downed(value: bool) -> void:
 
 # A bot says what it's doing when it matters to the people nearby (BotBrain._bark_for):
 # a Shout over its head, so a crew of bots reads as people. Kept rare: one bot at most
-# every BARK_GAP, the whole crew every BARK_CREW_GAP. Not on the title or in the tutorial.
+# every BARK_GAP, the whole crew every BARK_CREW_GAP. Not on the title.
 const BARK_Y        := PIP_Y + 1.1   # over the pip and the "Help up" tag
 const BARK_GAP      := 9.0
 const BARK_CREW_GAP := 3.5
@@ -1512,7 +1522,7 @@ var _bark_shout: Shout
 ## Server: a bot says `line` (English; each peer translates). `urgent` (down, helped up)
 ## skips the wait and makes it breathe.
 func bark(line: String, urgent := false) -> void:
-	if brain == null or GameState.attract or GameState.tutorial:
+	if brain == null or GameState.attract:
 		return
 	var now := Time.get_ticks_msec() * 0.001
 	if not urgent and (now < _barked_at + BARK_GAP or now < _crew_barked_at + BARK_CREW_GAP):

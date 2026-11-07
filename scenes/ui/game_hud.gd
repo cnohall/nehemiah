@@ -441,8 +441,8 @@ func _process(delta: float) -> void:
 	if _next_poll > 0.0 or _next_line == null:
 		return
 	_next_poll = NEXT_POLL
-	# The practice points the way itself (Tutorial); two voices would talk over each other
-	var text := "" if GameState.free_play() else _next_text()
+	# A first-day tag points the way itself (FirstSteps); two voices would talk over each other
+	var text := "" if GameState.free_play() or FirstSteps.speaking else _next_text()
 	var line := _next_caption if _style_world else _next_line
 	(_next_line if _style_world else _next_caption).visible = false
 	line.visible = not text.is_empty()

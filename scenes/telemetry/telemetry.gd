@@ -99,8 +99,6 @@ func snapshot(kind: String) -> Dictionary:
 	return d
 
 func _mode() -> String:
-	if GameState.tutorial:
-		return "tutorial"
 	if GameState.festival:
 		return "explore"
 	if GameState.replay_section >= 0:

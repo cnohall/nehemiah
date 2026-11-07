@@ -28,7 +28,7 @@
 **Setup (observer does this, then steps back):** Settings → Advanced → Game → Simple or Full. Host's choice, the other players inherit it. No bots when there are 2+ people; one Builder bot when someone plays alone.
 
 **The session (about 45 minutes, one sitting):**
-1. Hand them the link. No tutorial pushed; "Learn the Basics" is there if they choose it. Start the stopwatch when the first day's work begins.
+1. Hand them the link. There is no tutorial to offer: the first day teaches itself with tags (GDD §5.26). **Every group starts with fresh settings**, or the lessons are already marked done. Start the stopwatch when the first day's work begins.
 2. They play on their own from day 1. **They may stop whenever they like. Do not ask them to continue.** When and why they stop is the main result.
 3. At 45 minutes, or when they stop, go to the questions (§3).
 
@@ -53,6 +53,8 @@ Tally marks plus a clock reading ("T+4:30" from the first day's work). Time-stam
 
 **Friction** ("what do I do?" is the main count)
 - [ ] "What do I do now?" / "where does this go?" — tally: ______
+- [ ] First load delivered: T+____ (the first foe and the sun wait for it, 45 s at most)
+- [ ] Followed the tags / ignored them / stood waiting for the next one (circle)
 - [ ] Hit while building and complains
 - [ ] Doesn't see a breach or battered wall until too late
 - [ ] Can't find the day count / how much is left
