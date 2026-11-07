@@ -14,12 +14,12 @@ const BRONZE := Color(0.61, 0.40, 0.19)
 const KNEE_Y := -0.13
 const ANKLE_Y := -0.2
 const ELBOW_Y := -0.2
-# Hem heights (torso space, before its stretch) and flares, short build → tall: the tunic
-# just past the knee, the long robe to the ankle, whatever the legs (CharacterRig.build)
-const HEM_SHORT := Vector2(-0.123, -0.215)
-const HEM_LONG := Vector2(-0.30, -0.545)
-const FLARE_SHORT := Vector2(0.370, 0.345)
-const FLARE_LONG := Vector2(0.385, 0.375)
+# Hem heights (torso space, before its stretch) and flares: the tunic just past the knee,
+# the long robe to the ankle
+const HEM_SHORT := -0.123
+const HEM_LONG := -0.30
+const FLARE_SHORT := 0.370
+const FLARE_LONG := 0.385
 static var _cache: Dictionary = {}
 static var _material: ShaderMaterial
 var _rig: Node3D
@@ -29,23 +29,17 @@ var _belt := LEATHER
 var _long := false
 var _gear := false   # cross strap, shoulder harness and hip pouches
 var _trim := LINEN
-var _grown := 0.0      # the rig's build (CharacterRig._grown)
-var _hem := 0.0        # this figure's hem height and flare at that build
+var _hem := 0.0        # this figure's hem height and flare
 var _flare := 0.0
-var _g := ""           # cache-key suffix for meshes that follow the build
 
 func build(rig: Node3D, look: Dictionary) -> Array[Node3D]:
 	_rig = rig
 	_skin = look["skin"]
 	_linen = look.get("robe", LINEN)
 	_trim = look.get("trim", _linen.darkened(0.15))
-	_grown = rig._grown
 	var long_robe: bool = look.get("long_robe", false)
-	var hem: Vector2 = HEM_LONG if long_robe else HEM_SHORT
-	var fl: Vector2 = FLARE_LONG if long_robe else FLARE_SHORT
-	_hem = lerpf(hem.x, hem.y, _grown)
-	_flare = lerpf(fl.x, fl.y, _grown)
-	_g = "_g%d" % roundi(_grown * 100.0)
+	_hem = HEM_LONG if long_robe else HEM_SHORT
+	_flare = FLARE_LONG if long_robe else FLARE_SHORT
 	_belt = look.get("belt_color", LEATHER)
 	_long = look.get("long_robe", false)
 	_gear = look.get("strap", false)
@@ -120,7 +114,7 @@ func _tunic() -> void:
 	_rig._skirt = skirt
 	var hem_y := _hem
 	var flare := _flare
-	_part(skirt, _surface(("skirt_long" if _long else "skirt") + _g, 16, 40, func(u: float, v: float) -> Vector3:
+	_part(skirt, _surface(("skirt_long" if _long else "skirt"), 16, 40, func(u: float, v: float) -> Vector3:
 		var a := u * TAU
 		var radius := lerpf(flare, 0.300, pow(v, 0.85))
 		# Folds deepen toward the hem: long vertical pleats from the belt, a few broad ones
@@ -134,7 +128,7 @@ func _tunic() -> void:
 	_ribbon(torso, "wrap_seam", [Vector3(-0.13, 0.29, 0.216), Vector3(-0.15, 0.25, 0.22), Vector3(-0.155, 0.21, 0.224), Vector3(-0.16, 0.17, 0.228)], 0.011, 0.004, _linen.darkened(0.12), 1.0)
 	# Below the belt the wrap's edge falls with the skirt, opening a little toward the hem
 	var seam_r := flare * 0.72
-	_ribbon(skirt, ("wrap_seam_skirt_long" if _long else "wrap_seam_skirt") + _g, [Vector3(-0.16, 0.17 - BELT, 0.232),
+	_ribbon(skirt, ("wrap_seam_skirt_long" if _long else "wrap_seam_skirt"), [Vector3(-0.16, 0.17 - BELT, 0.232),
 		Vector3(-0.17, 0.0 - BELT, 0.25), Vector3(-0.18, (hem_y + 0.1) * 0.6 - BELT, seam_r * 0.92),
 		Vector3(-0.19, hem_y + 0.012 - BELT, seam_r * 0.97)], 0.011, 0.004, _linen.darkened(0.12), 1.0)
 	# Raised hem follows the same irregular folds as the skirt, a woven band in a darker thread
@@ -143,11 +137,11 @@ func _tunic() -> void:
 		var a := TAU * i / 64.0
 		var f := sin(a * 9.0 + 0.4) * 0.014 + sin(a * 5.0 - 0.8) * 0.007 + sin(a * 17.0 + 1.3) * 0.004
 		hem.append(Vector3(cos(a) * (flare + f), hem_y + 0.004 + sin(a * 3.0 + 0.5) * 0.012 + cos(a * 9.0) * 0.006 - BELT, sin(a) * (flare * 0.72 + f)))
-	_part(skirt, _tube(("hem_long" if _long else "hem") + _g, hem, 0.006, 6), _linen.darkened(0.08), Vector3.ZERO, 1.0)
+	_part(skirt, _tube(("hem_long" if _long else "hem"), hem, 0.006, 6), _linen.darkened(0.08), Vector3.ZERO, 1.0)
 	var band: Array[Vector3] = []
 	for p in hem:
 		band.append(p + Vector3(0, 0.035, 0) + Vector3(p.x, 0, p.z).normalized() * -0.004)
-	_part(skirt, _tube(("hem_band_long" if _long else "hem_band") + _g, band, 0.0045, 5), _hem_band_color(), Vector3.ZERO, 1.0)
+	_part(skirt, _tube(("hem_band_long" if _long else "hem_band"), band, 0.0045, 5), _hem_band_color(), Vector3.ZERO, 1.0)
 
 ## The woven band above the hem: the trim's thread, never quite the cloth's own colour
 func _hem_band_color() -> Color:
@@ -179,7 +173,7 @@ func _vest(cloth: Color) -> void:
 	var skirt: Node3D = _rig._skirt
 	var hem_y := _hem * 0.62
 	var flare := _flare
-	_part(skirt, _open_surface(("vest_skirt_long" if _long else "vest_skirt") + _g, 10, 36, func(u: float, v: float) -> Vector3:
+	_part(skirt, _open_surface(("vest_skirt_long" if _long else "vest_skirt"), 10, 36, func(u: float, v: float) -> Vector3:
 		var a: float = angle.call(u)
 		var y := lerpf(hem_y, 0.19, v)
 		var t := clampf((0.217 - y) / (0.217 - _hem), 0.0, 1.0)
@@ -201,14 +195,14 @@ func _vest(cloth: Color) -> void:
 			var t := clampf((0.217 - y) / (0.217 - _hem), 0.0, 1.0)
 			var r := lerpf(0.300, flare, pow(t, 1.0 / 0.85)) + OVER + 0.007
 			down.append(Vector3(cos(a) * r, y - 0.2, sin(a) * (r * 0.72 + 0.006)))
-		_part(skirt, _tube("vest_skirt_edge%s%s%s" % [side, _long, _g], down, 0.012, 6), braid, Vector3.ZERO, 2.0)
+		_part(skirt, _tube("vest_skirt_edge%s%s" % [side, _long], down, 0.012, 6), braid, Vector3.ZERO, 2.0)
 	var hem: Array[Vector3] = []
 	for i in 41:
 		var a: float = angle.call(i / 40.0)
 		var t := clampf((0.217 - hem_y) / (0.217 - _hem), 0.0, 1.0)
 		var r := lerpf(0.300, flare, pow(t, 1.0 / 0.85)) + OVER + 0.007
 		hem.append(Vector3(cos(a) * r, hem_y - 0.2, sin(a) * (r * 0.72 + 0.006)))
-	_part(skirt, _tube("vest_hem%s%s" % [_long, _g], hem, 0.012, 6), braid, Vector3.ZERO, 2.0)
+	_part(skirt, _tube("vest_hem%s" % _long, hem, 0.012, 6), braid, Vector3.ZERO, 2.0)
 
 ## A foe's corselet: rows of small bronze-and-leather scales on a leather backing from the
 ## shoulders to the hips, its lower edge cut straight, a collar of leather at the neck
@@ -329,9 +323,9 @@ func _arm(arm: Node3D, side: float, sleeve_cloth := false) -> Node3D:
 	_oval(arm, Vector3(0.16, 0.16, 0.16), forearm, Vector3(0, ELBOW_Y + 0.002, 0))
 	_oval(arm, Vector3(0.10, 0.10, 0.04), forearm, Vector3(0, -0.244, -0.064))
 	var hand: Node3D = _rig._pivot(arm, Vector3(0, -0.425, 0.005))
-	# The fist drawn smaller on its own pivot, so what the hand holds keeps its size
+	# The fist on its own pivot, so what the hand holds keeps its size: a chunky mitt
 	var fist: Node3D = _rig._pivot(hand, Vector3.ZERO)
-	fist.scale = Vector3.ONE * 0.8
+	fist.scale = Vector3.ONE * 1.05
 	_soft(fist, Vector3(0.166, 0.154, 0.135), _skin, Vector3(0, -0.018, 0), 0.0)
 	for finger in 4:
 		var x := -0.059 + finger * 0.039

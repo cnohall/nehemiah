@@ -3,7 +3,8 @@ extends SceneTree
 # Experimental forecast + call early (GDD §5.21), offline:
 #   Godot --headless --path . --script res://tools/forecast_test.gd -- --nostory
 # - both toggles OFF: no forecast, no pack, call_early refuses (the default game is unchanged)
-# - forecast ON: the pack is rolled ~22 s ahead and the wave spawns exactly that many, of those types
+# - forecast Solo (one person here): the pack is rolled ~22 s ahead and the wave spawns exactly that many, of those types
+# - its route is drawn from the ring to just inside the wall, the count stands on it
 # - the chip counts down to the spawn, not three seconds past it
 # - call early: bell pulled to 5 s, crew spurred (work x1.15), refused too close to the bell
 # Exit code 0 = every check passed.
@@ -48,7 +49,7 @@ func _process(delta: float) -> bool:
 			_check(_gs.waves, "waves are on")
 			_clear()
 			# OFF
-			Settings.exp_forecast = false
+			Settings.exp_forecast = 0
 			Settings.exp_call_early = false
 			_wm._surge_timer = 20.0
 			_wm._forecasted = false
@@ -59,7 +60,7 @@ func _process(delta: float) -> bool:
 				_check(not _wm._forecasted and _wm._pack.is_empty(), "off: no forecast, no pack")
 				_check(not _wm.call_early(), "off: call_early refuses")
 				_check(_gs.spur_until == 0, "off: crew not spurred")
-				Settings.exp_forecast = true
+				Settings.exp_forecast = 1   # Solo: one person here, bots or not
 				Settings.exp_call_early = true
 				_wm._surge_timer = 30.0
 				_wm._forecasted = false
@@ -72,10 +73,20 @@ func _process(delta: float) -> bool:
 				_spawned.clear()
 				_check(_told.size() >= 2, "forecast: pack of %d rolled" % _told.size())
 				_check(_wm._surge_timer <= _wm.FORECAST_LEAD + 0.5, "forecast fires at lead (%.1f s)" % _wm._surge_timer)
+				var lines: Array = _wm._forecast_marks.filter(func(n): return n is MultiMeshInstance3D)
+				var tags: Array = _wm._forecast_marks.filter(func(n): return n is Label3D)
+				_check(lines.size() == _wm._surge_at.size(), "route: one line per spot (%d)" % lines.size())
+				if not lines.is_empty():
+					var mm: MultiMesh = lines[0].multimesh
+					var last := mm.get_instance_transform(mm.instance_count - 1).origin
+					_check(mm.instance_count >= 8 and last.z > -1.0 and last.z <= _wm.ROUTE_END_Z,
+						"route: %d dashes, ends at z %.1f" % [mm.instance_count, last.z])
+				_check(tags.size() == (1 if _wm._surge_at.size() == 1 else 0), "route: count tag on a single spot")
 				var worth: bool = _wm._surge_timer >= _wm.CALL_EARLY_MIN
 				_check(_wm.call_early() == worth, "call_early honours the minimum")
 				_state = "spawn"
 				_wm._surge_timer = 0.05
+				_wm._timer = 999.0   # no trickle scout in the count
 				_mark = _t
 		"spawn":
 			if _t - _mark > 6.0:
@@ -106,7 +117,7 @@ func _process(delta: float) -> bool:
 				_wm._surge_left = 0
 				_wm._surge_timer = 6.0
 				_check(not _wm.call_early(), "refused 6 s from the bell")
-				Settings.exp_forecast = false
+				Settings.exp_forecast = 0
 				Settings.exp_call_early = false
 				return _finish()
 	return false

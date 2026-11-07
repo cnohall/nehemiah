@@ -122,7 +122,6 @@ var _holder: Node3D
 var _rig: CharacterRig
 var _medals: Array[Control] = []
 var _medal_vps: Array[SubViewport] = []
-var _medal_cams: Array[Camera3D] = []
 var _count: Label
 var _count_bar: Control
 var _eyebrow: Label
@@ -157,7 +156,6 @@ func open() -> void:
 		var m := _medals[i]
 		(m.get_meta("box") as Control).material = null if known else _silhouette
 		(m.get_meta("name") as Label).text = tr(ENTRIES[i]["name"]) if known else "?"
-		_frame_medal(_medal_cams[i])   # the build may have changed (Settings.tall_figures)
 		_medal_vps[i].render_target_update_mode = SubViewport.UPDATE_ONCE
 	_count.text = tr("Met %d of %d") % [met, ENTRIES.size()]
 	_count_bar.set_meta("share", float(met) / ENTRIES.size())
@@ -172,13 +170,12 @@ func close() -> void:
 	hide()
 	closed.emit()
 
-## Head and shoulders, framed for the figures' build (CharacterRig.build)
+## Head and shoulders
 static func _frame_medal(cam: Camera3D) -> void:
 	var s: float = cam.get_meta("scale", 1.0)
-	var g := CharacterRig.build
-	var head := Vector3(0, lerpf(1.62, 1.86, g) * s, 0)
+	var head := Vector3(0, 1.62 * s, 0)
 	var eye := head + Vector3(2.3, 1.2, 2.0)
-	cam.size = lerpf(1.7, 1.3, g) * s
+	cam.size = 1.7 * s
 	cam.transform = Transform3D.IDENTITY.looking_at(head - eye).translated(eye)
 
 static func _known(e: Dictionary) -> bool:
@@ -730,7 +727,6 @@ func _medal(i: int) -> Control:
 	cam.set_meta("scale", s)
 	_frame_medal(cam)
 	world.add_child(cam)
-	_medal_cams.append(cam)
 	var holder := Node3D.new()
 	holder.scale = Vector3.ONE * s
 	world.add_child(holder)

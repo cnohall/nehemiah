@@ -61,6 +61,7 @@ const CLIMB_CLEAR  := 1.0
 const PILE_REACH   := 2.0
 const ESCAPE_Z     := -15.0
 const CORPSE_TIME := 0.9
+const VANISH_TIME := 0.24   # the last of it: the body shrinks away in a puff, not blinks out
 # Dusk: the day is lost for them — they turn tail and run for the hills
 const FLEE_TIME    := 2.4
 const FLEE_SPEED   := 1.5    # × normal speed
@@ -85,6 +86,7 @@ var anim := "idle_down":
 				_sprite.squash(Vector2(1.2, 0.82))
 			elif value == "collapse":
 				Sfx.play("enemy_die", global_position)
+				get_tree().create_timer(CORPSE_TIME - VANISH_TIME).timeout.connect(_vanish)
 		anim = value
 		if _sprite != null and _sprite.animation != value:
 			_sprite.play(value)
@@ -480,6 +482,12 @@ func _die() -> void:
 	await get_tree().create_timer(CORPSE_TIME).timeout
 	if is_instance_valid(self):
 		queue_free()
+
+# Every peer: the fallen foe goes in a puff of dust just before he's freed
+func _vanish() -> void:
+	DustFx.puff(get_parent(), global_position + Vector3.UP * 0.3, 8, 0.6)   # outlives him
+	create_tween().tween_property(_sprite, "scale", Vector3.ONE * 0.01, VANISH_TIME) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 
 # ── Rout (dusk) ────────────────────────────────────────────
 
