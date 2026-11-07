@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://scenes/birds/birds.gd" id="41_birds"]
 [ext_resource type="Script" path="res://scenes/day_light/day_light.gd" id="13_daylight"]
 [ext_resource type="Script" path="res://scenes/horn/horn.gd" id="14_horn"]
+[ext_resource type="Script" path="res://scenes/calls/calls.gd" id="60_calls"]
 [ext_resource type="PackedScene" path="res://scenes/watch_post/watch_post.tscn" id="15_post"]
 [ext_resource type="Script" path="res://scenes/shared/ground_mesh.gd" id="16_groundmesh"]
 [ext_resource type="Script" path="res://scenes/shared/breeze.gd" id="17_breeze"]
@@ -92,7 +93,7 @@ adjustment_saturation = 1.2
 code = "shader_type canvas_item;
 
 // Screen-space finishing pass: tilt-shift blur (top/bottom of screen, sampled from
-// the screen texture's mip chain — far cheaper than the 3D DOF pass) + warm vignette.
+// the screen texture's mip chain — far cheaper than the 3D DOF pass) + warm vignette + dither.
 
 uniform float vignette_strength = 0.22;
 uniform vec3 tint = vec3(0.30, 0.24, 0.20);
@@ -115,7 +116,11 @@ void fragment() {
 	vec2 uv = SCREEN_UV - 0.5;
 	uv.x *= SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;
 	float v = smoothstep(0.35, 0.95, length(uv) * 1.1);
-	COLOR = vec4(mix(col, col * tint * 2.2, v * vignette_strength), 1.0);
+	col = mix(col, col * tint * 2.2, v * vignette_strength);
+	// Interleaved-gradient dither, under one 8-bit step: breaks up banding in the pale
+	// ground and the vignette falloff
+	col += (fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
+	COLOR = vec4(col, 1.0);
 }
 "
 
@@ -319,6 +324,9 @@ script = ExtResource("18_passersby")
 
 [node name="Horn" type="Node3D" parent="."]
 script = ExtResource("14_horn")
+
+[node name="Calls" type="Node3D" parent="."]
+script = ExtResource("60_calls")
 
 [node name="Visitors" type="Node3D" parent="."]
 

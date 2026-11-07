@@ -123,6 +123,7 @@ var anim := "idle_down":
 	set(value):
 		anim = value
 		if _sprite != null and _sprite.animation != value:
+			_sprite.stirring = value.begins_with("build_") and _at_trough() != null
 			_sprite.play(value)
 
 var health: float = MAX_HEALTH
@@ -311,37 +312,39 @@ func to_start() -> void:
 	global_position = start_spot(_slot)
 	velocity = Vector3.ZERO
 
-## "Carpenter" etc. — untranslated (callers tr() it)
+## "Carpenter" etc. — untranslated (callers tr() it). With no trades in play (the simple
+## game, `--no-trades`) everyone is a plain builder (Neh. 4:18, "the builders")
 func trade_name() -> String:
-	return CharacterRig.TRADES[trade]
+	return CharacterRig.TRADES[trade] if GameState.trades_on() else "Builder"
 
-# Small diamond in the player's colour over the head — who's who in a busy crew.
-# Only with company; pulses while downed so teammates see who needs help.
+# Small mark in the player's colour over the head — who's who in a busy crew. Each slot
+# has its own shape too (CrewMark: diamond, circle, triangle, square), so it doesn't
+# rest on colour alone. Only with company; pulses while downed so teammates see who
+# needs help.
 var _pip: MeshInstance3D
 var _pip_tween: Tween
+var _pip_slot := -1
 
 func _build_pip() -> void:
-	var gem := SphereMesh.new()   # 4 segments × 2 rings = a diamond
-	gem.radius = 0.16
-	gem.height = 0.42
-	gem.radial_segments = 4
-	gem.rings = 1
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.no_depth_test = true
 	mat.render_priority = 1
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED   # the shape's outline, front on
+	mat.billboard_keep_scale = true                         # the downed pulse
 	_pip = MeshInstance3D.new()
-	_pip.mesh = gem
 	_pip.material_override = mat
 	_pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_pip.position.y = PIP_Y
-	_pip.rotation.y = PI / 4   # a face toward the iso camera
 	add_child(_pip)
 	_refresh_pip()
 
 func _refresh_pip() -> void:
 	if _pip == null:
 		return
+	if _pip_slot != _slot:
+		_pip_slot = _slot
+		_pip.mesh = CrewMark.pip_mesh(_slot)
 	_pip.visible = GameState.crew_size > 1 and not GameState.attract
 	(_pip.material_override as StandardMaterial3D).albedo_color = slot_color
 	if _pip_tween:
@@ -403,6 +406,8 @@ func _physics_process(delta: float) -> void:
 				_server_horn.rpc_id(1, global_position)
 			else:   # experimental call-early (GDD §5.21); the host decides if it counts
 				_server_call_early.rpc_id(1)
+		if _consume("call"):
+			_server_call.rpc_id(1, _call_point())
 	_update_anim()
 
 # ── Movement ───────────────────────────────────────────────
@@ -421,7 +426,7 @@ func _buffer_input(delta: float) -> void:
 	if brain == null and InputMode.gameplay_blocked():
 		_buffered.clear()
 		return
-	for action: String in ["interact", "drop", "dash", "horn"]:
+	for action: String in ["interact", "drop", "dash", "horn", "call"]:
 		if brain.take_press(action) if brain != null else Input.is_action_just_pressed(action):
 			_buffered[action] = INPUT_BUFFER
 		elif _buffered.has(action):
@@ -829,7 +834,7 @@ func _server_interact(at: Vector3) -> void:
 		Act.HELP:
 			_set_helping.rpc(target.worker_id())
 			_sfx.rpc("pickup")
-			_tell("Holding the other end — {interact} to let go")
+			_tell("Holding the other end. {interact} to let go")
 		Act.DELIVER:
 			_deliver(target, at)
 		Act.TALK:
@@ -883,6 +888,14 @@ func _climb_over(dest: Vector3) -> void:
 		_climbing = false
 		_sprite.squash(Vector2(1.1, 0.9))
 
+## Owner's count of loads this worker has delivered (FirstSteps)
+var loads_brought := 0
+
+@rpc("any_peer", "call_local", "reliable")
+func _note_brought() -> void:
+	if multiplayer.get_remote_sender_id() == 1:
+		loads_brought += 1
+
 # Server: hand the carried load to `dest` (null = nothing near wants it)
 func _deliver(dest: Node3D, at: Vector3) -> void:
 	if dest == null or not dest.deposit(carried_kind, 1):
@@ -890,6 +903,8 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 		_tell(why[0], why[1])
 		return
 	get_tree().call_group("day_director", "note_load", worker_id(), dest)
+	if not is_bot():
+		_note_brought.rpc_id(get_multiplayer_authority())
 	_sfx.rpc("deposit_" + carried_kind)
 	_set_carried.rpc("")
 	if dest.can_build():
@@ -907,13 +922,13 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 # [message, material for its {need}]
 func _why_not_needed(at: Vector3) -> PackedStringArray:
 	if carried_kind == "debris":
-		return ["Rubbish — carry it clear of the footing, then {drop}", ""]
+		return ["Rubbish: carry it clear of the footing, then {drop}", ""]
 	var wall := _nearest_in_reach("build_sites", at, func(_s): return true)
 	if wall == null:
 		if health < MAX_HEALTH and _nearest_in_reach("wells", at, func(_w): return true) != null:
-			return ["Set it down first — {drop}, then {interact} to drink", ""]
+			return ["Set it down first: {drop}, then {interact} to drink", ""]
 		if _nearest_in_reach("supply_piles", at, func(_p): return true) != null:
-			return ["Hands full — deliver it, or {drop} to drop", ""]
+			return ["Hands full: deliver it, or {drop} to drop", ""]
 		return ["Bring it to a wall", ""]
 	if wall.has_method("refusal"):   # a watch post explains itself
 		return [wall.refusal(carried_kind), ""]
@@ -922,7 +937,7 @@ func _why_not_needed(at: Vector3) -> PackedStringArray:
 		return ["Needs {need} first", need]
 	if wall.can_build():
 		# Every load for this stage is in; it only wants working before the next material
-		return ["Build this stage first — {drop} to drop, then {interact} to work", ""]
+		return ["Build this stage first: {drop} to drop, then {interact} to work", ""]
 	return ["This wall is finished", ""]
 
 @rpc("any_peer", "call_local", "reliable")
@@ -987,7 +1002,7 @@ func _drop_carried(at: Vector3) -> void:
 				item.position = Vector3(slot.x, GROUND_Y, slot.z)
 				if not RelayMat.told:
 					RelayMat.told = true
-					_tell("Left on the relay mat — the porter carries it to the wall")
+					_tell("Left on the relay mat: the porter carries it to the wall")
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
 	items.add_child(item, true)
@@ -999,13 +1014,13 @@ func _set_carried(kind: String) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return
 	carried_kind = kind
-	_rebuild_carry_prop()
+	_rebuild_carry_prop(true)
 	if multiplayer.is_server() and kind != "beam":
 		_release_helper()
 	if kind == "beam" and is_multiplayer_authority() and GameState.crew_size > 1:
-		_toast("Heavy — a partner can take the other end {interact}")
+		_toast("Heavy: a partner can take the other end {interact}")
 	elif not kind.is_empty() and is_multiplayer_authority() and Trade.carry_mult(trade) > 1.0:
-		_knack("Your trade — quicker with a load")
+		_knack("Your trade: quicker with a load")
 	# Pick up → squashed under the load; put down → spring back up
 	_sprite.squash(Vector2(1.08, 0.92) if not kind.is_empty() else Vector2(0.95, 1.05))
 
@@ -1108,7 +1123,7 @@ func release_throw() -> void:
 		if true_shot and brain == null:
 			InputMode.rumble(0.2, 0.0, 0.06)
 		if Trade.hit_mult(trade) > 1.0:
-			_knack("Your trade — your blows land harder")
+			_knack("Your trade: your blows land harder")
 
 # ── Sword ──────────────────────────────────────────────────
 
@@ -1145,7 +1160,7 @@ func _swing_sword(foe: Node3D) -> void:
 		return   # knocked out of the swing before it landed
 	_server_sword.rpc_id(1, global_position, aim_yaw)
 	if Trade.hit_mult(trade) > 1.0 and is_instance_valid(foe) and foe.is_in_group("enemies"):   # not a jar
-		_knack("Your trade — your blows land harder")
+		_knack("Your trade: your blows land harder")
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_sword(at: Vector3, yaw: float) -> void:
@@ -1166,8 +1181,6 @@ func _server_sword(at: Vector3, yaw: float) -> void:
 		if turn:
 			enemy.knock_down(Vector3(to.x, 0.0, to.y), RIPOSTE_KNOCK)
 			turned.append(enemy.global_position)
-		else:
-			enemy.knock_back(Vector3(to.x, 0.0, to.y), SWORD_KNOCKBACK)
 		hit = true
 	var pots := get_tree().get_first_node_in_group("breakable_set")
 	if pots and pots.smash_arc(at, fwd, SWORD_REACH + 0.4, SWORD_ARC_DEG):
@@ -1241,7 +1254,7 @@ func _riposte_hint() -> void:
 		if String(enemy.anim).begins_with("brace") and Vector2(enemy.global_position.x - global_position.x,
 				enemy.global_position.z - global_position.z).length() < SWORD_REACH:
 			_riposte_told = true
-			_toast("Cut as he draws back — turn the blow")
+			_toast("Cut as he draws back: turn the blow")
 			return
 
 # Turn toward a ground point: exact yaw for the rig, nearest 4-way facing for the rest
@@ -1537,6 +1550,9 @@ func _on_hurt(new_health: float) -> void:
 	_sprite.hit_flash()
 	if new_health > 0.0:
 		Sfx.play("hurt", global_position)
+		# Rocked by the blow, as a foe is: the flash alone was lost in a crowd
+		_sprite.recoil(0.22)
+		_sprite.squash(Vector2(1.08, 0.93))
 	if is_multiplayer_authority():
 		_jolt(0.35, 0.4, 0.2, 0.15)
 		_well_hint()
@@ -1560,7 +1576,7 @@ func _set_downed(value: bool) -> void:
 		if is_multiplayer_authority():
 			_jolt(0.6, 0.3, 0.8, 0.35)
 		if multiplayer.is_server() and not _nobody_to_raise():
-			bark("I've fallen — help me up!", true)
+			bark("I've fallen! Help me up!", true)
 	else:
 		health = MAX_HEALTH * REVIVE_HEALTH
 	if is_multiplayer_authority():
@@ -1572,7 +1588,7 @@ func _set_downed(value: bool) -> void:
 
 # A bot says what it's doing when it matters to the people nearby (BotBrain._bark_for):
 # a Shout over its head, so a crew of bots reads as people. Kept rare: one bot at most
-# every BARK_GAP, the whole crew every BARK_CREW_GAP. Not on the title or in the tutorial.
+# every BARK_GAP, the whole crew every BARK_CREW_GAP. Not on the title.
 const BARK_Y        := PIP_Y + 1.1   # over the pip and the "Help up" tag
 const BARK_GAP      := 9.0
 const BARK_CREW_GAP := 3.5
@@ -1583,7 +1599,7 @@ var _bark_shout: Shout
 ## Server: a bot says `line` (English; each peer translates). `urgent` (down, helped up)
 ## skips the wait and makes it breathe.
 func bark(line: String, urgent := false) -> void:
-	if brain == null or GameState.attract or GameState.tutorial:
+	if brain == null or GameState.attract:
 		return
 	var now := Time.get_ticks_msec() * 0.001
 	if not urgent and (now < _barked_at + BARK_GAP or now < _crew_barked_at + BARK_CREW_GAP):
@@ -1644,7 +1660,7 @@ func _set_working(site_path: NodePath) -> void:
 		anim = "build_" + _facing
 		_sprite.squash(Vector2(1.06, 0.94))
 		if Trade.prefers(trade, site.work_material()):
-			_knack("Your trade — quicker hands at this work")
+			_knack("Your trade: quicker hands at this work")
 	elif not downed and not _is_busy:
 		anim = "idle_" + _facing
 
@@ -1663,8 +1679,19 @@ func _stop_work() -> void:
 	if not _is_busy:
 		anim = "idle_" + _facing
 
+## Every peer: the trough we're working at, if the build stroke is a stir there (else null)
+func _at_trough() -> Node3D:
+	var site := _nearest_in_reach("build_sites", global_position, func(_s): return true)
+	return site if site != null and "mortar_ready" in site else null
+
+func is_stirring() -> bool:
+	return _sprite != null and _sprite.stirring and anim.begins_with("build_")
+
 # Every peer: one strike of the tool — a knock and a little dust off the wall
 func _on_strike() -> void:
+	if _sprite.stirring:
+		Sfx.play("work_mortar", global_position)   # a slap of wet lime, no dust
+		return
 	var site := _nearest_in_reach("build_sites", global_position, func(s): return not s.work_material().is_empty())
 	var mat: String = site.work_material() if site != null else "stone"
 	Sfx.play("work_" + mat, global_position)
@@ -1777,6 +1804,29 @@ func _server_horn(at: Vector3) -> void:
 	else:
 		_tell("The horn was just sounded")
 
+# ── The call (GDD §5.25) ───────────────────────────────────
+
+const CALL_REACH     := 20.0   # mouse: the call goes where the cursor points, this far at most
+const CALL_PAD_REACH := 6.0    # pad: this far along the right stick, or where we stand
+
+## Owner: where a call points
+func _call_point() -> Vector3:
+	if brain != null:
+		return global_position
+	if InputMode.using_pad:
+		var stick := Input.get_vector("aim_west", "aim_east", "aim_north", "aim_south", STICK_DEADZONE)
+		return global_position + screen_to_ground(stick).normalized() * CALL_PAD_REACH if stick != Vector2.ZERO else global_position
+	var to := _cursor_on_ground() - global_position
+	return global_position + Vector3(to.x, 0.0, to.z).limit_length(CALL_REACH)
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_call(at: Vector3) -> void:
+	if not _from_owner() or downed or is_led():
+		return
+	var calls := get_tree().get_first_node_in_group("calls")
+	if calls != null:
+		calls.request(self, at)
+
 @rpc("any_peer", "call_local", "reliable")
 func _server_call_early() -> void:
 	if not _from_owner() or downed or is_led():
@@ -1784,7 +1834,7 @@ func _server_call_early() -> void:
 	var waves := get_node_or_null("../../WaveManager")
 	if waves != null and waves.call_early():
 		_action.rpc("halfslash")
-		_tell("Wave called in early — the crew is spurred")
+		_tell("Wave called in early: the crew is spurred")
 
 # ── Led off to Ono ("schemes" twist) ────────────────────────
 
@@ -2025,11 +2075,12 @@ func _glint() -> void:
 	SlingStone.flash(get_tree().current_scene, _whirl_stone.global_position, 0.9, 0.2)
 	if self == local and brain == null and not _true_told:
 		_true_told = true
-		_toast("Let go as it glints — a true shot")
+		_toast("Let go as it glints: a true shot")
 
 # ── Carried prop ───────────────────────────────────────────
 
-func _rebuild_carry_prop() -> void:
+## `pop`: a fresh pickup, so the load lands in the arms squashed and springs to shape
+func _rebuild_carry_prop(pop := false) -> void:
 	for c in _carry_prop.get_children():
 		c.queue_free()
 	if is_instance_valid(_carry_front):
@@ -2048,6 +2099,10 @@ func _rebuild_carry_prop() -> void:
 		else:
 			prop.scale = Vector3.ONE * CARRY_SCALE
 			_carry_prop.add_child(prop)
+		if pop:
+			var s := prop.scale
+			prop.scale = Vector3(s.x * 1.2, s.y * 0.65, s.z * 1.2)
+			prop.create_tween().tween_property(prop, "scale", s, 0.22) 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # ── Helpers ────────────────────────────────────────────────
 

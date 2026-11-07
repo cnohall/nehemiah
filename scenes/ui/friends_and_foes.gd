@@ -181,6 +181,14 @@ func close() -> void:
 	hide()
 	closed.emit()
 
+## Head and shoulders
+static func _frame_medal(cam: Camera3D) -> void:
+	var s: float = cam.get_meta("scale", 1.0)
+	var head := Vector3(0, 1.62 * s, 0)
+	var eye := head + Vector3(2.3, 1.2, 2.0)
+	cam.size = 1.7 * s
+	cam.transform = Transform3D.IDENTITY.looking_at(head - eye).translated(eye)
+
 static func _known(e: Dictionary) -> bool:
 	return e["group"] == "friends" or GameState.has_met(e["key"])
 
@@ -285,7 +293,7 @@ func _fill_extra(e: Dictionary, known: bool, where: String) -> void:
 		row.add_child(_label(&"Body", 15 if _m else 17, UiStyle.INK, false, Trade.ABOUT[e["slot"]]))
 		_extra.add_child(row)
 		_extra.add_child(_label(&"Eyebrow", 11 if _m else 13, UiStyle.INK_MUTED, false,
-			"Anyone can do any job — pick your trade when the crew gathers"))
+			"Anyone can do any job. Pick your trade when the crew gathers"))
 	if e.has("enemy"):
 		var t := _enemy_type(e)
 		# Against the fastest, toughest, hardest-hitting of the three
@@ -329,14 +337,16 @@ static func _look(e: Dictionary) -> Dictionary:
 		return CharacterRig.worker_look(e["slot"], Palette.CREW[e["slot"]])
 	if e.has("enemy"):
 		return CharacterRig.enemy_look(e["enemy"])
-	var foe := { "outline": Color(0.36, 0.07, 0.05), "brows": true, "tool": false, "bare_arms": false }
+	var foe := { "outline": Color(0.36, 0.07, 0.05), "brows": true, "tool": false, "bare_arms": false,
+		"sculpted_builder": true, "sculpted_body": true }
 	match e["key"]:
 		"nehemiah":
 			return { "skin": CharacterRig.SKIN[1], "hair": CharacterRig.HAIR_BROWN, "beard": "full",
 				"hat": "wrap", "hat_color": Color(0.96, 0.94, 0.89), "band": Color(0.80, 0.62, 0.26),
 				"robe": Color(0.93, 0.90, 0.83), "vest": Color(0.20, 0.30, 0.52), "long_robe": true,
 				"trim": Color(0.80, 0.62, 0.26), "sash": Color(0.80, 0.62, 0.26),
-				"outline": CharacterRig.OUTLINE_PLAYER, "no_outline": true, "tool": false }
+				"outline": CharacterRig.OUTLINE_PLAYER, "no_outline": true, "tool": false,
+				"sculpted_builder": true, "sculpted_body": true }
 		"sanballat":
 			foe.merge({ "skin": Color(0.64, 0.44, 0.30), "hair": Color(0.10, 0.08, 0.07), "beard": "long",
 				"hat": "wrap", "hat_color": Color(0.30, 0.10, 0.09), "band": Color(0.74, 0.54, 0.26),
@@ -747,12 +757,10 @@ func _medal(i: int) -> Control:
 	box.add_child(vp)
 	var world := _stage_world(vp)
 	var s: float = Enemy.SCALE[_enemy_type(e)] if e.has("enemy") else 1.0
-	var head := Vector3(0, 1.62 * s, 0)
-	var eye := head + Vector3(2.3, 1.2, 2.0)
 	var cam := Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	cam.size = 1.7 * s
-	cam.transform = Transform3D.IDENTITY.looking_at(head - eye).translated(eye)
+	cam.set_meta("scale", s)
+	_frame_medal(cam)
 	world.add_child(cam)
 	var holder := Node3D.new()
 	holder.scale = Vector3.ONE * s

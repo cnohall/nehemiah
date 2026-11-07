@@ -3,8 +3,13 @@ extends RefCounted
 # Builder-specific sculpt. All positions are relative to the animated neck pivot.
 # Curved, tapered locks and shaped cross sections are authored in model space;
 # meshes are cached across gameplay rigs and the live crew portraits.
+const BODY := preload("res://scenes/shared/builder_body.gd")
+const CREST := Color(0.50, 0.12, 0.09)   # horsehair on a captain's helmet, oxblood like the foes' rim
+const BEARD_AT := Vector3(0, 0.18, 0.28)   # the beard is drawn smaller toward here (the mouth)
+const BEARD_SCALE := 0.88
 static var _cache: Dictionary = {}
 static var _material: ShaderMaterial
+static var _metal_material: ShaderMaterial
 var _rig: Node3D
 var _head: Node3D
 var _skin: Color
@@ -14,6 +19,7 @@ var _beard_kind := ""
 var _hat := "band"
 var _style := "short"
 var _clustered_builder := false
+var _foe := false   # outlined figures (enemies) scowl; the crew goes without an outline
 
 func build(rig: Node3D, head: Node3D, look: Dictionary) -> void:
 	_rig = rig
@@ -25,6 +31,7 @@ func build(rig: Node3D, head: Node3D, look: Dictionary) -> void:
 	_hat = look.get("hat", "band")
 	_style = look.get("hair_style", "short")
 	_clustered_builder = _style == "short" and look.get("basket_stones", false)
+	_foe = not look.get("no_outline", false)
 	if _material == null:
 		_material = ShaderMaterial.new()
 		_material.shader = preload("res://assets/shaders/builder_sculpt.gdshader")
@@ -42,8 +49,12 @@ func build(rig: Node3D, head: Node3D, look: Dictionary) -> void:
 		_:
 			_headband(cloth, look.get("stripe", cloth.lightened(0.10)) if _hat == "scarf" else cloth.lightened(0.10))
 
+## Parts go on the head unless `_into` (a pivot on it) is set: authored in head space either way
+var _into: Node3D
+
 func _add(mesh: Mesh, color: Color, pos := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
-	var part: MeshInstance3D = _rig._part(_head, mesh, color, pos, rot)
+	var parent: Node3D = _into if _into != null else _head
+	var part: MeshInstance3D = _rig._part(parent, mesh, color, pos - (parent.position if _into != null else Vector3.ZERO), rot)
 	part.material_override = _material
 	return part
 
@@ -63,13 +74,26 @@ func _face() -> void:
 		# One flattened ear and one shallow inset, with no small helix details.
 		_oval(Vector3(0.13, 0.19, 0.115), _skin, Vector3(side * 0.326, 0.315, 0.005))
 		_oval(Vector3(0.032, 0.105, 0.065), _skin.darkened(0.17), Vector3(side * 0.387, 0.32, 0.028))
-		# Smaller eyes sit deeper in the face, with the brow shading their tops.
-		var eye := Vector3(side * 0.135, 0.340, 0.224)
-		_oval(Vector3(0.132, 0.103, 0.075), Color(0.97, 0.92, 0.83), eye)
-		_oval(Vector3(0.067, 0.073, 0.024), Color(0.19, 0.11, 0.07), eye + Vector3(-side * 0.009, -0.004, 0.032))
-		_oval(Vector3(0.035, 0.051, 0.012), Color(0.045, 0.029, 0.024), eye + Vector3(-side * 0.009, -0.004, 0.044))
-		# The inner brow sits lowest, giving the builder a focused expression.
-		_lock("brow%s" % side, [Vector3(side * 0.040, 0.382, 0.315), Vector3(side * 0.096, 0.395, 0.344), Vector3(side * 0.174, 0.428, 0.322), Vector3(side * 0.245, 0.415, 0.263)], 0.046, 0.034, _brow)
+		# Big bright eyes with a catchlight: cartoony on purpose (GDD §6.2), and the face
+		# reads at play zoom
+		var eye := Vector3(side * 0.135, 0.330, 0.248)
+		var look_at := eye + Vector3(-side * 0.008, -0.004, 0.0)
+		# Each eye on its own pivot, a little below its middle: the rig blinks it shut there
+		_into = _rig._pivot(_head, eye + Vector3(0, -0.012, 0))
+		_rig._eyes.append(_into)
+		_oval(Vector3(0.118, 0.098, 0.074), Color(0.97, 0.95, 0.90), eye)
+		_oval(Vector3(0.070, 0.078, 0.026), Color(0.22, 0.13, 0.08), look_at + Vector3(0, 0, 0.031))
+		_oval(Vector3(0.040, 0.052, 0.014), Color(0.045, 0.029, 0.024), look_at + Vector3(0, 0, 0.043))
+		_oval(Vector3(0.020, 0.020, 0.008), Color(1.0, 1.0, 0.97), look_at + Vector3(side * 0.012, 0.016, 0.050))
+		_into = null
+		if _foe:
+			# The upper lid: a crease of shadow over each eye, so it sits under the brow
+			_lock("lid%s" % side, [Vector3(side * 0.074, 0.362, 0.286), Vector3(side * 0.110, 0.382, 0.308), Vector3(side * 0.160, 0.382, 0.300), Vector3(side * 0.198, 0.360, 0.270)], 0.018, 0.012, _skin.darkened(0.22))
+			# Slanted down to the nose: a foe reads as one at a glance
+			_lock("brow_foe%s" % side, [Vector3(side * 0.045, 0.372, 0.296), Vector3(side * 0.100, 0.392, 0.322), Vector3(side * 0.174, 0.424, 0.300), Vector3(side * 0.240, 0.432, 0.240)], 0.044, 0.024, _brow)
+		else:
+			# Lifted in the middle: open and friendly
+			_lock("brow_up%s" % side, [Vector3(side * 0.045, 0.428, 0.290), Vector3(side * 0.100, 0.446, 0.318), Vector3(side * 0.174, 0.442, 0.298), Vector3(side * 0.240, 0.410, 0.240)], 0.040, 0.022, _brow)
 	# One broad bridge and rounded tip, projecting beyond the eyes in profile.
 	_add(_profile("nose", [Vector4(0.220, 0.033, 0.308, 0.25),
 		Vector4(0.248, 0.072, 0.375, 0.25), Vector4(0.280, 0.093, 0.408, 0.25),
@@ -80,25 +104,29 @@ func _beard() -> void:
 	if _beard_kind.is_empty():
 		return
 	var short := _beard_kind == "short"
+	# One rounded shape with a few broad locks, drawn a little smaller toward the mouth:
+	# a cartoon beard (GDD §6.2), not a bunch of grapes over half the face
+	_into = _rig._pivot(_head, BEARD_AT)
+	_into.scale = Vector3.ONE * BEARD_SCALE
 	# The wrap is one closed cheek-to-cheek volume. Its front top dips under
 	# the mouth; the sides rise into the sideburns.
 	_add(_beard_mass(short), _hair)
 	for side: float in [-1.0, 1.0]:
-		# Two large cheek locks per side, overlapping the broad mass.
-		_lock("cheek_upper%s" % side, [Vector3(side * 0.275, 0.260, 0.160), Vector3(side * 0.355, 0.228, 0.242), Vector3(side * 0.350, 0.142, 0.294), Vector3(side * 0.263, 0.103, 0.283)], 0.088, 0.038, _hair.lightened(0.020), Vector3(side, 0, 0))
+		# One cheek lock per side, overlapping the broad mass.
 		_lock("cheek_lower%s" % side, [Vector3(side * 0.258, 0.172, 0.248), Vector3(side * 0.330, 0.132, 0.312), Vector3(side * 0.270, 0.008, 0.327), Vector3(side * 0.175, -0.045, 0.260)], 0.078, 0.041, _hair.lightened(0.010), Vector3.FORWARD)
 		# Moustache remains two separate curved wedges above the beard.
 		_lock("moustache%s" % side, [Vector3(side * 0.018, 0.200, 0.338), Vector3(side * 0.070, 0.222, 0.386), Vector3(side * 0.132, 0.194, 0.370), Vector3(side * 0.190, 0.177, 0.313)], 0.050, 0.035, _hair.lightened(0.025))
-	# Four chunky chin locks, with their tips defining a soft scalloped edge.
-	for i in 4:
-		var x := (i - 1.5) * 0.108
-		var central := i == 1 or i == 2
-		var tip_y := (-0.070 if central else -0.050) if short else (-0.138 if central else -0.092)
-		_lock("chin_%s_%s" % ["short" if short else "full", i], [Vector3(x, 0.103, 0.313), Vector3(x + 0.022, 0.068, 0.388), Vector3(x + 0.014, -0.050, 0.375), Vector3(x * 0.82, tip_y, 0.215)], 0.082 if central else 0.064, 0.056, _hair.lightened(0.009 * (i % 3)))
+	# Three broad chin locks, their tips a soft scalloped edge.
+	for i in 3:
+		var x := (i - 1) * 0.13
+		var central := i == 1
+		var tip_y := (-0.070 if central else -0.045) if short else (-0.138 if central else -0.088)
+		_lock("chin3_%s_%s" % ["short" if short else "full", i], [Vector3(x, 0.103, 0.313), Vector3(x + 0.022, 0.068, 0.388), Vector3(x + 0.014, -0.050, 0.375), Vector3(x * 0.82, tip_y, 0.215)], 0.10 if central else 0.085, 0.056, _hair.lightened(0.009 * i))
 	if _beard_kind == "long":
 		for i in 3:
 			var x := (i - 1) * 0.115
 			_lock("long%s" % i, [Vector3(x, -0.06, 0.25), Vector3(x * 1.15, -0.15, 0.36), Vector3(x * 0.8, -0.30, 0.32), Vector3(x * 0.45, -0.39 + absf(x) * 0.5, 0.20)], 0.077, 0.055, _hair.lightened(0.012 * i))
+	_into = null
 
 func _haircut() -> void:
 	if _hat == "wrap" or _hat == "hood" or _hat == "helmet":
@@ -154,8 +182,15 @@ func _headband(color: Color, fold: Color) -> void:
 	_add(_band(), color)
 	_lock("band_fold", [Vector3(-0.28, 0.50, 0.17), Vector3(-0.10, 0.49, 0.355), Vector3(0.12, 0.54, 0.358), Vector3(0.28, 0.53, 0.17)], 0.012, 0.007, fold)
 	_oval(Vector3(0.12, 0.11, 0.095), color.darkened(0.07), Vector3(-0.16, 0.51, -0.33))
+	# The two ends hang from the knot on their own pivots: they stream back on a run and
+	# swing out on a turn (CharacterRig._secondary)
 	for i in 2:
+		_into = _rig._pivot(_head, Vector3(-0.16, 0.50, -0.34))
+		_rig._tails.append(_into)
 		_lock("band_tail%s" % i, [Vector3(-0.16, 0.50, -0.34), Vector3(-0.23 + i * 0.09, 0.43, -0.41), Vector3(-0.29 + i * 0.20, 0.29, -0.42), Vector3(-0.31 + i * 0.22, 0.21 + i * 0.04, -0.39)], 0.069, 0.018, color.lightened(i * 0.05), Vector3.BACK)
+		# A fringe of loose threads where the cloth was torn off the bolt
+		_oval(Vector3(0.10, 0.03, 0.02), color.darkened(0.12), Vector3(-0.31 + i * 0.22, 0.205 + i * 0.04, -0.39))
+	_into = null
 
 func _turban(cloth: Color, band: Color) -> void:
 	# Wound head-cloth over the crown, a coloured band, cloth falling behind to the shoulders.
@@ -163,21 +198,63 @@ func _turban(cloth: Color, band: Color) -> void:
 	for k in 3:
 		_oval(Vector3(0.78 - k * 0.07, 0.19, 0.74 - k * 0.07), cloth.darkened(0.07 + k * 0.02), Vector3(0, 0.55 + k * 0.07, -0.02 - k * 0.02), Vector3(0, 0, 0.12 - k * 0.10))
 	_add(_band(), band)
+	# The fall down the back hangs from the band on its own pivot (CharacterRig._secondary)
+	_into = _rig._pivot(_head, Vector3(0, 0.46, -0.36))
+	_rig._veil = _into
 	_oval(Vector3(0.74, 0.50, 0.15), cloth.darkened(0.04), Vector3(0, 0.24, -0.37), Vector3(0.12, 0, 0))
+	_oval(Vector3(0.70, 0.04, 0.13), cloth.darkened(0.14), Vector3(0, 0.0, -0.41), Vector3(0.12, 0, 0))
+	_into = null
 	for side: float in [-1.0, 1.0]:
-		_oval(Vector3(0.14, 0.52, 0.42), cloth.darkened(0.02), Vector3(side * 0.37, 0.24, -0.12), Vector3(-0.12, 0, side * 0.10))
+		# The cloth falls past the ears in a narrow fold, not a disc over them
+		_oval(Vector3(0.08, 0.50, 0.30), cloth.darkened(0.02), Vector3(side * 0.335, 0.22, -0.17), Vector3(-0.16, 0, side * 0.06))
+		_lock("turban_fold%s" % side, [Vector3(side * 0.36, 0.45, 0.06), Vector3(side * 0.385, 0.36, -0.04), Vector3(side * 0.37, 0.18, -0.16), Vector3(side * 0.34, 0.02, -0.22)], 0.03, 0.02, cloth.darkened(0.12), Vector3(side, 0, 0))
 
 func _hood(cloth: Color) -> void:
-	_oval(Vector3(0.78, 0.40, 0.72), cloth, Vector3(0, 0.55, -0.06))
-	_oval(Vector3(0.76, 0.66, 0.30), cloth, Vector3(0, 0.28, -0.30))
+	_oval(Vector3(0.76, 0.40, 0.72), cloth, Vector3(0, 0.55, -0.06))
+	_oval(Vector3(0.72, 0.64, 0.30), cloth, Vector3(0, 0.28, -0.30))
 	for side: float in [-1.0, 1.0]:
-		_oval(Vector3(0.13, 0.56, 0.48), cloth, Vector3(side * 0.37, 0.30, -0.07), Vector3(0, 0, side * 0.05))
-	_oval(Vector3(0.86, 0.26, 0.56), cloth.darkened(0.06), Vector3(0, -0.06, -0.14))
+		# Close round the cheeks, the face framed in it
+		_oval(Vector3(0.08, 0.52, 0.42), cloth, Vector3(side * 0.335, 0.30, -0.06), Vector3(0, 0, side * 0.04))
+	# The rolled edge round the face, a shade darker, and the fold where it gathers at the throat
+	var edge: Array[Vector3] = []
+	for i in 25:
+		var a := lerpf(-0.15, PI + 0.15, i / 24.0)
+		edge.append(Vector3(cos(a) * 0.34, 0.30 + sin(a) * 0.40, 0.17 + sin(a) * 0.03))
+	_add(BODY._tube("hood_edge", edge, 0.028, 8), cloth.darkened(0.18))
+	_oval(Vector3(0.80, 0.24, 0.52), cloth.darkened(0.06), Vector3(0, -0.06, -0.14))
 
+## A pointed bronze helmet (the Assyrian and Persian kind the hill peoples copied), a
+## rolled rim, a nose bar, and a leather curtain hanging from it over the nape
 func _helmet(metal: Color) -> void:
-	_oval(Vector3(0.74, 0.50, 0.70), metal, Vector3(0, 0.56, -0.03))
-	_add(_rig._soft(Vector3(0.78, 0.07, 0.74), 0.02), metal.darkened(0.25), Vector3(0, 0.46, -0.02))
-	_add(_rig._soft(Vector3(0.07, 0.30, 0.06), 0.015), metal.darkened(0.15), Vector3(0, 0.34, 0.345))
+	_metal(_profile("cone_helmet", [Vector4(0.44, 0.36, 0.35, -0.36),
+		Vector4(0.53, 0.36, 0.35, -0.36), Vector4(0.64, 0.33, 0.31, -0.33),
+		Vector4(0.76, 0.25, 0.23, -0.25), Vector4(0.88, 0.14, 0.13, -0.14),
+		Vector4(0.98, 0.05, 0.05, -0.05), Vector4(1.03, 0.008, 0.0, -0.008)], 0.9), metal)
+	var rim: Array[Vector3] = []
+	for i in 49:
+		var a := TAU * i / 48.0
+		rim.append(Vector3(cos(a) * 0.372, 0.45, sin(a) * 0.362))
+	_metal(BODY._tube("helmet_rim", rim, 0.024, 8), metal.darkened(0.18))
+	# A raised rib up each side to the point, as beaten into the bronze
+	for side: float in [-1.0, 1.0]:
+		_lock("helmet_rib%s" % side, [Vector3(side * 0.35, 0.47, 0.0), Vector3(side * 0.31, 0.68, 0.0), Vector3(side * 0.19, 0.86, 0.0), Vector3(side * 0.03, 1.01, 0.0)], 0.022, 0.016, metal.lightened(0.06), Vector3(side, 0, 0))
+	_metal(_rig._soft(Vector3(0.06, 0.24, 0.05), 0.015), metal.darkened(0.12), Vector3(0, 0.36, 0.36))
+	_add(_rig._ellipsoid(Vector3(0.72, 0.30, 0.22), true), Color(0.30, 0.19, 0.12), Vector3(0, 0.32, -0.29), Vector3(0.2, 0, 0))
+	# A finial on the point and a horsehair crest streaming back from it, the mark of a captain
+	_metal(_rig._ellipsoid(Vector3(0.1, 0.1, 0.1), true), metal.lightened(0.2), Vector3(0, 1.04, 0.0))
+	for i in 5:
+		var t := i / 4.0
+		var s := lerpf(0.28, 0.15, t)
+		_add(_rig._ellipsoid(Vector3(s * 0.5, s * 0.95, s * 1.7), true), CREST.darkened(0.07 * (i % 2)),
+			Vector3(0, 0.99 + 0.17 * sin(t * PI * 0.8) - 0.1 * t * t, -0.02 - 0.40 * t), Vector3(0.55 * t, 0, 0))
+
+func _metal(mesh: Mesh, color: Color, pos := Vector3.ZERO, rot := Vector3.ZERO) -> MeshInstance3D:
+	if _metal_material == null:
+		_metal_material = _material.duplicate()
+		_metal_material.set_shader_parameter("metal", 1.0)
+	var part := _add(mesh, color, pos, rot)
+	part.material_override = _metal_material
+	return part
 
 # Cubic sweep with a rounded root and a tapered tip.
 func _lock(key: String, points: Array, width: float, depth: float, color: Color, outward := Vector3.FORWARD, grooves := false) -> void:

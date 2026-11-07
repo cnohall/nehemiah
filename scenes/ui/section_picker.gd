@@ -11,7 +11,7 @@ signal chosen(section_index: int)
 signal closed
 
 const TWIST_NAMES := {
-	"doors": "Doors", "beams": "Beams", "salvage": "Salvage", "mixing": "Mortar mixing",
+	"doors": "Doors", "mortar": "Mortar", "posts": "Watch posts", "beams": "Beams", "salvage": "Salvage", "mixing": "Mortar mixing",
 	"thick": "Double-thick wall", "ruins": "Old and burned", "horn": "The horn",
 	"haul": "Long haul", "spring": "The spring", "night": "Night watch", "cramped": "Narrow lanes",
 	"schemes": "Schemes",
@@ -176,8 +176,7 @@ func _fill_details(i: int) -> void:
 		_twists.add_child(chip)
 	# What's new here, in a sentence — unless everything is (the finale)
 	var lines: Array = fresh.map(_intro)
-	_twist_note.text = "" if not open_ else ("
-".join(lines) if fresh.size() <= 2 else tr("Everything the wall has asked of you, all at once."))
+	_twist_note.text = "" if not open_ else ("\n".join(lines) if fresh.size() <= 2 else tr("Everything the wall has asked of you, all at once."))
 	_twist_note.visible = not _twist_note.text.is_empty()
 
 	# Once a foe has shown up, it keeps coming (GameState.MET_AT: where each first shows)
@@ -186,7 +185,7 @@ func _fill_details(i: int) -> void:
 		_foes.add_child(_chip(tr(FOE_NAMES[k]) if met else "?", met, true))
 
 func _intro(twist: String) -> String:
-	return tr(GameState.TWIST_INTRO.get(twist, "")).format({"horn": "[%s]" % InputMode.key("horn")})
+	return tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
 
 func _chip(text: String, strong: bool, foe := false, fresh := false) -> Label:
 	var l := _label(&"Eyebrow", 11 if Mobile.enabled() else 13, UiStyle.INK if fresh else UiStyle.CREAM if strong else UiStyle.INK_SOFT, false, text)

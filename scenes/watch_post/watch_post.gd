@@ -104,8 +104,9 @@ func _on_section_changed() -> void:
 		reset_slot()
 	_refresh()
 
+## Not before the Tower of the Ovens (GameState.posts_open): the wall comes first, posts when the ambush does
 func _enabled() -> bool:
-	return GameState.posts
+	return GameState.posts and GameState.posts_open()
 
 # Shown / in the groups only while the rule is on; solid only once it stands
 func _refresh() -> void:
@@ -233,7 +234,7 @@ func is_complete() -> bool:
 ## Player: why a load was refused here
 func refusal(kind: String) -> String:
 	if not built:
-		return "The post needs timber" if kind != "wood" else "Enough timber — {interact} to raise it"
+		return "The post needs timber" if kind != "wood" else "Enough timber. {interact} to raise it"
 	if kind != "stone":
 		return "The slinger wants stone for his sling"
 	return "The slinger has stones enough"
@@ -431,5 +432,4 @@ func _update_label() -> void:
 		lines.append("Stone %d/%d" % [ceili(float(ammo) / SHOTS_PER_LOAD), MAX_AMMO / SHOTS_PER_LOAD])
 	# A short name stacks to fit the narrow post; a long one would tower, so it stays a line
 	_label.stack_name = built and ammo > 0
-	_label.text = "
-".join(lines)
+	_label.text = "\n".join(lines)

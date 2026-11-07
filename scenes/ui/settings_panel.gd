@@ -2,9 +2,10 @@ extends Control
 
 # Modal settings sheet, shared by the title screen and the in-game menu.
 # Writes straight through to the Settings autoload; Esc / Done closes.
-# A second page, "Keys", rebinds the keyboard / mouse (built in code).
+# Two more pages, built in code: "Keys" rebinds the keyboard / mouse, "Advanced" holds what
+# most players never touch (looks and rules on trial, the view and HUD alternatives).
 # Phones: a full-height side sheet from the right (Material side sheet): language,
-# screen shake and audio — no window/vsync/keys choices — then the version and the
+# screen shake and audio, no window/vsync/keys choices, then the version and the
 # credits; tap outside or back closes.
 
 signal closed
@@ -36,16 +37,22 @@ const KEY_ROWS := [
 	["move_south", "Move down"], ["move_east", "Move right"],
 	["interact", "Pick up · deliver · build"], ["drop", "Drop"],
 	["dash", "Dash"], ["throw_charge", "Sling"], ["horn", "Horn"],
-	["reveal", "What can I do here?"],
+	["call", "Call"], ["reveal", "What can I do here?"],
 ]
 
 # Settings property → row label (GDD §5.21)
 const EXPERIMENTS := [
-	["exp_forecast", "Wave forecast"],
 	["exp_call_early", "Call waves early"],
 ]
 
 var _exp_btns := {}         # Settings property → [Off, On]
+var _forecast_btns: Array[Button]   # indexed by Settings.FORECAST_*
+var _full_game: Button
+var _simple_game: Button
+var _hints_on: Button
+var _hints_off: Button
+var _stats_on: Button
+var _stats_off: Button
 var _rumble_on: Button
 var _world_hud: Button
 var _plaque_hud: Button
@@ -58,6 +65,10 @@ var _hold: Button
 var _toggle_mode: Button
 var _keys_btn: Button
 var _keys_page: VBoxContainer
+var _adv_btn: Button
+var _adv_page: VBoxContainer
+var _adv_grid: GridContainer
+var _target: GridContainer   # the grid rows are being added to
 var _key_buttons := {}      # action → Button
 var _reset: Button
 var _language: OptionButton
@@ -84,9 +95,10 @@ func _ready() -> void:
 	_music.drag_ended.connect(func(_changed): Settings.save())
 	_sfx.value_changed.connect(_on_sfx)
 	_sfx.drag_ended.connect(func(_changed): Settings.save())
-	_done.pressed.connect(close)
+	_done.pressed.connect(_on_done)
 	_build_extra_rows()
-	_even_rows()
+	_even_rows(_grid)
+	_even_rows(_adv_grid)
 	_build_keys_page()
 	if Mobile.enabled():
 		# Rumble, hold/toggle sling and key rebinding are pad / keyboard things
@@ -99,9 +111,9 @@ func _ready() -> void:
 
 # Every control spans the same width (the widest row's), and a row's choices share it
 # evenly — rows of their own natural widths made a ragged right edge
-func _even_rows() -> void:
-	for i in range(1, _grid.get_child_count(), _grid.columns):
-		var c := _grid.get_child(i) as Control
+func _even_rows(grid: GridContainer) -> void:
+	for i in range(1, grid.get_child_count(), grid.columns):
+		var c := grid.get_child(i) as Control
 		c.size_flags_horizontal = Control.SIZE_FILL
 		if c is HBoxContainer:
 			for k in c.get_children():
@@ -152,10 +164,18 @@ func open() -> void:
 	_map_view.button_pressed     = Settings.turn_to_map
 	_hold.button_pressed         = not Settings.toggle_charge
 	_toggle_mode.button_pressed  = Settings.toggle_charge
+	_full_game.button_pressed     = not Settings.simple_game
+	_simple_game.button_pressed   = Settings.simple_game
+	_hints_on.button_pressed      = Settings.hints
+	_hints_off.button_pressed     = not Settings.hints
+	if _stats_on != null:
+		_stats_on.button_pressed  = Settings.share_stats
+		_stats_off.button_pressed = not Settings.share_stats
+	_forecast_btns[Settings.exp_forecast].button_pressed = true
 	for key: String in _exp_btns:
 		_exp_btns[key][0].button_pressed = not Settings.get(key)
 		_exp_btns[key][1].button_pressed = Settings.get(key)
-	_show_keys(false)
+	_show_page(null)
 	show()
 	_fit_modal.call_deferred()   # after the rows above have laid out
 	UiFx.fade_in(self, 0.18)
@@ -174,10 +194,7 @@ func close() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
-		if _keys_page.visible:
-			_show_keys(false)
-		else:
-			close()
+		_on_done()
 
 # Rebinding grabs the very next key / click before the GUI or ui_* actions see it
 func _input(event: InputEvent) -> void:
@@ -272,23 +289,10 @@ func _build_side_sheet() -> void:
 		slider.custom_minimum_size = Vector2(130, 48)   # the whole row is the target
 	for b: Button in [_shake_on, _shake_off]:
 		b.custom_minimum_size = Vector2(65, 48)   # the pair spans a slider's width
-	# Every choice row shares the sheet's width evenly — the desktop's fixed segment
-	# widths (up to 4 × 110) would push the sheet off the right edge
-	for c in _grid.get_children():
-		if c is HBoxContainer:
-			(c as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			for k in c.get_children():
-				if k is Button and not (k in [_shake_on, _shake_off]):
-					(k as Button).custom_minimum_size = Vector2(0, 48)
-					(k as Button).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-					(k as Button).add_theme_font_size_override("font_size", 12)
-					(k as Button).add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_SEMI, 0))
-					(k as Button).clip_text = true
-		elif c is Label and (c as Label).theme_type_variation == &"Caption":
-			(c as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			(c as Label).custom_minimum_size.x = 0
-		elif c is Label and c.get_index() % _grid.columns == 0:
-			(c as Label).size_flags_horizontal = Control.SIZE_FILL   # the choices get the spare width
+	_phone_rows(_grid)
+	_adv_grid.add_theme_constant_override("h_separation", 20)
+	_adv_grid.add_theme_constant_override("v_separation", 4)
+	_phone_rows(_adv_grid)
 	_done.get_parent().hide()
 	_language.custom_minimum_size.x = 0
 	_language.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -305,6 +309,8 @@ func _build_side_sheet() -> void:
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(rows)
 	_grid.reparent(rows)
+	_adv_page.reparent(rows)
+	_keys_page.reparent(rows)
 	var version := Label.new()
 	version.theme_type_variation = &"Caption"
 	version.add_theme_font_size_override("font_size", 12)
@@ -329,6 +335,25 @@ func _build_side_sheet() -> void:
 		if e is InputEventMouseButton and e.pressed:
 			close())
 
+# Every choice row shares the sheet's width evenly: the desktop's fixed segment
+# widths (up to 4 × 110) would push the sheet off the right edge
+func _phone_rows(grid: GridContainer) -> void:
+	for c in grid.get_children():
+		if c is HBoxContainer:
+			(c as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			for k in c.get_children():
+				if k is Button and not (k in [_shake_on, _shake_off]):
+					(k as Button).custom_minimum_size = Vector2(0, 48)
+					(k as Button).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+					(k as Button).add_theme_font_size_override("font_size", 12)
+					(k as Button).add_theme_font_override("font", UiStyle.tracked(UiStyle.CINZEL_SEMI, 0))
+					(k as Button).clip_text = true
+		elif c is Label and (c as Label).theme_type_variation == &"Caption":
+			(c as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			(c as Label).custom_minimum_size.x = 0
+		elif c is Label and c.get_index() % grid.columns == 0:
+			(c as Label).size_flags_horizontal = Control.SIZE_FILL   # the choices get the spare width
+
 # Pinned right, full height. Re-applied on open: a container that briefly outgrew
 # its anchors keeps the larger offsets.
 func _place_sheet() -> void:
@@ -351,12 +376,51 @@ func _slide_in() -> void:
 # ── Extra rows / keys page ─────────────────────────────────
 
 func _build_extra_rows() -> void:
+	_target = _grid
 	var pair := _segment_row("Rumble", "On", "Off")
 	_rumble_on = pair[0]
 	_rumble_off = pair[1]
 	_rumble_on.pressed.connect(_toggle.bind("rumble", true))
 	_rumble_off.pressed.connect(_toggle.bind("rumble", false))
-	pair = _segment_row("Day info", "In the world", "Plaques")
+	pair = _segment_row("Sling", "Hold", "Toggle")
+	_hold = pair[0]
+	_toggle_mode = pair[1]
+	_hold.pressed.connect(_set_charge_mode.bind(false))
+	_toggle_mode.pressed.connect(_set_charge_mode.bind(true))
+	_build_graphics_rows()
+	if OS.has_feature("pc") and not Mobile.enabled():
+		_build_window_row()
+	_add_label("Keys")
+	_keys_btn = Button.new()
+	_keys_btn.text = "Rebind keys…"
+	_keys_btn.theme_type_variation = &"GhostButton"
+	_keys_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_keys_btn.pressed.connect(func(): _show_page(_keys_page))   # built after this row: bind() would capture null
+	_grid.add_child(_keys_btn)
+	_build_language_row()
+	_add_label("More")
+	_adv_btn = Button.new()
+	_adv_btn.text = "Advanced…"
+	_adv_btn.theme_type_variation = &"GhostButton"
+	_adv_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_grid.add_child(_adv_btn)
+	_build_advanced_rows()
+	_adv_btn.pressed.connect(_show_page.bind(_adv_page))
+
+# The Advanced page: views, looks and rules most players leave as they are
+func _build_advanced_rows() -> void:
+	_adv_page = VBoxContainer.new()
+	_adv_page.add_theme_constant_override("separation", 22)
+	_adv_page.visible = false
+	_grid.add_sibling(_adv_page)
+	_adv_grid = GridContainer.new()
+	_adv_grid.columns = _grid.columns
+	_adv_grid.add_theme_constant_override("h_separation", _grid.get_theme_constant("h_separation"))
+	_adv_grid.add_theme_constant_override("v_separation", _grid.get_theme_constant("v_separation"))
+	_adv_page.add_child(_adv_grid)
+	_target = _adv_grid
+	_heading("View")
+	var pair := _segment_row("Day info", "In the world", "Plaques")
 	_world_hud = pair[0]
 	_plaque_hud = pair[1]
 	_world_hud.pressed.connect(_toggle.bind("diegetic_hud", true))
@@ -371,31 +435,93 @@ func _build_extra_rows() -> void:
 	_map_view = pair[1]
 	_game_view.pressed.connect(_toggle.bind("turn_to_map", false))
 	_map_view.pressed.connect(_toggle.bind("turn_to_map", true))
-	pair = _segment_row("Sling", "Hold", "Toggle")
-	_hold = pair[0]
-	_toggle_mode = pair[1]
-	_hold.pressed.connect(_set_charge_mode.bind(false))
-	_toggle_mode.pressed.connect(_set_charge_mode.bind(true))
-	_build_graphics_rows()
-	if OS.has_feature("pc") and not Mobile.enabled():
-		_build_window_row()
-	_add_label("Keys")
-	_keys_btn = Button.new()
-	_keys_btn.text = "Rebind keys…"
-	_keys_btn.theme_type_variation = &"GhostButton"
-	_keys_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	_keys_btn.pressed.connect(_show_keys.bind(true))
-	_grid.add_child(_keys_btn)
-	_build_language_row()
+	_heading("Look")
+	_style_btns = _choice_row("Art style", Settings.ART_STYLES, 110)
+	for i in _style_btns.size():
+		_style_btns[i].pressed.connect(func():
+			Settings.art_style = i
+			Settings.save())
+	_heading("Rules")
+	_build_game_row()
+	_build_hints_row()
 	_build_experimental_rows()
+	if Telemetry.available():
+		_build_stats_row()
+	_target = _grid
 
-# Ideas being tried with playtesters (GDD §5.21): off unless switched on, the host's pick rules
+## A small section heading across the page's label column
+func _heading(text: String) -> void:
+	var h := Label.new()
+	h.text = text
+	h.theme_type_variation = &"Eyebrow"
+	_target.add_child(h)
+	_target.add_child(Control.new())
+
+# Full or simple game (Settings.simple_game): the host's pick, sent to the crew at once
+func _build_game_row() -> void:
+	var pair := _segment_row("Game", "Full", "Simple")
+	_full_game = pair[0]
+	_simple_game = pair[1]
+	_full_game.pressed.connect(_set_simple.bind(false))
+	_simple_game.pressed.connect(_set_simple.bind(true))
+	_add_label("")
+	var note := Label.new()
+	note.theme_type_variation = &"Caption"
+	note.text = "Host's choice. Simple keeps the wall, the fight and each stretch's new twist; it drops trades, the saboteur, the choice before each stretch, hungry households, and the life in the streets."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(300, 0)
+	_target.add_child(note)
+
+# First-day hints (FirstSteps): turning them on shows every one again
+func _build_hints_row() -> void:
+	var pair := _segment_row("Hints", "On", "Off")
+	_hints_on = pair[0]
+	_hints_off = pair[1]
+	_hints_on.pressed.connect(func():
+		Settings.learned.clear()
+		_toggle("hints", true))
+	_hints_off.pressed.connect(_toggle.bind("hints", false))
+	_add_label("")
+	var note := Label.new()
+	note.theme_type_variation = &"Caption"
+	note.text = "A tag over your next job until you have done it once. Turning them on shows them all again."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(300, 0)
+	_target.add_child(note)
+
+# Anonymous play stats (Telemetry), web only: where a game stops and how smoothly it ran
+func _build_stats_row() -> void:
+	_heading("Privacy")
+	var pair := _segment_row("Play stats", "On", "Off")
+	_stats_on = pair[0]
+	_stats_off = pair[1]
+	_stats_on.pressed.connect(_toggle.bind("share_stats", true))
+	_stats_off.pressed.connect(_toggle.bind("share_stats", false))
+	_add_label("")
+	var note := Label.new()
+	note.theme_type_variation = &"Caption"
+	note.text = "Anonymous: where a game stops and how it runs. No name, no account, nothing kept on your device."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(300, 0)
+	_target.add_child(note)
+
+func _set_simple(on: bool) -> void:
+	_toggle("simple_game", on)
+	GameState.share_rules()
+
+# Ideas being tried with playtesters (GDD §5.21): the host's pick rules
 func _build_experimental_rows() -> void:
 	_add_label("Experimental")
 	var note := Label.new()
 	note.theme_type_variation = &"Caption"
-	note.text = "Host's choice. Ideas on trial; off is the game as designed."
-	_grid.add_child(note)
+	note.text = "Host's choice. Ideas on trial."
+	_target.add_child(note)
+	# Solo (the default): on when one person plays, with or without bots
+	_forecast_btns = _choice_row("Wave forecast", ["Off", "Solo", "Always"], 100)
+	for i in _forecast_btns.size():
+		_forecast_btns[i].pressed.connect(func():
+			Settings.exp_forecast = i
+			Settings.save())
 	for row: Array in EXPERIMENTS:
 		var pair := _segment_row(row[1], "Off", "On")
 		_exp_btns[row[0]] = pair
@@ -437,12 +563,6 @@ func _select_window_size() -> void:
 	_window_size.disabled = Settings.fullscreen or not Settings.can_change_window()
 
 func _build_graphics_rows() -> void:
-	# Trying out drawn looks with playtesters; switches live under the open panel
-	_style_btns = _choice_row("Art style", Settings.ART_STYLES, 110)
-	for i in _style_btns.size():
-		_style_btns[i].pressed.connect(func():
-			Settings.art_style = i
-			Settings.save())
 	_quality_btns = _choice_row("Graphics", Settings.QUALITIES.map(func(q): return q["name"]), 110)
 	for i in _quality_btns.size():
 		_quality_btns[i].pressed.connect(func():
@@ -509,7 +629,7 @@ func _choice_row(label: String, options: Array, width: int) -> Array[Button]:
 	_add_label(label)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 0)
-	_grid.add_child(row)
+	_target.add_child(row)
 	var group := ButtonGroup.new()
 	var out: Array[Button] = []
 	for text: String in options:
@@ -528,7 +648,7 @@ func _add_label(text: String) -> void:
 	l.text = text
 	l.theme_type_variation = &"Body"
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_grid.add_child(l)
+	_target.add_child(l)
 
 func _set_charge_mode(toggle: bool) -> void:
 	_toggle("toggle_charge", toggle)
@@ -571,27 +691,34 @@ func _build_keys_page() -> void:
 	_done.add_sibling(_reset)
 	_done.get_parent().move_child(_reset, 0)
 
-func _show_keys(on: bool) -> void:
+## Shows `page` (the keys or the advanced page), or the main sheet for null
+func _show_page(page: Control) -> void:
+	var from: Control = _keys_page if _keys_page.visible else (_adv_page if _adv_page.visible else null)
 	_listening = ""
-	_grid.visible = not on
-	_keys_page.visible = on
-	_reset.visible = on
+	_grid.visible = page == null
+	_keys_page.visible = page == _keys_page
+	_adv_page.visible = page == _adv_page
+	_reset.visible = page == _keys_page
 	if visible:
-		_fit_modal.call_deferred()   # the keys page is shorter than the settings grid
-	_title.text = "Keys" if on else "Settings"
-	_done.text = "Back" if on else "Done"
-	if _done.pressed.is_connected(close) == on:
-		if on:
-			_done.pressed.disconnect(close)
-			_done.pressed.connect(_show_keys.bind(false))
-		else:
-			_done.pressed.disconnect(_show_keys)
-			_done.pressed.connect(close)
-	if on:
+		_fit_modal.call_deferred()   # the pages are shorter than the settings grid
+	_title.text = "Keys" if page == _keys_page else ("Advanced" if page == _adv_page else "Settings")
+	_done.text = "Back" if page != null else "Done"
+	if Mobile.enabled() and _credits_btn != null:
+		_done.get_parent().visible = page != null
+	if page == _keys_page:
 		_refresh_keys()
 		_key_buttons[KEY_ROWS[0][0]].grab_focus()
-	elif visible:
-		_keys_btn.grab_focus()
+	elif page == _adv_page:
+		_world_hud.grab_focus()
+	elif visible and from != null:
+		(_keys_btn if from == _keys_page else _adv_btn).grab_focus()
+
+## Done on the main sheet closes it; on a page, back to the sheet
+func _on_done() -> void:
+	if _grid.visible:
+		close()
+	else:
+		_show_page(null)
 
 func _listen(action: String) -> void:
 	_refresh_keys()

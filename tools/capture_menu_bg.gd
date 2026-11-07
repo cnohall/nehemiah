@@ -40,7 +40,9 @@ func _stage_scene() -> void:
 	_main.get_node("PostFX").hide()   # the menu applies its own veil
 	for p in _main.get_node("Players").get_children():
 		p.queue_free()
-	_main.get_node("/root/GameState").day_changed.emit(GameState.TOTAL_DAYS)   # outer stretches finished
+	# (the autoload by path: naming it here fails to compile under --script)
+	var gs: Node = _main.get_node("/root/GameState")
+	gs.day_changed.emit(gs.TOTAL_DAYS)   # outer stretches finished
 	for w in _main.get_tree().get_nodes_in_group("wall_sections"):
 		w.is_target = false
 		w.stage = w.Stage.MORTARED
@@ -51,7 +53,8 @@ func _stage_scene() -> void:
 	_pose_crew()
 	var cam: Camera3D = _main.get_node("Camera3D")
 	cam.size = CAM_SIZE
-	cam.global_position = FOCUS + CAM_OFFSET
+	# The game's own view, whatever turn the player's settings give the camera
+	cam.look_at_from_position(FOCUS + CAM_OFFSET, FOCUS)
 
 # The four trades at work by the gate, so the title shows who you'll play
 func _pose_crew() -> void:

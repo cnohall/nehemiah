@@ -78,21 +78,15 @@ func _ready() -> void:
 	move_child(_folk, fade.get_index())
 	_folk_btn.pressed.connect(_folk.open)
 	_folk.closed.connect(_folk_btn.grab_focus)
-	# Learn the basics: a solo practice walked through step by step (Tutorial)
-	var learn := join_btn.duplicate() as Button
-	learn.name = "LearnButton"
-	learn.text = "Learn the Basics"
-	menu.add_child(learn)
-	learn.pressed.connect(_on_learn)
 	# Explore Jerusalem: the Festival of Booths, a sandbox with no clock and no enemy
 	var walk := join_btn.duplicate() as Button
 	walk.name = "FestivalButton"
 	walk.text = "Explore Jerusalem"
 	var built := GameState.built_sections()
-	walk.tooltip_text = tr("The wall is finished: the Festival of Booths.") if not built.has(false) 		else tr("Walk the city as far as your wall stands — %d of %d stretches. The Festival of Booths waits for the whole wall.") % [built.count(true), built.size()]
+	walk.tooltip_text = tr("The wall is finished: the Festival of Booths.") if not built.has(false) 		else tr("Walk the city as far as your wall stands: %d of %d stretches. The Festival of Booths waits for the whole wall.") % [built.count(true), built.size()]
 	menu.add_child(walk)
 	walk.pressed.connect(_on_festival)
-	_second_tier([_sections_btn, learn, walk])
+	_second_tier([_sections_btn, walk])
 	# Credits: in the small row before Quit; the roll plays over the menu
 	_credits_btn = settings_btn.duplicate()
 	_credits_btn.name = "CreditsButton"
@@ -134,7 +128,6 @@ func _ready() -> void:
 	_intro()
 	# Back from a replay: straight to the map, on the stretch just played
 	GameState.replay_section = -1
-	GameState.tutorial = false
 	GameState.festival = false
 	if GameState.picker_return >= 0:
 		_picker.open(GameState.picker_return)
@@ -325,15 +318,15 @@ func _show_default_status() -> void:
 	if host_btn.disabled:
 		return  # mid-host: keep the progress/error line
 	if _use_eos():
-		net_status.text = "Online — host for a room code, or join with one"
+		net_status.text = "Online: host for a room code, or join with one"
 	elif _use_steam():
-		net_status.text = tr("Signed in to Steam as %s — invite friends once in game") % NetworkManager.steam_name()
+		net_status.text = tr("Signed in to Steam as %s. Invite friends once in game") % NetworkManager.steam_name()
 	elif NetworkManager.steam_available():
-		net_status.text = tr("LAN mode — share your IP address to play together")
+		net_status.text = tr("LAN mode: share your IP address to play together")
 	elif NetworkManager.online_error().is_empty():
 		net_status.text = tr("Connecting to online services…")
 	else:
-		net_status.text = tr("Online unavailable: %s — LAN play only") % tr(NetworkManager.online_error())
+		net_status.text = tr("Online unavailable: %s. LAN play only") % tr(NetworkManager.online_error())
 
 # ── Host ───────────────────────────────────────────────────
 
@@ -377,18 +370,11 @@ func _build_continue() -> void:
 	host_btn.text = "New Game"
 	host_btn.theme_type_variation = join_btn.theme_type_variation
 
-# Solo, offline: no hosting, the game scene runs as its own server
-func _on_learn() -> void:
-	_stop_world()
-	# A join or host still in flight would land us in someone's game as a client
-	NetworkManager.disconnect_session()
-	GameState.replay_section = -1
-	GameState.tutorial = true
-	get_tree().change_scene_to_file(GAME_SCENE)
-
-# Solo, offline, like the practice: the city at the Festival of Booths
+# Solo, offline: the city at the Festival of Booths. No hosting, the game scene runs as its
+# own server
 func _on_festival() -> void:
 	_stop_world()
+	# A join or host still in flight would land us in someone's game as a client
 	NetworkManager.disconnect_session()
 	GameState.replay_section = -1
 	GameState.festival = true
@@ -511,7 +497,7 @@ func _on_connect() -> void:
 		NetworkManager.join_online(addr)
 	elif addr.is_valid_int() and addr.length() > 12:
 		if not NetworkManager.steam_available():
-			_join_failed("That's a Steam lobby code — start Steam first.")
+			_join_failed("That's a Steam lobby code. Start Steam first.")
 			return
 		NetworkManager.join_steam(addr.to_int())
 	else:
@@ -554,8 +540,8 @@ func _on_settings() -> void:
 
 # ── Phone layout ───────────────────────────────────────────
 
-# Title lockup left with the three ways into a game under it (host = filled, join and
-# the practice = tonal). The pages you browse — the section map, Friends and Foes,
+# Title lockup left with the ways into a game under it (host = filled, join and
+# the city walk = tonal). The pages you browse — the section map, Friends and Foes,
 # settings — sit as pills top-right. The credits roll from Settings › About.
 # No Quit — Android back leaves from here.
 func _mobile_layout() -> void:
@@ -578,14 +564,11 @@ func _mobile_layout() -> void:
 	host_btn.text = "Host a room"
 	join_btn.theme_type_variation = &"GhostButton"
 	join_btn.text = "Join with code"
-	var learn := menu.get_node("LearnButton") as Button
-	learn.theme_type_variation = &"GhostButton"
-	menu.move_child(learn, join_btn.get_index() + 1)
 	var walk := menu.get_node("FestivalButton") as Button
 	walk.theme_type_variation = &"GhostButton"
-	menu.move_child(walk, learn.get_index() + 1)
+	menu.move_child(walk, join_btn.get_index() + 1)
 	menu.add_theme_constant_override("separation", 8)
-	for b: Button in [host_btn, join_btn, learn, walk]:
+	for b: Button in [host_btn, join_btn, walk]:
 		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.focus_mode = Control.FOCUS_NONE
 		b.pressed.connect(Mobile.haptic)
@@ -597,7 +580,7 @@ func _mobile_layout() -> void:
 	for c in menu.get_children():
 		if c.get_class() == "Control":
 			c.hide()
-	for b: Button in [learn, walk]:
+	for b: Button in [walk]:
 		b.remove_theme_font_size_override("font_size")
 		b.remove_theme_color_override("font_color")
 	if _continue_btn:

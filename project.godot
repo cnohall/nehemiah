@@ -42,6 +42,7 @@ Settings="*res://scenes/settings/settings.gd"
 InputMode="*res://scenes/input_mode/input_mode.gd"
 Mobile="*res://scenes/mobile/mobile.gd"
 SteamAchievements="*res://scenes/achievements/achievements.gd"
+Telemetry="*res://scenes/telemetry/telemetry.gd"
 
 [debug]
 
@@ -148,6 +149,12 @@ horn={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":9,"pressure":0.0,"pressed":true,"script":null)
 ]
 }
+call={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":70,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":2,"pressure":0.0,"pressed":true,"script":null)
+]
+}
 reveal={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194306,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
@@ -182,4 +189,4 @@ lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=1
 camera/depth_of_field/depth_of_field_bokeh_shape=0
 anti_aliasing/quality/msaa_3d=2
 environment/glow/upscale_mode=0
-limits/global_shader_variables/buffer_size=131072
+limits/global_shader_variables/buffer_size=262144

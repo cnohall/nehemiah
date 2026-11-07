@@ -15,11 +15,31 @@ const DELAY      := 0.35   # let the moment land on screen first
 const DOWN_POLL  := 0.4
 
 # Kinds, least to most worth keeping when the reel is full
-const RANK := { "piece": 0, "down": 1, "up": 1, "knocked": 2, "breach": 2, "dusk": 3, "stands": 4, "end": 5 }
+const RANK := { "piece": 0, "down": 1, "up": 1, "knocked": 2, "breach": 2, "dusk": 3, "stands": 4, "close": 4, "end": 5 }
+
+# Steam's game recording (GDD §7.1 #7): the same moments go on its timeline, so a player
+# can clip a breach or a close call from the overlay. kind → [built-in icon, priority,
+# clip priority (Steam's ETimelineEventClipPriority: 1 none, 2 standard, 3 featured)]
+const TIMELINE := {
+	"piece":   ["steam_checkmark", 10, 1],
+	"down":    ["steam_death", 20, 2],
+	"up":      ["steam_heart", 10, 1],
+	"knocked": ["steam_explosion", 30, 2],
+	"breach":  ["steam_caution", 40, 2],
+	"dusk":    ["steam_flag", 20, 1],
+	"stands":  ["steam_completed", 60, 2],
+	"close":   ["steam_starburst", 100, 3],
+	"end":     ["steam_trophy", 80, 2],
+}
+# Steam's ETimelineGameMode: 1 playing, 2 staging (the gathering), 3 menus
+const MODE_PLAYING := 1
+const MODE_STAGING := 2
+const MODE_MENUS   := 3
 
 ## [{ "tex": ImageTexture, "caption": String, "kind": String }], oldest first
 var shots: Array = []
 
+var _on := true        # off on the title, in free play and headless (nothing to keep)
 var _last := {}        # kind → ticks (ms) of its last shot
 var _downed := {}      # worker id → downed, as last seen
 var _down_poll := 0.0
@@ -29,6 +49,8 @@ var _last_breaches := 0
 func _ready() -> void:
 	if GameState.attract or GameState.free_play() or DisplayServer.get_name() == "headless":
 		set_process(false)
+		_on = false
+		_steam_mode(MODE_MENUS if GameState.attract else MODE_PLAYING)
 		return
 	GameState.progress_changed.connect(_on_progress)
 	GameState.breaches_changed.connect(_on_breaches)
@@ -67,6 +89,16 @@ func _on_breaches(count: int) -> void:
 
 func _on_phase(phase: GameState.Phase) -> void:
 	match phase:
+		GameState.Phase.GATHER:
+			_steam_mode(MODE_STAGING)
+		GameState.Phase.STORY:
+			_steam_mode(MODE_MENUS)
+		GameState.Phase.DAWN:
+			_steam_mode(MODE_PLAYING)
+			var steam := NetworkManager.steam()
+			if steam:
+				steam.setTimelineTooltip(tr("Day %d · %s") % [GameState.current_day,
+					tr(GameState.get_current_section()["name"])], 0.0)
 		GameState.Phase.DUSK:
 			var stands := GameState.targets_total > 0 and GameState.targets_done >= GameState.targets_total
 			var text := tr("The %s stands") % tr(GameState.get_current_section()["name"]) if stands \
@@ -76,16 +108,23 @@ func _on_phase(phase: GameState.Phase) -> void:
 			take("stands" if stands else "dusk", text, true)
 		GameState.Phase.WON:
 			take("end", tr("The wall is finished"), true)
+			_steam_mode(MODE_MENUS)
 		GameState.Phase.LOST:
 			take("end", tr("Day %d · the city fell") % GameState.current_day, true)
+			_steam_mode(MODE_MENUS)
 
-## Grab a still of what's on screen now (after a beat), captioned
-func take(kind: String, caption: String, force := false) -> void:
+## Grab a still of what's on screen now (after a beat), captioned. A close call passes no
+## beat: the wall cam swings away from the gap as the tally comes in.
+func take(kind: String, caption: String, force := false, delay := DELAY) -> void:
+	if not _on:
+		return
 	var now := Time.get_ticks_msec()
 	if not force and now - int(_last.get(kind, -100000)) < THROTTLE * 1000.0:
 		return
 	_last[kind] = now
-	await get_tree().create_timer(DELAY).timeout
+	_steam_mark(kind, caption)
+	if delay > 0.0:
+		await get_tree().create_timer(delay).timeout
 	await RenderingServer.frame_post_draw
 	if not is_inside_tree():
 		return
@@ -107,6 +146,18 @@ func _trim() -> void:
 			if RANK[shots[i]["kind"]] < RANK[shots[worst]["kind"]]:
 				worst = i
 		shots.remove_at(worst)
+
+func _steam_mark(kind: String, caption: String) -> void:
+	var steam := NetworkManager.steam()
+	if steam == null or not TIMELINE.has(kind):
+		return
+	var t: Array = TIMELINE[kind]
+	steam.addInstantaneousTimelineEvent(caption, tr(GameState.get_current_section()["name"]), t[0], t[1], 0.0, t[2])
+
+func _steam_mode(mode: int) -> void:
+	var steam := NetworkManager.steam()
+	if steam:
+		steam.setTimelineGameMode(mode)
 
 func _who(p: Player) -> String:
 	var who := NetworkManager.name_of(p.worker_id())

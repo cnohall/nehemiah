@@ -24,6 +24,8 @@ const HUD_INTERVAL := 0.1
 # Dusk: the last stone lands in slow motion, the light turns gold, the camera leans in
 const DUSK_SLOWMO      := 0.3    # time scale…
 const DUSK_SLOWMO_TIME := 0.5    # …for this many real seconds
+const CLOSE_SLOWMO      := 0.12   # a close call holds it longer and deeper
+const CLOSE_SLOWMO_TIME := 1.1
 const DUSK_CAM_SIZE    := 15.5
 const DUSK_SUN_COLOR   := Color(1.0, 0.74, 0.5)
 const DUSK_SUN_ENERGY  := 1.45
@@ -66,6 +68,7 @@ var _hud_timer := 0.0
 var _day_sun_color: Color
 var _day_sun_energy: float
 var _mood_tween: Tween
+var _slowmo_gen := 0
 var _wall_cam: Tween
 var _carvings: Array[Label3D] = []   # names on their tablets
 var _look: LookPass
@@ -75,6 +78,7 @@ func _on_art_style_changed() -> void:
 
 func _ready() -> void:
 	add_to_group("camera_rig")
+	CharacterRig.prewarm()   # while loading, not at the first brute's spawn
 	# Drawn looks over the world and its tags (under the HUD), on trial: Settings'
 	# art style; `-- --look=litho|cel` overrides, F10 cycles, F9 over the HUD too (debug)
 	var look := LookPass.new(($WorldEnvironment as WorldEnvironment).environment)
@@ -101,12 +105,12 @@ func _ready() -> void:
 	# The day's record and its threats, kept in the world (diegetic HUD)
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
-	add_child(Taunts.new())
 	var relay := RelayMat.new()   # the long haul's halfway stack + porter (Gate of the Ash Heaps)
 	relay.name = "RelayMat"       # same node path on every peer, for its trip RPC
 	add_child(relay)
 	add_child(Households.new())   # the hungry families of Neh. 5 (Fountain Gate)
-	add_child(Leaders.new())    # Sanballat, Tobiah, Geshem watching from the rise at the peaks
+	if not GameState.attract and not GameState.free_play():
+		add_child(FirstSteps.new())   # the first day teaches the work (every peer, its own player)
 	if GameState.attract:
 		_start_attract()
 		return
@@ -168,10 +172,7 @@ func _ready() -> void:
 		for id in multiplayer.get_peers():
 			_spawn_player(id)
 		director.start()
-		if GameState.tutorial:
-			fit_bots(0)
-			add_child(Tutorial.new(self))
-		elif GameState.festival:
+		if GameState.festival:
 			fit_bots(0)
 			add_child(Festival.new(self))
 		else:
@@ -410,12 +411,29 @@ func _on_story_finished() -> void:
 	else:
 		director.mark_ready()
 
-# The finishing blow lands heavy: a breath of slow motion, then back to speed
-func _slowmo() -> void:
-	Engine.time_scale = DUSK_SLOWMO
-	await get_tree().create_timer(DUSK_SLOWMO_TIME, true, false, true).timeout
-	if is_inside_tree():
+# The finishing blow lands heavy: a breath of slow motion, then back to speed. A newer
+# call (a close call deepening the dusk's) owns the time scale from then on.
+func _slowmo(scale := DUSK_SLOWMO, time := DUSK_SLOWMO_TIME) -> void:
+	_slowmo_gen += 1
+	var gen := _slowmo_gen
+	Engine.time_scale = scale
+	await get_tree().create_timer(time, true, false, true).timeout
+	if is_inside_tree() and gen == _slowmo_gen:
 		Engine.time_scale = 1.0
+
+# A close call (DayDirector._close_call): the stretch stood by a hair. Every peer holds its
+# breath a little longer, the watch calls it, and the reel and Steam's recording keep it.
+func _close_call(kind: String) -> void:
+	_slowmo(CLOSE_SLOWMO, CLOSE_SLOWMO_TIME)
+	Sfx.hold_breath(CLOSE_SLOWMO_TIME + 0.6)
+	shake(0.35)
+	var line := tr("By a hair! The stars are coming out!") if kind == "stars" \
+		else tr("Just in time! They were at the stones!")
+	for watch in get_tree().get_nodes_in_group("watchmen"):
+		watch.call_out(line)
+	var reel := get_node_or_null("Highlights") as Highlights
+	if reel:
+		reel.take("close", tr("Day %d · by a hair") % GameState.current_day, true, 0.0)
 
 func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
 	if _mood_tween:
@@ -431,6 +449,8 @@ func _set_mood(sun_color: Color, sun_energy: float, cam_size: float) -> void:
 
 func _on_day_tallied(stats: Dictionary) -> void:
 	GameState.chronicle_day(stats)
+	if stats.has("close") and not GameState.attract:
+		_close_call(stats["close"])
 	if stats.has("names") and not GameState.attract:
 		_play_wall_cam(stats["names"])
 

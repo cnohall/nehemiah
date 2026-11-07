@@ -83,12 +83,12 @@ func _ready() -> void:
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
 	_viewport.msaa_3d = Viewport.MSAA_4X
-	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_PARENT_VISIBLE
 	_container.add_child(_viewport)
 	_diorama = CircuitDiorama.new()
 	_viewport.add_child(_diorama)
 	_diorama.set_look(look)
 	_diorama.focus_on(section + 0.5)
+	_fit_update()
 
 	_overlay = Control.new()
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -150,6 +150,20 @@ static func _draw_lock(o: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 func _layout() -> void:
 	_container.position = Vector2.ZERO
 	_container.size = size
+
+# The diorama renders only while the map shows. UPDATE_WHEN_PARENT_VISIBLE meant the
+# root viewport, not this Control: the story's hidden map drew a full-screen 4x MSAA
+# frame every frame of play (~16 ms GPU at 5120x1440, half-scale Low)
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED:
+		_fit_update()
+
+func _fit_update() -> void:
+	if not _diorama:
+		return
+	var on := is_visible_in_tree()
+	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	_diorama.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
 
 func _process(delta: float) -> void:
 	if not is_visible_in_tree():
@@ -480,6 +494,8 @@ func _note_for(c: Dictionary) -> PackedStringArray:
 		lines.append(tr("none got in"))
 	if c["nightfalls"] > 0:
 		lines.append(tr("worked till the stars"))
+	elif c.get("close", false):   # older saves have no "close"
+		lines.append(tr("by a hair"))
 	elif c["spare"] > 0:
 		lines.append(tr_n("%d day to spare", "%d days to spare", c["spare"]) % c["spare"])
 	elif c["knocked"] > 0:

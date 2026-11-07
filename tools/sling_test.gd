@@ -124,7 +124,7 @@ func _process(delta: float) -> bool:
 				_mark = _t
 				_foe.queue_free()
 				_foe = null
-				_spawn(1, Vector3(4.2, 0, -4.2))   # off to the screen-right, clear of the herald
+				_spawn(1, Vector3(4.2, 0, -4.2))   # off to the screen-right
 				_foe._pace = 0.0   # stands his ground (still knocked about) for the shot
 				_player.set_physics_process(false)
 				_show_aim()

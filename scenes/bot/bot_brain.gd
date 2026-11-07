@@ -15,8 +15,10 @@ extends RefCounted
 # Taking up a job that matters, it says so (Player.bark) — a crew of bots reads as people.
 # The horn (Horn): a bot with a pack on it sounds it; empty-handed bots not at the wall gather
 # in the ring while foes are about, where blows land harder. Haul relays fall back to the jobs above.
+# A person's call (Calls, GDD §5.25) goes above all of it but reviving: the bot leaves what it
+# was doing to cover them, hold a spot, haul a load to a site or work it.
 
-enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY, RALLY, COVER, DRINK }
+enum Job { IDLE, REVIVE, HELP_BEAM, DELIVER, WORK, FETCH, GUARD, TIDY, CHASE, RELAY, RALLY, COVER, DRINK, HOLD }
 
 # Apprentice / Builder / Master builder. think = seconds between decisions; speed = stick
 # push (1 = full run); aim_err = metres off the enemy; charge = least wind-up;
@@ -87,6 +89,7 @@ var _foe: Node3D                  # enemy being wound up for
 var _aim_off := Vector3.ZERO
 var _horn_ready := 0.0            # clock time (s) this bot may sound the horn again
 var _ono := {}                   # messenger → true/false: go with him when he asks?
+var _order := {}                 # a person's call (Calls): kind, target, material, arrive, until
 
 func _init(player: Player, skill_index: int) -> void:
 	_p = player
@@ -102,6 +105,24 @@ func take_press(action: String) -> bool:
 
 func _press(action: String) -> void:
 	_presses[action] = true
+
+## Calls: take up a person's call now, ahead of this bot's own list (but not of a revive)
+func give_order(order: Dictionary) -> void:
+	_order = order
+	_think = 0.0
+	match order["kind"]:
+		"cover":
+			_p.bark("I've got your back!", true)
+		"bring":
+			var said: String = { "stone": "Bringing stone!", "wood": "Bringing timber!", "mortar": "Bringing mortar!" }.get(order["material"], "Bringing it!")
+			_p.bark(said, true)
+		"work":
+			_p.bark("I'll build it!", true)
+		_:
+			_p.bark("On my way!", true)
+
+func reviving() -> bool:
+	return _job == Job.REVIVE
 
 # ── Every physics frame (host) ─────────────────────────────
 
@@ -134,6 +155,10 @@ func _can_act() -> bool:
 
 func _decide() -> void:
 	if _p._work_site != null:
+		# Called away: leave the wall half done (the call's price) and go
+		if _order_elsewhere():
+			_step_off()
+			return
 		# At the wall: stay with it, unless (Master builder) an enemy is right on us
 		if skill["guard"] and _nearest_foe(WORK_BREAK) != null:
 			_set_job(Job.GUARD, null)
@@ -150,6 +175,8 @@ func _decide() -> void:
 	var fallen := _nearest_worker(REVIVE_RANGE, func(w): return w.downed)
 	if fallen != null:
 		_set_job(Job.REVIVE, fallen)
+		return
+	if _follow_order():
 		return
 	# A person at the wall can't sling: with a foe on them, the nearest bot not at work stands
 	# by (a load in hand doesn't stop the sling; a beam does)
@@ -252,12 +279,12 @@ func _decide() -> void:
 		return
 	# Trades (Trade): the overseer is the first to stand guard when foes close on the work
 	var foes := _foes_near_work()
-	if _guards() < _guards_wanted() or (_p.trade == Trade.OVERSEER and GameState.trades \
+	if _guards() < _guards_wanted() or (_p.trade == Trade.OVERSEER and GameState.trades_on() \
 			and not foes.is_empty() and _guards() == 0):
 		_set_job(Job.GUARD, _site_facing(foes))
 		return
 	# …the water carrier would rather carry, while anything is wanted
-	if _p.trade == Trade.WATER_CARRIER and GameState.trades:
+	if _p.trade == Trade.WATER_CARRIER and GameState.trades_on():
 		var haul := _pick_fetch()
 		if haul != null:
 			_set_job(Job.FETCH, haul)
@@ -284,6 +311,55 @@ func _decide() -> void:
 ## (the crew's hauler), when the mat has room and lies well short of the wall
 func get_tree_horn() -> Node:
 	return _p.get_tree().get_first_node_in_group("horn")
+
+## A standing call that wants this bot somewhere other than the wall it is working
+func _order_elsewhere() -> bool:
+	return _order_live() and not (_order["kind"] == "work" and _order["target"] == _p._work_site)
+
+func _order_live() -> bool:
+	if _order.is_empty():
+		return false
+	if Time.get_ticks_msec() > _order["until"] or not is_instance_valid(_order["target"]):
+		_order = {}
+		return false
+	return true
+
+## The call's job, while it still makes sense; false (and the call dropped) once it's done
+func _follow_order() -> bool:
+	if not _order_live():
+		return false
+	var target: Node3D = _order["target"]
+	match _order["kind"]:
+		"cover":
+			if target.downed or target.building_site == null and _foe_near(target.global_position, COVER_THREAT) == null:
+				_order = {}
+				return false
+			_set_job(Job.COVER, target)
+		"hold":
+			_set_job(Job.HOLD, target)   # the call's standard: held while it stands
+		"bring":
+			var kind: String = _order["material"]
+			if not target.needs(kind):
+				_order = {}
+				return false
+			if _p.carried_kind == kind:
+				_set_job(Job.DELIVER, target)
+			elif not _p.carried_kind.is_empty():
+				_press("drop")   # set down what we had: the call comes first
+				_set_job(Job.IDLE, null)
+			else:
+				var src := _nearest_source(kind)
+				if src == null:
+					_order = {}
+					return false
+				_set_job(Job.FETCH, src)
+				_fetch_kind = kind
+		"work":
+			if not target.can_build():
+				_order = {}
+				return false
+			_set_job(Job.WORK, target)
+	return true
 
 func _relay_for(site: Node3D) -> Node3D:
 	if site == null or not GameState.has_twist("haul") or _p.trade != Trade.WATER_CARRIER or _p.carried_kind == "beam" \
@@ -395,7 +471,7 @@ func _set_job(job: Job, target: Node3D) -> void:
 func _bark_for(job: Job, target: Node3D) -> void:
 	match job:
 		Job.REVIVE:
-			_p.bark("Hold on — I'm coming!")
+			_p.bark("Hold on, I'm coming!")
 		Job.COVER:
 			_p.bark("I've got your back!")
 		Job.CHASE:
@@ -470,7 +546,8 @@ func _missing(site: Node3D) -> Dictionary:
 				want[kind] = 1
 		return want
 	if site.has_method("repairing") and site.repairing():
-		return { "mortar": 1 } if site.needs("mortar") else {}
+		var mend_with: String = site.repair_material()
+		return { mend_with: 1 } if site.needs(mend_with) else {}
 	if site.has_method("cost_for") and site.get("pending") is Dictionary:
 		var out := {}
 		var cost: Dictionary = site.cost_for(site.stage + 1)
@@ -620,6 +697,8 @@ func _act(delta: float) -> void:
 		Job.RALLY:
 			if _flat(_target.global_position - _p.global_position).length() > 1.8:
 				_walk_to(_target.global_position, delta, 1.0)
+		Job.HOLD:
+			_walk_to(_target.global_position, delta, _order.get("arrive", 1.8))
 		Job.COVER:
 			_walk_to(_target.global_position, delta, COVER_GAP)
 		Job.CHASE:

@@ -28,7 +28,7 @@ const IDLE_ALPHA   := 0.82     # resting buttons: solid enough to read, the worl
 ## later) and is reset on the next press.
 static var aiming := false
 static var aim_vec := Vector2.ZERO
-## A control the tutorial is asking for right now ("interact", "sling", "dash", "drop",
+## A control FirstSteps is asking for right now ("interact", "sling", "dash", "drop",
 ## or "move" for the stick): it breathes a bright ring so the thumb knows where to go
 static var hint := ""
 
@@ -265,7 +265,7 @@ func _draw() -> void:
 			draw_string(font, b.pos + Vector2(-w * 0.5, glyph * 0.5 + 8.0), b.label.to_upper(),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(ink, 0.9))
 
-# The tutorial's ask: a ring breathing out from the button, or — for "move", where
+# FirstSteps' ask: a ring breathing out from the button, or — for "move", where
 # there is no button until the thumb lands — a ghost stick whose knob drifts outward
 func _draw_hint(held: Array) -> void:
 	if hint.is_empty():

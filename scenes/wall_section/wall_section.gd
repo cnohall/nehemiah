@@ -146,6 +146,9 @@ var health: float = MAX_HEALTH:
 			_shake()
 			Sfx.play("wall_hit", global_position)
 			last_hit_msec = Time.get_ticks_msec()
+		elif value - health >= MAX_HEALTH * REPAIR_GAIN * 0.8 and is_node_ready() \
+				and GameState.phase == GameState.Phase.WORK and is_complete():
+			Sfx.play("mend", global_position + _center)   # a mend took (§5.17); not the overnight repair
 		health = value
 		if is_node_ready():
 			_prime_work()   # the mending job opens and closes with the damage
@@ -351,12 +354,16 @@ func needs(kind: String) -> bool:
 	if _clearing():
 		return false
 	if repairing():
-		return kind == "mortar" and pending.get("mortar", 0) < 1
+		return kind == repair_material() and pending.get(kind, 0) < 1
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return false
 	var cost: Dictionary = cost_for(next)
 	return cost.has(kind) and pending.get(kind, 0) < cost[kind]
+
+## What a mend takes: mortar, or stone on the first stretch, which has none (GameState.first_stretch)
+func repair_material() -> String:
+	return "stone" if GameState.first_stretch() else "mortar"
 
 ## A finished wall battered low enough to want mending (one load of mortar, then work)
 func repairing() -> bool:
@@ -370,11 +377,9 @@ func cost_for(target_stage: int) -> Dictionary:
 	if GameState.active_build:
 		for kind: String in cost:
 			cost[kind] = maxi(1, cost[kind] - ACTIVE_BUILD_DISCOUNT)
-	if GameState.intro_day():
-		var loads := 0
-		for kind: String in cost:
-			loads += cost[kind]
-		return { "stone": loads }   # day 1: every stage is stone; the wood and mortar piles are put away
+	if GameState.first_stretch() and cost.has("mortar"):
+		cost["stone"] = cost.get("stone", 0) + cost["mortar"]   # the first stretch has no mortar: finished in stone
+		cost.erase("mortar")
 	if is_thick():
 		for kind: String in THICK_EXTRA.get(target_stage, {}):
 			cost[kind] += THICK_EXTRA[target_stage][kind]
@@ -391,7 +396,7 @@ func work_material() -> String:
 	if _clearing():
 		return "wood"   # charred timbers — the carpenters' work
 	if repairing():
-		return "mortar"
+		return repair_material()
 	var next := stage + 1
 	return "" if next > Stage.MORTARED else cost_for(next).keys()[0]
 
@@ -400,7 +405,7 @@ func next_need() -> String:
 	if _clearing():
 		return ""
 	if repairing():
-		return "mortar" if needs("mortar") else ""
+		return repair_material() if needs(repair_material()) else ""
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return ""
@@ -414,7 +419,7 @@ func can_build() -> bool:
 	if _clearing():
 		return not pulled   # pulling down is work; hauling is not
 	if repairing():
-		return pending.get("mortar", 0) >= 1
+		return pending.get(repair_material(), 0) >= 1
 	var next := stage + 1
 	if next > Stage.MORTARED:
 		return false
@@ -433,7 +438,7 @@ func try_build() -> bool:
 		_dust_puff()
 		return true
 	if repairing():
-		pending["mortar"] -= 1
+		pending[repair_material()] -= 1
 		health = minf(MAX_HEALTH, health + MAX_HEALTH * REPAIR_GAIN)
 		_dust_puff()
 		return true
@@ -641,6 +646,39 @@ func _on_work_progress(value: float) -> void:
 			_:
 				_preview_skip = 0
 	BuildWork.reveal(_preview, value, _preview_skip)
+	_rise_core()
+
+# The dark core behind the joints rises with the courses laid in front of it. Shown whole
+# from the first stone, it stood over the half-laid wall as a finished slab of shadow.
+func _rise_core() -> void:
+	var core := _preview.get_child(0) as MeshInstance3D
+	if core == null or not core.mesh is BoxMesh or not core.visible:
+		return
+	var courses: MultiMeshInstance3D = null
+	for c in _preview.get_children():
+		if c is MultiMeshInstance3D:
+			courses = c
+			break
+	if courses == null:
+		return
+	if not core.has_meta("y"):
+		core.set_meta("y", core.position.y)
+	var h: float = (core.mesh as BoxMesh).size.y
+	var bottom: float = core.get_meta("y") - h * 0.5
+	var mm := courses.multimesh
+	var shown := mm.instance_count if mm.visible_instance_count < 0 else mm.visible_instance_count
+	# Up to the last course laid end to end (the one going up has nothing behind it yet),
+	# sunk under the stones' tops
+	var top := bottom
+	if shown > 0:
+		var last := mm.get_instance_transform(shown - 1)
+		var half := last.basis.y.length() * 0.5
+		var row_done := shown == mm.instance_count or mm.get_instance_transform(shown).origin.y > last.origin.y + 0.01
+		top = last.origin.y + (half if row_done else -half) - 0.05
+	var f := clampf((top - bottom) / h, 0.0, 1.0)
+	core.visible = f > 0.02
+	core.scale.y = f
+	core.position.y = bottom + h * f * 0.5
 
 func _clear_preview() -> void:
 	if _preview != null:
@@ -661,8 +699,11 @@ func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
 			if _clearing() and not pulled:
 				_add_charred(rng)
 		Stage.FRAMED:
-			_add_box(Vector3(_size.x - 0.1, minf(COURSE_H, _size.y) - 0.04, _size.z - 0.14),
-				Vector3(_center.x, 0.12 + minf(COURSE_H, _size.y) * 0.5, _center.z), Palette.STONE_JOINT)
+			# Its top under the stones' (theirs is a half joint below the course line): level
+			# with them, the dark showed as a slab over the whole course
+			var core_h := minf(COURSE_H, _size.y) - 0.1
+			_add_box(Vector3(_size.x - 0.1, core_h, _size.z - 0.14),
+				Vector3(_center.x, 0.14 + core_h * 0.5, _center.z), Palette.STONE_JOINT)
 			_add_courses(rng, minf(COURSE_H, _size.y), GAP_ROUGH)
 			_add_scaffold(rng)
 			if thick and face > 0:
@@ -685,11 +726,42 @@ func _build_stage(s: Stage, rng: RandomNumberGenerator) -> void:
 			else:
 				_add_courses(rng, _size.y, GAP_MORTARED)
 			_add_merlons()
+			_add_dressing(rng)
 
 func _add_foundation() -> void:
 	var s := Vector3(_size.x + 0.35, 0.12, _size.z + 0.35)
 	_foundation_mat = _add_box(s, Vector3(_center.x, 0.06, _center.z),
 		TARGET_COLOR if is_target and not GameState.attract else EARTH_COLOR)  # the title backdrop stays unmarked
+	_add_plinth()
+
+# A course of rough footing stones laid along both edges of the pad, with gaps where they
+# have gone: the wall stands on something, and the marker reads as ground the stones sit on.
+# Its own RNG, so the stages' seeded blocks stay as they were. In a holder, so BuildWork's
+# preview counting (the first multimesh in _visual) still finds the courses.
+func _add_plinth() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(global_position.snapped(Vector3.ONE * 0.1)) + 17
+	var transforms: Array[Transform3D] = []
+	var colors: Array[Color] = []
+	var x0 := _center.x - _size.x * 0.5 - 0.1
+	var span := _size.x + 0.2
+	for side: float in [-1.0, 1.0]:
+		var x := x0
+		while x < x0 + span - 0.2:
+			var blen := minf(rng.randf_range(0.35, 0.85), x0 + span - x)
+			if rng.randf() > 0.22:
+				var h := rng.randf_range(0.09, 0.17)
+				var d := rng.randf_range(0.16, 0.26)
+				var b := Basis(Vector3.UP, rng.randf_range(-0.12, 0.12))
+				transforms.append(Transform3D(b.scaled_local(Vector3(blen - 0.05, h, d)),
+					Vector3(x + blen * 0.5, 0.12 + h * 0.5 - 0.02, _center.z + side * (_size.z * 0.5 + 0.1 + rng.randf_range(-0.02, 0.03)))))
+				var v := rng.randf_range(-0.2, -0.06)
+				colors.append(Color(STONE_COLOR.r + v + 0.03, STONE_COLOR.g + v + 0.02, STONE_COLOR.b + v))
+			x += blen
+	var holder := Node3D.new()
+	holder.name = "Plinth"
+	_visual.add_child(holder)
+	_add_multimesh(transforms, colors, null, null, holder)
 
 # Staggered courses of rough-cut blocks, one MultiMesh for the whole section
 func _add_courses(rng: RandomNumberGenerator, height: float, gap: float, bands: Array = []) -> void:
@@ -734,20 +806,44 @@ func _add_faces(rng: RandomNumberGenerator, height: float, gap: float, count := 
 	_add_courses(rng, height, gap, bands)
 
 # What's left of the old wall (Neh. 2:13 "broken down"): the bottom course, stones
-# cracked, sunk and tilted, a few gone, the odd one still standing a course higher
+# cracked, sunk and tilted, some gone with only chips where they lay, one split in two,
+# one turned on edge, the odd one still standing a course higher, chips thrown out over
+# the pad
 func _add_ruin(rng: RandomNumberGenerator) -> void:
 	var transforms: Array[Transform3D] = []
 	var colors: Array[Color] = []
 	var x0 := _center.x - _size.x * 0.5
 	var x := x0
 	while x < x0 + _size.x - 0.1:
-		var blen := minf(rng.randf_range(0.6, 1.1), x0 + _size.x - x)
-		if rng.randf() > 0.12:
-			var h := rng.randf_range(0.16, 0.34)
-			var depth := _size.z * rng.randf_range(0.75, 1.0)
+		var blen := minf(rng.randf_range(0.5, 1.1), x0 + _size.x - x)
+		var roll := rng.randf()
+		var mid := x + blen * 0.5
+		if roll < 0.18:
+			# A stone gone: bare earth, a couple of chips where it lay
+			_ruin_chips(rng, transforms, colors, mid, blen, rng.randi_range(2, 4))
+		elif roll < 0.32:
+			# Cracked through: two halves, the gap between them, each slumped its own way
+			for half: float in [-1.0, 1.0]:
+				var hl := blen * rng.randf_range(0.36, 0.46)
+				var h := rng.randf_range(0.13, 0.26)
+				var b := Basis.from_euler(Vector3(rng.randf_range(-0.14, 0.14), rng.randf_range(-0.2, 0.2), rng.randf_range(-0.2, 0.2)))
+				transforms.append(Transform3D(b.scaled_local(Vector3(hl, h, _size.z * rng.randf_range(0.7, 0.95))),
+					Vector3(mid + half * (blen * 0.25 + 0.04), 0.12 + h * 0.5 - 0.04, _center.z + rng.randf_range(-0.1, 0.1))))
+				var v := rng.randf_range(-0.14, -0.02)
+				colors.append(Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.1))
+			_ruin_chips(rng, transforms, colors, mid, blen, 2)
+		elif roll < 0.40:
+			# Turned up on its edge, half sunk, where the wall fell
+			var h := rng.randf_range(0.38, 0.52)
+			var b := Basis.from_euler(Vector3(rng.randf_range(-0.1, 0.1), rng.randf_range(-0.3, 0.3), rng.randf_range(-0.22, 0.22)))
+			transforms.append(Transform3D(b.scaled_local(Vector3(blen * 0.45, h, _size.z * 0.8)), Vector3(mid, 0.12 + h * 0.5 - 0.12, _center.z + rng.randf_range(-0.1, 0.1))))
+			colors.append(Color(STONE_COLOR.r - 0.1, STONE_COLOR.g - 0.1, STONE_COLOR.b - 0.11))
+		else:
+			var h := rng.randf_range(0.12, 0.3)
+			var depth := _size.z * rng.randf_range(0.7, 1.0)
 			var s := Vector3(blen - 0.08, h, depth)
-			var b := Basis.from_euler(Vector3(rng.randf_range(-0.08, 0.08), rng.randf_range(-0.1, 0.1), rng.randf_range(-0.1, 0.1)))
-			var pos := Vector3(x + blen * 0.5, 0.12 + h * 0.5 - 0.03, _center.z + rng.randf_range(-0.08, 0.08))
+			var b := Basis.from_euler(Vector3(rng.randf_range(-0.1, 0.1), rng.randf_range(-0.14, 0.14), rng.randf_range(-0.14, 0.14)))
+			var pos := Vector3(mid, 0.12 + h * 0.5 - 0.04, _center.z + rng.randf_range(-0.1, 0.1))
 			transforms.append(Transform3D(b.scaled_local(s), pos))
 			var v := rng.randf_range(-0.12, 0.0)
 			colors.append(Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v * 1.1))
@@ -757,8 +853,20 @@ func _add_ruin(rng: RandomNumberGenerator) -> void:
 				transforms.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.12, 0.12)).scaled_local(s2),
 					pos + Vector3(rng.randf_range(-0.1, 0.1), h * 0.5 + 0.15, 0)))
 				colors.append(Color(STONE_COLOR.r - 0.06, STONE_COLOR.g - 0.06, STONE_COLOR.b - 0.07))
+			if rng.randf() < 0.35:
+				_ruin_chips(rng, transforms, colors, mid, blen, 1)
 		x += blen
 	_add_multimesh(transforms, colors)
+
+# Broken-off pieces lying about the pad near x, a shade lighter where they are freshly split
+func _ruin_chips(rng: RandomNumberGenerator, transforms: Array[Transform3D], colors: Array[Color],
+		x: float, spread: float, count: int) -> void:
+	for i in count:
+		var s := Vector3(rng.randf_range(0.1, 0.24), rng.randf_range(0.06, 0.12), rng.randf_range(0.1, 0.2))
+		var b := Basis.from_euler(Vector3(rng.randf_range(-0.4, 0.4), rng.randf() * TAU, rng.randf_range(-0.4, 0.4)))
+		transforms.append(Transform3D(b.scaled_local(s), Vector3(x + rng.randf_range(-spread * 0.6, spread * 0.6), 0.12 + s.y * 0.35, _center.z + rng.randf_range(-_size.z * 0.55, _size.z * 0.55))))
+		var v := rng.randf_range(-0.06, 0.05)
+		colors.append(Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v))
 
 # Burned recipe: blackened framing, fallen across the footing
 func _add_charred(rng: RandomNumberGenerator) -> void:
@@ -772,6 +880,46 @@ func _add_charred(rng: RandomNumberGenerator) -> void:
 		poles.append(_pole_transform(Vector3(x, 0.1, z), Vector3(x, 0.1, z) + lean, 0.06))
 		colors.append(CHAR_COLOR.lightened(rng.randf_range(0.0, 0.1)))
 	_add_multimesh(poles, colors, Chunky.unit_block(), Chunky.wood_material(0.03))
+
+# The finished wall's dressing: a coping course along the top under the merlons, and arrow
+# slits (a dark cut with a lintel stone over it and a sill under) in each face every couple
+# of metres. Towers keep their flat tops but get a table of corbels under the merlons.
+func _add_dressing(rng: RandomNumberGenerator) -> void:
+	var transforms: Array[Transform3D] = []
+	var colors: Array[Color] = []
+	var top := 0.12 + _size.y
+	var x0 := _center.x - _size.x * 0.5
+	if _size.z <= 1.5 or is_thick():
+		var x := x0
+		while x < x0 + _size.x - 0.05:
+			var blen := minf(rng.randf_range(1.0, 1.7), x0 + _size.x - x)
+			transforms.append(Transform3D(Basis.from_scale(Vector3(blen - 0.03, 0.1, _size.z + 0.12)), Vector3(x + blen * 0.5, top + 0.05, _center.z)))
+			var v := rng.randf_range(-0.04, 0.06)
+			colors.append(Color(STONE_COLOR.r + v, STONE_COLOR.g + v, STONE_COLOR.b + v))
+			x += blen
+	var dress := Color(STONE_COLOR.r + 0.05, STONE_COLOR.g + 0.05, STONE_COLOR.b + 0.05)
+	if _size.z > 1.5 and not is_thick():
+		# Towers: a table of corbels under the merlon ring, the parapet jutting over the faces
+		var nc := maxi(2, floori(_size.x / 0.55))
+		for side: float in [-1.0, 1.0]:
+			for i in nc:
+				transforms.append(Transform3D(Basis.from_scale(Vector3(0.24, 0.16, 0.16)), Vector3(x0 + _size.x * (i + 0.5) / nc, top - 0.12, _center.z + side * (_size.z * 0.5 + 0.05))))
+				colors.append(dress.darkened(0.03 * (i % 2)))
+	if _size.y >= 1.6:
+		var n := maxi(1, floori(_size.x / 2.6))
+		var dark := Color(0.10, 0.09, 0.11)
+		var ys := 0.12 + _size.y * 0.62
+		for side: float in [-1.0, 1.0]:
+			var z := _center.z + side * (_size.z * 0.5 + 0.02)
+			for i in n:
+				var x := x0 + _size.x * (i + 0.5) / n + rng.randf_range(-0.25, 0.25)
+				transforms.append(Transform3D(Basis.from_scale(Vector3(0.12, 0.62, 0.06)), Vector3(x, ys, z)))
+				colors.append(dark)
+				transforms.append(Transform3D(Basis.from_scale(Vector3(0.42, 0.11, 0.12)), Vector3(x, ys + 0.37, z + side * 0.02)))
+				colors.append(dress)
+				transforms.append(Transform3D(Basis.from_scale(Vector3(0.34, 0.08, 0.16)), Vector3(x, ys - 0.34, z + side * 0.04)))
+				colors.append(dress.darkened(0.04))
+	_add_multimesh(transforms, colors)
 
 func _add_merlons() -> void:
 	var top := 0.12 + _size.y
@@ -812,6 +960,8 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 	var bay := _size.x / bays
 	var off := _size.z * 0.5 + 0.28
 	var tops: Array[Vector3] = []
+	var lashes: Array[Transform3D] = []
+	var lash_colors: Array[Color] = []
 	for side: float in [-1.0, 1.0]:
 		var z := _center.z + side * off
 		var feet: Array[Vector3] = []
@@ -823,6 +973,12 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 			pole.call(foot, head, 0.055, WOOD_COLOR.darkened(rng.randf_range(0.0, 0.15)))
 			feet.append(foot)
 			heads.append(head)
+			# Hemp lashings where the ledger and the brace meet the pole
+			for ly_off: float in [-0.1, 0.04]:
+				lashes.append(Transform3D(Basis(Vector3.UP, rng.randf_range(-0.2, 0.2)).scaled_local(Vector3(0.26, 0.07, 0.26)), Vector3(head.x, h - 0.12 + ly_off, z)))
+				lash_colors.append(Color(0.64, 0.54, 0.34).darkened(rng.randf_range(0.0, 0.2)))
+			lashes.append(Transform3D(Basis.from_scale(Vector3(0.26, 0.07, 0.26)), Vector3(foot.x, 0.28, z)))
+			lash_colors.append(Color(0.60, 0.50, 0.32).darkened(rng.randf_range(0.0, 0.2)))
 		# Ledger lashed along the top, X-brace in alternate bays
 		var ly := h - 0.12
 		pole.call(Vector3(x0 - 0.15, ly, z), Vector3(x0 + _size.x + 0.15, ly, z), 0.035, WOOD_COLOR.darkened(0.1))
@@ -860,6 +1016,7 @@ func _add_scaffold(rng: RandomNumberGenerator) -> void:
 		pole.call(Vector3(lx - 0.2, y, z), Vector3(lx + 0.2, y, z), 0.02, WOOD_COLOR.lightened(0.05))
 	_add_multimesh(poles, pole_colors, Chunky.unit_block(), Chunky.wood_material(0.03))
 	_add_multimesh(planks, plank_colors, Chunky.unit_block(), Chunky.wood_material(0.015))
+	_add_multimesh(lashes, lash_colors, Chunky.unit_block(), Chunky.material(0.015, false, 0.15))
 
 # Squared timber between two points: the unit block stretched to length, chunky section
 static func _pole_transform(a: Vector3, b: Vector3, radius: float) -> Transform3D:
@@ -882,7 +1039,7 @@ func _add_box(size: Vector3, pos: Vector3, color: Color) -> StandardMaterial3D:
 	return mat
 
 func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color],
-		mesh: Mesh = null, mat: Material = null) -> void:
+		mesh: Mesh = null, mat: Material = null, parent: Node = null) -> void:
 	if transforms.is_empty():
 		return
 	var mm := MultiMesh.new()
@@ -895,8 +1052,8 @@ func _add_multimesh(transforms: Array[Transform3D], colors: Array[Color],
 		mm.set_instance_color(i, colors[i])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.material_override = mat if mat != null else Chunky.material(0.07)
-	_visual.add_child(mmi)
+	mmi.material_override = mat if mat != null else Chunky.stone_material(0.07)
+	(parent if parent != null else _visual).add_child(mmi)
 
 ## Every peer, at dusk: today's finished wall takes a bow
 func celebrate() -> void:
@@ -1000,7 +1157,8 @@ func _update_label() -> void:
 			parts.append("%s %d/%d" % [kind.capitalize(), have, cost[kind]])
 		lines.append("  ".join(parts))
 	elif repairing():
-		lines.append("Mend  [%s]" % InputMode.key("interact") if can_build() else "Mortar to mend  %d/1" % mini(pending.get("mortar", 0), 1))
+		var mend_with := repair_material()
+		lines.append("Mend  [%s]" % InputMode.key("interact") if can_build() 			else ("Stone to mend  %d/1" if mend_with == "stone" else "Mortar to mend  %d/1") % mini(pending.get(mend_with, 0), 1))
 	if is_built() and health < MAX_HEALTH:
 		lines.append("Wall %d%%" % roundi(health / MAX_HEALTH * 100.0))
 	_label.text = "\n".join(lines)

@@ -51,9 +51,24 @@ var bot_skill := 1   # index into BotBrain.SKILLS
 var difficulty := 1
 # This player's trade (Trade), or -1 for their place in the crew's own
 var trade := -1
-# Experimental (GDD §5.21), off by default; the host's choice rules the crew like difficulty
-var exp_forecast := false    # wave forecast: how many and what, ~22 s ahead, spot ringed on the ground
-var exp_call_early := false  # [Horn] brings the next wave forward for a short work boost
+# Simple game (GDD §5.23): the core loop and each stretch's twist, without the rules
+# everyone must learn on top — no trades, saboteur, boons, rumour, strewn yard, hungry
+# households, jars, birds, townsfolk, wandering sheep, "In good time" mark, stretch-end ready check or calling waves
+# early. Skill depth stays (true shot, turning the blow, mending, the well, posts).
+# Host's choice, synced (GameState.simple)
+var simple_game := false
+# Anonymous play stats from the web build (Telemetry): where a game stops, how it runs
+var share_stats := true
+# Tags over the next job until this player has done it once (FirstSteps). The host's also
+# decides whether the first day waits for the first load (DayDirector)
+var hints := true
+var learned := {}   # FirstSteps lesson → true
+# Experimental (GDD §5.21); the host's choice rules the crew like difficulty
+# Wave forecast: how many and what, ~22 s ahead, spot ringed and route drawn on the ground.
+# On by default when one person plays (bots or not): information is worth most alone (§5.25)
+enum { FORECAST_OFF, FORECAST_SOLO, FORECAST_ALWAYS }
+var exp_forecast := FORECAST_SOLO
+var exp_call_early := false  # off by default: [Horn] brings the next wave forward for a short work boost
 
 # pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
 # harm: multiplies every enemy blow, on workers and on the wall
@@ -93,7 +108,7 @@ const KR_REGULAR := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Medium-subset.tt
 const KR_BOLD    := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Bold-subset.ttf"
 
 const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
-	"interact", "drop", "dash", "throw_charge", "horn", "reveal"]
+	"interact", "drop", "dash", "throw_charge", "horn", "call", "reveal"]
 
 func _ready() -> void:
 	if OS.has_feature("web") or OS.has_feature("mobile"):
@@ -124,8 +139,21 @@ func _ready() -> void:
 		bot_skill = cfg.get_value("bots", "skill", bot_skill)
 		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
-		exp_forecast = cfg.get_value("experimental", "forecast", exp_forecast)
+		simple_game = cfg.get_value("general", "simple_game", simple_game)
+		share_stats = cfg.get_value("general", "share_stats", share_stats)
+		hints = cfg.get_value("general", "hints", hints)
+		learned = cfg.get_value("general", "learned", learned)
+		# "forecast" was an on/off bool before Nov 2026: on stays on, off takes the new default
+		var old_forecast: bool = cfg.get_value("experimental", "forecast", false)
+		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode",
+			FORECAST_ALWAYS if old_forecast else exp_forecast), FORECAST_OFF, FORECAST_ALWAYS)
 		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
+	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
+	if "--script" in OS.get_cmdline_args():
+		simple_game = "--simple" in OS.get_cmdline_user_args()
+		exp_forecast = FORECAST_OFF   # the default game as it was: tests switch it on themselves
+		hints = "--hints" in OS.get_cmdline_user_args()
+		learned = {}
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -308,9 +336,27 @@ func save() -> void:
 	cfg.set_value("bots", "skill", bot_skill)
 	cfg.set_value("general", "difficulty", difficulty)
 	cfg.set_value("general", "trade", trade)
-	cfg.set_value("experimental", "forecast", exp_forecast)
+	cfg.set_value("general", "simple_game", simple_game)
+	cfg.set_value("general", "share_stats", share_stats)
+	cfg.set_value("general", "hints", hints)
+	cfg.set_value("general", "learned", learned)
+	cfg.set_value("experimental", "forecast_mode", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)
+
+## FirstSteps: this player has done it once
+func has_learned(lesson: String) -> bool:
+	return learned.has(lesson)
+
+func all_learned(lessons: Array) -> bool:
+	return learned.size() >= lessons.size() and learned.has_all(lessons)
+
+func learn(lesson: String) -> void:
+	if learned.has(lesson):
+		return
+	learned[lesson] = true
+	if "--script" not in OS.get_cmdline_args():   # a test never marks the player's own copy
+		save()
 
 ## The chosen difficulty's row of DIFFICULTIES
 func diff() -> Dictionary:

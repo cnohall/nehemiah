@@ -29,14 +29,14 @@ const SHEMAIAH_AT := 40.0   # seconds into the day
 # What the watchman says, the verse (WEB), its reference, and the scribe's margin note
 const SETBACK_LINES := {
 	"fox":     ["A fox! Tobiah said one would break our wall down…", "What they are building, if a fox climbed up it, he would break down their stone wall.", "Neh. 4:3", ""],
-	"warn":    ["They'll slip in tonight — a watch on the wall!", "But we made our prayer to our God, and set a watch against them day and night, because of them.", "Neh. 4:9", ""],
-	"held":    ["The watch held — they crept off in the dark.", "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work.", "Neh. 4:15", "The watch held in the night"],
-	"hit":     ["In the night they came — a stretch pulled down, the yard in rubble!", "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall.", "Neh. 4:10", "Pulled down in the night"],
-	"hungry":  ["The hungry went back to their fields — we're short of hands.", "Yet now our flesh is as the flesh of our brothers, our children as their children.", "Neh. 5:5", "Short of hands: the hungry were not fed"],
+	"warn":    ["They'll slip in tonight. A watch on the wall!", "But we made our prayer to our God, and set a watch against them day and night, because of them.", "Neh. 4:9", ""],
+	"held":    ["The watch held. They crept off in the dark.", "When our enemies heard that it was known to us, and God had brought their counsel to nothing, all of us returned to the wall, everyone to his work.", "Neh. 4:15", "The watch held in the night"],
+	"hit":     ["In the night they came: a stretch pulled down, the yard in rubble!", "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall.", "Neh. 4:10", "Pulled down in the night"],
+	"hungry":  ["The hungry went back to their fields. We're short of hands.", "Yet now our flesh is as the flesh of our brothers, our children as their children.", "Neh. 5:5", "Short of hands: the hungry were not fed"],
 	"letter":  ["A letter in the yard: they say you mean to be king!", "You would be their king, according to these words.", "Neh. 6:6", "A rumour weakens every hand"],
-	"answer":  ["“No such things are done” — the letter is turned away.", "There are no such things done as you say, but you imagine them out of your own heart.", "Neh. 6:8", "The letter answered"],
-	"lifted":  ["The rumour dies down — strengthen our hands!", "But now, strengthen my hands.", "Neh. 6:9", ""],
-	"shem":    ["A man of the temple is asking for you — it's a trap!", "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple.", "Neh. 6:10", ""],
+	"answer":  ["“No such things are done.” The letter is turned away.", "There are no such things done as you say, but you imagine them out of your own heart.", "Neh. 6:8", "The letter answered"],
+	"lifted":  ["The rumour dies down. Strengthen our hands!", "But now, strengthen my hands.", "Neh. 6:9", ""],
+	"shem":    ["A man of the temple is asking for you. It's a trap!", "Let us meet together in God’s house, within the temple, and let us shut the doors of the temple.", "Neh. 6:10", ""],
 	"shem_no": ["He turned away. He was hired to frighten us.", "Should a man like me flee? Who is there that, being such as I, would go into the temple to save his life? I will not go in.", "Neh. 6:11", "Would not hide in the temple"],
 	"shem_go": ["Someone has gone to hide in the temple!", "He hired so that I would be afraid, do so, and sin.", "Neh. 6:13", "One hid in the temple"],
 }
@@ -44,10 +44,16 @@ const DAWN_TIME        := 5.0
 const FRESH_DAWN_TIME  := 9.0   # a new stretch's first dawn: time to look round before the work starts
 const DUSK_TIME        := 9.0   # long enough to read the tally (title screen: nobody to wait for)
 const DUSK_MIN         := 4.0   # the cheer plays out even if everyone is ready at once
+const SECTION_DUSK_TIME := 11.0 # simple game: a stretch's last tally (after the wall cam) moves on by itself
 const CELEBRATE_STEP   := 0.12  # seconds between each finished unit's flourish
 const NAV_REBAKE_DELAY := 0.4
 const REPAIR_ON_DAWN   := 0.5   # fraction of lost health restored overnight
 const SUN_RESYNC       := 2.0   # seconds between sun-clock corrections to clients
+# A close call (GDD §7.1 #6): the stretch stood with the stars nearly out on its last day,
+# or with a foe at the very piece that closed it. Main gives it a held breath, the watch
+# calls it, the reel and Steam's recording keep it.
+const CLOSE_SUN := 12.0   # seconds of daylight left
+const CLOSE_FOE := 4.0    # metres from the last piece raised
 
 # Every peer: Main shows/hides the StoryPlayer on these
 signal story_started(day: int)
@@ -101,6 +107,7 @@ var _credit := {}
 var _choices := {}
 var _chosen_boon := ""
 var _sun_resync := 0.0
+var _last_raised: Node3D = null   # server: the wall part that last went up a stage
 
 func _ready() -> void:
 	add_to_group("day_director")
@@ -115,7 +122,7 @@ func _ready() -> void:
 			parts.append(node)
 		_units.append(parts)
 		for part in parts:
-			part.stage_changed.connect(_on_stage_changed.unbind(1))
+			part.stage_changed.connect(_on_stage_changed.bind(part).unbind(1))
 	# Parse the tagged scene roots (floor, wall, supplies, houses) rather than the
 	# region's own (empty) children. Set here: the .tscn key doesn't round-trip.
 	_nav.navigation_mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_WITH_CHILDREN
@@ -133,6 +140,20 @@ func start() -> void:
 	GameState.apply_debug_start_day()
 	GameState.apply_restart()   # after --day=N: a restart picks its own day
 
+# The run's first day waits for a person's first load (FirstSteps' tags have the floor): no
+# foe and no sun until then, however long it takes up to this. A bot's load doesn't count.
+const FIRST_LOAD_WAIT := 45.0
+var _first_load_wait := 0.0
+
+func _holds_first_load() -> bool:
+	return Settings.hints and GameState.current_day == 1 and GameState.first_stretch() \
+		and not GameState.is_replay()
+
+func _end_first_load_wait() -> void:
+	_first_load_wait = 0.0
+	GameState.set_sun_held(false)
+	_waves.start(GameState.current_day)
+
 ## Server: host is ready — day 1 starts
 func begin() -> void:
 	if multiplayer.is_server() and GameState.phase == GameState.Phase.GATHER:
@@ -146,8 +167,17 @@ func _process(delta: float) -> void:
 			if _timer <= 0.0:
 				GameState.set_phase(GameState.Phase.WORK)
 				_setback_at_dawn()
-				_waves.start(GameState.current_day)
+				if _holds_first_load():
+					_first_load_wait = FIRST_LOAD_WAIT
+					GameState.set_sun_held(true)
+				else:
+					_waves.start(GameState.current_day)
 		GameState.Phase.WORK:
+			if _first_load_wait > 0.0:
+				_first_load_wait -= delta
+				if _first_load_wait <= 0.0:
+					_end_first_load_wait()
+				return
 			_stats["time"] += delta
 			_section_time += delta
 			_tick_sun(delta)
@@ -193,7 +223,7 @@ func _setback_at_dawn() -> void:
 		_setback_report.rpc("lifted", 0.0, 0)
 	if pos.x == 0 and GameState.hungry_left > 0:
 		_setback_report.rpc("hungry", 0.0, GameState.hungry_left)
-	if LETTER.get(i, -1) == pos.x and pos.x < pos.y - 1:
+	if LETTER.get(i, -1) == pos.x and pos.x < pos.y - 1 and not GameState.simplified():
 		_letter_open = true
 		_setback_report.rpc("letter", 0.0, 0)
 	if FOX.get(i, -1) == pos.x:
@@ -255,10 +285,11 @@ func _night_raid() -> void:
 		return
 	for n in RAID_STAGES:
 		piece._degrade()
-	# "Much rubble": the yard's loads are strewn too, tidied like a saboteur's (§5.9)
+	# "Much rubble": the yard's loads are strewn too, tidied like a saboteur's (§5.9).
+	# Not in the simple game, which has no tidying up
 	var strewn := 0
 	for pile: Node in get_tree().get_nodes_in_group("supply_piles"):
-		if strewn < RAID_STREWN and pile.kind in ["stone", "wood"] and pile.scatter():
+		if not GameState.simplified() and strewn < RAID_STREWN and pile.kind in ["stone", "wood"] and pile.scatter():
 			strewn += 1
 	print("DayDirector: night raid pulled down %s, strewed %d piles" % [piece.name, strewn])
 	_setback_report.rpc("hit", piece.global_position.x, 0)
@@ -375,12 +406,17 @@ func _tick_sun(delta: float) -> void:
 		_end_day(true)
 
 func _end_day(nightfall := false) -> void:
+	_first_load_wait = 0.0
+	GameState.set_sun_held(false)
 	_waves.stop()
 	_stats["unfinished"] = GameState.targets_total - GameState.targets_done if nightfall else 0
 	if GameState.sun_total > 0.0:
 		print("DayDirector: day %d — work %.0f s of %.0f s daylight%s" % [GameState.current_day,
 			_stats["time"], GameState.sun_total, ", nightfall with %d unfinished" % _stats["unfinished"] if nightfall else ""])
 	GameState.set_sun(GameState.sun_total, GameState.sun_left)
+	var close := "" if nightfall or not _section_done() else _close_call()
+	if not close.is_empty():
+		_stats["close"] = close
 	GameState.set_phase(GameState.Phase.DUSK)
 	for e in _enemies.get_children():
 		e.flee()
@@ -403,6 +439,9 @@ func _end_day(nightfall := false) -> void:
 	# crew has nobody to wait for
 	if GameState.attract:
 		_timer = DUSK_TIME
+	elif _section_done() and GameState.simplified():
+		# Simple game: the story cards that follow are the one stop; this tally doesn't wait
+		_timer = SECTION_DUSK_TIME
 	else:
 		_timer = DUSK_MIN
 		_open_wait("tally")
@@ -415,7 +454,7 @@ func _rate_section() -> void:
 	var spare := pos.y - 1 - pos.x
 	var health := _wall_health()
 	var mask := 0
-	if spare >= GameState.pace_spare_needed(i):
+	if spare >= GameState.pace_spare_needed(i) and GameState.Mark.PACE in GameState.marks_in_play():
 		mask |= GameState.Mark.PACE
 	if GameState.breaches == _section_breaches:
 		mask |= GameState.Mark.CLEAN
@@ -453,6 +492,23 @@ func _carvings() -> Array:
 				best = id
 		out.append(best)
 	return out
+
+## Server, as a stretch stands: "stars" (its last day, the light nearly gone), "gap" (a
+## runner at the piece that closed it: one that would have got through), or "" for an
+## ordinary finish. Wreckers batter whatever stands near, and late in a stretch they are
+## always at the wall, so they don't count; nor does the saboteur.
+func _close_call() -> String:
+	if GameState.sun_total > 0.0 and GameState.last_day_of_section() and GameState.sun_left <= CLOSE_SUN:
+		return "stars"
+	if not is_instance_valid(_last_raised):
+		return ""
+	for e in _enemies.get_children():
+		var foe := e as Enemy
+		if foe == null or foe.type == Enemy.Type.SABOTEUR or foe._wrecker or foe._fleeing or foe.health <= 0.0:
+			continue
+		if _last_raised.distance_to_point(foe.global_position) <= CLOSE_FOE:
+			return "gap"
+	return ""
 
 func _section_done() -> bool:
 	return _units.all(func(unit): return unit.all(func(p): return p.is_complete()))
@@ -739,6 +795,8 @@ func _count(key: String, peer_id: int) -> void:
 func note_load(peer_id: int, site: Node = null) -> void:
 	if GameState.phase == GameState.Phase.WORK:
 		_count("loads", peer_id)
+		if _first_load_wait > 0.0 and not Player.is_bot_id(peer_id):
+			_end_first_load_wait()
 	for i in _units.size():
 		if site in _units[i]:
 			var by: Dictionary = _credit.get_or_add(i, {})
@@ -783,10 +841,12 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 
 # ── Progress ───────────────────────────────────────────────
 
-func _on_stage_changed() -> void:
+func _on_stage_changed(part: Node3D) -> void:
 	# Explore Jerusalem raises and ruins whole stretches as you walk round: no day to end
 	if not multiplayer.is_server() or GameState.festival:
 		return
+	if part.is_complete():
+		_last_raised = part
 	_request_nav_rebake()
 	_update_progress()
 	if GameState.phase == GameState.Phase.WORK and GameState.targets_done >= GameState.targets_total:

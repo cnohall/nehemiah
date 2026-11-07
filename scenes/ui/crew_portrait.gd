@@ -11,6 +11,7 @@ var _vp: SubViewport
 var _rig: CharacterRig
 var _color := Color.WHITE
 var _rim: Control
+var _cam: Camera3D
 var downed := false:
 	set(value):
 		downed = value
@@ -54,9 +55,7 @@ func _init() -> void:
 	world.add_child(env)
 	var cam := Camera3D.new()
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	cam.size = 1.45
-	# Three-quarter view of the face (idle_down faces +x +z)
-	cam.transform = Transform3D.IDENTITY.looking_at(Vector3(0, 1.55, 0) - Vector3(2.3, 2.1, 1.1)).translated(Vector3(2.3, 2.1, 1.1))
+	_cam = cam
 	world.add_child(cam)
 	# Rim over the figure, inside the mask
 	_rim = Control.new()
@@ -66,12 +65,25 @@ func _init() -> void:
 		var c := _rim.size * 0.5
 		var r := minf(_rim.size.x, _rim.size.y) * 0.5
 		_rim.draw_arc(c, r - 3.0, 0, TAU, 56, UiStyle.PARCHMENT, 4.0, true)
-		_rim.draw_arc(c, r - 1.0, 0, TAU, 56, _color.darkened(0.2), 2.0, true))
+		_rim.draw_arc(c, r - 1.0, 0, TAU, 56, _color.darkened(0.2), 2.0, true)
+		# A seal's beaded border just inside the rim, in gold leaf
+		for i in 36:
+			var a := TAU * i / 36.0
+			_rim.draw_circle(c + Vector2(cos(a), sin(a)) * (r - 7.0), 0.9, Color(UiStyle.GOLD, 0.75)))
 	add_child(_rim)
 	var holder := Node3D.new()
 	world.add_child(holder)
 	_rig = CharacterRig.new()
 	holder.add_child(_rig)
+	_rig.rebuilt.connect(_frame)
+
+# Three-quarter view of the face (idle_down faces +x +z), head and shoulders: the face,
+# not the belt, at the centre
+func _frame() -> void:
+	_cam.size = 1.45
+	var aim := Vector3(0, 1.55, 0)
+	var eye := aim + Vector3(2.3, 0.55, 1.1)
+	_cam.transform = Transform3D.IDENTITY.looking_at(aim - eye).translated(eye)
 
 func set_worker(slot: int, color: Color) -> void:
 	_color = color
@@ -81,6 +93,7 @@ func set_worker(slot: int, color: Color) -> void:
 	else:
 		_rig.set_look(CharacterRig.worker_look(slot, color))
 	_rig.play("idle_down")
+	_frame()
 	if Mobile.enabled():
 		_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 		# Once more after the pose has settled (the first frame can catch it mid-setup)
