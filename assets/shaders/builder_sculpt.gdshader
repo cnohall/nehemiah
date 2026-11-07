@@ -30,8 +30,8 @@ void vertex() {
 }
 
 void fragment() {
-	vec3 paint = part_color.rgb;
-	paint *= 1.0 - wear * blot(local_pos * 11.0 + part_color.rgb * 7.0);
+	vec3 paint = part_color.rgb * COLOR.rgb;   // merged rigs (phones): colour per vertex
+	paint *= 1.0 - wear * blot(local_pos * 11.0 + paint * 7.0);
 	ALBEDO = mix(paint, vec3(1.0, 0.96, 0.88), flash * 0.8);
 	ROUGHNESS = mix(0.86, 0.55, metal);
 	SPECULAR = 0.22;

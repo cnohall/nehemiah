@@ -55,11 +55,6 @@ func _process(_delta: float) -> bool:
 		_check(JSON.stringify(beacon).length() < 300, "a beacon stays small (%d bytes)" % JSON.stringify(beacon).length())
 
 	# Modes
-	gs.tutorial = true
-	_got.clear()
-	tel.event("beat")
-	_check(_got[0]["mode"] == "tutorial", "the practice reads as tutorial")
-	gs.tutorial = false
 	gs.festival = true
 	_got.clear()
 	tel.event("beat")

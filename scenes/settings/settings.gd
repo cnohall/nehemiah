@@ -60,6 +60,10 @@ var trade := -1
 var simple_game := false
 # Anonymous play stats from the web build (Telemetry): where a game stops, how it runs
 var share_stats := true
+# Tags over the next job until this player has done it once (FirstSteps). The host's also
+# decides whether the first day waits for the first load (DayDirector)
+var hints := true
+var learned := {}   # FirstSteps lesson → true
 # Experimental (GDD §5.21); the host's choice rules the crew like difficulty
 # Wave forecast: how many and what, ~22 s ahead, spot ringed and route drawn on the ground.
 # On by default when one person plays (bots or not): information is worth most alone (§5.25)
@@ -137,6 +141,8 @@ func _ready() -> void:
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
 		simple_game = cfg.get_value("general", "simple_game", simple_game)
 		share_stats = cfg.get_value("general", "share_stats", share_stats)
+		hints = cfg.get_value("general", "hints", hints)
+		learned = cfg.get_value("general", "learned", learned)
 		# "forecast" was an on/off bool before Nov 2026: on stays on, off takes the new default
 		var old_forecast: bool = cfg.get_value("experimental", "forecast", false)
 		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode",
@@ -146,6 +152,8 @@ func _ready() -> void:
 	if "--script" in OS.get_cmdline_args():
 		simple_game = "--simple" in OS.get_cmdline_user_args()
 		exp_forecast = FORECAST_OFF   # the default game as it was: tests switch it on themselves
+		hints = "--hints" in OS.get_cmdline_user_args()
+		learned = {}
 	_apply_bindings()
 	_add_font_fallbacks()
 	for bus_name in ["Music", "SFX"]:
@@ -323,9 +331,25 @@ func save() -> void:
 	cfg.set_value("general", "trade", trade)
 	cfg.set_value("general", "simple_game", simple_game)
 	cfg.set_value("general", "share_stats", share_stats)
+	cfg.set_value("general", "hints", hints)
+	cfg.set_value("general", "learned", learned)
 	cfg.set_value("experimental", "forecast_mode", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)
+
+## FirstSteps: this player has done it once
+func has_learned(lesson: String) -> bool:
+	return learned.has(lesson)
+
+func all_learned(lessons: Array) -> bool:
+	return learned.size() >= lessons.size() and learned.has_all(lessons)
+
+func learn(lesson: String) -> void:
+	if learned.has(lesson):
+		return
+	learned[lesson] = true
+	if "--script" not in OS.get_cmdline_args():   # a test never marks the player's own copy
+		save()
 
 ## The chosen difficulty's row of DIFFICULTIES
 func diff() -> Dictionary:

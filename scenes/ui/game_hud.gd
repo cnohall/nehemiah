@@ -443,8 +443,8 @@ func _process(delta: float) -> void:
 	if _next_poll > 0.0 or _next_line == null:
 		return
 	_next_poll = NEXT_POLL
-	# The practice points the way itself (Tutorial); two voices would talk over each other
-	var text := "" if GameState.free_play() else _next_text()
+	# A first-day tag points the way itself (FirstSteps); two voices would talk over each other
+	var text := "" if GameState.free_play() or FirstSteps.speaking else _next_text()
 	var line := _next_caption if _style_world else _next_line
 	(_next_line if _style_world else _next_caption).visible = false
 	line.visible = not text.is_empty()
@@ -672,6 +672,10 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 		_tally_band.visible = with_tally
 	banner_title.text = title
 	banner_sub.text = sub
+	# Long lines (a stretch's twist intro) wrap inside the band, not off the screen's edges
+	banner_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	banner_sub.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	banner_sub.custom_minimum_size.x = minf(banner.get_viewport_rect().size.x * 0.84, 1100.0)
 	if _tally != null and not with_tally:
 		_tally.hide()
 	if not with_tally:

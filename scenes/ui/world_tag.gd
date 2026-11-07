@@ -52,6 +52,8 @@ var modulate := Color.WHITE
 var screen_lift := 0.0
 ## A gentle breathing scale — the one tag that says "here next"
 var pulse := false
+## Never fades for a worker behind it: this tag has to be read (FirstSteps)
+var solid := false
 ## Slide in from the screen edge when the spot is off-screen (false: just hide)
 var clamp_to_screen := true
 ## A site's name stacks word over word (a narrow sign over a narrow thing)
@@ -144,7 +146,7 @@ func _process(_delta: float) -> void:
 	if _pointer != null:
 		_pointer.modulate.a = 1.0 if at.is_equal_approx(want) else 0.0
 	# A worker standing behind the tag shows through it
-	var covers := _covers_player(cam, Rect2(at, sz).grow(4.0))
+	var covers := not solid and _covers_player(cam, Rect2(at, sz).grow(4.0))
 	_see_through = move_toward(_see_through, 1.0 if covers else 0.0, _delta * SEE_THROUGH_SPEED)
 	_root.modulate = modulate * Color(1, 1, 1, lerpf(1.0, SEE_THROUGH_ALPHA, _see_through))
 	_bump = maxf(0.0, _bump - _delta / BUMP_TIME)

@@ -30,7 +30,7 @@ void vertex() {
 }
 
 void fragment() {
-	vec3 paint = part_color.rgb;
+	vec3 paint = part_color.rgb * COLOR.rgb;   // merged rigs (phones): colour per vertex
 	if (surface_kind > 0.5 && surface_kind < 1.5) {
 		float weave = sin(UV.x * 754.0) * sin(UV.y * 628.0);
 		paint *= 0.985 + weave * 0.015;
@@ -59,7 +59,7 @@ void fragment() {
 		float nap = blot(local_pos * 70.0) * 0.6 + blot(local_pos * 23.0) * 0.4;
 		paint *= 0.93 + nap * 0.1;
 	}
-	paint *= 1.0 - wear * blot(local_pos * 9.0 + part_color.rgb * 7.0);
+	paint *= 1.0 - wear * blot(local_pos * 9.0 + paint * 7.0);
 	ALBEDO = mix(paint, vec3(1.0, 0.96, 0.88), flash * 0.8);
 	bool metal = surface_kind > 5.5 && surface_kind < 7.5;
 	ROUGHNESS = metal ? 0.60 : (surface_kind > 7.5 ? 0.97 : 0.90);

@@ -70,12 +70,6 @@ func _ready() -> void:
 	move_child(_folk, fade.get_index())
 	_folk_btn.pressed.connect(_folk.open)
 	_folk.closed.connect(_folk_btn.grab_focus)
-	# Learn the basics: a solo practice walked through step by step (Tutorial)
-	var learn := join_btn.duplicate() as Button
-	learn.name = "LearnButton"
-	learn.text = "Learn the Basics"
-	menu.add_child(learn)
-	learn.pressed.connect(_on_learn)
 	# Explore Jerusalem: the Festival of Booths, a sandbox with no clock and no enemy
 	var walk := join_btn.duplicate() as Button
 	walk.name = "FestivalButton"
@@ -84,7 +78,7 @@ func _ready() -> void:
 	walk.tooltip_text = tr("The wall is finished: the Festival of Booths.") if not built.has(false) 		else tr("Walk the city as far as your wall stands: %d of %d stretches. The Festival of Booths waits for the whole wall.") % [built.count(true), built.size()]
 	menu.add_child(walk)
 	walk.pressed.connect(_on_festival)
-	_second_tier([_sections_btn, learn, walk])
+	_second_tier([_sections_btn, walk])
 	# Credits: in the small row before Quit; the roll plays over the menu
 	_credits_btn = settings_btn.duplicate()
 	_credits_btn.name = "CreditsButton"
@@ -121,7 +115,6 @@ func _ready() -> void:
 	_intro()
 	# Back from a replay: straight to the map, on the stretch just played
 	GameState.replay_section = -1
-	GameState.tutorial = false
 	GameState.festival = false
 	# Opened from an invite link: join that room right away
 	var invite := NetworkManager.take_invite_code() if NetworkManager.online_available() else ""
@@ -367,18 +360,11 @@ func _build_continue() -> void:
 	host_btn.text = "New Game"
 	host_btn.theme_type_variation = join_btn.theme_type_variation
 
-# Solo, offline: no hosting, the game scene runs as its own server
-func _on_learn() -> void:
-	_stop_world()
-	# A join or host still in flight would land us in someone's game as a client
-	NetworkManager.disconnect_session()
-	GameState.replay_section = -1
-	GameState.tutorial = true
-	get_tree().change_scene_to_file(GAME_SCENE)
-
-# Solo, offline, like the practice: the city at the Festival of Booths
+# Solo, offline: the city at the Festival of Booths. No hosting, the game scene runs as its
+# own server
 func _on_festival() -> void:
 	_stop_world()
+	# A join or host still in flight would land us in someone's game as a client
 	NetworkManager.disconnect_session()
 	GameState.replay_section = -1
 	GameState.festival = true
