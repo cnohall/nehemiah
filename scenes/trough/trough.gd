@@ -32,7 +32,6 @@ var mortar_ready := false:
 		mortar_ready = value
 		_refresh()
 
-var _last_progress := 0.0
 var _lime_layer: MeshInstance3D
 var _water_layer: MeshInstance3D
 var _paste: MeshInstance3D
@@ -47,19 +46,17 @@ func _ready() -> void:
 	_work.work_time = MIX_TIME
 	_work.position.y = 1.5
 	add_child(_work)
-	_work.progress_changed.connect(_stir)
 	_build_sync()
 	GameState.section_changed.connect(_refresh.unbind(1))
 	_refresh()
 
 func _process(_delta: float) -> void:
 	_label.visible = _active() and not _work_ready() and _local_player_near()
+	# The paddle waits in the trough; whoever stirs takes it up (CharacterRig.stirring)
+	_paddle.visible = _work_ready() and not _stirred()
 
-## The paddle turns with the stirring: every peer sees the progress, so every peer sees it move
-func _stir(value: float) -> void:
-	if _paddle != null and value > _last_progress:
-		_paddle.rotation.y += (value - _last_progress) * TAU * 3.0
-	_last_progress = value
+func _stirred() -> bool:
+	return get_tree().get_nodes_in_group("players").any(func(p): return p.is_stirring())
 
 func _work_ready() -> bool:
 	return has_lime and has_water and not mortar_ready

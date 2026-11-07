@@ -10,6 +10,13 @@ static func active() -> bool:
 static func origin() -> String:
 	return _eval("location.origin")
 
+## The page is served by the game's own Worker (or a local test server), not
+## embedded on another site such as itch.io, where the signaling server, play stats
+## and invite links of the page's origin don't exist
+static func home() -> bool:
+	var host := _eval("location.hostname")
+	return host in ["localhost", "127.0.0.1", "nehemiahgame.com"] or host.ends_with(".nehemiahgame.com")
+
 ## A ?key=value query parameter of the page URL
 static func query(key: String) -> String:
 	return _eval("new URLSearchParams(location.search).get(%s) || ''" % JSON.stringify(key))

@@ -305,7 +305,7 @@ func _show_default_status() -> void:
 		Net.STEAM:
 			net_status.text = tr("Signed in to Steam as %s. Invite friends once in game") % NetworkManager.steam_name()
 		Net.ONLINE:
-			net_status.text = tr("Host to get a room code: friends join with it or your invite link") if OS.has_feature("web") \
+			net_status.text = tr("Host to get a room code: friends join with it or your invite link") if WebPage.home() \
 				else tr("Host to get a room code: friends join with it")
 		_:
 			if NetworkManager.steam_available():

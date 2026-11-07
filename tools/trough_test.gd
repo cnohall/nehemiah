@@ -26,6 +26,7 @@ func _check(ok: bool, what: String) -> void:
 func _process(delta: float) -> bool:
 	_frame += 1
 	if _frame == 3:
+		_main.fit_bots(0)   # the menu backdrop's bots would fill and stir the trough first
 		_main.director.begin()
 	if _frame < 3:
 		return false

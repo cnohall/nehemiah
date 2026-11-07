@@ -20,6 +20,7 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | The well: drink to mend | 5.22 | `--no-well` | pending |
 | Simple game (depth without load) | 5.23 | Settings → Game → Simple (host's choice, `GameState.simplified()`) | built 6 Oct 2026; test `tools/simple_game_test.gd --day=34`; needs playtest 4 |
 | Play stats from the web build (where sessions stop) | 5.24 | Settings → Advanced → Play stats (web only, on by default) | built 13 Oct 2026; test `tools/telemetry_test.gd`; Worker side in `web-port` (`worker/src/stats.js`), not deployed |
+| The call: context ping, bots take it as an order (fun alone) | 5.25 | `--no-calls` | prototype 1 Nov 2026; test `tools/calls_test.gd`; needs playtest 4 (solo sessions) |
 | Choice before each stretch (boons) | 6.5 | `--boon=<key>` | pending |
 | Section beats | 6.4 | `--no-beats` | pending |
 | Explore Jerusalem, dedication choirs | 5.8, 5.19 | n/a | **frozen** (side mode) |
@@ -577,6 +578,48 @@ Posts are open from section 4 (`GameState.posts_open`), the saboteur from 8. Cut
 - **Tests:** `tools/telemetry_test.gd` (no browser: allow-list, off switch, caps, modes, attract mode, the settings row); `worker`: `npm test` (row validation, the report). Checked once against the real web export in headless Chrome and `wrangler dev`: open, heartbeat and tab-hidden beacons arrived and the report counted them. Real play through the browser wasn't driven (headless Chrome ran ~1 fps); phase beacons share the tested `event()` path
 **Not built:** a persistent id (needs consent wording, and the follow-up message does the job); desktop / Steam stats (a different promise to players); per-stretch time and death counts (add only if the funnel says where to look).
 **Kill rule:** if the report is never opened between playtests, remove it. If a tester or a player objects to it, make it opt-in.
+
+### 5.25 Fun alone: the call, and the foreman's fantasy — ◐ prototype (1 Nov 2026), needs playtest 4
+**Goal (user, 1 Nov 2026):** the game must be fun to play alone too, not just co-op with seats missing.
+
+**MDA review (1 Nov 2026):** Fellowship (the core aesthetic) comes from *interdependence* dynamics: hands full at the wall so someone guards, beams for two, no self-revive, the horn. Alone, none of these run between people. What solo had instead:
+- **Solo + bots:** bots run a fixed priority list (`BotBrain._decide`) and the player's only word to them was the horn, from stretch 6. So there was **no dynamic between the player and the crew**: the aesthetic slid to Submission (a passenger), and a Master builder crew plays the stretch by itself. Auto-cover (§5.20) made it worse: the bot guards you, which takes the 4:17 tension away from the one person playing
+- **Solo, no bots:** pure juggling. The 4:17 tension is strongest here (you must drop the trowel yourself), but it is the Overcooked solo mode, the weakest part of Overcooked
+
+**Solo's own aesthetic profile** (not co-op minus Fellowship):
+| Aesthetic | Dynamic | Mechanics |
+|---|---|---|
+| **Challenge** (first) | triage: where am I needed *now* | waves, the tell, posts; needs **information** (Thronefall works alone because you always know what is coming: the forecast, §5.21, is worth more alone than in co-op) |
+| **Command** (Fellowship-lite) | delegation: "you hold the gate, I'll build" | **the call** (below). Models: Deep Rock Galactic's Bosco, Kingdom's subjects |
+| **Mastery** | true shot, turned blow, routing | built (§5.16). Alone it shows most: nobody else saves you |
+
+**Fun check:**
+- **Fantasy:** Nehemiah posting the people "by their families" (4:13) and placing the watch (4:9): the foreman, not worker #4. In co-op, the crew calling out jobs, which the pitch sells (§8) and online play without voice could not do (§7.1 #4)
+- **Dynamic:** alone, the player decides what a bot drops to do what they ask (the bot's own job stops while it obeys). In company, one player points, another answers
+- **Kind of fun:** Fellowship (online: a signal; alone: a crew that answers), Challenge (triage now includes the bots)
+- **Where it can go sour:** micromanagement (a call every few seconds); bots that obey too well and make the player a dispatcher who never builds; a call nobody answers (no bot free) that feels broken; ping spam in co-op
+- **A/B switch:** `-- --no-calls` (the button does nothing; host's flag goes to joiners like the rest)
+- **Kill rule:** players alone with bots never call after their first stretch (the bots are good enough on their own, or the button is clunky); or in co-op, calls are spammed and ignored
+
+**Rules (prototype)** (`Calls`, `scenes/calls/calls.gd`; `BotBrain.give_order`):
+- **One button, read from context, no wheel.** [F] / pad X ("call", rebindable). With the mouse the call goes where the cursor points (within 20 m); on a pad, 6 m along the right stick, or where you stand. The server reads the spot:
+  1. You are working a wall → **"Cover me!"** — a bot stands by you and slings at what's on you
+  2. A foe within 6 m of the spot → **"Foes here!"** — a bot goes there and holds it while the call stands
+  3. A wall, gate, post or trough within 4 m that wants a load → **"Stone here!"** (timber, mortar, beams, lime, water) — a bot hauls that material to *that* site until it has enough or the order runs out
+  4. …one with all its loads in → **"Build here!"** — a bot works it
+  5. Anything else → **"Here!"** — a bot comes and holds the spot
+- **Everyone sees it:** a small ring and standard in the caller's colour, the words over it, and an off-screen pointer (`OffscreenAlerts.ping`) for the others. It lasts `CALL_TIME` (8 s)
+- **One bot answers**, the nearest free one (not downed, led off, reviving or on a beam); a bot at work counts as `BUSY_PENALTY` (8 m) further, one already carrying the wanted load 10 m nearer. It says so ("On my way!", "Bringing stone!", "I've got your back!") and the order sits above its own list (below reviving) for `ORDER_TIME` (20 s), or until done. A new call to the same bot replaces the old one. No bot free → the call still shows (it's a signal), and the caller is told "Nobody free to answer"
+- **The cost is real:** the bot drops what it was doing. A bot pulled off a wall leaves that wall's work half done; a bot told to haul stone drops the timber it was carrying
+- **Per-caller cooldown** 1.2 s. Work phase only. Not in the tutorial or the attract crew
+- From the first stretch, in both games (it is communication, not a rule: §5.23 "Mandatory rule on top" does not apply, since ignoring it changes nothing)
+
+**Open (decide after playtest 4):**
+- **Auto-cover alone:** keep it (safer for new players) or make cover call-only when the crew is one person + bots (more decisions, more 4:17)? A/B with `-- --no-auto-cover` once the call proves itself
+- Should bot *skill* mean how well they carry out an order (Apprentice dawdles on the way) rather than how much they decide alone?
+- A count of calls per stretch in the session log / play stats, for the kill rule
+
+**Playtest 4 addition:** 1–2 solo sessions (one person + 2 Builder bots), observer ticks: "waits / watches bots work" (Submission, bad), "calls a bot to a spot after a threat call" (triage, good), "calls more than once a minute" (micromanagement). New strings English only; run the i18n extract for es / pt_BR / de / ko.
 
 ### 5.3 Backlog (bigger features, one at a time)
 | Idea | Value | Risk |

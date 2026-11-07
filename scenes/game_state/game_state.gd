@@ -113,10 +113,12 @@ const TOTAL_DAYS   := 52
 # Demo build (GDD §7.1 #2): export feature "demo", or `-- --demo` on the command line.
 # Days 1-9, ending at the dusk of the first day brutes come (WaveManager forces one).
 # Only the first DEMO_SECTIONS stretches open on the map. Wishlist link: fill in the
-# store page once the Steam App ID exists; the end-card button stays hidden while empty.
+# store page once the Steam App ID exists; until then the end-card button points to the
+# site's launch-news sign-up instead.
 const DEMO_LAST_DAY := 9
 const DEMO_SECTIONS := 2
 const DEMO_WISHLIST_URL := ""
+const DEMO_NEWS_URL := "https://www.nehemiahgame.com/?ref=demo"
 
 static func is_demo() -> bool:
 	return OS.has_feature("demo") or "--demo" in OS.get_cmdline_user_args()

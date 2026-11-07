@@ -41,6 +41,17 @@ uniform float cloud_speed = 1.3;   // metres a second
 // 6 sawdust and shavings, 7 trampled fold
 uniform int feature = 0;
 
+// The static noise, baked by GroundMesh once at load (ground_bake.gdshader). Until it lands
+// (and headless) the ground works it out per pixel. bake_origin/bake_extent: the span the
+// coarse, feature and fine textures cover, in world x/z
+uniform bool baked = false;
+uniform sampler2D noise_coarse : filter_linear, repeat_disable;
+uniform sampler2D noise_feature : filter_linear, repeat_disable;
+uniform sampler2D noise_fine : filter_linear, repeat_disable;
+uniform sampler2D noise_grit : filter_linear_mipmap, repeat_enable;
+uniform vec2 bake_origin = vec2(-110.0, -90.0);
+uniform vec2 bake_extent = vec2(220.0, 180.0);
+
 varying vec2 world_xz;
 varying float world_y;
 varying float slope;
@@ -51,29 +62,7 @@ void vertex() {
 	slope = 1.0 - NORMAL.y;
 }
 
-float hash2(vec2 p) {
-	p = fract(p * vec2(234.34, 435.35));
-	p += dot(p, p + 34.23);
-	return fract(p.x * p.y);
-}
-
-float vnoise(vec2 p) {
-	// Continuous, differently angled waves avoid the visible cells of grid noise.
-	float a = sin(p.x * 1.70 + p.y * 0.87 + sin(p.y * 0.33));
-	float b = sin(p.x * -0.73 + p.y * 1.43 + 0.6 * sin(p.x * 0.58));
-	float c = sin(p.x * 2.31 - p.y * 1.17);
-	return 0.5 + 0.16 * a + 0.11 * b + 0.07 * c;
-}
-
-float fbm(vec2 p) {
-	float v = 0.0, a = 0.55;
-	for (int i = 0; i < 5; i++) {
-		v += a * vnoise(p);
-		p  = p * 2.13 + vec2(3.71, 1.93);
-		a *= 0.48;
-	}
-	return v;
-}
+#include "res://assets/shaders/ground_noise.gdshaderinc"
 
 // Shared with ScatterLayer.meadow() — keep the two in step
 float meadow_mask(vec2 w) {
@@ -91,10 +80,37 @@ float work_area(vec2 w) {
 void fragment() {
 	vec2 p = world_xz * scale;
 
-	float macro  = fbm(p);
-	float mid    = fbm(p * 2.8  + vec2(5.1, 3.3));
-	float detail = fbm(p * 7.2  + vec2(1.9, 8.7));
-	float micro  = vnoise(p * 18.0 + vec2(4.5, 9.3));
+	vec4 coarse;
+	vec2 fine;
+	float drift = 0.0;   // the painted feature's drifts (features 3-6)
+	vec2 grits;
+	if (baked) {
+		vec2 uv = (world_xz - bake_origin) / bake_extent;
+		coarse = texture(noise_coarse, uv);
+		fine = texture(noise_fine, uv).rg;
+		if (feature >= 3 && feature <= 6) {
+			drift = dot(texture(noise_feature, uv), vec4(equal(ivec4(feature), ivec4(3, 4, 5, 6))));
+		}
+		grits = vec2(texture(noise_grit, world_xz * (1.8 / GRIT_CELLS)).r,
+			texture(noise_grit, world_xz * (4.2 / GRIT_CELLS)).g) * 0.25 - 0.125;
+	} else {
+		coarse = ground_coarse(p);
+		fine = ground_fine(p);
+		if (feature == 3) {
+			drift = fbm(p * 1.3 + vec2(3.0, 9.0));
+		} else if (feature == 4) {
+			drift = fbm(p * 1.6 + vec2(13.0, 5.0));
+		} else if (feature == 5) {
+			drift = fbm(p * 2.4 + vec2(8.0, 2.0));
+		} else if (feature == 6) {
+			drift = fbm(p * 2.0 + vec2(17.0, 6.0));
+		}
+		grits = vec2(grit(world_xz * 1.8, 0), grit(world_xz * 4.2, 1));
+	}
+	float macro  = coarse.r;
+	float mid    = coarse.g;
+	float detail = fine.r;
+	float micro  = fine.g;
 
 	// Sand layers — mostly yellow-warm, subtle variation
 	vec3 col = mix(col_sand_mid, col_sand_bright, smoothstep(0.42, 0.68, macro));
@@ -120,7 +136,7 @@ void fragment() {
 	col = mix(col, col_trodden, trodden * 0.6);
 
 	// Patches of dry scrub off the beaten track — the hills weren't bare sand
-	float scrub = smoothstep(0.56 - scrub_bias, 0.66 - scrub_bias, fbm(p * 1.6 + vec2(11.3, 4.1)) + (mid - 0.5) * 0.25);
+	float scrub = smoothstep(0.56 - scrub_bias, 0.66 - scrub_bias, coarse.b + (mid - 0.5) * 0.25);
 	scrub *= 1.0 - trodden;
 	scrub *= 1.0 - smoothstep(12.0, 15.0, world_xz.y);   // city ground is swept earth
 	scrub *= 1.0 - (1.0 - smoothstep(6.0, 9.0, abs(world_xz.y))) * (1.0 - smoothstep(24.0, 28.0, abs(world_xz.x)));
@@ -128,7 +144,7 @@ void fragment() {
 	col = mix(col, scrub_col, scrub * 0.45);
 
 	// Red-ochre earth breaking through in soft, irregular patches.
-	float ochre = smoothstep(0.58, 0.74, fbm(p * 1.9 + vec2(21.7, 3.3))) * (1.0 - trodden * 0.6);
+	float ochre = smoothstep(0.58, 0.74, coarse.a) * (1.0 - trodden * 0.6);
 	col = mix(col, col_ochre, ochre * 0.4);
 
 	// Meadows: green ground where the grass colonies grow, darker at the heart
@@ -156,23 +172,23 @@ void fragment() {
 		col = mix(col, vec3(0.44, 0.54, 0.25), inside * smoothstep(0.55, 1.0, rows) * 0.3);
 	} else if (feature == 3) {
 		// Ash and soot: burned ground in drifts, darkest round the middle
-		float soot = smoothstep(0.52, 0.74, fbm(p * 1.3 + vec2(3.0, 9.0)) + (mid - 0.5) * 0.3);
+		float soot = smoothstep(0.52, 0.74, drift + (mid - 0.5) * 0.3);
 		soot *= (1.0 - smoothstep(18.0, 28.0, abs(world_xz.x))) * (1.0 - smoothstep(9.0, 18.0, abs(world_xz.y)));
 		col = mix(col, col * vec3(0.46, 0.42, 0.40), soot * 0.72);
 	} else if (feature == 4) {
 		// Bare limestone breaking through the earth: pale, in tilted strata
-		float rockm = smoothstep(0.56, 0.74, fbm(p * 1.6 + vec2(13.0, 5.0)) + (detail - 0.5) * 0.25) * (1.0 - trodden);
+		float rockm = smoothstep(0.56, 0.74, drift + (detail - 0.5) * 0.25) * (1.0 - trodden);
 		float strata = 0.5 + 0.5 * sin((world_xz.x * 0.55 + world_xz.y * 0.95) * 2.2 + detail * 3.0);
 		col = mix(col, mix(vec3(0.78, 0.74, 0.66), vec3(0.68, 0.64, 0.56), strata), rockm * 0.8);
 	} else if (feature == 5) {
 		// Fish market: hosed, trodden wet ground
-		float damp = smoothstep(0.50, 0.70, fbm(p * 2.4 + vec2(8.0, 2.0)) + (mid - 0.5) * 0.3);
+		float damp = smoothstep(0.50, 0.70, drift + (mid - 0.5) * 0.3);
 		damp *= (1.0 - smoothstep(14.0, 22.0, abs(world_xz.x))) * (1.0 - smoothstep(6.0, 11.0, abs(world_xz.y)));
 		col = mix(col, col * vec3(0.72, 0.77, 0.80), damp * 0.6);
 		rough_out = mix(roughness, 0.35, damp);
 	} else if (feature == 6) {
 		// Workshops: pale sawdust and shavings, with a dark scatter of filings
-		float saw = smoothstep(0.54, 0.72, fbm(p * 2.0 + vec2(17.0, 6.0)) + (mid - 0.5) * 0.3);
+		float saw = smoothstep(0.54, 0.72, drift + (mid - 0.5) * 0.3);
 		saw *= (1.0 - smoothstep(16.0, 24.0, abs(world_xz.x))) * (1.0 - smoothstep(8.0, 14.0, abs(world_xz.y)));
 		col = mix(col, vec3(0.90, 0.80, 0.58), saw * 0.55);
 		col *= 1.0 - saw * step(0.82, micro) * 0.25;
@@ -196,30 +212,8 @@ void fragment() {
 	// Micro grain — soft sandy texture
 	col *= 0.93 + 0.07 * micro;
 
-	// Painted grit: soft dots, a few per cell, some darker (grit, shade) some lighter
-	// (sun-caught grains). Two scales so it doesn't read as a grid.
-	for (int k = 0; k < 2; k++) {
-		float sc = k == 0 ? 1.8 : 4.2;
-		vec2 gp = world_xz * sc;
-		vec2 gi = floor(gp);
-		float best = 9.0;
-		float bh = 0.0;
-		for (int y = -1; y <= 1; y++) {
-			for (int x = -1; x <= 1; x++) {
-				vec2 c = gi + vec2(float(x), float(y));
-				float h = hash2(c + float(k) * 17.0);
-				vec2 pt = c + vec2(hash2(c + 3.1), hash2(c + 7.7));
-				float d = length(gp - pt);
-				if (d < best) { best = d; bh = h; }
-			}
-		}
-		// Ragged edges: grit isn't round
-		best += (vnoise(gp * 3.0 + float(k) * 5.0) - 0.5) * 0.16;
-		float r = k == 0 ? 0.17 : 0.2;
-		float dotm = (1.0 - smoothstep(r * 0.6, r, best)) * step(0.45, bh);
-		float sgn = bh > 0.82 ? 0.07 : (k == 0 ? -0.08 : -0.11);
-		col *= 1.0 + dotm * sgn * (1.0 - scrub * 0.6);
-	}
+	// Painted grit (ground_noise grit()), two scales so it doesn't read as a grid
+	col *= (1.0 + grits.x * (1.0 - scrub * 0.6)) * (1.0 + grits.y * (1.0 - scrub * 0.6));
 
 	// Steep ground is stone: the terrace risers read as dry-stone retaining walls (courses
 	// run level, each stone its own value), the valley sides as bare limestone

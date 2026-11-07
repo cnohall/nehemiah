@@ -110,7 +110,7 @@ const KR_REGULAR := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Medium-subset.tt
 const KR_BOLD    := "res://assets/fonts/NotoSerifKR/NotoSerifKR-Bold-subset.ttf"
 
 const REBINDABLE := ["move_north", "move_west", "move_south", "move_east",
-	"interact", "drop", "dash", "throw_charge", "horn", "reveal"]
+	"interact", "drop", "dash", "throw_charge", "horn", "call", "reveal"]
 
 func _ready() -> void:
 	if OS.has_feature("web") or OS.has_feature("mobile"):

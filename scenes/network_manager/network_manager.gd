@@ -197,9 +197,10 @@ func in_online_room() -> bool:
 func room_code() -> String:
 	return _online.room_code if _online else ""
 
-## Page link that joins this room on open ("" outside the web build)
+## Page link that joins this room on open ("" outside the web build, and on itch.io,
+## whose game frame has its own URL: friends type the code there)
 func invite_link() -> String:
-	return WebPage.url_with(ROOM_QUERY, room_code()) if in_online_room() and WebPage.active() else ""
+	return WebPage.url_with(ROOM_QUERY, room_code()) if in_online_room() and WebPage.active() and WebPage.home() else ""
 
 ## Room code from an invite link the page was opened with, once ("" if none)
 func take_invite_code() -> String:

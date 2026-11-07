@@ -123,6 +123,7 @@ var anim := "idle_down":
 	set(value):
 		anim = value
 		if _sprite != null and _sprite.animation != value:
+			_sprite.stirring = value.begins_with("build_") and _at_trough() != null
 			_sprite.play(value)
 
 var health: float = MAX_HEALTH
@@ -404,6 +405,8 @@ func _physics_process(delta: float) -> void:
 				_server_horn.rpc_id(1, global_position)
 			else:   # experimental call-early (GDD §5.21); the host decides if it counts
 				_server_call_early.rpc_id(1)
+		if _consume("call"):
+			_server_call.rpc_id(1, _call_point())
 	_update_anim()
 
 # ── Movement ───────────────────────────────────────────────
@@ -422,7 +425,7 @@ func _buffer_input(delta: float) -> void:
 	if brain == null and InputMode.gameplay_blocked():
 		_buffered.clear()
 		return
-	for action: String in ["interact", "drop", "dash", "horn"]:
+	for action: String in ["interact", "drop", "dash", "horn", "call"]:
 		if brain.take_press(action) if brain != null else Input.is_action_just_pressed(action):
 			_buffered[action] = INPUT_BUFFER
 		elif _buffered.has(action):
@@ -1586,8 +1589,19 @@ func _stop_work() -> void:
 	if not _is_busy:
 		anim = "idle_" + _facing
 
+## Every peer: the trough we're working at, if the build stroke is a stir there (else null)
+func _at_trough() -> Node3D:
+	var site := _nearest_in_reach("build_sites", global_position, func(_s): return true)
+	return site if site != null and "mortar_ready" in site else null
+
+func is_stirring() -> bool:
+	return _sprite != null and _sprite.stirring and anim.begins_with("build_")
+
 # Every peer: one strike of the tool — a knock and a little dust off the wall
 func _on_strike() -> void:
+	if _sprite.stirring:
+		Sfx.play("work_mortar", global_position)   # a slap of wet lime, no dust
+		return
 	var site := _nearest_in_reach("build_sites", global_position, func(s): return not s.work_material().is_empty())
 	var mat: String = site.work_material() if site != null else "stone"
 	Sfx.play("work_" + mat, global_position)
@@ -1699,6 +1713,29 @@ func _server_horn(at: Vector3) -> void:
 		_action.rpc("halfslash")
 	else:
 		_tell("The horn was just sounded")
+
+# ── The call (GDD §5.25) ───────────────────────────────────
+
+const CALL_REACH     := 20.0   # mouse: the call goes where the cursor points, this far at most
+const CALL_PAD_REACH := 6.0    # pad: this far along the right stick, or where we stand
+
+## Owner: where a call points
+func _call_point() -> Vector3:
+	if brain != null:
+		return global_position
+	if InputMode.using_pad:
+		var stick := Input.get_vector("aim_west", "aim_east", "aim_north", "aim_south", STICK_DEADZONE)
+		return global_position + screen_to_ground(stick).normalized() * CALL_PAD_REACH if stick != Vector2.ZERO else global_position
+	var to := _cursor_on_ground() - global_position
+	return global_position + Vector3(to.x, 0.0, to.z).limit_length(CALL_REACH)
+
+@rpc("any_peer", "call_local", "reliable")
+func _server_call(at: Vector3) -> void:
+	if not _from_owner() or downed or is_led():
+		return
+	var calls := get_tree().get_first_node_in_group("calls")
+	if calls != null:
+		calls.request(self, at)
 
 @rpc("any_peer", "call_local", "reliable")
 func _server_call_early() -> void:

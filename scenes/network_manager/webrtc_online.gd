@@ -19,6 +19,7 @@ signal failed(reason: String)
 const PROTOCOL := 1
 const SETTING_URL := "nehemiah/online/signaling_url"
 const LOCAL_URL := "ws://localhost:8787/ws"
+const PLAY_URL := "wss://play.nehemiahgame.com/ws"   # the web build embedded elsewhere (itch.io)
 const CONNECT_TIMEOUT := 10.0   # signaling socket
 const JOIN_TIMEOUT := 20.0      # code accepted → data channels open
 
@@ -53,7 +54,8 @@ static func available() -> bool:
 	return GDExtensionManager.is_extension_loaded("res://addons/webrtc_native/webrtc_native.gdextension")
 
 ## Signaling server: `-- --signal=URL`, then ?signal= on the web page, then the
-## project setting, then (web) the server that served the page, else localhost.
+## project setting, then (web) the server that served the page (the live one when
+## embedded on another site), else localhost.
 static func signaling_url() -> String:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--signal="):
@@ -65,6 +67,8 @@ static func signaling_url() -> String:
 	if not setting.is_empty():
 		return setting
 	if OS.has_feature("web"):
+		if not WebPage.home():
+			return PLAY_URL
 		var origin := WebPage.origin()
 		if origin.begins_with("http"):
 			return origin.replace("http", "ws") + "/ws"

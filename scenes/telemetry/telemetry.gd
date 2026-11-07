@@ -48,8 +48,9 @@ func _on() -> bool:
 		return false
 	if transport.is_valid():
 		return true
-	# Test harnesses (`--script`) aren't players
-	return OS.has_feature("web") and not "--script" in OS.get_cmdline_args()
+	# Test harnesses (`--script`) aren't players. Embedded on another site (itch.io) the
+	# relative URL has no Worker behind it
+	return OS.has_feature("web") and WebPage.home() and not "--script" in OS.get_cmdline_args()
 
 ## On the title screen: the bot crew playing behind the menu (attract mode) is not a game
 func _on_title() -> bool:
