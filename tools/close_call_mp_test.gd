@@ -41,7 +41,7 @@ func _process(delta: float) -> bool:
 			_state = "connect"
 		"connect":
 			var up: bool = _mode == "host" or (root.multiplayer.multiplayer_peer.get_connection_status() \
-				== MultiplayerPeer.CONNECTION_CONNECTED and root.multiplayer.get_unique_id() != 1)
+				== MultiplayerPeer.CONNECTION_CONNECTED and root.multiplayer.get_unique_id() != 1 and 1 in root.multiplayer.get_peers())
 			if up:
 				_main = load("res://scenes/main/main.tscn").instantiate()
 				root.add_child(_main)

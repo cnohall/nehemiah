@@ -2593,3 +2593,6 @@ msgstr "Ein Schild über deiner nächsten Aufgabe, bis du sie einmal erledigt ha
 
 msgid "Aim and throw"
 msgstr "Zielen und schleudern"
+
+msgid "Your game and the host's are different versions. Both of you need the same build to play together."
+msgstr "Dein Spiel und das des Gastgebers sind verschiedene Versionen. Ihr braucht beide dieselbe Version, um zusammen zu spielen."

@@ -2593,3 +2593,6 @@ msgstr "Uma etiqueta sobre a sua próxima tarefa até você fazê-la uma vez. Ao
 
 msgid "Aim and throw"
 msgstr "Mire e lance"
+
+msgid "Your game and the host's are different versions. Both of you need the same build to play together."
+msgstr "O seu jogo e o do anfitrião são versões diferentes. Vocês dois precisam da mesma versão para jogar juntos."
