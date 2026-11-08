@@ -751,7 +751,7 @@ msgid "Deliver"
 msgstr ""
 
 #: scenes\first_steps\first_steps.gd:91
-msgid "Deliver  {interact}"
+msgid "Carry it here"
 msgstr ""
 
 #: scenes\story\credits_roll.gd:27

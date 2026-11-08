@@ -44,6 +44,10 @@ var anim := "idle_down":
 		anim = value
 		if _figure != null and _figure.animation != value:
 			_figure.play(value)
+# Replicated position + server clock; clients draw him smoothed (NetSmooth)
+var net_pos: Vector4:
+	get: return NetSmooth.stamp(self)
+	set(v): NetSmooth.receive(self, v)
 var state := State.COMING:
 	set(value):
 		state = value

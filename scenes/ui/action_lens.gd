@@ -115,7 +115,7 @@ func _entries(me: Player) -> Array:
 			add.call(at, tr("%s Work it up") % e)
 		elif not need.is_empty():
 			if carrying == need:
-				add.call(at, tr("%s Deliver the %s") % [e, _mat(need)])
+				add.call(at, tr("Bring %s") % _mat(need))   # walking it in delivers it
 			elif post:
 				add.call(at, tr("Watch post: bring %s") % _mat(need))
 			elif site.get("is_target") != false:
