@@ -1472,6 +1472,9 @@ msgstr "Aufheben  {interact}"
 msgid "Carry it here"
 msgstr "Hierher tragen"
 
+msgid "Deliver  {interact}"
+msgstr "Abliefern  {interact}"
+
 msgid "Not needed here  {drop}"
 msgstr "Hier nicht gebraucht  {drop}"
 

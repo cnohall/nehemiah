@@ -8,7 +8,8 @@ extends SceneTree
 var _main: Node3D
 var _output := ""
 var _frame := 0
-var _flock: Flock
+var _flock: Node3D
+var F: GDScript   # Flock, loaded at run time: its GameState refs need the autoloads up
 var _player: Node3D
 var _bad := 0
 
@@ -18,6 +19,7 @@ func _initialize() -> void:
 			_output = arg
 	DirAccess.make_dir_recursive_absolute(_output)
 	root.size = Vector2i(1280, 720)
+	F = load("res://scenes/section_terrain/flock.gd")
 	_main = load("res://scenes/main/main.tscn").instantiate()
 	root.add_child(_main)
 	current_scene = _main
@@ -29,7 +31,9 @@ func _process(_delta: float) -> bool:
 	if _frame == 20:
 		_main.set_process(false)
 		_main.hud.visible = false
-		_flock = _main.get_node("SectionTerrain/Flock")
+		_flock = get_first_node_in_group("sheep_flocks")
+		assert(_flock, "no Flock in the scene")
+		print("sheep_motion: %d sheep, first stretch %s" % [_flock.get("_sheep").size(), root.get_node("GameState").first_stretch()])
 		_player = _main.get_node("Players").get_child(0)
 		_player.global_position = Vector3(10.0, 0.1, 8.0)
 		_set_camera(9.0, Vector3(-15.0, 0.0, -7.2))
@@ -63,17 +67,17 @@ func _audit() -> void:
 	var sheep: Array = _flock.get("_sheep")
 	for i in sheep.size():
 		var a: Dictionary = sheep[i]
-		var ea := Flock._capsule(a.pos, a.yaw, a.s.x)
-		if a.pen_r > 0.0 and not Flock.in_pen(ea, a.pen_c, a.pen_r + 0.05, a.s.x):
+		var ea: Array = F._capsule(a.pos, a.yaw, a.s.x)
+		if a.pen_r > 0.0 and not F.in_pen(ea, a.pen_c, a.pen_r + 0.05, a.s.x):
 			_bad += 1
 			print("frame %d: sheep %d out of fold" % [_frame, i])
 		for j in range(i + 1, sheep.size()):
 			var b: Dictionary = sheep[j]
-			var d := Flock.apart(ea, Flock._capsule(b.pos, b.yaw, b.s.x))
+			var d: float = F.apart(ea, F._capsule(b.pos, b.yaw, b.s.x))
 			var key := i * 100 + j
 			if not _start.has(key):
 				_start[key] = d
-			if d < minf(Flock.RADIUS * (a.s.x + b.s.x), _start[key]) - 0.05:
+			if d < minf(F.RADIUS * (a.s.x + b.s.x), _start[key]) - 0.05:
 				_bad += 1
 				print("frame %d: sheep %d and %d overlap" % [_frame, i, j])
 

@@ -1472,6 +1472,9 @@ msgstr "Pegar  {interact}"
 msgid "Carry it here"
 msgstr "Leve até aqui"
 
+msgid "Deliver  {interact}"
+msgstr "Entregar  {interact}"
+
 msgid "Not needed here  {drop}"
 msgstr "Não precisa aqui  {drop}"
 
