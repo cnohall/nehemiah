@@ -742,6 +742,9 @@ msgstr ""
 msgid "Carry it here"
 msgstr ""
 
+msgid "Deliver  {interact}"
+msgstr ""
+
 #: scenes\story\credits_roll.gd:27
 msgid "Development"
 msgstr ""

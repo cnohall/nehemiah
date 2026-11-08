@@ -17,7 +17,9 @@ const SLING_MAX_RANGE  := 10.0
 const SLING_MIN_DAMAGE := 12.0
 const SLING_MAX_DAMAGE := 25.0
 const SLING_CHARGE_TIME := 0.9    # seconds to full charge
-const SLING_COOLDOWN   := 0.6
+const SLING_COOLDOWN   := 0.4     # from the let-go; about when the cast's follow-through ends
+const SLING_CAST_SPEED := 1.3     # the "slash" cast plays this fast, so the stone leaves soon after the let-go
+const THROW_BUFFER     := 0.3     # a press this early (mid-cast / cooldown) still starts the next whirl
 const SLING_MIN_THROW  := 1.5     # never land closer than this
 const SLING_KNOCK_MIN  := 0.15    # m a stone shoves a scout back, light charge…
 const SLING_KNOCK_MAX  := 0.55    # …and full
@@ -46,7 +48,7 @@ const RIPOSTE_KNOCK   := 1.4      # m a scout is thrown back as he goes down
 const BLADE_COLOR     := Color(1.0, 0.98, 0.94, 0.75)   # the cut's sweep
 const BLADE_TRUE      := Color(1.0, 0.76, 0.3, 0.9)      # …gold when it turns a blow
 const AIM_ASSIST_DEG   := 18.0   # enemies inside this cone of the aim get homed on
-const CHARGE_MOVE_MULT := 0.55    # slower while winding up
+const CHARGE_MOVE_MULT := 0.7     # slower while winding up
 const AIM_RING_LOCKED  := Color(0.86, 0.38, 0.26, 0.9)
 const AIM_RING_FREE    := Color(0.45, 0.30, 0.12, 0.85)   # dark ochre — reads on sand
 const GROUND_Y         := 0.1     # top of the floor slab
@@ -73,6 +75,8 @@ const PLAY_AREA       := Rect2(-44.0, -25.0, 88.0, 49.7)   # = Terrain.FLAT_FOE 
 const CARRY_FRONT_SCALE := 0.8   # a load hugged at the chest reads a little smaller than overhead
 const CARRY_HEIGHT    := 2.4      # just above the head of the ~2.2 m chibi figure
 const CARRY_SCALE     := 1.35     # loads read bigger overhead than on the ground (Overcooked)
+const HANDS_Y         := 1.2      # chest height, for a load's hop when the rig has no carry anchor
+const PILE_LIFT_REACH := 0.5      # a load is lifted from this far out of a pile's centre, on the worker's side
 const PIP_Y           := 3.2      # player-colour marker above the head (multiplayer)
 const SLING_RELEASE_Y := 1.9      # overhead hand height
 const SLING_RELEASE_FRAME := 3    # frame of the "slash" swing where the stone leaves the hand
@@ -93,7 +97,6 @@ const BEAM_HELP_REACH := 3.2      # from the carrier: covers the dragging end, w
 const BEAM_HOLD_Y     := 1.25     # shoulder height
 const FOCUS_COLOR     := Color(0.99, 0.93, 0.74, 0.95)   # cream ring under what [E] will use
 const FOCUS_POLL      := 0.1
-const AUTO_DELIVER_CD := 0.6      # s between walk-in deliveries (the server's reply lands first)
 const RUN_ANIM_SPEED  := 8.0      # ground speed the run cycle was drawn for
 const WALK_ANIM_SPEED := 4.5
 const STICK_DEADZONE  := 0.2
@@ -147,7 +150,9 @@ var _sling_cd := 0.0
 var _down_timer := 0.0
 var _carry_prop: Node3D
 var _carry_front: Node3D   # the load at the chest, parented to the rig's carry anchor
+var _load_in_ms := 0       # a load is flying into the arms until then: the carried prop waits for it
 var _charging := false
+var _throw_buf := 0.0           # owner: seconds a sling press stays good for (THROW_BUFFER)
 var _charge := 0.0
 var _aim_point := Vector3.ZERO
 var _aim_marker: MeshInstance3D
@@ -173,7 +178,6 @@ var _dash_cd := 0.0
 var _dash_dir := Vector3.ZERO
 var _focus_ring: MeshInstance3D
 var _focus_poll := 0.0
-var _auto_cd := 0.0
 var _beam: Node3D   # carried beam, placed in world space between the two ends
 var _beam_tag: WorldTag   # "Take the other end" over a lone beam's dragging end, for the others
 var _buffered := {}   # action → seconds left to act on an early press
@@ -431,7 +435,12 @@ static func screen_to_ground(v: Vector2) -> Vector3:
 func _buffer_input(delta: float) -> void:
 	if brain == null and InputMode.gameplay_blocked():
 		_buffered.clear()
+		_throw_buf = 0.0
 		return
+	# The sling press, kept apart: it's held, not just pressed. A click on HUD buttons isn't one
+	_throw_buf = maxf(0.0, _throw_buf - delta)
+	if brain == null and _throw_just_pressed() and get_viewport().gui_get_hovered_control() == null:
+		_throw_buf = THROW_BUFFER
 	for action: String in ["interact", "drop", "dash", "horn", "call"]:
 		if brain.take_press(action) if brain != null else Input.is_action_just_pressed(action):
 			_buffered[action] = INPUT_BUFFER
@@ -732,7 +741,6 @@ func _update_focus(delta: float) -> void:
 	if not downed and not GameState.is_over():
 		var choice := _interact_choice(global_position)
 		target = choice[1]
-		_auto_deliver(choice[0], target)
 	_focus_ring.visible = target != null
 	if target == null:
 		return
@@ -749,20 +757,6 @@ func _update_focus(delta: float) -> void:
 		size = 1.1
 	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + lift, spot.z)
 	_focus_ring.mesh.size = Vector2(size, size)
-
-## Owner: walking a load into a wall that wants it hands it over, no button: the first
-## loop is "pick up, walk to the wall". The same press [E] would send, so the server's
-## rules (deposit, last load sets you to work) stay in one place. Walls only: a hungry
-## household (Neh. 5) is a choice, never an accident of walking past.
-func _auto_deliver(act: Act, target: Node3D) -> void:
-	_auto_cd = maxf(0.0, _auto_cd - FOCUS_POLL)   # runs once a focus poll
-	if act != Act.DELIVER or target == null or not target.is_in_group("build_sites") or _auto_cd > 0.0:
-		return
-	if GameState.phase not in [GameState.Phase.DAWN, GameState.Phase.WORK] or _is_busy or _climbing or _work_site != null \
-			or _led_by != null or _hold_time > 0.0:
-		return
-	_auto_cd = AUTO_DELIVER_CD
-	_server_interact.rpc_id(1, global_position)
 
 func _build_focus_ring() -> void:
 	var quad := QuadMesh.new()
@@ -813,9 +807,9 @@ func _update_anim() -> void:
 	anim = ("walk_" if laden else "run_") + _facing
 
 # One-shot action animation that blocks input until it finishes (owner only)
-func _play_action(anim_base: String) -> void:
+func _play_action(anim_base: String, speed := 1.0) -> void:
 	_is_busy = true
-	_sprite.speed_scale = 1.0
+	_sprite.speed_scale = speed
 	anim = anim_base + "_" + _facing
 	await _sprite.animation_finished
 	if is_instance_valid(self) and not downed:
@@ -873,12 +867,15 @@ func _server_interact(at: Vector3) -> void:
 			_start_drink(target)
 		Act.TAKE_ITEM:
 			var kind: String = target.kind
+			var from: Vector3 = target.global_position + Vector3.UP * DroppedItem.REST_Y.get(kind, 0.15)
 			if target.take():
 				_sfx.rpc("pickup")
+				_load_fx.rpc(kind, from, true)
 				_set_carried.rpc(kind)
 		Act.TAKE_PILE:
 			if target.request_pickup():
 				_sfx.rpc("pickup")
+				_load_fx.rpc(target.kind, _pile_top(target, at), true)
 				_set_carried.rpc(target.kind)
 		Act.CLIMB:
 			# The spot mirrored through the wall, stepped clear of its far face
@@ -927,6 +924,7 @@ func _deliver(dest: Node3D, at: Vector3) -> void:
 	if not is_bot():
 		_note_brought.rpc_id(get_multiplayer_authority())
 	_sfx.rpc("deposit_" + carried_kind)
+	_load_fx.rpc(carried_kind, _set_on(dest, at), false)
 	_set_carried.rpc("")
 	if dest.can_build():
 		# Last load for this stage: the one who brought it sets straight to work
@@ -968,7 +966,10 @@ func _server_drop(at: Vector3) -> void:
 	if helping_id != 0:
 		_set_helping.rpc(0)
 	elif carried_kind == "debris" and _at_tip(at):
-		_set_carried.rpc("")   # set down on the tip: tipped out, not passed or left lying
+		# Set down on the tip: tipped out, not passed or left lying
+		var heap := at.lerp(_tip_site(at).dump_marker().global_position, 0.5)
+		_load_fx.rpc(carried_kind, Vector3(heap.x, GROUND_Y + 0.15, heap.z), false)
+		_set_carried.rpc("")
 		_sfx.rpc("drop")
 	elif not carried_kind.is_empty():
 		var mate := _free_hands_near(at)
@@ -978,10 +979,13 @@ func _server_drop(at: Vector3) -> void:
 			_drop_carried(at)
 
 func _at_tip(at: Vector3) -> bool:
+	return _tip_site(at) != null
+
+func _tip_site(at: Vector3) -> Node3D:
 	for s in get_tree().get_nodes_in_group("build_sites"):
 		if s.has_method("at_tip") and s.at_tip(at):
-			return true
-	return false
+			return s
+	return null
 
 # Server: the nearest teammate who could take our load straight from our hands
 func _free_hands_near(at: Vector3) -> Node3D:
@@ -1000,6 +1004,7 @@ func _free_hands_near(at: Vector3) -> Node3D:
 
 func _hand_over(mate: Node3D) -> void:
 	var kind := carried_kind
+	mate._load_fx.rpc(kind, _hands_pos(), true)
 	_set_carried.rpc("")
 	mate._set_carried.rpc(kind)
 	_sfx.rpc("pickup")
@@ -1015,6 +1020,9 @@ func _drop_carried(at: Vector3) -> void:
 	item.kind = carried_kind
 	item.position = Vector3(at.x + randf_range(-DROP_JITTER, DROP_JITTER), GROUND_Y,
 		at.z + randf_range(-DROP_JITTER, DROP_JITTER))
+	if carried_kind != "beam":   # a beam is on two shoulders, not in the arms
+		item.drop_from = _hands_pos()
+		item.drop_scale = CARRY_SCALE * CARRY_FRONT_SCALE
 	# The long haul's relay mat: stacked in a free place, not left loose
 	for mat: Node3D in get_tree().get_nodes_in_group("relay_mats"):
 		if at.distance_to(mat.global_position) < mat.REACH:
@@ -1062,8 +1070,10 @@ func _sfx(event: String) -> void:
 func _handle_attack(delta: float) -> void:
 	_riposte_hint()
 	if not _charging:
-		# A click on HUD buttons / the Esc menu isn't a throw
-		if _throw_just_pressed() and _sling_cd <= 0.0 and (brain != null or get_viewport().gui_get_hovered_control() == null):
+		# Bots press once and keep it pressed; people's presses are buffered (_buffer_input),
+		# so one made mid-cast or a beat before the cooldown ends still throws
+		if (brain.throw_pressed if brain != null else _throw_buf > 0.0) and _sling_cd <= 0.0:
+			_throw_buf = 0.0
 			if brain != null:
 				brain.throw_pressed = false
 			# Foe at arm's length: no time to whirl — draw the sword instead (Neh. 4:18)
@@ -1118,8 +1128,9 @@ func release_throw() -> void:
 		charge = 1.0   # a hair early still counts as full
 	_cancel_charge(true)   # the stone keeps whirling through the cast until it's let go
 	_sling_cd = SLING_COOLDOWN
+	_throw_buf = 0.0   # the let-go press (toggle mode) isn't the next throw
 	_face_aim(land)
-	_play_action("slash")
+	_play_action("slash", SLING_CAST_SPEED)
 	# Release on the swing's release frame, not at wind-up
 	while is_instance_valid(self) and _sprite.animation.begins_with("slash") \
 			and _sprite.frame < SLING_RELEASE_FRAME:
@@ -2025,6 +2036,42 @@ func _glint() -> void:
 
 # ── Carried prop ───────────────────────────────────────────
 
+## Where a load sits in this worker's arms (world)
+func _hands_pos() -> Vector3:
+	if is_instance_valid(_carry_front):
+		return _carry_front.global_position
+	var anchor: Node3D = _sprite.carry_anchor() if _sprite != null else null
+	return anchor.global_position if anchor != null else global_position + Vector3.UP * HANDS_Y
+
+## Server: the near side of a pile's heap, where a load is lifted from
+func _pile_top(pile: Node3D, at: Vector3) -> Vector3:
+	var p := pile.global_position
+	var out := Vector3(at.x - p.x, 0.0, at.z - p.z)
+	p += out.limit_length(PILE_LIFT_REACH)
+	return Vector3(p.x, GROUND_Y + 0.6, p.z)
+
+## Server: where a delivered load is set down on `dest`: its face nearest the worker
+func _set_on(dest: Node3D, at: Vector3) -> Vector3:
+	var p: Vector3 = dest.approach_point(at, -0.45) if dest.has_method("approach_point") else dest.global_position
+	return Vector3(p.x, GROUND_Y + 0.6, p.z)
+
+## Server → everyone, cosmetic: a load hops between these arms and `spot`.
+## `into_arms`: lifted from `spot` (the carried prop waits for it to arrive); else set down there.
+@rpc("any_peer", "call_local", "reliable")
+func _load_fx(kind: String, spot: Vector3, into_arms: bool) -> void:
+	if multiplayer.get_remote_sender_id() != 1 or kind == "beam" or not is_inside_tree():
+		return
+	var arms_scale := CARRY_SCALE * CARRY_FRONT_SCALE
+	var parent := get_tree().current_scene
+	if into_arms:
+		_load_in_ms = Time.get_ticks_msec() + int(LoadFlight.TIME * 1000.0)
+		LoadFlight.fly(parent, kind, Transform3D(Basis(Vector3.UP, randf() * TAU), spot),
+			func() -> Vector3: return _hands_pos() if is_instance_valid(self) else spot, arms_scale)
+	else:
+		var from := _carry_front.global_transform if is_instance_valid(_carry_front) \
+			else Transform3D(Basis().scaled(Vector3.ONE * arms_scale), _hands_pos())
+		LoadFlight.fly(parent, kind, from, func() -> Vector3: return spot, 0.85, LoadFlight.End.SINK)
+
 ## `pop`: a fresh pickup, so the load lands in the arms squashed and springs to shape
 func _rebuild_carry_prop(pop := false) -> void:
 	for c in _carry_prop.get_children():
@@ -2047,8 +2094,15 @@ func _rebuild_carry_prop(pop := false) -> void:
 			_carry_prop.add_child(prop)
 		if pop:
 			var s := prop.scale
+			var tw := prop.create_tween()
+			# Still flying in from the pile: shown, squashed, as it reaches the arms
+			var wait := (_load_in_ms - Time.get_ticks_msec()) / 1000.0
+			if wait > 0.0:
+				prop.visible = false
+				tw.tween_interval(wait)
+				tw.tween_callback(prop.show)
 			prop.scale = Vector3(s.x * 1.2, s.y * 0.65, s.z * 1.2)
-			prop.create_tween().tween_property(prop, "scale", s, 0.22) 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(prop, "scale", s, 0.22) 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # ── Helpers ────────────────────────────────────────────────
 

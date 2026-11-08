@@ -125,12 +125,17 @@ func _process(delta: float) -> void:
 	_t += delta
 	var players := get_tree().get_nodes_in_group("players")
 	var foes := get_tree().get_nodes_in_group("enemies")
-	var calm := GameState.first_stretch()   # the first stretch: the flock only grazes where it stands
+	# The first stretch: the fold flock turns and ambles inside its walls, the strays by
+	# the work stand grazing, and nothing shies (playtest 3: the sheep drew the eye)
+	var calm := GameState.first_stretch()
 	for sh in _sheep:
 		sh.shy = maxf(sh.shy - delta, 0.0)
 		sh.alert = maxf(sh.alert - delta, 0.0)
 		if calm:
-			sh.step = move_toward(sh.step, 0.0, delta * 3.0)
+			if sh.pen_r > 0.0:
+				_move(sh, delta)
+			else:
+				sh.step = move_toward(sh.step, 0.0, delta * 3.0)
 		else:
 			if sh.shy <= 0.0:
 				_sense(sh, players, PLAYER_REACH)

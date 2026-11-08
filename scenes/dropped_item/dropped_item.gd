@@ -23,20 +23,45 @@ const REST_Y := { "stone": 0.14, "wood": 0.08, "mortar": 0.13, "beam": 0.11, "de
 	"branch": 0.1, "portion": 0.14 }
 
 @export var kind: String = "stone"
+## Where the dropper's arms were (world): the load hops down from there. ZERO = it just
+## appears (strewn by a pulling down, a saboteur, a test)
+@export var drop_from := Vector3.ZERO
+## Its size in the arms, so the hop starts from what was carried
+@export var drop_scale := 1.0
 
 var _taken := false
 
 func _ready() -> void:
 	add_to_group("dropped_items")
 	var prop := build_prop(kind)
-	prop.position.y = REST_Y.get(kind, 0.15)
+	var rest := Vector3(0, REST_Y.get(kind, 0.15), 0)
+	prop.position = rest
 	prop.rotation.y = hash(name) % 628 / 100.0  # every peer agrees on the angle
 	add_child(prop)
 	_add_marker()
+	if drop_from != Vector3.ZERO:
+		_hop_down(prop, rest)
+		return
 	# Small pop so a drop reads at a glance
 	prop.scale = Vector3.ONE * 0.6
 	prop.create_tween().tween_property(prop, "scale", Vector3.ONE, 0.18) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+# Out of the arms in a short arc, a thump of dust, then settles from a squash
+func _hop_down(prop: Node3D, rest: Vector3) -> void:
+	var from := drop_from - position
+	prop.position = from
+	prop.scale = Vector3.ONE * drop_scale
+	var tw := prop.create_tween()
+	tw.tween_method(func(t: float) -> void:
+		prop.position = from.lerp(rest, t * t) + Vector3.UP * sin(t * PI) * LoadFlight.ARC * 0.6
+		prop.scale = Vector3.ONE * lerpf(drop_scale, 1.0, t), 0.0, 1.0, LoadFlight.TIME)
+	tw.tween_callback(func() -> void:
+		DustFx.puff(self, global_position + Vector3.UP * 0.1, 6, 0.4)
+		if multiplayer.is_server():
+			drop_from = Vector3.ZERO)   # one who joins later finds it lying, not falling
+	tw.tween_property(prop, "scale", Vector3(1.25, 0.7, 1.25), 0.05)
+	tw.tween_property(prop, "scale", Vector3.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # Soft contact shadow so the load sits on the ground
 func _add_marker() -> void:

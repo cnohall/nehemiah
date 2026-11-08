@@ -15,8 +15,9 @@ const WALK_WAIT := 3.0      # s standing still before "walk" is worth saying
 const WALK_DONE := 4.0      # m walked: they know
 const FOE_NEAR := 14.0      # m: a foe this close is the next job (the sling reaches 10)
 const PING_EVERY := 0.4     # s between edge-arrow refreshes for an off-screen target
-# Walking a load in delivers it (Player._auto_deliver): no button to name, a trail to follow
+# Carrying: footprints to the wall, then the button once a press would deliver
 const DELIVER_LINE := "Carry it here"
+const DELIVER_PRESS := "Deliver  {interact}"
 const TRAIL_STEP := 0.85    # m between footprints
 const TRAIL_FLOW := 1.4     # m/s they creep toward the wall
 const TRAIL_REPATH := 0.15  # s: the near end keeps up with a walking player
@@ -102,7 +103,11 @@ func _work_goal(me: Player) -> Array:
 	if not me.carried_kind.is_empty():
 		if Settings.has_learned("deliver"):
 			return []
-		return [site, DELIVER_LINE] if SiteFocus.matches_carry() else [me, "Not needed here  {drop}"]
+		if not SiteFocus.matches_carry():
+			return [me, "Not needed here  {drop}"]
+		var choice := me._interact_choice(me.global_position)
+		var in_reach: bool = choice[0] == Player.Act.DELIVER and choice[1] == site
+		return [site, DELIVER_PRESS if in_reach else DELIVER_LINE]
 	if GameState.active_build and site.has_method("can_build") and site.can_build():
 		return [] if Settings.has_learned("build") else [site, "Build  {interact}"]
 	if Settings.has_learned("carry") and Settings.has_learned("deliver"):
@@ -147,7 +152,7 @@ func _show(goal: Array, delta: float) -> void:
 		_update_trail(null, delta)
 		return
 	speaking = true
-	_update_trail(node if goal[1] == DELIVER_LINE else null, delta)
+	_update_trail(node if goal[1] == DELIVER_LINE or goal[1] == DELIVER_PRESS else null, delta)
 	var own_tag := _own_tag(node)
 	var at := own_tag.global_position if own_tag != null else node.global_position + Vector3(0.0, 2.4, 0.0)
 	_guide.global_position = at
