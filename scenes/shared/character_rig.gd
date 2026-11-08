@@ -213,17 +213,19 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 				"bracers": true, "brow": HAIR_GINGER.darkened(0.2),
 				"sculpted_builder": true, "sculpted_body": true}, true)
 		3:
-			look.merge({"skin": SKIN[0], "hair": HAIR_GREY, "beard": "long", "hat": "wrap",
+			look.merge({"skin": SKIN[3], "hair": HAIR_GREY, "beard": "long", "hat": "wrap",
 				"hat_color": Color(0.96, 0.94, 0.89), "band": dye, "robe": Color(0.93, 0.90, 0.83),
 				"vest": dye, "long_robe": true, "scroll": Color(0.90, 0.82, 0.62),
 				"trim": dye.darkened(0.2), "brow": Color(0.62, 0.60, 0.56),
 				"sculpted_builder": true, "sculpted_body": true}, true)
 	return look
 
-## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type
-static func enemy_look(kind: String) -> Dictionary:
+## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type. Never told apart by
+## skin: Horonites, Ammonites and Arabs were the Judeans' own neighbours, so each foe draws
+## from the crew's SKIN range (`variant`, the same on every peer) and the cloth does the rest.
+static func enemy_look(kind: String, variant := 0) -> Dictionary:
 	var base := {
-		"skin": Color(0.60, 0.40, 0.27), "trim": Color(0.12, 0.09, 0.08), "hair": Color(0.19, 0.12, 0.08),
+		"skin": SKIN[posmod(variant, SKIN.size())], "trim": Color(0.12, 0.09, 0.08), "hair": Color(0.19, 0.12, 0.08),
 		"band": Color(0.10, 0.08, 0.07), "brows": true, "outline": Color(0.36, 0.07, 0.05),
 		"bare_arms": false,
 	}

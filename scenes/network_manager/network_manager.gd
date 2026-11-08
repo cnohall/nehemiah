@@ -384,6 +384,7 @@ func _on_steam_lobby_created(result: int, lobby_id: int) -> void:
 	_steam.setLobbyData(lobby_id, "host_name", steam_name())
 	_steam.setLobbyJoinable(lobby_id, true)
 	var peer: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
+	_relay_on(peer)
 	var err: int = peer.create_host(0)
 	if err != OK:
 		disconnect_session()
@@ -412,6 +413,7 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 		return
 	var lobby_owner: int = _steam.getLobbyOwner(lobby_id)
 	var peer: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
+	_relay_on(peer)
 	var err: int = peer.create_client(lobby_owner, 0)
 	if err != OK:
 		disconnect_session()
@@ -420,6 +422,13 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 	multiplayer.multiplayer_peer = peer
 	_set_presence()
 	# lobby_joined(true) fires from connected_to_server once the socket is up
+
+# Clients only reach each other through the host: each one's moves, RPCs and the
+# "someone joined" notice are relayed. SteamMultiplayerPeer has its own switch for it
+func _relay_on(peer: MultiplayerPeer) -> void:
+	if peer.has_method("set_server_relay"):
+		peer.call("set_server_relay", true)
+	multiplayer.server_relay = true
 
 # Friend clicked "Join Game" in the overlay / friends list, or accepted an invite
 func _on_steam_join_requested(lobby_id: int, _friend_id: int) -> void:

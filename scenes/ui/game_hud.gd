@@ -21,6 +21,8 @@ const TALLY_COUNT   := 0.55    # seconds each number takes to count up
 const TALLY_STEP    := 0.3     # between one number starting and the next
 const WALL_CAM_HOLD := 3.3     # Main.WALL_CAM_TIME + its lead-in, less a beat
 const BANNER_PAD    := 28.0    # space above and below the banner text
+const BANNER_TOP    := -12.0   # Banner offset_top (as in the scene)
+const SCREEN_EDGE   := 16.0    # the tally never runs closer than this to the screen's top or bottom
 const BANNER_H      := 150.0   # Banner offset_bottom: title + sub…
 const TALLY_H       := 118.0   # …plus the numbers row…
 const CREW_H        := 62.0   # …plus one line per worker's share (multiplayer)
@@ -87,6 +89,8 @@ var _pause_what: Label       # controls card: what the pause key does
 var _host_refreshers: Array[Callable] = []   # bot / difficulty rows (gather panel + pause menu)
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _ready_row: ReadyRow      # under the tally: hold [E] to go on, who else is ready
+var _tally_builders: Control  # the "next to him…" names: first to go when the tally won't fit
+var _invite_fold := Callable()   # (folded: bool) — the Steam invite panel tucks away once the work starts
 var _tally_waiting: Array = []   # latest DayDirector ready state for the tally
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
 var _next_line: Label        # day plaque: what to do next, for the local player
@@ -599,6 +603,9 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 		_tally.hide()
 		banner.hide()
 	gather.visible = phase == GameState.Phase.GATHER
+	# Open while the crew gathers, folded once the work starts (a click brings it back)
+	if _invite_fold.is_valid():
+		_invite_fold.call(phase != GameState.Phase.GATHER)
 	_refresh_controls()
 	var section := GameState.get_current_section()
 	match phase:
@@ -676,6 +683,8 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 	banner_sub.custom_minimum_size.x = minf(banner.get_viewport_rect().size.x * 0.84, 1100.0)
 	if _tally != null and not with_tally:
 		_tally.hide()
+	banner.offset_top = BANNER_TOP   # _fit_tally may have moved it…
+	banner.scale = Vector2.ONE       # …or shrunk it
 	if not with_tally:
 		# Grow the band with the text (a new stretch can bring two twist lines)
 		var content := ($Root/Banner/VBox as Control).get_combined_minimum_size().y
@@ -998,6 +1007,7 @@ func show_tally(stats: Dictionary) -> void:
 	# campaign strip, today's cell filling. Counts beneath either way, smaller.
 	var marks_line: Control = null
 	var builders_shown := false
+	_tally_builders = null
 	var strip: CircuitStrip = null
 	if stats.has("marks") and unfinished == 0:
 		var gap := Control.new()
@@ -1008,6 +1018,7 @@ func show_tally(stats: Dictionary) -> void:
 		var builders := _builders_line()
 		if builders:
 			builders_shown = true
+			_tally_builders = builders
 			_tally.add_child(builders)
 		var after := Control.new()  # air between the marks and the counts
 		after.custom_minimum_size.y = 8
@@ -1081,6 +1092,40 @@ func show_tally(stats: Dictionary) -> void:
 		banner_title.scale = Vector2.ONE * 1.08
 		create_tween().tween_property(banner_title, "scale", Vector2.ONE, 0.4) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.2)
+	_fit_tally()
+
+## The heights above are a guess: builder names wrap to two lines, a crew row joins, a
+## language runs longer. Once laid out, grow the band to what it holds and lift it so
+## the ready prompt ("Hold E", "E · Not ready yet") never sits below the screen
+func _fit_tally() -> void:
+	# Wrapped labels learn their height a frame after they learn their width
+	for i in 2:
+		await get_tree().process_frame
+	if _tally == null or not _tally.visible or not banner.visible:
+		return
+	var vp_h := banner.get_viewport_rect().size.y
+	var room := vp_h - SCREEN_EDGE * 2.0
+	var vbox := $Root/Banner/VBox as Control
+	var content := vbox.get_combined_minimum_size().y + BANNER_PAD * 2.0
+	# A finished stretch with a crew runs taller than a 1080 screen: the builders'
+	# names go first (flavour), so the ready prompt beneath always shows
+	if content > room and _tally_builders != null and _tally_builders.visible:
+		var freed := _tally_builders.get_combined_minimum_size().y \
+			+ float(_tally.get_theme_constant("separation"))
+		_tally_builders.hide()
+		content -= freed
+		banner.offset_bottom -= freed
+	var h := maxf(banner.offset_bottom - banner.offset_top, content)
+	# Still too tall: shrink the whole band from its top centre to fit
+	var s := minf(1.0, room / h)
+	banner.pivot_offset = Vector2(banner.size.x * 0.5, 0.0)
+	banner.scale = Vector2.ONE * s
+	var top := banner.anchor_top * vp_h + banner.offset_top
+	top = clampf(top, SCREEN_EDGE, maxf(SCREEN_EDGE, vp_h - h * s - SCREEN_EDGE))
+	banner.anchor_top = 0.0
+	banner.anchor_bottom = 0.0
+	banner.offset_top = top
+	banner.offset_bottom = top + h
 
 # The section's three marks, each with what earned it (or what it needed)
 func _marks_line(stats: Dictionary, big := false) -> Control:
@@ -1831,6 +1876,32 @@ func _build_invite_panel() -> void:
 		DisplayServer.clipboard_set(NetworkManager.lobby_code())
 		copy.text = "Copied")
 	hb.add_child(copy)
+
+	# Fold: down to "Crew" and a chevron, so it doesn't sit over the tally all game.
+	# A drawn chevron (no font glyph to trust): › folds away to the right, ‹ opens
+	var fold := Button.new()
+	fold.theme_type_variation = &"GhostButton"
+	fold.focus_mode = Control.FOCUS_NONE
+	fold.custom_minimum_size = Vector2(36, 0)
+	fold.tooltip_text = tr("Fold")
+	hb.add_child(fold)
+	var folded := [false]
+	fold.draw.connect(func():
+		var c := fold.size * 0.5
+		var d := -1.0 if folded[0] else 1.0   # folded: point left, back out
+		var pts := PackedVector2Array([c + Vector2(-4 * d, -7), c + Vector2(4 * d, 0), c + Vector2(-4 * d, 7)])
+		fold.draw_polyline(pts, UiStyle.INK, 2.0, true))
+	var set_folded := func(f: bool):
+		folded[0] = f
+		invite.visible = not f
+		copy.visible = not f
+		if f:
+			list_panel.hide()
+		fold.tooltip_text = tr("Invite friends") if f else tr("Fold")
+		fold.queue_redraw()
+	fold.pressed.connect(func(): set_folded.call(not folded[0]))
+	_invite_fold = set_folded
+	set_folded.call(GameState.phase != GameState.Phase.GATHER)
 
 func _fill_friend_list(list: VBoxContainer, scroll: ScrollContainer) -> void:
 	for c in list.get_children():

@@ -1396,8 +1396,8 @@ msgstr "걷기  {move}"
 msgid "Pick up  {interact}"
 msgstr "줍기  {interact}"
 
-msgid "Deliver  {interact}"
-msgstr "전달  {interact}"
+msgid "Carry it here"
+msgstr "여기로 가져가세요"
 
 msgid "Not needed here  {drop}"
 msgstr "여기선 필요 없음  {drop}"

@@ -93,6 +93,7 @@ const BEAM_HELP_REACH := 3.2      # from the carrier: covers the dragging end, w
 const BEAM_HOLD_Y     := 1.25     # shoulder height
 const FOCUS_COLOR     := Color(0.99, 0.93, 0.74, 0.95)   # cream ring under what [E] will use
 const FOCUS_POLL      := 0.1
+const AUTO_DELIVER_CD := 0.6      # s between walk-in deliveries (the server's reply lands first)
 const RUN_ANIM_SPEED  := 8.0      # ground speed the run cycle was drawn for
 const WALK_ANIM_SPEED := 4.5
 const STICK_DEADZONE  := 0.2
@@ -125,6 +126,11 @@ var anim := "idle_down":
 		if _sprite != null and _sprite.animation != value:
 			_sprite.stirring = value.begins_with("build_") and _at_trough() != null
 			_sprite.play(value)
+
+# Replicated position + owner's clock; other peers draw it smoothed (NetSmooth)
+var net_pos: Vector4:
+	get: return NetSmooth.stamp(self)
+	set(v): NetSmooth.receive(self, v)
 
 var health: float = MAX_HEALTH
 var carried_kind: String = ""
@@ -167,6 +173,7 @@ var _dash_cd := 0.0
 var _dash_dir := Vector3.ZERO
 var _focus_ring: MeshInstance3D
 var _focus_poll := 0.0
+var _auto_cd := 0.0
 var _beam: Node3D   # carried beam, placed in world space between the two ends
 var _beam_tag: WorldTag   # "Take the other end" over a lone beam's dragging end, for the others
 var _buffered := {}   # action → seconds left to act on an early press
@@ -723,7 +730,9 @@ func _update_focus(delta: float) -> void:
 		_build_focus_ring()
 	var target: Node3D = null
 	if not downed and not GameState.is_over():
-		target = _interact_choice(global_position)[1]
+		var choice := _interact_choice(global_position)
+		target = choice[1]
+		_auto_deliver(choice[0], target)
 	_focus_ring.visible = target != null
 	if target == null:
 		return
@@ -740,6 +749,20 @@ func _update_focus(delta: float) -> void:
 		size = 1.1
 	_focus_ring.global_position = Vector3(spot.x, GROUND_Y + lift, spot.z)
 	_focus_ring.mesh.size = Vector2(size, size)
+
+## Owner: walking a load into a wall that wants it hands it over, no button: the first
+## loop is "pick up, walk to the wall". The same press [E] would send, so the server's
+## rules (deposit, last load sets you to work) stay in one place. Walls only: a hungry
+## household (Neh. 5) is a choice, never an accident of walking past.
+func _auto_deliver(act: Act, target: Node3D) -> void:
+	_auto_cd = maxf(0.0, _auto_cd - FOCUS_POLL)   # runs once a focus poll
+	if act != Act.DELIVER or target == null or not target.is_in_group("build_sites") or _auto_cd > 0.0:
+		return
+	if GameState.phase not in [GameState.Phase.DAWN, GameState.Phase.WORK] or _is_busy or _climbing or _work_site != null \
+			or _led_by != null or _hold_time > 0.0:
+		return
+	_auto_cd = AUTO_DELIVER_CD
+	_server_interact.rpc_id(1, global_position)
 
 func _build_focus_ring() -> void:
 	var quad := QuadMesh.new()

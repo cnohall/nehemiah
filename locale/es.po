@@ -1406,8 +1406,8 @@ msgstr "Caminar  {move}"
 msgid "Pick up  {interact}"
 msgstr "Recoger  {interact}"
 
-msgid "Deliver  {interact}"
-msgstr "Entregar  {interact}"
+msgid "Carry it here"
+msgstr "Llévalo aquí"
 
 msgid "Not needed here  {drop}"
 msgstr "Aquí no hace falta  {drop}"

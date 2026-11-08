@@ -91,6 +91,11 @@ var anim := "idle_down":
 		if _sprite != null and _sprite.animation != value:
 			_sprite.play(value)
 
+# Replicated position + server clock; clients draw it smoothed (NetSmooth)
+var net_pos: Vector4:
+	get: return NetSmooth.stamp(self)
+	set(v): NetSmooth.receive(self, v)
+
 # Replicated hit counter — every change flashes the sprite on all peers
 var hits := 0:
 	set(value):
@@ -152,7 +157,8 @@ func _ready() -> void:
 	_bar.position.y = 2.6 * SCALE[type]
 	add_child(_bar)
 	add_to_group("enemies")
-	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type]), SCALE[type])
+	# Skin by name: the spawner gives every peer the same one
+	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type], String(name).hash()), SCALE[type])
 	GameState.mark_met(_LOOKS[type])
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
@@ -485,7 +491,8 @@ func _die() -> void:
 
 # Every peer: the fallen foe goes in a puff of dust just before he's freed
 func _vanish() -> void:
-	DustFx.puff(get_parent(), global_position + Vector3.UP * 0.3, 8, 0.6)   # outlives him
+	# Outlives him. Not under the enemies root: everything iterating it expects Enemy children
+	DustFx.puff(get_tree().current_scene, global_position + Vector3.UP * 0.3, 8, 0.6)
 	create_tween().tween_property(_sprite, "scale", Vector3.ONE * 0.01, VANISH_TIME) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 

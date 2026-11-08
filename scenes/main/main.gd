@@ -561,11 +561,19 @@ func _on_peer_connected(id: int) -> void:
 	# All peers spawn the newly arrived player
 	_spawn_player(id)
 	if multiplayer.is_server():
+		# A client hears of another client only through the host's relay, and that notice
+		# can miss (Steam) or land before its Main is up: the host says so itself, as it
+		# does for bots. _spawn_player skips one already there.
+		for peer in _ready_peers():
+			if peer != id:
+				_receive_roster_entry.rpc_id(peer, id)
 		fit_bots()   # a person takes a bot's place when the crew is full
 
 func _on_peer_disconnected(id: int) -> void:
 	_despawn(id)
 	if multiplayer.is_server():
+		for peer in _ready_peers():
+			_remove_bot.rpc_id(peer, id)   # same reason, the other way
 		fit_bots()
 
 func _despawn(id: int) -> void:
@@ -655,6 +663,7 @@ func _bot_skill() -> int:
 func _ready_peers() -> Array:
 	return Array(multiplayer.get_peers()).filter(NetworkManager.is_peer_ready)
 
+# A bot let go, or a person who left (host → clients)
 @rpc("authority", "reliable")
 func _remove_bot(id: int) -> void:
 	_despawn(id)
