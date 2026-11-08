@@ -519,6 +519,11 @@ func _carve(text: String, unit: Node3D) -> Label3D:
 	mat.roughness = 0.95
 	tablet.material_override = mat
 	tablet.position = Vector3(unit.global_position.x, 1.45, face + 0.28)
+	# A gate: set into the lintel over the opening, not across the doors
+	var gate_consts: Dictionary = unit.get_script().get_script_constant_map() if unit.get_script() != null else {}
+	if gate_consts.has("LINTEL_Y"):
+		var lintel: Vector3 = gate_consts["LINTEL_SIZE"]
+		tablet.position = Vector3(unit.global_position.x, gate_consts["LINTEL_Y"] + lintel.y * 0.5, unit.global_position.z + lintel.z * 0.5 + 0.06)
 	tablet.scale = Vector3(1.0, 0.001, 1.0)
 	add_child(tablet)
 	var l := Label3D.new()

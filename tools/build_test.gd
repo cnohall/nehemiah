@@ -85,7 +85,7 @@ func _process(delta: float) -> bool:
 		return false
 	if _mode == "client" and _main == null:
 		# Status flips to connected a moment before the server hands out our peer id
-		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1:
+		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1 and 1 in root.multiplayer.get_peers():
 			_start_main()
 		return false
 	if _mode == "host" and _main != null:

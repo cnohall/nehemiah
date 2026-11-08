@@ -109,7 +109,7 @@ func _network(_delta: float) -> bool:
 			nm.join("127.0.0.1", nm.TEST_PORT)
 		return false
 	if _main == null:
-		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1:
+		if root.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED 				and root.multiplayer.get_unique_id() != 1 and 1 in root.multiplayer.get_peers():
 			_main = load("res://scenes/main/main.tscn").instantiate()
 			root.add_child(_main)
 			current_scene = _main

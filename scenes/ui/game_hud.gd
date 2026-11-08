@@ -1935,8 +1935,9 @@ func _build_room_panel() -> void:
 		DisplayServer.clipboard_set(NetworkManager.room_code())
 		copy.text = "Copied")
 	hb.add_child(copy)
+	var share: Button = null
 	if not link.is_empty():
-		var share := Button.new()
+		share = Button.new()
 		share.theme_type_variation = &"PrimaryButton"
 		share.text = "Copy invite link"
 		share.focus_mode = Control.FOCUS_NONE
@@ -1944,6 +1945,34 @@ func _build_room_panel() -> void:
 			DisplayServer.clipboard_set(link)
 			share.text = "Link copied")
 		hb.add_child(share)
+
+	# Fold like the Steam card: once the work starts, down to "Room CODE" and a
+	# chevron, so the code stays readable for a late friend but the buttons go
+	var fold := Button.new()
+	fold.theme_type_variation = &"GhostButton"
+	fold.focus_mode = Control.FOCUS_NONE
+	fold.custom_minimum_size = Vector2(36, 0)
+	fold.tooltip_text = tr("Fold")
+	hb.add_child(fold)
+	var folded := [false]
+	fold.draw.connect(func():
+		var c := fold.size * 0.5
+		var d := -1.0 if folded[0] else 1.0   # folded: point left, back out
+		var pts := PackedVector2Array([c + Vector2(-4 * d, -7), c + Vector2(4 * d, 0), c + Vector2(-4 * d, 7)])
+		fold.draw_polyline(pts, UiStyle.INK, 2.0, true))
+	var set_folded := func(f: bool):
+		folded[0] = f
+		copy.visible = not f
+		copy.text = "Copy code"   # fresh labels when it opens again
+		if share != null:
+			share.visible = not f
+			share.text = "Copy invite link"
+		fold.tooltip_text = tr("Invite friends") if f else tr("Fold")
+		fold.queue_redraw()
+	fold.pressed.connect(func(): set_folded.call(not folded[0]))
+	_invite_fold = set_folded
+	set_folded.call(GameState.phase != GameState.Phase.GATHER)
+
 	# Lift the controls hint clear of the room card (it's built first, in the same corner)
 	if _controls != null:
 		var lift := panel.get_combined_minimum_size().y + 10.0
