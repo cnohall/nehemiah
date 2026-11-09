@@ -16,7 +16,7 @@ const SLING_MIN_RANGE  := 4.0
 const SLING_MAX_RANGE  := 10.0
 const SLING_MIN_DAMAGE := 12.0
 const SLING_MAX_DAMAGE := 25.0
-const SLING_CHARGE_TIME := 0.9    # seconds to full charge
+const SLING_CHARGE_TIME := 0.7    # seconds to full charge (= CharacterRig.WINDUP_FULL)
 const SLING_COOLDOWN   := 0.4     # from the let-go; about when the cast's follow-through ends
 const SLING_CAST_SPEED := 1.3     # the "slash" cast plays this fast, so the stone leaves soon after the let-go
 const THROW_BUFFER     := 0.3     # a press this early (mid-cast / cooldown) still starts the next whirl
@@ -27,9 +27,9 @@ const SLING_KNOCK_MAX  := 0.55    # …and full
 # spin the stone glints once a beat — at full charge, then every TRUE_PERIOD. Let go within
 # TRUE_HALF of a glint and the stone strikes ×TRUE_MULT and knocks the foe off his feet.
 # A ring closes on the aim ring over TRUE_LEAD before each glint, so it can be timed
-const TRUE_PERIOD      := 0.75
-const TRUE_HALF        := 0.11
-const TRUE_LEAD        := 0.4
+const TRUE_PERIOD      := 0.55
+const TRUE_HALF        := 0.09    # ~a third of the beat: a quicker beat with a tighter window, so mashing doesn't land them
+const TRUE_LEAD        := 0.3
 const TRUE_MULT        := 1.5
 const TRUE_KNOCK       := 1.4     # m a true shot throws a scout back as he goes down
 const AIM_RING_TRUE    := Color(1.0, 0.86, 0.48, 1.0)    # the aim ring in the window: gold
@@ -678,8 +678,8 @@ func _interact_choice(at: Vector3) -> Array:
 		var dest := _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
 		if dest == null:   # a hungry household of the Fountain Gate (Neh. 5)
 			dest = _nearest_in_reach("households", at, func(h): return h.needs(carried_kind))
-		if dest == null and carried_kind != "beam" and _wall_to_climb(at) != null:
-			return [Act.CLIMB, _wall_to_climb(at)]
+		# No climbing laden: a missed delivery press used to throw you over the wall.
+		# Set the load down ([drop]) first, then climb.
 		return [Act.DELIVER, dest]
 	var carrier := _carrier_needing_help(at)
 	if carrier != null:
@@ -957,6 +957,8 @@ func _why_not_needed(at: Vector3) -> PackedStringArray:
 	if wall.can_build():
 		# Every load for this stage is in; it only wants working before the next material
 		return ["Build this stage first: {drop} to drop, then {interact} to work", ""]
+	if wall.has_method("blocks_workers") and wall.blocks_workers():
+		return ["This wall is finished. {drop} to set it down, then {interact} to climb over", ""]
 	return ["This wall is finished", ""]
 
 @rpc("any_peer", "call_local", "reliable")
