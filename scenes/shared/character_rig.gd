@@ -34,7 +34,7 @@ const BEVEL_SCALE  := 1.3      # chamfer as a multiple of each part's authored b
 const BUILD_TURN   := -0.65
 const BLEND_TIME   := 0.09     # cross-fade from the old pose when the animation changes
 const HOLD_TIME    := 0.1      # this long without motion and the figure counts as stopped
-const WINDUP_FULL  := 0.9    # wind-up reaches full tension (= Player.SLING_CHARGE_TIME)
+const WINDUP_FULL  := 0.7   # wind-up reaches full tension (= Player.SLING_CHARGE_TIME)
 const SEEN_MARGIN  := 3.0      # metres past the view edge a figure still poses (its shadow, the next pan)
 
 # Rig dimensions (metres, before scale). Feet at y = 0.

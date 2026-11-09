@@ -67,6 +67,57 @@ func _input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if _await_release and not GAMEPLAY.any(Input.is_action_pressed):
 		_await_release = false
+	_update_cursor()
+
+# ── Play cursor ────────────────────────────────────────────
+# The OS arrow is lost on the busy HD-2D ground. While our own worker is out there to aim,
+# the arrow becomes a big cream reticle with an ink outline; menus, story and the tally get
+# the arrow back. Scaled to the window height, so it doesn't shrink to a speck at 4K.
+const RETICLE_PX := 40      # at 1080p
+const RETICLE_MAX := 96     # browsers drop cursors over 128 px
+var _reticle_px := 0        # 0 = OS arrow
+
+func _update_cursor() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var px := 0
+	if not using_pad and not menu_open and _local_worker_out():
+		var h := float(DisplayServer.window_get_size().y)
+		px = clampi(roundi(RETICLE_PX * h / 1080.0), 32, RETICLE_MAX)
+	if px == _reticle_px:
+		return
+	_reticle_px = px
+	if px == 0:
+		Input.set_custom_mouse_cursor(null)
+	else:
+		Input.set_custom_mouse_cursor(_reticle(px), Input.CURSOR_ARROW, Vector2(px, px) * 0.5)
+
+func _local_worker_out() -> bool:
+	if GameState.phase not in [GameState.Phase.DAWN, GameState.Phase.WORK, GameState.Phase.GATHER]:
+		return false
+	for p in get_tree().get_nodes_in_group("players"):
+		if p.get("brain") == null and p.is_multiplayer_authority():
+			return true
+	return false
+
+## A ring and a centre dot, cream on an ink outline (reads on sand and on stone)
+static func _reticle(px: int) -> Image:
+	var img := Image.create_empty(px, px, false, Image.FORMAT_RGBA8)
+	var c := px * 0.5
+	var ring := px * 0.30
+	var band := maxf(1.5, px * 0.05)     # half-width of the cream ring
+	var dot := maxf(1.5, px * 0.06)
+	var line := maxf(1.5, px * 0.045)    # ink outline round both
+	for y in px:
+		for x in px:
+			var d := Vector2(x + 0.5 - c, y + 0.5 - c).length()
+			var sd := minf(absf(d - ring) - band, d - dot)   # <0 inside the cream
+			var fill := clampf(0.5 - sd, 0.0, 1.0)
+			var edge := clampf(0.5 - (sd - line), 0.0, 1.0)
+			var col := UiStyle.INK.lerp(UiStyle.CREAM, fill)
+			col.a = edge
+			img.set_pixel(x, y, col)
+	return img
 
 ## HUD: a menu opened / closed over play
 func set_menu_open(open: bool) -> void:

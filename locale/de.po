@@ -703,6 +703,9 @@ msgstr "Erst diesen Bauabschnitt fertigstellen: {drop} zum Ablegen, dann {intera
 msgid "This wall is finished"
 msgstr "Diese Mauer ist fertig"
 
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
+msgstr "Diese Mauer ist fertig. {drop} zum Absetzen, dann {interact} zum Hinüberklettern"
+
 msgid "Caught it"
 msgstr "Gefangen"
 

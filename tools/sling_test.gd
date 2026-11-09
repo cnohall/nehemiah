@@ -71,7 +71,7 @@ func _process(delta: float) -> bool:
 				_player.global_position = Vector3(0.0, 0.1, -4.0)
 				_check(is_zero_approx(_P.true_offset(_P.SLING_CHARGE_TIME)), "a glint at full charge")
 				_check(absf(_P.true_offset(_P.SLING_CHARGE_TIME + _P.TRUE_PERIOD * 2.0)) < 0.001, "…and every beat after")
-				_check(_P.true_offset(_P.SLING_CHARGE_TIME + 0.3) > _P.TRUE_HALF, "between beats is outside the window")
+				_check(absf(_P.true_offset(_P.SLING_CHARGE_TIME + _P.TRUE_PERIOD * 0.5)) > _P.TRUE_HALF, "between beats is outside the window")
 				_check(_P.true_offset(0.5) < -_P.TRUE_HALF, "before full charge is outside the window")
 				_spawn(0, Vector3(1.1, 0, -1.1))
 				_state = "stand"

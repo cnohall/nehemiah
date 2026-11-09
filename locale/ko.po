@@ -703,6 +703,9 @@ msgstr "이 단계를 먼저 쌓으세요: {drop} 내려놓고 {interact} 작업
 msgid "This wall is finished"
 msgstr "이 성벽은 완성되었습니다"
 
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
+msgstr "이 성벽은 완성되었습니다. {drop}(으)로 내려놓고 {interact}(으)로 넘어가세요"
+
 msgid "Caught it"
 msgstr "받았다"
 

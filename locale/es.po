@@ -703,6 +703,9 @@ msgstr "Primero construye esta etapa: {drop} para soltar la carga, luego {intera
 msgid "This wall is finished"
 msgstr "Esta muralla está terminada"
 
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
+msgstr "Esta muralla está terminada. {drop} para soltarlo, luego {interact} para trepar"
+
 msgid "Caught it"
 msgstr "¡Atrapada!"
 

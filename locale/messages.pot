@@ -2787,6 +2787,9 @@ msgstr ""
 msgid "This wall is finished"
 msgstr ""
 
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
+msgstr ""
+
 #: scenes\ui\friends_and_foes.gd:73
 msgid "Those against the work"
 msgstr ""
