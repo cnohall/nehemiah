@@ -2602,3 +2602,36 @@ msgstr "Zielen und schleudern"
 
 msgid "Your game and the host's are different versions. Both of you need the same build to play together."
 msgstr "Dein Spiel und das des Gastgebers sind verschiedene Versionen. Ihr braucht beide dieselbe Version, um zusammen zu spielen."
+
+msgid "Opening the gates"
+msgstr "Die Tore öffnen sich"
+
+msgid "Gathering the builders"
+msgstr "Die Bauleute sammeln sich"
+
+msgid "Back to the city"
+msgstr "Zurück in die Stadt"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Carry the load to the wall, then work it up with your own hands."
+msgstr "Trag die Last zur Mauer und zieh sie dann mit eigenen Händen hoch."
+
+msgid "Foes come while you build. Drive them off, then go back to the work."
+msgstr "Feinde kommen, während du baust. Vertreib sie und geh dann zurück an die Arbeit."
+
+msgid "If ten foes reach the inner city, the city falls."
+msgstr "Erreichen zehn Feinde die innere Stadt, fällt die Stadt."
+
+msgid "Each stretch has three marks to earn: In good time, None got through, The wall holds."
+msgstr "Jeder Abschnitt hat drei Zeichen zu verdienen: Gut in der Zeit, Keiner kam durch, Die Mauer hält."
+
+msgid "The campaign is kept at the start of each stretch. Continue picks it up from there."
+msgstr "Der Feldzug wird zu Beginn jedes Abschnitts gesichert. Fortsetzen macht dort weiter."
+
+msgid "Every stretch you have built can be played again from the map."
+msgstr "Jeden Abschnitt, den du gebaut hast, kannst du auf der Karte noch einmal spielen."
+
+msgid "Playing alone: bots fill the crew, and come to the work or the fight when you call."
+msgstr "Allein unterwegs: Bots füllen die Truppe auf und kommen zur Arbeit oder zum Kampf, wenn du rufst."

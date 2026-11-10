@@ -1,4 +1,4 @@
-[gd_resource type="AudioBusLayout" load_steps=2 format=3]
+[gd_resource type="AudioBusLayout" format=3 uid="uid://bxcrdxfg4xyh4"]
 
 [sub_resource type="AudioEffectAmplify" id="AudioEffectAmplify_voicedip"]
 resource_name = "VoiceDip"

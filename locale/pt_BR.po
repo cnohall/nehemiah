@@ -2602,3 +2602,36 @@ msgstr "Mire e lance"
 
 msgid "Your game and the host's are different versions. Both of you need the same build to play together."
 msgstr "O seu jogo e o do anfitrião são versões diferentes. Vocês dois precisam da mesma versão para jogar juntos."
+
+msgid "Opening the gates"
+msgstr "Abrindo as portas"
+
+msgid "Gathering the builders"
+msgstr "Reunindo os construtores"
+
+msgid "Back to the city"
+msgstr "De volta à cidade"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Carry the load to the wall, then work it up with your own hands."
+msgstr "Leve a carga até a muralha e depois levante-a com as próprias mãos."
+
+msgid "Foes come while you build. Drive them off, then go back to the work."
+msgstr "Os inimigos chegam enquanto você constrói. Expulse-os e volte à obra."
+
+msgid "If ten foes reach the inner city, the city falls."
+msgstr "Se dez inimigos chegarem ao interior da cidade, a cidade cai."
+
+msgid "Each stretch has three marks to earn: In good time, None got through, The wall holds."
+msgstr "Cada trecho tem três marcas a conquistar: No tempo certo, Ninguém passou, A muralha resiste."
+
+msgid "The campaign is kept at the start of each stretch. Continue picks it up from there."
+msgstr "A campanha é salva no início de cada trecho. Continuar retoma dali."
+
+msgid "Every stretch you have built can be played again from the map."
+msgstr "Todo trecho que você construiu pode ser jogado de novo pelo mapa."
+
+msgid "Playing alone: bots fill the crew, and come to the work or the fight when you call."
+msgstr "Jogando sozinho: os bots completam a equipe e vêm para a obra ou para a luta quando você chama."

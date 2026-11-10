@@ -735,12 +735,16 @@ func _restart(choice: String) -> void:
 func _reload(replay: int, picker: int) -> void:
 	GameState.replay_section = replay
 	GameState.picker_return = picker
-	get_tree().paused = false
 	Engine.time_scale = 1.0
+	# Where the next run opens, for the cover's map: the replay's stretch, the stretch
+	# lost (started again from its first day), else a campaign begun anew
+	var section := replay if replay >= 0 else (GameState.current_section_index if GameState.phase == GameState.Phase.LOST else 0)
+	if GameState.festival:
+		section = -1
 	var restart := GameState.restart_day
 	GameState.reset()
 	GameState.restart_day = restart
-	get_tree().reload_current_scene.call_deferred()
+	LoadCover.go(get_tree().current_scene.scene_file_path, "Gathering the builders", section)
 
 # Host plus every client whose Main scene exists — a peer still loading in has
 # nowhere to receive these RPCs (it catches up via send_story_to)

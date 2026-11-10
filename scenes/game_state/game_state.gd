@@ -620,6 +620,15 @@ func reset() -> void:
 	boon = ""
 	_debug_start = attract or festival
 
+## Host, before loading the game: the stretch the run will open on (the load cover's
+## map), or -1 for the festival
+func start_section() -> int:
+	if festival:
+		return -1
+	if is_replay():
+		return replay_section
+	return _section_index_for_day(restart_day) if restart_day > 0 else 0
+
 ## Server: a replay starts on its section's first day
 func apply_replay() -> void:
 	if is_replay():

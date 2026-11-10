@@ -30,6 +30,7 @@ Settings="*res://scenes/settings/settings.gd"
 InputMode="*res://scenes/input_mode/input_mode.gd"
 SteamAchievements="*res://scenes/achievements/achievements.gd"
 Telemetry="*res://scenes/telemetry/telemetry.gd"
+LoadCover="*res://scenes/ui/load_cover.gd"
 
 [debug]
 

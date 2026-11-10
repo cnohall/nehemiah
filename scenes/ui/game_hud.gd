@@ -346,7 +346,7 @@ func _leave() -> void:
 	get_tree().paused = false
 	NetworkManager.disconnect_session()
 	GameState.reset()
-	get_tree().change_scene_to_file(MENU_SCENE)
+	LoadCover.go(MENU_SCENE, "Back to the city")
 
 # ── Day / Section ──────────────────────────────────────────
 
