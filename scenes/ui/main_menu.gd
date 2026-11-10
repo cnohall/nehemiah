@@ -44,7 +44,7 @@ var _world_tween: Tween
 @onready var fade:          ColorRect = $Fade
 
 func _ready() -> void:
-	Sfx.play_music("calm")  # back from a finished game, the music may be off
+	Sfx.play_music("menu")  # back from a finished game, the music may be off
 	host_btn.pressed.connect(_on_host)
 	_build_continue()
 	# Replay map: first of the second tier, under Join; the picker over everything

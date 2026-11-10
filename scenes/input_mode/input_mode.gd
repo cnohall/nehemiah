@@ -71,17 +71,21 @@ func _process(_delta: float) -> void:
 
 # ── Play cursor ────────────────────────────────────────────
 # The OS arrow is lost on the busy HD-2D ground. While our own worker is out there to aim,
-# the arrow becomes a big cream reticle with an ink outline; menus, story and the tally get
-# the arrow back. Scaled to the window height, so it doesn't shrink to a speck at 4K.
+# the arrow becomes a big cream reticle with an ink outline; menus, story, the tally and
+# any HUD panel under the pointer get the arrow back (same rule as the throw in player.gd:
+# the reticle shows only where a click would throw). Scaled to the window height, so it
+# doesn't shrink to a speck at 4K.
 const RETICLE_PX := 40      # at 1080p
 const RETICLE_MAX := 96     # browsers drop cursors over 128 px
 var _reticle_px := 0        # 0 = OS arrow
+var _reticle_img: Image     # cached: hovering on/off the HUD swaps often
 
 func _update_cursor() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	var px := 0
-	if not using_pad and not menu_open and _local_worker_out():
+	if not using_pad and not menu_open and _local_worker_out() \
+			and get_viewport().gui_get_hovered_control() == null:
 		var h := float(DisplayServer.window_get_size().y)
 		px = clampi(roundi(RETICLE_PX * h / 1080.0), 32, RETICLE_MAX)
 	if px == _reticle_px:
@@ -90,7 +94,9 @@ func _update_cursor() -> void:
 	if px == 0:
 		Input.set_custom_mouse_cursor(null)
 	else:
-		Input.set_custom_mouse_cursor(_reticle(px), Input.CURSOR_ARROW, Vector2(px, px) * 0.5)
+		if _reticle_img == null or _reticle_img.get_width() != px:
+			_reticle_img = _reticle(px)
+		Input.set_custom_mouse_cursor(_reticle_img, Input.CURSOR_ARROW, Vector2(px, px) * 0.5)
 
 func _local_worker_out() -> bool:
 	if GameState.phase not in [GameState.Phase.DAWN, GameState.Phase.WORK, GameState.Phase.GATHER]:

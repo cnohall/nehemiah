@@ -118,6 +118,7 @@ func _ready() -> void:
 	if GameState.attract:
 		_start_attract()
 		return
+	Sfx.sync_music()   # out of the menu theme, into the phase's own
 	hud = HUD_SCENE.instantiate()
 	add_child(hud)
 	var reel := Highlights.new()

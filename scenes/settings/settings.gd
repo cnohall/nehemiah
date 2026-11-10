@@ -20,6 +20,7 @@ var _mode_pending := false         # a fullscreen / windowed change is still bei
 var volume := 0.8   # master bus, linear 0..1
 var music_volume := 0.6   # Music bus (created here), linear 0..1
 var sfx_volume := 0.8     # SFX bus (created here) — effects + jingles, linear 0..1
+var voice_volume := 0.8   # Voice bus (created here) — story narration (English), linear 0..1; 0 = off
 var screen_shake := true
 # Drawn look over the world, on trial with playtesters: index into ART_STYLES (LookPass)
 signal art_style_changed
@@ -128,6 +129,7 @@ func _ready() -> void:
 		volume    = cfg.get_value("audio", "volume", volume)
 		music_volume = cfg.get_value("audio", "music_volume", music_volume)
 		sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
+		voice_volume = cfg.get_value("audio", "voice_volume", voice_volume)
 		screen_shake = cfg.get_value("display", "screen_shake", screen_shake)
 		art_style = clampi(cfg.get_value("display", "art_style", art_style), 0, ART_STYLES.size() - 1)
 		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
@@ -158,7 +160,7 @@ func _ready() -> void:
 		learned = {}
 	_apply_bindings()
 	_add_font_fallbacks()
-	for bus_name in ["Music", "SFX"]:
+	for bus_name in ["Music", "SFX", "Voice"]:   # all in default_bus_layout.tres (web needs them there); this is a fallback
 		if AudioServer.get_bus_index(bus_name) == -1:
 			AudioServer.add_bus()
 			var bus := AudioServer.bus_count - 1
@@ -199,6 +201,9 @@ func apply() -> void:
 	var sfx := AudioServer.get_bus_index("SFX")
 	AudioServer.set_bus_volume_db(sfx, linear_to_db(maxf(sfx_volume, 0.0001)))
 	AudioServer.set_bus_mute(sfx, sfx_volume <= 0.0)
+	var voice := AudioServer.get_bus_index("Voice")
+	AudioServer.set_bus_volume_db(voice, linear_to_db(maxf(voice_volume, 0.0001)))
+	AudioServer.set_bus_mute(voice, voice_volume <= 0.0)
 
 # ── Window ─────────────────────────────────────────────────
 
@@ -324,6 +329,7 @@ func save() -> void:
 	cfg.set_value("audio", "volume", volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
+	cfg.set_value("audio", "voice_volume", voice_volume)
 	cfg.set_value("controls", "rumble", rumble)
 	cfg.set_value("controls", "toggle_charge", toggle_charge)
 	cfg.set_value("controls", "bindings", bindings)

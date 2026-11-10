@@ -233,6 +233,33 @@ theme_type_variation = &"Body"
 text = "80%"
 horizontal_alignment = 2
 
+[node name="VoiceLabel" type="Label" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Body"
+text = "Narration"
+
+[node name="VoiceRow" type="HBoxContainer" parent="Center/Modal/VBox/Grid"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Voice" type="HSlider" parent="Center/Modal/VBox/Grid/VoiceRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+step = 1.0
+value = 80.0
+
+[node name="VoiceValue" type="Label" parent="Center/Modal/VBox/Grid/VoiceRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "80%"
+horizontal_alignment = 2
+
 [node name="Footer" type="HBoxContainer" parent="Center/Modal/VBox"]
 layout_mode = 2
 alignment = 2

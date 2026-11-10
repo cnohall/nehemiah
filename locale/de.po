@@ -137,6 +137,9 @@ msgstr "Musik"
 msgid "Effects"
 msgstr "Effekte"
 
+msgid "Narration"
+msgstr "Erzähler"
+
 msgid "Done"
 msgstr "Fertig"
 
