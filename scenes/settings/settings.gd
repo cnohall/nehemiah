@@ -66,9 +66,9 @@ var hints := true
 var learned := {}   # FirstSteps lesson → true
 # Experimental (GDD §5.21); the host's choice rules the crew like difficulty
 # Wave forecast: how many and what, ~22 s ahead, spot ringed and route drawn on the ground.
-# On by default when one person plays (bots or not): information is worth most alone (§5.25)
+# On by default for everyone since Nov 2026 (it was Solo: a group, more chaotic, got only the bell)
 enum { FORECAST_OFF, FORECAST_SOLO, FORECAST_ALWAYS }
-var exp_forecast := FORECAST_SOLO
+var exp_forecast := FORECAST_ALWAYS
 var exp_call_early := false  # off by default: [Horn] brings the next wave forward for a short work boost
 
 # pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
@@ -148,8 +148,13 @@ func _ready() -> void:
 		learned = cfg.get_value("general", "learned", learned)
 		# "forecast" was an on/off bool before Nov 2026: on stays on, off takes the new default
 		var old_forecast: bool = cfg.get_value("experimental", "forecast", false)
-		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode",
-			FORECAST_ALWAYS if old_forecast else exp_forecast), FORECAST_OFF, FORECAST_ALWAYS)
+		var mode: int = cfg.get_value("experimental", "forecast_mode",
+			FORECAST_ALWAYS if old_forecast else exp_forecast)
+		# Before 10 Nov 2026 Solo was the default (a group got only the bell): a saved Solo
+		# takes the new default, Off and Always stay as picked
+		if not cfg.has_section_key("experimental", "forecast_mode2") and mode == FORECAST_SOLO:
+			mode = FORECAST_ALWAYS
+		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode2", mode), FORECAST_OFF, FORECAST_ALWAYS)
 		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
 	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
 	if "--script" in OS.get_cmdline_args():
@@ -339,7 +344,7 @@ func save() -> void:
 	cfg.set_value("general", "share_stats", share_stats)
 	cfg.set_value("general", "hints", hints)
 	cfg.set_value("general", "learned", learned)
-	cfg.set_value("experimental", "forecast_mode", exp_forecast)
+	cfg.set_value("experimental", "forecast_mode2", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)
 

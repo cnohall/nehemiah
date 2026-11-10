@@ -16,13 +16,15 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | Sling tell, true shot, riposte | 5.16 | `--no-tell` `--no-true-shot` `--no-riposte` | pending |
 | Mending | 5.17 | n/a | pending |
 | Solo with bots: crew weight, calls, cover | 5.20 | n/a | pending |
-| Experimental: wave forecast + route, call early (Thronefall-inspired) | 5.21 | Settings → Experimental (forecast Off / Solo / Always, Solo default; call early off) | route + Solo default 3 Nov 2026; needs playtest 4 |
+| Experimental: wave forecast + route, call early (Thronefall-inspired) | 5.21 | Settings → Experimental (forecast Off / Solo / Always, Always default since 10 Nov 2026; call early off) | route 3 Nov 2026; needs playtest 4 |
+| Waves you can read: no trickle, three-beat arc, named shapes, work pulls the next pack | 5.27 | `--old-waves` | built 10 Nov 2026; `tools/waves_v2_test.gd`; needs playtest 4 |
+| End of the first act: camp gathers, Jeshanah climax, camp reveal, yard choice from the Broad Wall | 5.28 | `--old-camp` `--card-choice` | built 10 Nov 2026; `tools/camp_reveal_shots.gd`, `tools/yard_choice_test.gd`; needs playtest 4 |
 | Hardships on stretch replays (Thronefall mutators) | 5.21 | n/a | spec only; build if anyone replays after a win |
 | The well: drink to mend | 5.22 | `--no-well` | pending |
 | Simple game (depth without load) | 5.23 | Settings → Game → Simple (host's choice, `GameState.simplified()`) | built 6 Oct 2026; test `tools/simple_game_test.gd --day=34`; needs playtest 4 |
 | Play stats from the web build (where sessions stop) | 5.24 | Settings → Advanced → Play stats (web only, on by default) | built 13 Oct 2026; test `tools/telemetry_test.gd`; Worker side in `web-port` (`worker/src/stats.js`), not deployed |
 | The call: context ping, bots take it as an order (fun alone) | 5.25 | `--no-calls` | prototype 1 Nov 2026; test `tools/calls_test.gd`; needs playtest 4 (solo sessions) |
-| Choice before each stretch (boons) | 6.5 | `--boon=<key>` | pending |
+| Choice before each stretch (boons) | 6.5, 5.28 | `--boon=<key>` `--card-choice` | from the Broad Wall, in the yard (10 Nov 2026); pending |
 | Section beats | 6.4 | `--no-beats` | pending |
 | Explore Jerusalem, dedication choirs | 5.8, 5.19 | n/a | **frozen** (side mode) |
 | Road mini-game | 5.13 | n/a | **cut to cards** (not built) |
@@ -670,6 +672,58 @@ Done and removed from the table: healing → the well (§5.22), wall damage (§5
 **Kill rule:** none for the idea; if the tags crowd the first minute, drop to pile + wall only and leave the rest to the HUD line.
 Test: `tools/first_steps_test.gd` (offline, hints off, all learned, wait runs out, host + client).
 
+### 5.27 Waves you can read — ◐ built 10 Nov 2026, needs playtest 4
+**Why:** "most people stop around stretch 3" (playtests, the designer's own runs) and "the waves feel unclear, the play should feel more dynamic". In the code, over half the foes came from an unannounced trickle (a random spot on the north edge every 10–18 s). A "wave" was 2–3 scouts on a 5 s bell, the same scouts as the trickle, so nobody could tell a wave from the noise. The pressure was a flat hum: never quiet enough to build freely, never big enough to be an event. And a crew got less warning than a solo player (forecast was Solo by default).
+
+**What changed (`WaveManager`, server):**
+- **No trickle.** Every foe comes in a warned pack (a wave's or a section beat's). A pack carries the foes the trickle would have sent over its cycle, so the quiet between packs is real building time. The saboteur and the messengers keep their own timers. The demo's day-9 brute still walks in alone, early.
+- **Three-beat arc.** Packs run in threes through the day: lull ×0.75, build ×1.0, peak ×1.3. A day opens on the lull.
+- **Shapes, named.** Each pack has a shape the watch calls and the pointer names, so the crew knows *what* to do, not only *that* something comes:
+  - *Wave*: the day's usual mix, anywhere
+  - *Rush* (from day 2): scouts, ×1.25, round one end, quick on each other's heels
+  - *Pincer* (from the Fish Gate): both ends at once
+  - *Ram* (from day 8): brutes with scouts to screen them, ×0.7, straight at the gate
+  - *Raid* (from day 17): raiders with a scout, ×0.8, in on the yard's side
+  - Never the same twice running; the peak of each three is the heaviest shape the day allows.
+- **The enemy answers the work** (Neh. 4:7): each unit raised brings the next pack 9 s sooner (never inside 9 s). A section beat's pack takes the next wave's place: the wave stands back at least 20 s and the three starts again from the lull.
+- **Forecast for everyone:** Settings → Experimental → Wave forecast defaults to Always. A saved Solo (the old default) is read as Always; a saved Off stays off.
+
+**Numbers (`tools/waves_v2_test.gd`, solo, 2.5 min):** day 9 old: 28 foes, 16 of them unannounced; v2: 24, none. Bot runs (crew of 4): Jeshanah 39 foes, 3 breaches (old 60, 1); Valley Gate 58, 1 (old 120, 1). So fewer foes, but each pack lands harder. Tune `ARC`, `SHAPES` sizes, `PROGRESS_PULL` from playtest 4.
+
+**A/B:** `-- --old-waves` (trickle and plain clock as before). **Watch in playtest 4:** do players name the shape back ("it's a rush!")? Do they use the quiet to build, or stand at the wall waiting? Do they hold back the last unit so the pull doesn't bring the next pack (if so, that's a choice, keep it)? **Kill rule:** breaches climb while foes fall: shrink the peak before bringing back the trickle.
+Test: `tools/waves_v2_test.gd -- --nostory --day=9` (and `--old-waves`), `tools/forecast_test.gd`, `tools/beats_test.gd --day=9`.
+
+### 5.28 The end of the first act — ◐ built 10 Nov 2026, needs playtest 4
+**Why:** crews stop after stretch 3 and skip the story cards, especially together. So the pull has to happen in play, not on a card.
+
+**1. The camp gathers (`ScatterLayer.camp_stage`).** The enemy camp behind the spawn line used to stand whole from day 1. Now it grows with the story:
+- Stretches 1–3: a picket fire only. Sanballat scoffs from Samaria (4:1-2).
+- From the Broad Wall: the army of Samaria camps on the hill (4:2): ridge tents, the standard.
+- From the Valley Gate: Geshem's Arabs have joined the plot (4:7-8): the black tents and camels.
+- `-- --old-camp`: every camp from day 1.
+
+**2. Jeshanah's last unit is a climax (`SectionBeats`).** It's the biggest pack yet, 2 brutes + 5 scouts from both ends, called "Sanballat's men, both ends! Hold the old gate!" with Sanballat's own mockery of the burned stones (4:2).
+
+**3. The camp reveal (`Main._camp_arrival`).** When a stretch stands and the next one brings a new camp (the Jeshanah Gate, the Tower of the Ovens), the wall cam doesn't end on the tally:
+- the camera glides to the hill;
+- a torch column of their men (real enemy rigs) marches in;
+- the tents go up and the hearth catches;
+- the watch calls who has come ("The army of Samaria is camping on the hill!").
+It takes 4.7 s, and the tally waits for it. There's nothing to read but the call. Not in a replay, the festival or the attract loop. Shots: `tools/camp_reveal_shots.gd -- --nostory --day=12`.
+
+**4. The first choice answers it, in the yard (`YardChoice`).** The choice before a stretch (§6.5) now starts at the Broad Wall (`StoryData.CHOICES_FROM` 5 → 3). That makes it the crew's answer to the camp, as 4:9 answers 4:7-8. It's no longer a story card. At the stretch's first dawn:
+- Two rings stand in the yard, each with its standard, title and gain/cost lines. The crew walks into one.
+- The dawn waits until every person has stood in a ring for 1.5 s, or 25 s pass. Most bodies win, the host's ring breaks a tie, nobody = the first. Bots don't vote.
+- The pick is horned, called by the watch, put on the banner, and its standard stays in the yard all stretch.
+- The Broad Wall's pair: **Press the work** (4:6: build +20%, wall takes +25% harm) or **Set a watch** (4:9: wall takes −25% harm, build −10%; no posts yet, they open at the Ovens).
+- `-- --card-choice`: the old card.
+
+**Ladder (§5.23):** the Broad Wall now brings "thick" and the first choice. The choice is a decision, not a rule to learn, so it's allowed; if playtest 4 says the Broad Wall is crowded, move `CHOICES_FROM` to 4.
+**Watch in playtest 4:** does anyone look at the hill after the reveal? Does the group argue in the yard, or does one person walk in and decide for everyone? Does the reveal make them start stretch 4 instead of stopping at the map? (That's the real measure: compare against the "pull past stretch 3" row.)
+**Kill rule:** a crew walks into the first ring every time without reading: the trade is invisible, so either show its effect in play or cut the choice from the early stretches.
+Test: `tools/yard_choice_test.gd -- --nostory --day=13 [out_dir]`, `tools/choice_test.gd -- --card-choice --day=24`.
+**Not built (next):** the mid-day caravan (§6.4 Next #4). Supply piles are endless, so free timber gives nothing; its gain would be a second pile at the wall front (less walking) if the crew escorts it in. It needs a moving, synced cart that foes can target, and a free stretch on the ladder (from the Ovens on). Playtest 4 first: if the shaped waves already lift the sag, the caravan may not be needed.
+
 ## 6. The Twelve Sections — one twist each
 
 **Problem to solve:** 52 days of the same carry-and-build loop gets repetitive. **Rule (Overcooked):** every section adds *one* new ingredient to what players already know; no ingredient stays unchanged for more than ~2 sections. Twists come from the text (Neh 3–6) or from real ancient building work — never invented gimmicks.
@@ -748,10 +802,11 @@ The figures lean cartoony on purpose (big heads, chunky hands, short legs, simpl
 ### 6.5 A choice before each stretch — ◐ reworked (1 Oct 2026), needs playtest 3
 **Fun check:** *Fantasy* — Nehemiah deciding how to meet "the work is great and large" (4:19). *Kind of fun:* Fellowship (the crew agrees, or argues), Challenge (a price you chose to pay). *Where it can go sour:* one option is always right (then it's a chore, cut it); a vote that stalls a session in multiplayer; one more screen before the work.
 **First pass was too weak** (a free +20% daylight, a post nobody felt, a "keep to the plan" that lost to both, no memory of it). Reworked as **two real trades per stretch, tied to what the stretch brings**, and written down.
-**What:** the last story card of every new stretch (not the first, not a replay, not the tutorial/festival) — `StoryData` slide `choice: true`, shown by `StoryPlayer`, **no extra screen or phase**: it rides on the story ready check. ← → / 1–2 / click to pick, E to confirm. Each reader's pick goes to the server (`DayDirector.cast_choice`); **most votes win, the host's pick breaks a tie, no votes = the first of the two**. Bots don't vote. In play for that stretch only (`GameState.boon`, synced).
+**What (since 10 Nov 2026, §5.28):** made in the yard at a new stretch's first dawn (`YardChoice`), from the Broad Wall on. The card below is kept behind `--card-choice`. **Card version:** the last story card of every new stretch (not the first, not a replay, not the tutorial/festival) — `StoryData` slide `choice: true`, shown by `StoryPlayer`, **no extra screen or phase**: it rides on the story ready check. ← → / 1–2 / click to pick, E to confirm. Each reader's pick goes to the server (`DayDirector.cast_choice`); **most votes win, the host's pick breaks a tie, no votes = the first of the two**. Bots don't vote. In play for that stretch only (`GameState.boon`, synced).
 **Every option is a gain and a cost, and the card text is generated from the modifiers** (`GameState.BOONS[k].mods`, `boon_lines()`), so what it says is what it does. Modifiers: `work` (build speed), `harm` (blows the wall takes), `pressure` (foes), `beam_solo`, `carry`, `clear` (burned timbers), `mix` (mortar), and `posts` (watch posts stand from dawn). `-- --boon=<key>` (debug) forces one for every stretch, to A/B a trade.
 **The axis everywhere:** pace (the *In good time* mark) against defence (*None got through*, *The wall holds*). Stretches without their own pair (Fountain Gate to Miphkad Gate) offer **Press the work** (build +20%, wall takes +25% harm) or **Hold the line** (watch posts from dawn, −25% harm, build −10%).
-**Tailored pairs** (each pair a trade on that stretch's twist; first = default):
+**In the code (`GameState.SECTIONS[i].choices`, 10 Nov 2026):** Broad Wall build / watch; Valley Gate terraces / heights; Gate of the Ash Heaps bundles / road; Fountain Gate table / fields; Horse Gate dig / shore; every other stretch build / guard. The list below is the first design and has drifted (beams are at the Jeshanah Gate, mixing at the Fountain Gate).
+**Tailored pairs, first design** (each pair a trade on that stretch's twist; first = default):
 - Fish Gate (beams): *Practised porters* (a lone beam +90% faster; +15% foes) / *Watch the market side* (posts; −20% foes; build −10%)
 - Jeshanah (salvage, ruins): *Dig out the rubble* (burned timbers 2× faster, build +10%; +20% foes) / *Shore up the old courses* (−30% harm; timbers 40% slower)
 - Broad Wall (thick): *Rush the faces* (build +30%; +40% harm) / *Pack the core* (−40% harm; build −15%)

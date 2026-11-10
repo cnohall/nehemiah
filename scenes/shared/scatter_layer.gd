@@ -493,10 +493,95 @@ func _build_camp() -> void:
 	var layout_rng := _rng
 	_rng = RandomNumberGenerator.new()
 	_rng.seed = 455
-	_soldier_camp(Vector3(-12.0, 0.0, -22.5))
-	_arab_camp(Vector3(10.5, 0.0, -24.5))
+	# The camps gather as the story does (GDD §5.28): every camp is still built so the
+	# camp RNG draws the same, but one not yet come goes nowhere
+	var stage := camp_stage(_built_for)
+	_camp_part(stage >= 2, _soldier_camp.bind(SOLDIER_CAMP_AT))
+	_camp_part(stage >= 3, _arab_camp.bind(ARAB_CAMP_AT))
 	_picket(Vector3(23.0, 0.0, -15.5))
 	_rng = layout_rng
+
+# The enemy gathering, by stretch (Neh. 4): 1 = a picket fire, Sanballat only scoffs from
+# Samaria (4:1-2); 2 = from the Broad Wall, the army of Samaria camps on the hill (4:2);
+# 3 = from the Valley Gate, Geshem's Arabs have joined the plot (4:7-8). The festival: none.
+# `-- --old-camp`: every camp from the first day, as before
+const SOLDIER_CAMP_AT := Vector3(-12.0, 0.0, -22.5)
+const ARAB_CAMP_AT    := Vector3(10.5, 0.0, -24.5)
+const CAMP_STAGE_FROM := { 2: 3, 3: 5 }   # stage → first stretch it stands at
+static func camp_stage(section_index: int) -> int:
+	if "--old-camp" in OS.get_cmdline_user_args():
+		return 3
+	var stage := 1
+	for s: int in CAMP_STAGE_FROM:
+		if section_index >= CAMP_STAGE_FROM[s]:
+			stage = maxi(stage, s)
+	return stage
+
+## Where the camp that comes after stretch `section_index` will stand, or Vector3.INF when
+## nothing new comes (Main's camp reveal looks there at the stretch's end)
+static func camp_arrives_after(section_index: int) -> Vector3:
+	var now := camp_stage(section_index)
+	var next := camp_stage(section_index + 1)
+	if next <= now or section_index + 1 >= GameState.SECTIONS.size():
+		return Vector3.INF
+	return SOLDIER_CAMP_AT if next == 2 else ARAB_CAMP_AT
+
+## The stretch that just stood: where Main's camp reveal looks, or Vector3.INF (nothing
+## new comes, a replay, the festival, the attract loop)
+static func camp_reveal_at() -> Vector3:
+	if GameState.is_replay() or GameState.festival or GameState.attract:
+		return Vector3.INF
+	return camp_arrives_after(GameState.current_section_index)
+
+## Main's camp reveal: the camp that comes after this stretch, built now under its own node
+## with its pivot on the ground, so the reveal can raise its tents as the column comes in.
+## Its fires' torch nodes are left out: the reveal lights its own. Null when none comes.
+func build_arriving_camp() -> Node3D:
+	var at := camp_arrives_after(_built_for)
+	if at == Vector3.INF:
+		return null
+	var batches := _batches
+	var layout_rng := _rng
+	_batches = {}
+	_rng = RandomNumberGenerator.new()
+	_rng.seed = 455   # the draws _build_camp makes, so the camp that stands later is this one
+	var before := get_child_count()
+	var soldiers := at == SOLDIER_CAMP_AT
+	_soldier_camp(SOLDIER_CAMP_AT)
+	if not soldiers:
+		_batches = {}
+		_arab_camp(ARAB_CAMP_AT)
+	for i in range(get_child_count() - 1, before - 1, -1):   # torches and smoke
+		var c := get_child(i)
+		remove_child(c)
+		c.free()
+	var ground := Terrain.height(at.x, at.z)
+	var holder := Node3D.new()
+	holder.name = "ArrivingCamp"
+	holder.position.y = ground
+	add_child(holder)
+	for kind: String in _batches:
+		var mmi := _multimesh(_mesh_for(kind), _batches[kind][0], _batches[kind][1], _material_for(kind))
+		mmi.reparent(holder, false)
+		mmi.position.y = -ground
+	_batches = batches
+	_rng = layout_rng
+	return holder
+
+## Build one camp, or (not yet come) build it into nothing: same RNG draws either way
+func _camp_part(shown: bool, build: Callable) -> void:
+	if shown:
+		build.call()
+		return
+	var batches := _batches
+	_batches = {}
+	var before := get_child_count()
+	build.call()
+	_batches = batches
+	for i in range(get_child_count() - 1, before - 1, -1):   # its fires' torch nodes
+		var c := get_child(i)
+		remove_child(c)
+		c.free()
 
 const CAMP_CLEAR := [Rect2(-20.0, -28.0, 16.0, 11.0), Rect2(3.0, -30.0, 15.5, 11.0), Rect2(20.0, -18.5, 6.0, 5.5)]
 const GOAT_HAIR  := Color(0.25, 0.20, 0.17)

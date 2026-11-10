@@ -20,6 +20,7 @@ const TALLY_HOLD    := 5.6
 const TALLY_COUNT   := 0.55    # seconds each number takes to count up
 const TALLY_STEP    := 0.3     # between one number starting and the next
 const WALL_CAM_HOLD := 3.3     # Main.WALL_CAM_TIME + its lead-in, less a beat
+const CAMP_REVEAL_HOLD := 4.7  # Main.CAMP_GLIDE + CAMP_HOLD: the enemy's camp after the wall cam
 const BANNER_PAD    := 28.0    # space above and below the banner text
 const BANNER_TOP    := -12.0   # Banner offset_top (as in the scene)
 const SCREEN_EDGE   := 16.0    # the tally never runs closer than this to the screen's top or bottom
@@ -199,6 +200,7 @@ func _ready() -> void:
 	GameState.phase_changed.connect(_on_phase_changed)
 	GameState.progress_changed.connect(_on_progress_changed)
 	GameState.breaches_changed.connect(_on_breaches_changed)
+	GameState.boon_changed.connect(_on_boon_changed)
 	refresh_day(GameState.current_day)
 	_on_breaches_changed(GameState.breaches)
 	_on_phase_changed(GameState.phase)
@@ -596,6 +598,14 @@ func set_ready_state(kind: String, waiting: Array) -> void:
 	if _ready_row != null and is_instance_valid(_ready_row):
 		_ready_row.set_waiting(waiting)
 
+## The crew picked in the yard (YardChoice) during the dawn: say what it gives and costs
+func _on_boon_changed() -> void:
+	if GameState.phase != GameState.Phase.DAWN or not GameState.BOONS.has(GameState.boon):
+		return
+	var lines := GameState.boon_lines(GameState.boon)
+	_show_banner(tr("The crew chose: %s") % tr(GameState.BOONS[GameState.boon]["title"]),
+		"  ·  ".join(lines["gain"] + lines["cost"]))
+
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	_refresh_progress()
 	# A tally held open for the ready check goes when the dusk does
@@ -617,7 +627,11 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			if first_day:
 				for twist: String in GameState.new_twists():
 					sub += "\n" + tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
-				if GameState.BOONS.has(GameState.boon):
+				var yard := get_tree().get_first_node_in_group("yard_choice")
+				if yard != null and yard.open:
+					sub += "
+" + tr("How will you meet it? Stand in a ring")
+				elif GameState.BOONS.has(GameState.boon):
 					var lines := GameState.boon_lines(GameState.boon)
 					sub += "\n" + tr("The crew chose: %s") % tr(GameState.BOONS[GameState.boon]["title"])
 					sub += "  ·  " + "  ·  ".join(lines["gain"] + lines["cost"])
@@ -964,7 +978,10 @@ func show_tally(stats: Dictionary) -> void:
 	_last_tally = stats
 	# A stretch that stands gets its wall cam first (Main)
 	var wall_cam := stats.has("names") and not GameState.attract
-	await get_tree().create_timer(TALLY_DELAY + (WALL_CAM_HOLD if wall_cam else 0.0), true, false, true).timeout
+	var hold := WALL_CAM_HOLD if wall_cam else 0.0
+	if wall_cam and ScatterLayer.camp_reveal_at() != Vector3.INF:
+		hold += CAMP_REVEAL_HOLD   # and the enemy's camp after it
+	await get_tree().create_timer(TALLY_DELAY + hold, true, false, true).timeout
 	if GameState.phase != GameState.Phase.DUSK:
 		return
 	if _tally == null:

@@ -208,7 +208,7 @@ static func slides_for_day(day: int) -> Array:
 			"title": TWIST_TITLES.get(twist, twist),
 			"twist": twist,
 		})
-	if choice_offered(i):
+	if choice_offered(i) and not GameState.yard_choice:   # else it's made in the yard (YardChoice)
 		slides.append({
 			"eyebrow": "Before the work",
 			"title": "How will you meet it?",
@@ -219,9 +219,11 @@ static func slides_for_day(day: int) -> Array:
 		})
 	return slides
 
-## The last card before a new stretch asks how the crew will meet it (campaign only, from the
-## Valley Gate: the first five stretches each bring one new thing, and a choice is another)
-const CHOICES_FROM := 5
+## How the crew will meet a new stretch: asked in the yard at its first dawn (YardChoice), or
+## with `--card-choice` on the last card before it. Campaign only, from the Broad Wall: the
+## answer to Samaria's army on the hill at the Jeshanah Gate's end (Neh. 4:2, 4:9; GDD §5.28).
+## It was the Valley Gate (5) until Nov 2026: too late, past where most crews stopped
+const CHOICES_FROM := 3
 static func choice_offered(section_index: int) -> bool:
 	return section_index >= CHOICES_FROM and not GameState.is_replay() and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
 

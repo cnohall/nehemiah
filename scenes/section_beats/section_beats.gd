@@ -46,9 +46,14 @@ const BEATS := {
 		"half": { "call": "Both ends at once. Split up!", "pack": [[S, 2]], "at": "both" },
 		"last": { "call": "A rush at the gate!", "pack": [[S, 4]], "at": "gate" },
 	},
-	2: {   # Jeshanah Gate — brutes in force (the first one walked in on the Fish Gate's last day)
+	2: {   # Jeshanah Gate — brutes in force (the first one walked in on the Fish Gate's last day).
+		# Its last unit is the end of the first act (GDD §5.28): the biggest pack yet, from
+		# both ends, at the burned stones Sanballat mocked; then his army camps on the hill
+		# (Main's camp reveal)
 		"half": { "call": "Brutes, for the new stones!", "pack": [[B, 2], [S, 1]], "at": "flank" },
-		"last": { "call": "They're at the gate! Hold it!", "pack": [[B, 1], [S, 3]], "at": "gate" },
+		"last": { "call": "Sanballat's men, both ends! Hold the old gate!",
+			"verse": ["Will they revive the stones out of the heaps of rubbish, since they are burned?", "Neh. 4:2"],
+			"pack": [[B, 2], [S, 5]], "at": "both" },
 	},
 	3: {   # Broad Wall — the wall at half height, and their anger (Neh. 4:6-7)
 		"half": { "call": "Half its height! And they've heard of it…",
@@ -164,6 +169,8 @@ func _fire(key: String) -> void:
 	_queue = _pack(beat.get("pack", []), spots)
 	_warn = WARN
 	_gap = 0.0
+	if not _queue.is_empty():
+		_waves.beat_taken()   # one pack at a time: the next wave stands back
 	print("SectionBeats: %s \"%s\" — %d foes" % [GameState.SECTIONS[i]["name"], key, _queue.size()])
 	_announce.rpc(i, key, spots if not _queue.is_empty() else [])
 

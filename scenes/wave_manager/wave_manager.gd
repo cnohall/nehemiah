@@ -73,6 +73,31 @@ const SABOTEUR_FIRST      := 22.0
 const SABOTEUR_EVERY      := 50.0
 const SABOTEUR_PAIR_DAY   := 21
 
+# Waves v2 (Nov 2026, GDD §5.27): no trickle. Every foe comes in a warned pack, so the
+# quiet between packs is real building time and each pack is an event. A pack carries
+# the foes the trickle would have sent over its cycle. Packs run in threes through the
+# day (lull, build, peak), each has a shape the watch names (what to do, not only that
+# something comes), and raising a unit brings the next one sooner (Neh. 4:7, "they heard
+# that the repairing… went forward"). A section beat takes the place of the next wave.
+# `-- --old-waves`: the trickle and the plain clock as before, to A/B.
+var old_waves: bool = "--old-waves" in OS.get_cmdline_user_args()
+const ARC                 := [0.75, 1.0, 1.3]   # lull, build, peak
+const PROGRESS_PULL       := 9.0     # a unit raised brings the next pack this much sooner…
+const PULL_FLOOR          := 9.0     # …but never inside this (the bell's 5 s plus a breath)
+const BEAT_PUSH           := 20.0    # a section beat's pack: the next wave waits at least this
+# Shape → [size factor, seconds between members]. Scouts are slight, so a rush is many;
+# brutes and raiders are heavy, so fewer
+const SHAPES := {
+	"wave":   [1.0, 0.35],
+	"rush":   [1.25, 0.2],
+	"pincer": [1.0, 0.35],
+	"ram":    [0.7, 0.6],
+	"raid":   [0.8, 0.35],
+}
+const SHAPE_NAMES := { "wave": "Wave", "rush": "Rush", "pincer": "Pincer", "ram": "Ram", "raid": "Raid" }
+const RAM_X               := 3.0     # a ram comes straight at the gate
+const RUSH_X_MIN          := 8.0     # a rush comes round one end
+
 @onready var enemies_root: Node3D = get_parent().get_node("Enemies")
 @onready var players_root: Node3D = get_parent().get_node("Players")
 @onready var visitors_root: Node3D = get_parent().get_node("Visitors")
@@ -94,7 +119,15 @@ var _pack: Array[int] = []   # the forecast pack's types, spawned as told
 var _forecasted := false
 var _forecast_marks: Array[Node] = []   # every peer: ring, route, tag of the told wave
 var _demo_brute := false   # demo: the day's first brute has been sent
+var _shape := "wave"        # the coming pack's shape (v2)
+var _last_shape := ""
+var _wave_no := 0           # packs sent today: its place in the arc
+var _last_done := 0         # units standing when last looked (progress pull)
+var trickled := 0           # foes the trickle sent (tests: v2 must send none)
 
+
+func _ready() -> void:
+	GameState.progress_changed.connect(_on_progress)
 
 func start(day: int) -> void:
 	if GameState.free_play():
@@ -114,9 +147,17 @@ func start(day: int) -> void:
 	_forecasted = false
 	_demo_brute = false
 	_sab_timer = SABOTEUR_FIRST
+	_shape = "wave"
+	_last_shape = ""
+	_wave_no = 0
+	_last_done = GameState.targets_done
 
 func stop() -> void:
 	_active = false
+
+## v2: packs carry every foe (no trickle), unless waves are off altogether
+func packs_only() -> bool:
+	return not old_waves and (GameState.waves or GameState.has_twist("horn"))
 
 func _physics_process(delta: float) -> void:
 	if not _active or not multiplayer.is_server():
@@ -124,16 +165,23 @@ func _physics_process(delta: float) -> void:
 	_tick_messengers(delta)
 	_tick_saboteurs(delta)
 	_tick_surges(delta)
+	if packs_only() and not _demo_brute_due():   # the demo's brute still walks in alone, early
+		return
 	_timer -= delta
 	if _timer > 0.0:
 		return
 	_timer = _interval()
 	if enemies_root.get_child_count() < _max_alive():
+		trickled += 1
 		_do_spawn(_pick_type())
 
 # ── Pacing ─────────────────────────────────────────────────
 
 func _interval() -> float:
+	return _base_interval() * randf_range(1.0 - INTERVAL_JITTER, 1.0 + INTERVAL_JITTER)
+
+## The trickle's mean gap between foes (v2 never runs it, but sizes packs by it)
+func _base_interval() -> float:
 	var t := (_day - 1) / float(GameState.TOTAL_DAYS - 1)
 	var base := lerpf(INTERVAL_DAY1, INTERVAL_DAY52, t)
 	# More workers → more pressure (1 player ×1.3 … 4 players ×0.68)
@@ -143,7 +191,15 @@ func _interval() -> float:
 		base *= SURGE_TRICKLE_MULT
 	elif GameState.waves:
 		base *= WAVE_TRICKLE_MULT
-	return base * randf_range(1.0 - INTERVAL_JITTER, 1.0 + INTERVAL_JITTER)
+	return base
+
+## v2: the foes the old trickle sent over `cycle` seconds (it was held to _max_alive)
+func _trickle_share(cycle: float) -> float:
+	return cycle / _base_interval()
+
+## Seconds from one wave to the next (not the valley's surges)
+func _wave_every() -> float:
+	return lerpf(WAVE_EVERY_DAY1, WAVE_EVERY_DAY52, (_day - 1) / float(GameState.TOTAL_DAYS - 1))
 
 
 ## Per-section pace (breather / finale) times the host's difficulty
@@ -186,7 +242,7 @@ func _tick_surges(delta: float) -> void:
 	if _surge_left > 0:
 		_surge_gap -= delta
 		if _surge_gap <= 0.0:
-			_surge_gap = SURGE_GAP
+			_surge_gap = SHAPES[_shape][1] if packs_only() and not horn else SURGE_GAP
 			_surge_left -= 1
 			if _surge_left == 0:
 				_pack.clear()   # a pack the cap held back must not leak into the next
@@ -206,25 +262,95 @@ func _tick_surges(delta: float) -> void:
 		if not _warned_early:
 			_pick_surge_spots(horn)
 		for at in _surge_at:
-			_warn_surge.rpc(at, horn, warn)
+			_warn_surge.rpc(at, horn, warn, _shape_label())
 	elif _surge_timer <= 0.0:
 		_surge_gap = 0.0
 		_warned_early = false
 		_forecasted = false
 		if horn:
-			_surge_left = roundi((3 + floori(_day / 12.0)) * Settings.diff()["pace"])
+			var n: float = (3 + floori(_day / 12.0)) * Settings.diff()["pace"]
+			if packs_only():
+				n += _trickle_share(SURGE_EVERY / _pressure())
+			_surge_left = clampi(roundi(n), 1, MAX_ALIVE_CAP)
 			_surge_timer = SURGE_EVERY / _pressure()
 		else:
 			_surge_left = _pack.size() if not _pack.is_empty() else _wave_size()   # as forecast, even if the crew changed since
-			var t := (_day - 1) / float(GameState.TOTAL_DAYS - 1)
-			_surge_timer = lerpf(WAVE_EVERY_DAY1, WAVE_EVERY_DAY52, t)
+			_surge_timer = _wave_every()
+		_wave_no += 1
+		_last_shape = _shape
 
 func _wave_size() -> int:
-	return roundi((WAVE_BASE + floori(_day / WAVE_PER_DAYS) + floori((_crew() - 1.0) / WAVE_PER_CREW)) * _pressure())
+	var n: float = (WAVE_BASE + floori(_day / WAVE_PER_DAYS) + floori((_crew() - 1.0) / WAVE_PER_CREW)) * _pressure()
+	if not packs_only():
+		return roundi(n)
+	n += _trickle_share(_wave_every())
+	n *= ARC[_wave_no % ARC.size()] * SHAPES[_shape][0]
+	return clampi(roundi(n), 1, _max_alive())
 
-## The next member of the pack: as forecast, or rolled now
+## The next member of the pack: as forecast, or rolled now (`i` counts down to 0)
 func _next_type() -> Enemy.Type:
-	return _pack.pop_back() if not _pack.is_empty() else _pick_type()
+	return _pack.pop_back() if not _pack.is_empty() else _shape_type(_surge_left)
+
+## v2: one member of a pack of the coming shape. Rush = scouts; ram = brutes with scouts
+## to screen them; raid = raiders with a scout. Wave and pincer: the day's usual mix.
+## Old waves and the valley's surges: always the usual mix.
+func _shape_type(i: int) -> Enemy.Type:
+	if not packs_only() or GameState.has_twist("horn") or _demo_brute_due():
+		return _pick_type()
+	match _shape:
+		"rush":
+			return Enemy.Type.SCOUT
+		"ram":
+			return Enemy.Type.BRUTE if i % 3 != 2 else Enemy.Type.SCOUT
+		"raid":
+			return Enemy.Type.RAIDER if i % 3 != 2 else Enemy.Type.SCOUT
+	return _pick_type()
+
+func _demo_brute_due() -> bool:
+	return GameState.is_demo() and _day == GameState.DEMO_LAST_DAY and not _demo_brute
+
+## v2: the coming pack's shape, from those the day allows: never the same twice running,
+## and the peak of each three the heaviest the day has
+func _roll_shape() -> void:
+	var can: Array[String] = ["wave"]
+	if _day >= 2:
+		can.append("rush")
+	if GameState.current_section_index >= 1:
+		can.append("pincer")
+	if _day > BRUTE_UNLOCK_DAY:
+		can.append("ram")
+	if _day > RAIDER_UNLOCK_DAY:
+		can.append("raid")
+	if can.size() > 1:
+		can.erase(_last_shape)
+	var peak := _wave_no % ARC.size() == ARC.size() - 1
+	_shape = can[can.size() - 1] if peak else can[randi() % can.size()]
+
+## v2, server: the work went forward. Each unit raised brings the next pack sooner; a pack
+## already told is told again with its new time
+func _on_progress(done: int, _total: int) -> void:
+	if not _active or not multiplayer.is_server() or not packs_only():
+		_last_done = done
+		return
+	var raised := done - _last_done
+	_last_done = done
+	if raised <= 0 or _surge_left > 0 or _surge_timer <= PULL_FLOOR:
+		return
+	_surge_timer = maxf(PULL_FLOOR, _surge_timer - PROGRESS_PULL * raised)
+	if _forecasted:
+		_tell_forecast(false)
+
+## Server (SectionBeats): a beat's pack is coming, so the next wave stands back: one pack
+## at a time, and the beat counts as the peak
+func beat_taken() -> void:
+	if not _active or not packs_only() or _surge_left > 0:
+		return
+	if _surge_timer < BEAT_PUSH:
+		_surge_timer = BEAT_PUSH
+		if _forecasted:
+			_tell_forecast(false)
+	if not GameState.has_twist("horn"):
+		_wave_no = 0   # the next wave starts a new three, from the lull
 
 # ── Experimental: forecast and call early (GDD §5.21) ──────
 
@@ -245,7 +371,7 @@ func _forecast() -> void:
 		_warned_early = true
 	_pack.clear()
 	for i in _wave_size():
-		_pack.append(_pick_type())
+		_pack.append(_shape_type(i))
 	_tell_forecast(false)
 
 func _tell_forecast(called: bool) -> void:
@@ -255,7 +381,11 @@ func _tell_forecast(called: bool) -> void:
 	var routes := []
 	for at in _surge_at:
 		routes.append(_route(at))
-	_show_forecast.rpc(_surge_at.duplicate(), routes, counts, _surge_timer, called)
+	_show_forecast.rpc(_surge_at.duplicate(), routes, counts, _surge_timer, called, _shape_label())
+
+## What the watch calls the coming pack: its shape (v2), else just a wave
+func _shape_label() -> String:
+	return SHAPE_NAMES[_shape] if packs_only() else "Wave"
 
 ## Server: the way the pack will walk, from its spot to just inside the wall. Most of a
 ## pack heads for the stockpiles (Enemy._goal) through whatever gap the nav mesh leaves
@@ -295,7 +425,7 @@ func _spur() -> void:
 	GameState.spur_until = Time.get_ticks_msec() + int(GameState.SPUR_SECONDS * 1000.0)
 
 @rpc("authority", "call_local", "reliable")
-func _show_forecast(spots: Array, routes: Array, counts: Array, seconds: float, called: bool) -> void:
+func _show_forecast(spots: Array, routes: Array, counts: Array, seconds: float, called: bool, shape := "Wave") -> void:
 	var parts: PackedStringArray = []
 	if counts[0] > 0:
 		parts.append(tr_n("%d scout", "%d scouts", counts[0]) % counts[0])
@@ -304,6 +434,8 @@ func _show_forecast(spots: Array, routes: Array, counts: Array, seconds: float, 
 	if counts[2] > 0:
 		parts.append(tr_n("%d raider", "%d raiders", counts[2]) % counts[2])
 	var pack := ", ".join(parts)
+	if shape != "Wave":
+		pack = "%s: %s" % [tr(shape), pack]
 	var what := pack + (tr(" · the crew is spurred") if called else "")
 	get_tree().call_group("forecast_chip", "show_forecast", what, seconds, called)
 	# A wave called early is told again: its marks replace the first ones
@@ -410,6 +542,23 @@ func _ring_spot(at: Vector3, seconds: float) -> Node3D:
 
 func _pick_surge_spots(horn: bool) -> void:
 	_surge_at.clear()
+	if packs_only() and not horn:
+		_roll_shape()
+		var side := -1.0 if randf() < 0.5 else 1.0
+		match _shape:
+			"pincer":
+				for s in [-1.0, 1.0]:
+					_surge_at.append(Vector3(s * randf_range(RUSH_X_MIN, SPAWN_X_HALF), 0.1, SPAWN_Z))
+			"rush":
+				_surge_at.append(Vector3(side * randf_range(RUSH_X_MIN, SPAWN_X_HALF), 0.1, SPAWN_Z))
+			"ram":
+				_surge_at.append(Vector3(randf_range(-RAM_X, RAM_X), 0.1, SPAWN_Z))
+			"raid":   # for the piles: in on the side of the yard
+				var yard := 1.0 if GameState.yard_center().x >= 0.0 else -1.0
+				_surge_at.append(Vector3(yard * randf_range(RUSH_X_MIN, SPAWN_X_HALF), 0.1, SPAWN_Z))
+			_:
+				_surge_at.append(Vector3(randf_range(-SPAWN_X_HALF, SPAWN_X_HALF), 0.1, SPAWN_Z))
+		return
 	var spots := 2 if not horn and _day >= WAVE_SPLIT_DAY else 1
 	for i in spots:
 		# Two spots: one on each half of the front, so the crew has to split
@@ -426,25 +575,25 @@ func warn_early() -> bool:
 		return false
 	if _surge_left > 0:
 		for at in _surge_at:
-			_mark_surge.rpc(at, horn, _surge_left * SURGE_GAP)
+			_mark_surge.rpc(at, horn, _surge_left * SURGE_GAP, _shape_label())
 		return true
 	if not _warned_early:
 		_pick_surge_spots(horn)
 		_warned_early = true
 	for at in _surge_at:
-		_mark_surge.rpc(at, horn, _surge_timer)
+		_mark_surge.rpc(at, horn, _surge_timer, _shape_label())
 	return true
 
 # A quiet mark (no bell): the bell still rings at the usual warning
 @rpc("authority", "call_local", "reliable")
-func _mark_surge(at: Vector3, horn: bool, until: float) -> void:
-	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else "Wave", until + 3.0)
+func _mark_surge(at: Vector3, horn: bool, until: float, shape := "Wave") -> void:
+	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else shape, until + 3.0)
 
 @rpc("authority", "call_local", "reliable")
-func _warn_surge(at: Vector3, horn: bool, warn: float) -> void:
+func _warn_surge(at: Vector3, horn: bool, warn: float, shape := "Wave") -> void:
 	Sfx.play("alert")
-	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else "Wave", warn + 3.0)
-	get_tree().call_group("watchmen", "warn_wave", at, horn)
+	get_tree().call_group("offscreen_alerts", "ping", at, SURGE_COLOR, "Surge" if horn else shape, warn + 3.0)
+	get_tree().call_group("watchmen", "warn_wave", at, horn, shape)
 
 func _tick_saboteurs(delta: float) -> void:
 	if not GameState.saboteur_on() or GameState.current_section_index < SABOTEUR_SECTION:

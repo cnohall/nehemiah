@@ -16,7 +16,7 @@ const SECTIONS: Array = [
 	{ "name": "Sheep Gate",     "ref": "Neh. 3:1",  "days": [1,2,3,4],           "twists": ["doors"],                     "yard": Vector2(0, 10),  "terrain": "sheepfold" },
 	{ "name": "Fish Gate",      "ref": "Neh. 3:3",  "days": [5,6,7,8],           "twists": ["doors", "mortar"],           "yard": Vector2(-9, 10), "terrain": "fish_market" },
 	{ "name": "Jeshanah Gate",  "ref": "Neh. 3:6",  "days": [9,10,11,12],        "twists": ["doors", "beams"],            "yard": Vector2(0, 11),  "terrain": "ruins" },
-	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "gate": false },
+	{ "name": "Broad Wall",     "ref": "Neh. 3:8",  "days": [13,14,15,16,17],    "twists": ["thick"],                     "yard": Vector2(2, 12),  "terrain": "workshops", "gate": false, "choices": ["build", "watch"] },
 	{ "name": "Tower of the Ovens", "ref": "Neh. 3:11", "days": [18,19,20,21,22,23], "twists": ["posts"],                     "yard": Vector2(9, 10),  "terrain": "ovens", "gate": false },
 	{ "name": "Valley Gate",    "ref": "Neh. 3:13", "days": [24,25,26,27,28,29], "twists": ["doors", "horn"],             "yard": Vector2(-6, 11), "terrain": "valley", "choices": ["terraces", "heights"], "pressure": 1.1 },
 	{ "name": "Gate of the Ash Heaps",      "ref": "Neh. 3:14", "days": [30,31,32,33],       "twists": ["doors", "haul"],             "yard": Vector2(30, 9),  "terrain": "refuse", "choices": ["bundles", "road"] },
@@ -43,6 +43,9 @@ const SECTIONS: Array = [
 # time" mark) against defence (the "None got through" and "The wall holds" marks).
 const BOONS := {
 	"build": { "title": "Press the work", "ref": "Neh. 4:6", "mods": { "work": 1.2, "harm": 1.25 } },
+	# The first choice (Broad Wall, GDD §5.28): the answer to Samaria's army on the hill.
+	# No posts yet (they open at the Tower of the Ovens): the watch is men taken off the work
+	"watch": { "title": "Set a watch", "ref": "Neh. 4:9", "mods": { "harm": 0.75, "work": 0.9 } },
 	"guard": { "title": "Hold the line", "ref": "Neh. 4:13", "mods": { "work": 0.9, "harm": 0.75 }, "posts": true },
 	"dig": { "title": "Dig out the rubble", "ref": "Neh. 4:2", "mods": { "clear": 2.0, "work": 1.1, "pressure": 1.2 } },
 	"shore": { "title": "Shore up the old courses", "ref": "Neh. 3:6", "mods": { "harm": 0.7, "clear": 0.6 } },
@@ -151,6 +154,9 @@ var tell: bool = "--no-tell" not in OS.get_cmdline_user_args()
 var true_shot: bool = "--no-true-shot" not in OS.get_cmdline_user_args()
 # `-- --no-riposte`: a sword cut in a foe's draw only knocks the strike aside, like any hit
 var riposte: bool = "--no-riposte" not in OS.get_cmdline_user_args()
+# The choice before a stretch is made by standing in a ring in the yard at its first dawn
+# (YardChoice, GDD §5.28). `-- --card-choice`: the old way, on the last story card
+var yard_choice: bool = "--card-choice" not in OS.get_cmdline_user_args()
 # Simple game (Settings.simple_game): the host's pick, as clients last heard it. Read it
 # through simplified()
 var simple := false

@@ -2619,3 +2619,48 @@ msgstr "완성한 구간은 지도에서 다시 플레이할 수 있습니다."
 
 msgid "Playing alone: bots fill the crew, and come to the work or the fight when you call."
 msgstr "혼자 할 때는 봇이 작업단을 채우고, 부르면 작업이나 싸움에 달려옵니다."
+
+msgid "Rush"
+msgstr "돌격"
+
+msgid "Pincer"
+msgstr "협공"
+
+msgid "Ram"
+msgstr "공성"
+
+msgid "Raid"
+msgstr "약탈"
+
+msgid "Scouts running in: %s!"
+msgstr "척후병이 달려옵니다: %s!"
+
+msgid "Both ends at once: %s!"
+msgstr "양쪽 끝에서 동시에: %s!"
+
+msgid "Brutes for the wall: %s!"
+msgstr "난폭자들이 성벽으로: %s!"
+
+msgid "Raiders for the piles: %s!"
+msgstr "약탈자들이 더미로: %s!"
+
+msgid "The army of Samaria is camping on the hill!"
+msgstr "사마리아 군대가 언덕에 진을 칩니다!"
+
+msgid "Geshem's Arabs have joined them!"
+msgstr "게셈의 아랍인들이 합류했습니다!"
+
+msgid "Sanballat's men, both ends! Hold the old gate!"
+msgstr "산발랏의 부하들, 양쪽 끝입니다! 옛 문을 지키십시오!"
+
+msgid "Will they revive the stones out of the heaps of rubbish, since they are burned?"
+msgstr "불탄 돌을 잿더미에서 다시 살려 내겠다는 것인가?"
+
+msgid "Set a watch"
+msgstr "파수꾼 세우기"
+
+msgid "How will you meet it? Stand in a ring"
+msgstr "어떻게 맞서겠습니까? 원 안에 서십시오"
+
+msgid "%s!"
+msgstr "%s!"
