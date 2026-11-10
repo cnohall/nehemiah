@@ -1,9 +1,7 @@
 Novidades desta versão:
-• Corrigido: corpo branco dos construtores no celular
-• Sem tutorial separado: no dia 1 cada jogador novo vê sua próxima tarefa
-• Construtores mais simpáticos e cartunescos, que piscam e reagem
-• Chame seus ajudantes: toque em um ponto e um construtor livre vai até lá
-• A previsão de ondas mostra de onde vem o próximo ataque
-• Casas, portões, muralhas e templo mais detalhados
-• Configurações: nova página Avançado e dicas do primeiro dia
-• Desempenho mais suave
+• A história é lida em voz alta (em inglês), com volume próprio de narração
+• Mais música: um clima próprio para o menu, a história e os trechos mais difíceis
+• Sons mais equilibrados entre si
+• Cooperativo online mais suave e um aviso claro quando dois jogadores têm versões diferentes
+• As cargas pulam da pilha para os seus braços e para a muralha
+• Funda mais rápida; sem escalar carregando

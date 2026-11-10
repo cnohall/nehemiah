@@ -1,9 +1,7 @@
 Neu in diesem Build:
-• Behoben: weiße Körper der Bauleute auf Handys
-• Kein eigenes Tutorial mehr: Am ersten Tag sieht jeder neue Spieler seine nächste Aufgabe
-• Freundlichere, cartoonhafte Bauleute, die blinzeln und reagieren
-• Helfer rufen: Tippe auf eine Stelle, und ein freier Bauarbeiter geht hin
-• Die Wellenvorschau zeigt, woher der nächste Angriff kommt
-• Detailliertere Häuser, Tore, Mauern und Tempel
-• Einstellungen: neue Seite „Erweitert“, Hinweise für Tag 1
-• Flüssigere Leistung
+• Die Geschichte wird vorgelesen (Englisch), mit eigener Lautstärke für den Erzähler
+• Mehr Musik: eigene Stimmung für Menü, Geschichte und die schwersten Abschnitte
+• Klänge besser aufeinander abgestimmt
+• Flüssigeres Online-Koop und eine klare Meldung, wenn zwei Spieler verschiedene Versionen haben
+• Lasten fliegen vom Stapel in deine Arme und auf die Mauer
+• Schnellere Schleuder; kein Klettern mit Last

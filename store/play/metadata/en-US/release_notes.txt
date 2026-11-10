@@ -1,9 +1,7 @@
 New in this build:
-• Fixed: builders showed white bodies on phones
-• No separate tutorial: day 1 shows each new player their next job
-• Friendlier, cartoony builders who blink and react
-• Call your helpers: tap a spot and a free builder goes there
-• Wave forecast shows where the next attack comes from
-• More detailed houses, gates, walls and temple
-• Settings: new Advanced page and first-day hints toggle
-• Smoother performance
+• The story is read aloud (English), with its own Narration volume
+• More music: its own feel for the menu, the story and the hardest stretches
+• Sounds balanced against each other
+• Smoother online co-op, and a clear message when two players have different versions
+• Loads hop from the pile into your arms and onto the wall
+• Quicker sling; no climbing while carrying

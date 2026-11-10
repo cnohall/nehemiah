@@ -1,9 +1,7 @@
 Novedades de esta versión:
-• Corregido: cuerpos blancos de los constructores en el teléfono
-• Sin tutorial aparte: el día 1 muestra a cada jugador nuevo su siguiente tarea
-• Constructores más amables y caricaturescos que parpadean y reaccionan
-• Llama a tus ayudantes: toca un lugar y un constructor libre va allí
-• El pronóstico muestra de dónde viene el próximo ataque
-• Casas, puertas, muros y templo con más detalle
-• Ajustes: página Avanzado y pistas del día 1
-• Rendimiento más fluido
+• La historia se lee en voz alta (en inglés), con su propio volumen de narración
+• Más música: un ambiente propio para el menú, la historia y los tramos más duros
+• Sonidos mejor equilibrados entre sí
+• Cooperativo en línea más fluido y un aviso claro cuando dos jugadores tienen versiones distintas
+• Las cargas saltan del montón a tus brazos y al muro
+• Honda más rápida; no se puede trepar cargando
