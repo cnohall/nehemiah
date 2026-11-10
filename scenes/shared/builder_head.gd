@@ -107,6 +107,7 @@ func _beard() -> void:
 	# One rounded shape with a few broad locks, drawn a little smaller toward the mouth:
 	# a cartoon beard (GDD §6.2), not a bunch of grapes over half the face
 	_into = _rig._pivot(_head, BEARD_AT)
+	_into.name = "Beard"
 	_into.scale = Vector3.ONE * BEARD_SCALE
 	# The wrap is one closed cheek-to-cheek volume. Its front top dips under
 	# the mouth; the sides rise into the sideburns.
