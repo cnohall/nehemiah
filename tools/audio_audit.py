@@ -7,6 +7,8 @@ Reads _defs and TRIM straight from scenes/sfx/sfx.gd, so it always matches the g
 - Per event: effective level = clip level + TRIM + volume_db (before bus volume and
   3D distance falloff), flagging quiet events and variants that don't match.
 - Audition WAV: 3 variants of each event at in-game gain and pitch, with a cue sheet.
+- Mix layers: music, narration, jingles and effects as heard at default Settings, so
+  one layer never drowns another (rerun after adding music, voice or a jingle).
 """
 import os, random, re, statistics, subprocess
 
@@ -88,3 +90,57 @@ subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", *inputs,
 with open(os.path.join(OUT, "sfx_audition_cues.txt"), "w") as fh:
     fh.writelines(f"{int(c // 60)}:{c % 60:05.2f}  {n}\n" for c, n in cues)
 print(f"\nwrote {wav}")
+
+# ── Mix layers at default settings ──────────────────────────
+# Loudness of each layer as the player hears it with untouched Settings (bus volumes and
+# the Sfx player gains applied; Master left out, it moves everything together). Music and
+# voice: integrated LUFS. Jingles and effects: max momentary (400 ms) LUFS, which reads a
+# sustained swish fairly but under-reads a click (use the peak column above for those).
+import glob, math
+
+def _r128(path, pad):
+    af = ("apad=pad_dur=0.5," if pad else "") + "ebur128=metadata=1,ametadata=print:key=lavfi.r128.M"
+    err = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", path, "-af", af, "-f", "null", "-"],
+                         capture_output=True, text=True).stderr
+    m = [float(v) for v in re.findall(r"lavfi.r128.M=(-?[\d.]+)", err) if float(v) > -70]
+    i = re.findall(r"I:\s*(-?[\d.]+) LUFS", err)
+    return (float(i[-1]) if i else -99.0), (max(m) if m else -99.0)
+
+settings = open(os.path.join(ROOT, "scenes/settings/settings.gd"), encoding="utf-8").read()
+def _bus(var):
+    return 20 * math.log10(float(re.search(r"^var %s := ([\d.]+)" % var, settings, re.M).group(1)))
+def _const(name):
+    return float(re.search(r"const %s := (-?[\d.]+)" % name, src).group(1))
+MUSIC_BUS, SFX_BUS, VOICE_BUS = _bus("music_volume"), _bus("sfx_volume"), _bus("voice_volume")
+base = _const("MUSIC_BASE_DB")
+music_defs = src.split("var _music_defs := {")[1].split("\n}")[0]
+trims = {f: float(db) for f, db in re.findall(r'\["([\w/]+)", (-?[\d.]+)\]', music_defs)}
+story_trim = trims.get("story_temple_of_the_manes", 0.0)
+jingle_db = float(re.search(r"_jingle.volume_db = (-?[\d.]+)", src).group(1))
+
+print(f"\nMix layers at default settings (LUFS)")
+music = []
+for f, t in sorted(trims.items()):
+    p = os.path.join(ROOT, "assets/audio/music", f + ".ogg")
+    if os.path.exists(p):
+        music.append((f, _r128(p, False)[0] + t + base + MUSIC_BUS))
+lv = [v for _, v in music]
+print(f"  music      {statistics.median(lv):6.1f}  (spread {max(lv) - min(lv):.1f})")
+for f, v in music:   # the story track sits lower on purpose (under the reading)
+    if abs(v - statistics.median(lv)) > 1.0 and not f.startswith("story_"):
+        print(f"    {f:34} {v:6.1f}  <-- off the pack")
+voice = [_r128(p, False)[0] + VOICE_BUS for p in glob.glob(os.path.join(ROOT, "assets/audio/narration/en/*.ogg"))]
+if voice:
+    under = statistics.median(lv) + story_trim + _const("VOICE_DUCK_DB")
+    print(f"  narration  {statistics.median(voice):6.1f}  (spread {max(voice) - min(voice):.1f}; "
+          f"{statistics.median(voice) - under:.1f} LU over the dipped story music)")
+jm = [_r128(p, True)[1] + jingle_db + SFX_BUS for p in glob.glob(os.path.join(ROOT, "assets/audio/jingles/*.ogg"))]
+print(f"  jingles    {statistics.median(jm):6.1f}  (max momentary)")
+ev = []
+for name, files, vol, _, _ in events:
+    ms = [_r128(clip(f), True)[1] + trim.get(f, 0.0) for f in files]
+    ev.append((name, statistics.mean(ms) + vol + SFX_BUS))
+med = statistics.median(v for _, v in ev)
+print(f"  effects    {med:6.1f}  (median event, max momentary, within 10 m)")
+for n, v in sorted(ev, key=lambda r: -r[1])[:4]:
+    print(f"    loudest: {n:16} {v:6.1f}")

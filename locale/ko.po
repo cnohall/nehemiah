@@ -137,6 +137,9 @@ msgstr "음악"
 msgid "Effects"
 msgstr "효과음"
 
+msgid "Narration"
+msgstr "내레이션"
+
 msgid "Done"
 msgstr "완료"
 

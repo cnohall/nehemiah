@@ -42,6 +42,22 @@ const ROLL := [
 	["small", "by yd · CC0 · opengameart.org", ""],
 	["name", "AlkaKrab", ""],
 	["small", "“Desert Fantasy Ambient” · alkakrab.itch.io", ""],
+	["name", "“Temple of the Manes” · “Return of the Mummy”", ""],
+	["small", "Kevin MacLeod (incompetech.com) · CC-BY 4.0", ""],
+	["name", "“Defying Commodus”", ""],
+	["small", "by Matthew Pablo · matthewpablo.com · CC-BY 3.0", ""],
+	["name", "“Old Music”", ""],
+	["small", "by Alexandr Zhelanov · soundcloud.com/alexandr-zhelanov · CC-BY 3.0", ""],
+	["name", "“Ancient Temple”", ""],
+	["small", "by Alexandr Zhelanov · soundcloud.com/alexandr-zhelanov · CC-BY 4.0", ""],
+	["name", "“Mystic Journey”", ""],
+	["small", "by Tausdei · CC-BY 3.0 · opengameart.org", ""],
+	["name", "“Nomads”", ""],
+	["small", "by elerya · CC-BY 3.0 · opengameart.org", ""],
+	["name", "“Un désert”", ""],
+	["small", "by Loyalty Freak Music · CC0 · opengameart.org", ""],
+	["small", "All music loudness-adjusted from the originals", ""],
+	["small", "creativecommons.org/licenses/by/3.0 · /by/4.0", ""],
 	["role", "Sound", ""],
 	["name", "Kenney", ""],
 	["small", "kenney.nl · CC0", ""],
@@ -84,7 +100,7 @@ func play() -> void:
 	_map.section = CircuitDiorama.GATES.size() - 1
 	_map.finale = true
 	_map.play()
-	Sfx.play_music("calm")
+	Sfx.play_music("menu")
 	_column.position.y = _clip.size.y   # starts just below the fold
 
 func is_playing() -> bool:

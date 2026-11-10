@@ -19,6 +19,8 @@ signal closed
 @onready var _music_val:  Label  = %MusicValue
 @onready var _sfx:        HSlider = %Sfx
 @onready var _sfx_val:    Label  = %SfxValue
+@onready var _voice:      HSlider = %Voice
+@onready var _voice_val:  Label  = %VoiceValue
 @onready var _done:       Button = %Done
 @onready var _grid:       GridContainer = $Center/Modal/VBox/Grid
 @onready var _title:      Label = $Center/Modal/VBox/Header/Title
@@ -84,6 +86,8 @@ func _ready() -> void:
 	_music.drag_ended.connect(func(_changed): Settings.save())
 	_sfx.value_changed.connect(_on_sfx)
 	_sfx.drag_ended.connect(func(_changed): Settings.save())
+	_voice.value_changed.connect(_on_voice)
+	_voice.drag_ended.connect(func(_changed): Settings.save())
 	_done.pressed.connect(_on_done)
 	_build_extra_rows()
 	_even_rows(_grid)
@@ -130,6 +134,8 @@ func open() -> void:
 	_music_val.text = "%d%%" % roundi(_music.value)
 	_sfx.set_value_no_signal(Settings.sfx_volume * 100.0)
 	_sfx_val.text = "%d%%" % roundi(_sfx.value)
+	_voice.set_value_no_signal(Settings.voice_volume * 100.0)
+	_voice_val.text = "%d%%" % roundi(_voice.value)
 	_select_language()
 	_select_graphics()
 	if _window_size != null:
@@ -224,6 +230,11 @@ func _on_sfx(v: float) -> void:
 	Settings.sfx_volume = v / 100.0
 	Settings.apply()
 	_sfx_val.text = "%d%%" % roundi(v)
+
+func _on_voice(v: float) -> void:
+	Settings.voice_volume = v / 100.0
+	Settings.apply()
+	_voice_val.text = "%d%%" % roundi(v)
 
 # ── Extra rows / keys page ─────────────────────────────────
 

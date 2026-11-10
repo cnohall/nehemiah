@@ -816,6 +816,9 @@ msgstr ""
 msgid "Effects"
 msgstr ""
 
+msgid "Narration"
+msgstr ""
+
 #: scenes\festival\festival.gd:42
 msgid "Eliashib the high priest"
 msgstr ""

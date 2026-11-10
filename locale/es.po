@@ -137,6 +137,9 @@ msgstr "Música"
 msgid "Effects"
 msgstr "Efectos"
 
+msgid "Narration"
+msgstr "Narración"
+
 msgid "Done"
 msgstr "Listo"
 
