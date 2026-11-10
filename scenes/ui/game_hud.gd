@@ -642,6 +642,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 		_tally.hide()
 		banner.hide()
 	gather.visible = phase == GameState.Phase.GATHER
+	if _room_chip != null:
+		_room_chip.visible = phase == GameState.Phase.GATHER
 	# Open while the crew gathers, folded once the work starts (a click brings it back)
 	if _invite_fold.is_valid():
 		_invite_fold.call(phase != GameState.Phase.GATHER)
@@ -1468,12 +1470,13 @@ func _build_bot_row(vb: Control, at: int, in_menu: bool) -> void:
 	refresh.call()
 
 # Phones: the game menu is too short for the crew rows under Resume, so they go on a
-# second page behind one button — the rule and the five rows from _build_bot_row, then Back
+# second page behind one button — the rule and the six rows from _build_bot_row, then Back
+# (all six: the bot skill's caption left behind sat loose under the menu's buttons)
 func _build_host_page(menu: VBoxContainer, at: int) -> void:
 	_host_page = VBoxContainer.new()
 	_host_page.add_theme_constant_override("separation", 8)
 	_host_page.visible = false
-	var rows := menu.get_children().slice(at + 1, at + 6)
+	var rows := menu.get_children().slice(at + 1, at + 7)
 	menu.get_child(at).queue_free()   # the rule: the page has its own heading
 	menu.add_child(_host_page)
 	menu.move_child(_host_page, at)
@@ -1523,18 +1526,18 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 	tiles.add_theme_constant_override("separation", 6)
 	var about := _host_caption()
 	# The simple game has no trades: the row hides while it's in play (the host may switch)
+	# The gather panel says it; the phone menu has no room for two lines
+	var quiet := in_menu and Mobile.enabled()
 	var show_row := func():
 		if is_instance_valid(tiles):
 			tiles.visible = GameState.trades_on()
-			about.visible = GameState.trades_on()
+			about.visible = GameState.trades_on() and not quiet
 	GameState.rules_changed.connect(show_row)
 	show_row.call()
 	vb.add_child(tiles)
 	vb.move_child(tiles, at)
 	vb.add_child(about)
 	vb.move_child(about, at + 1)
-	if in_menu and Mobile.enabled():
-		about.hide()   # the gather panel says it; the phone menu has no room for two lines
 	var group := ButtonGroup.new()
 	var portraits: Array[CrewPortrait] = []
 	for t in CharacterRig.TRADES.size():
@@ -1748,7 +1751,9 @@ func set_player_present(slot: int, present: bool, is_local: bool, is_bot := fals
 	if slot >= _cards.size():
 		return
 	var card: Dictionary = _cards[slot]
-	card.root.visible = present
+	# Phones: bots get no token — their health isn't the player's to watch, and the
+	# column stays clear of the stick's corner
+	card.root.visible = present and not (is_bot and Mobile.enabled())
 	card.trade = trade
 	_card_title(card)
 	var who: String = tr("You") if is_local else (tr("Bot") if is_bot \
@@ -1783,6 +1788,8 @@ func set_player_carry(slot: int, kind: String) -> void:
 	var icon: TagIcon = _cards[slot].load
 	var k := kind.trim_suffix("s") if kind == "beams" else kind
 	icon.modulate.a = 0.0 if k.is_empty() else 1.0
+	if _cards[slot].badge != null:
+		_cards[slot].badge.modulate.a = icon.modulate.a
 	if not k.is_empty() and icon.kind != k:
 		icon.kind = k
 		icon.queue_redraw()
@@ -1793,7 +1800,9 @@ func set_player_color(slot: int, color: Color, trade := -1) -> void:
 	_slot_colors[slot] = color
 	(_cards[slot].portrait as CrewPortrait).set_worker(trade if trade >= 0 else slot, color)
 	(_cards[slot].mark as CrewMark).set_mark(slot, color)
-	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat
+	if Mobile.enabled():
+		return   # phones: a bare token, no card
+	var card :=(UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat
 	if Mobile.enabled():
 		card.content_margin_left = 5
 		card.content_margin_right = 8
@@ -1908,7 +1917,8 @@ func _build_player_cards() -> void:
 		root.custom_minimum_size = Vector2(120 if Mobile.enabled() else 236, 0)
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		root.visible = false
-		UiStyle.ornament(root, 4.0)
+		if not Mobile.enabled():   # phones: a bare token (below)
+			UiStyle.ornament(root, 4.0)
 		var hb := HBoxContainer.new()
 		hb.add_theme_constant_override("separation", 10)
 		root.add_child(hb)
@@ -1962,17 +1972,61 @@ func _build_player_cards() -> void:
 		var fill := UiStyle.box(UiStyle.OLIVE, Vector2.ZERO, 2)
 		bar.add_theme_stylebox_override("fill", fill)
 		vb.add_child(bar)
+		var token: Control = null
+		var badge: Control = null
 		if Mobile.enabled():
-			# Phones: a small portrait and the health bar; the world already shows who's who
+			# Phones: no card, just a token — the portrait in a health ring, their mark
+			# top-left, what they carry in a badge bottom-right. The bar stays (hidden)
+			# as the health value the ring reads.
 			root.custom_minimum_size = Vector2.ZERO
-			hb.add_theme_constant_override("separation", 6)
-			portrait.custom_minimum_size = Vector2(34, 34)
-			who.hide()
-			name_lbl.hide()
-			bar.custom_minimum_size = Vector2(50, 6)
+			root.add_theme_stylebox_override("panel", UiStyle.empty())
+			token = Control.new()
+			token.custom_minimum_size = Vector2(TOKEN_PX, TOKEN_PX)
+			token.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			root.add_child(token)
+			hb.hide()
+			# A container sizes the face: loose, it kept its 72px birth size
+			var mid := CenterContainer.new()
+			mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			mid.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			token.add_child(mid)
+			portrait.reparent(mid)
+			portrait.custom_minimum_size = Vector2(TOKEN_PX - 10, TOKEN_PX - 10)
+			var ring := Control.new()
+			ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			ring.draw.connect(_draw_health_ring.bind(ring, bar, fill))
+			bar.value_changed.connect(func(_v: float): ring.queue_redraw())
+			token.add_child(ring)
+			mark.reparent(token)
+			mark.position = Vector2(-2, -2)
+			badge = Control.new()
+			badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			badge.size = Vector2(22, 22)
+			badge.position = Vector2(TOKEN_PX - 18, TOKEN_PX - 18)
+			badge.draw.connect(func():
+				badge.draw_circle(badge.size * 0.5, 11.0, UiStyle.PARCHMENT)
+				badge.draw_arc(badge.size * 0.5, 10.5, 0, TAU, 32, Color(UiStyle.RULE, 0.8), 1.0, true))
+			badge.modulate.a = 0.0
+			token.add_child(badge)
+			load_icon.reparent(badge)
+			load_icon.custom_minimum_size = Vector2(18, 18)
+			load_icon.size = Vector2(18, 18)
+			load_icon.position = Vector2(2, 2)
 		players_row.add_child(root)
 		_cards.append({ root = root, portrait = portrait, name = name_lbl, who = who, mark = mark,
-			carry = carry, bar = bar, fill = fill, load = load_icon, trade = -1, slot = slot })
+			carry = carry, bar = bar, fill = fill, load = load_icon, badge = badge, trade = -1, slot = slot })
+
+const TOKEN_PX := 48   # phones: a crew token's size (portrait + health ring)
+
+# Phones: health as a ring round the portrait, clockwise from the top, in the bar's colour
+func _draw_health_ring(ring: Control, bar: ProgressBar, fill: StyleBoxFlat) -> void:
+	var c := ring.size * 0.5
+	var r := minf(ring.size.x, ring.size.y) * 0.5 - 3.0
+	ring.draw_arc(c, r, 0, TAU, 48, Color(UiStyle.PARCHMENT, 0.95), 6.0, true)
+	ring.draw_arc(c, r, 0, TAU, 48, Color(UiStyle.INK, 0.18), 3.5, true)
+	if bar.value > 0.0:
+		ring.draw_arc(c, r, -PI * 0.5, -PI * 0.5 + TAU * bar.value, 48, fill.bg_color, 3.5, true)
 
 # ── EOS room code ──────────────────────────────────────────
 
@@ -2004,8 +2058,13 @@ func _build_room_code() -> void:
 	hb.add_child(code)
 
 # Phones: a tappable chip beside the pause button — tap copies the code to paste
-# into a chat app; a check mark confirms.
+# into a chat app; a check mark confirms. Only while the crew gathers: once the work
+# starts it's clutter over the world, and the game menu carries its own copy.
 func _build_room_chip() -> void:
+	_room_chip = _make_room_chip()
+	$Root.add_child(_room_chip)
+
+func _make_room_chip() -> Button:
 	var chip := Button.new()
 	chip.focus_mode = Control.FOCUS_NONE
 	chip.icon = UiIcons.get_icon("copy", 18)
@@ -2036,8 +2095,7 @@ func _build_room_chip() -> void:
 		get_tree().create_timer(1.6).timeout.connect(func():
 			if is_instance_valid(chip):
 				chip.icon = UiIcons.get_icon("copy", 18)))
-	$Root.add_child(chip)
-	_room_chip = chip
+	return chip
 
 # ── Phone layout ───────────────────────────────────────────
 
@@ -2192,7 +2250,24 @@ func _compact_pause_menu() -> void:
 	pm.get_node("Hint").custom_minimum_size.x = 0
 	pm.get_node("Hint").add_theme_font_size_override("font_size", 14)
 	pm.get_node("Gap").hide()
+	# A 411dp-tall screen has no line to spare: the title says it, the dawn banner
+	# already says "Progress saved"
+	pm.get_node("Eyebrow").hide()
+	pm.get_node("SaveHint").hide()
 	pm.add_theme_constant_override("separation", 8)
+	# The room code, off the HUD once the work starts, lives here beside the title
+	if not NetworkManager.room_code().is_empty():
+		var chip := _make_room_chip()
+		chip.custom_minimum_size.y = 40
+		pm.get_node("Title").add_child(chip)
+		chip.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT, Control.PRESET_MODE_MINSIZE)
+		chip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		chip.grow_vertical = Control.GROW_DIRECTION_BOTH
+	# Still too tall (a longer language, a shorter phone): shrink the whole menu to fit.
+	# Scales the CenterContainer, not the modal: a container resets its children's scale.
+	var modal := $Root/PauseMenu/Center/Modal as Control
+	modal.resized.connect(_fit_pause_menu, CONNECT_DEFERRED)
+	get_viewport().size_changed.connect(_fit_pause_menu, CONNECT_DEFERRED)
 	var pair := HBoxContainer.new()
 	pair.name = "Pair"
 	pair.add_theme_constant_override("separation", 8)
@@ -2203,6 +2278,17 @@ func _compact_pause_menu() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.reparent(pair)
 	pm.get_node("Resume").focus_mode = Control.FOCUS_NONE
+
+func _fit_pause_menu() -> void:
+	var center := $Root/PauseMenu/Center as Control
+	var modal := $Root/PauseMenu/Center/Modal as Control
+	var s := Mobile.safe_insets()
+	var vp := center.get_viewport_rect().size
+	var room := Vector2(vp.x - s.x - s.z, vp.y - s.y - s.w) - Vector2(16, 16)
+	var need := modal.get_combined_minimum_size()
+	var k := minf(1.0, minf(room.x / need.x, room.y / need.y)) if need.x > 0.0 and need.y > 0.0 else 1.0
+	center.pivot_offset = center.size * 0.5
+	center.scale = Vector2.ONE * k
 
 # ── Steam invite ───────────────────────────────────────────
 
