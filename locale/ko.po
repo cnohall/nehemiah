@@ -703,6 +703,9 @@ msgstr "이 단계를 먼저 쌓으세요: {drop} 내려놓고 {interact} 작업
 msgid "This wall is finished"
 msgstr "이 성벽은 완성되었습니다"
 
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
+msgstr "이 성벽은 완성되었습니다. {drop}(으)로 내려놓고 {interact}(으)로 넘어가세요"
+
 msgid "Caught it"
 msgstr "받았다"
 
@@ -1481,6 +1484,9 @@ msgstr "걷기  {move}"
 
 msgid "Pick up  {interact}"
 msgstr "줍기  {interact}"
+
+msgid "Carry it here"
+msgstr "여기로 가져가세요"
 
 msgid "Deliver  {interact}"
 msgstr "전달  {interact}"
@@ -2660,3 +2666,6 @@ msgstr "한 번 해 볼 때까지 다음 할 일 위에 표시가 뜹니다. 켜
 
 msgid "Aim and throw"
 msgstr "조준하고 쏘기"
+
+msgid "Your game and the host's are different versions. Both of you need the same build to play together."
+msgstr "내 게임과 호스트의 게임 버전이 다릅니다. 함께 하려면 두 사람 모두 같은 버전이어야 합니다."

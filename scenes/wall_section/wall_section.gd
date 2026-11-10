@@ -510,13 +510,13 @@ func _follow_campaign(day: int) -> void:
 	if GameState.festival:
 		day = GameState.TOTAL_DAYS   # the festival comes after the wall is finished
 	var t := (day - 1 + (hash(global_position.x) % 7) - 3) / float(GameState.TOTAL_DAYS - 1)
-	var s := Stage.EMPTY
+	# Never bare foundation: a neighbour stretch stays solid (it fences the fight onto
+	# your own stretch), so it has to look solid too. Their timber is up from day 1
+	var s := Stage.FRAMED
 	if day >= GameState.TOTAL_DAYS or t >= 0.9:
 		s = Stage.MORTARED
 	elif t >= 0.5:
 		s = Stage.STACKED
-	elif t >= 0.2:
-		s = Stage.FRAMED
 	stage = s
 
 func is_built() -> bool:

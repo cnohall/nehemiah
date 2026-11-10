@@ -87,7 +87,9 @@ const WINDOW_SIZES := [Vector2i(1024, 768), Vector2i(1280, 720), Vector2i(1600, 
 const QUALITIES := [
 	{ "name": "Low",    "shadow": 2048, "soft": 1, "ssao": 0, "msaa": Viewport.MSAA_DISABLED },
 	{ "name": "Medium", "shadow": 4096, "soft": 2, "ssao": 1, "msaa": Viewport.MSAA_2X },
-	{ "name": "High",   "shadow": 8192, "soft": 3, "ssao": 2, "msaa": Viewport.MSAA_2X },
+	# 8192 drew no better than 4096 with these soft shadows (tools/shadow_check.gd) and cost
+	# 1.4 ms at 1080p, 1.7 at 5120x1440 on a Radeon 890M (tools/gpu_split.py)
+	{ "name": "High",   "shadow": 4096, "soft": 3, "ssao": 2, "msaa": Viewport.MSAA_DISABLED, "ssaa": Viewport.SCREEN_SPACE_AA_SMAA },
 ]
 
 # Auto step-down: this many seconds under LOW_FPS before the scale drops one notch
@@ -278,6 +280,7 @@ func _apply_graphics() -> void:
 	var q: Dictionary = QUALITIES[clampi(quality, 0, QUALITIES.size() - 1)]
 	var root := get_tree().root
 	root.msaa_3d = q["msaa"]
+	root.screen_space_aa = q.get("ssaa", Viewport.SCREEN_SPACE_AA_DISABLED)
 	if can_scale_3d():
 		root.scaling_3d_scale = render_scale
 		# FSR1 sharpens an upscale; at full scale plain bilinear costs nothing

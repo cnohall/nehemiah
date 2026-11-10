@@ -703,6 +703,9 @@ msgstr "Primero construye esta etapa: {drop} para soltar la carga, luego {intera
 msgid "This wall is finished"
 msgstr "Esta muralla está terminada"
 
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
+msgstr "Esta muralla está terminada. {drop} para soltarlo, luego {interact} para trepar"
+
 msgid "Caught it"
 msgstr "¡Atrapada!"
 
@@ -1491,6 +1494,9 @@ msgstr "Caminar  {move}"
 
 msgid "Pick up  {interact}"
 msgstr "Recoger  {interact}"
+
+msgid "Carry it here"
+msgstr "Llévalo aquí"
 
 msgid "Deliver  {interact}"
 msgstr "Entregar  {interact}"
@@ -2676,3 +2682,6 @@ msgstr "Una etiqueta sobre tu próxima tarea hasta que la hayas hecho una vez. A
 
 msgid "Aim and throw"
 msgstr "Apunta y lanza"
+
+msgid "Your game and the host's are different versions. Both of you need the same build to play together."
+msgstr "Tu juego y el del anfitrión son versiones distintas. Los dos necesitan la misma versión para jugar juntos."

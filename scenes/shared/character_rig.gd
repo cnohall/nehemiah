@@ -31,7 +31,9 @@ const BEVEL_SCALE  := 1.3      # chamfer as a multiple of each part's authored b
 const BUILD_TURN   := -0.65
 const BLEND_TIME   := 0.09     # cross-fade from the old pose when the animation changes
 const HOLD_TIME    := 0.1      # this long without motion and the figure counts as stopped
-const WINDUP_FULL  := 0.9      # wind-up reaches full tension (= Player.SLING_CHARGE_TIME)
+const ACCEL_LAG    := 6.0      # 1/s: how fast the lagged speed catches up (the accel filter)
+const ACCEL_DEADZONE := 2.0    # m/s² of speed wobble ignored before the torso leans on it
+const WINDUP_FULL  := 0.7   # wind-up reaches full tension (= Player.SLING_CHARGE_TIME)
 const SEEN_MARGIN  := 3.0      # metres past the view edge a figure still poses (its shadow, the next pan)
 
 # Rig dimensions (metres, before scale). Feet at y = 0.
@@ -168,12 +170,14 @@ var _sec_skirt := Vector2.ZERO
 var _prev_body_y := 0.0
 var _body_vy := 0.0
 var _accel := 0.0           # ground acceleration (m/s²), smoothed: leaning into starts and stops
+var _speed_slow := 0.0      # _move_speed lagged; its gap to the speed is the acceleration
 var _turn_rate := 0.0       # rad/s the figure is turning: banking into turns
 var _seed := 0.0            # each figure's idle drifts on its own clock
 var _last_pose: Dictionary = {}
 var _dip := 0.0             # knees giving under a load picked up, a landing, a blow (squash)
 var _dip_tween: Tween
 var _hand_items: Array[Node3D] = []   # things put in the right hand from outside (attach_to_hand)
+var _baked_figure: BakedFigure        # a Blender figure worn over the pivots (look "baked")
 
 static var _meshes: Dictionary = {}
 static var _part_mat: ShaderMaterial
@@ -213,17 +217,19 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 				"bracers": true, "brow": HAIR_GINGER.darkened(0.2),
 				"sculpted_builder": true, "sculpted_body": true}, true)
 		3:
-			look.merge({"skin": SKIN[0], "hair": HAIR_GREY, "beard": "long", "hat": "wrap",
+			look.merge({"skin": SKIN[3], "hair": HAIR_GREY, "beard": "long", "hat": "wrap",
 				"hat_color": Color(0.96, 0.94, 0.89), "band": dye, "robe": Color(0.93, 0.90, 0.83),
 				"vest": dye, "long_robe": true, "scroll": Color(0.90, 0.82, 0.62),
 				"trim": dye.darkened(0.2), "brow": Color(0.62, 0.60, 0.56),
 				"sculpted_builder": true, "sculpted_body": true}, true)
 	return look
 
-## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type
-static func enemy_look(kind: String) -> Dictionary:
+## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type. Never told apart by
+## skin: Horonites, Ammonites and Arabs were the Judeans' own neighbours, so each foe draws
+## from the crew's SKIN range (`variant`, the same on every peer) and the cloth does the rest.
+static func enemy_look(kind: String, variant := 0) -> Dictionary:
 	var base := {
-		"skin": Color(0.60, 0.40, 0.27), "trim": Color(0.12, 0.09, 0.08), "hair": Color(0.19, 0.12, 0.08),
+		"skin": SKIN[posmod(variant, SKIN.size())], "trim": Color(0.12, 0.09, 0.08), "hair": Color(0.19, 0.12, 0.08),
 		"band": Color(0.10, 0.08, 0.07), "brows": true, "outline": Color(0.36, 0.07, 0.05),
 		"bare_arms": false,
 	}
@@ -304,6 +310,7 @@ func set_look(look: Dictionary) -> void:
 	_ankles.clear()
 	_elbows.clear()
 	_tails.clear()
+	_baked_figure = null
 	_build(look)
 	_merge_parts(look)
 	_apply_pose()
@@ -425,6 +432,8 @@ func _process(delta: float) -> void:
 	_update_facing(delta)
 	_apply_pose()
 	_secondary(delta)
+	if _baked_figure != null:
+		_baked_figure.pose()
 	posed.emit(delta)
 
 # Posing is most of a figure's frame (the script, then every part's moved transform):
@@ -481,10 +490,15 @@ func _physics_process(delta: float) -> void:
 		_acc_d += step
 		_acc_t += delta
 		if step.length_squared() > 1e-10 or _acc_t >= HOLD_TIME:
-			var was := _move_speed
 			_vel = _vel.lerp(_acc_d / _acc_t, clampf(_acc_t * 14.0, 0.0, 1.0))
 			_move_speed = _vel.length()
-			_accel = lerpf(_accel, (_move_speed - was) / _acc_t, clampf(_acc_t * 8.0, 0.0, 1.0))
+			# Acceleration as the gap between the speed and its lagged self, not the tick-to-
+			# tick difference: that multiplied every slide along a neighbour or patch of drag
+			# by 60 and the torso flickered fore and aft. Small gaps are wobble, not a start
+			_speed_slow = lerpf(_speed_slow, _move_speed, clampf(_acc_t * ACCEL_LAG, 0.0, 1.0))
+			var raw := (_move_speed - _speed_slow) * ACCEL_LAG
+			raw = signf(raw) * maxf(absf(raw) - ACCEL_DEADZONE, 0.0)
+			_accel = lerpf(_accel, raw, clampf(_acc_t * 8.0, 0.0, 1.0))
 			_acc_d = Vector3.ZERO
 			_acc_t = 0.0
 	_last_pos = pos
@@ -1502,6 +1516,8 @@ func _build(look: Dictionary) -> void:
 		_part(_belt_sword, _soft(Vector3(0.24, 0.06, 0.1), 0.02), brass, Vector3(0, 0.04, 0))
 		_tool_visible()
 	_proportions()
+	if look.has("baked"):
+		_baked_figure = BakedFigure.apply(self, look["baked"])
 
 func _proportions() -> void:
 	if _head != null:

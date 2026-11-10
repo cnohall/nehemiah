@@ -66,6 +66,7 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	_setup_version_check()
 	_init_steam()
 	_init_eos()
 
@@ -77,6 +78,7 @@ var host_port := DEFAULT_PORT
 # Walks up `tries` ports when one is taken (a second copy of the game, a headless test);
 # joiners then type "ip:port". Tests pass tries = 1 so host and client never drift apart.
 func host(port: int = DEFAULT_PORT, tries: int = 5) -> void:
+	NetFingerprint.get_hash()   # now, not when the first friend arrives
 	for p in range(port, port + tries):
 		var peer := ENetMultiplayerPeer.new()
 		if peer.create_server(p, MAX_PLAYERS) == OK:
@@ -94,6 +96,8 @@ func join(address: String, port: int = DEFAULT_PORT) -> void:
 	if address.count(":") == 1 and address.get_slice(":", 1).is_valid_int():
 		port = address.get_slice(":", 1).to_int()
 		address = address.get_slice(":", 0)
+	join_error = ""
+	NetFingerprint.get_hash()
 	var peer := ENetMultiplayerPeer.new()
 	var err  := peer.create_client(address, port)
 	if err != OK:
@@ -128,6 +132,7 @@ func host_steam() -> void:
 	if not _steam:
 		host_failed.emit("Steam is not running.")
 		return
+	NetFingerprint.get_hash()
 	_hosting_lobby = true
 	_steam_pending = true
 	_steam.createLobby(LOBBY_TYPE_FRIENDS_ONLY, MAX_PLAYERS)
@@ -138,6 +143,8 @@ func join_steam(lobby_id: int) -> void:
 		return
 	_hosting_lobby = false
 	_steam_pending = true
+	join_error = ""
+	NetFingerprint.get_hash()
 	_steam.joinLobby(lobby_id)
 
 # Online Steam friends, those already in the game first. Used by the in-game
@@ -382,6 +389,52 @@ func add_sync(target: Node, props: Array[NodePath],
 	target.add_child(sync)
 	return sync
 
+# ── Version check ──────────────────────────────────────────
+# Every connection opens with SceneMultiplayer's auth step: each side sends its
+# NetFingerprint and admits the other only on a match. It runs below RPCs, so it holds
+# even between builds whose RPC numbering differs. A build from before this check never
+# sends one and times out (AUTH_TIMEOUT), which reads the same: different version.
+
+const AUTH_TIMEOUT := 15.0   # s; Steam's relay can take a few to route the first packets
+const VERSION_MISMATCH := "Your game and the host's are different versions. Both of you need the same build to play together."
+
+## Why the last join failed, when we know better than "connection failed"; "" otherwise
+var join_error := ""
+
+func _setup_version_check() -> void:
+	var mp := multiplayer as SceneMultiplayer
+	mp.auth_callback = _on_auth_data
+	mp.auth_timeout = AUTH_TIMEOUT
+	mp.peer_authenticating.connect(_on_peer_authenticating)
+	mp.peer_authentication_failed.connect(_on_peer_auth_failed)
+
+func _on_peer_authenticating(id: int) -> void:
+	(multiplayer as SceneMultiplayer).send_auth(id, NetFingerprint.get_hash().to_utf8_buffer())
+
+func _on_auth_data(id: int, data: PackedByteArray) -> void:
+	var theirs := data.get_string_from_utf8()
+	if theirs == NetFingerprint.get_hash():
+		(multiplayer as SceneMultiplayer).complete_auth(id)
+		return
+	push_warning("NetworkManager: peer %d runs a different build (%s, ours %s)" % [id, theirs, NetFingerprint.get_hash()])
+	_refuse(id)
+
+func _on_peer_auth_failed(id: int) -> void:
+	push_warning("NetworkManager: peer %d never confirmed its version" % id)
+	_refuse(id)
+
+# The host drops the stray peer and carries on; a joiner gives up on this host
+func _refuse(id: int) -> void:
+	if multiplayer.is_server():
+		if multiplayer.multiplayer_peer:
+			multiplayer.multiplayer_peer.disconnect_peer(id)
+		return
+	if id != 1 or not join_error.is_empty():
+		return
+	join_error = VERSION_MISMATCH   # the menu's label translates it
+	disconnect_session.call_deferred()
+	lobby_joined.emit.call_deferred(false)
+
 # ── Signals ────────────────────────────────────────────────
 
 func _on_peer_connected(id: int) -> void:
@@ -402,7 +455,8 @@ func _on_connected_to_server() -> void:
 
 func _on_connection_failed() -> void:
 	disconnect_session()
-	lobby_joined.emit(false)
+	if join_error.is_empty():   # a refused version already said so
+		lobby_joined.emit(false)
 
 # Host left — drop back to the menu instead of running against a dead peer
 func _on_server_disconnected() -> void:
@@ -451,6 +505,7 @@ func _on_steam_lobby_created(result: int, lobby_id: int) -> void:
 	_steam.setLobbyData(lobby_id, "host_name", steam_name())
 	_steam.setLobbyJoinable(lobby_id, true)
 	var peer: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
+	_relay_on(peer)
 	var err: int = peer.create_host(0)
 	if err != OK:
 		disconnect_session()
@@ -479,6 +534,7 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 		return
 	var lobby_owner: int = _steam.getLobbyOwner(lobby_id)
 	var peer: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
+	_relay_on(peer)
 	var err: int = peer.create_client(lobby_owner, 0)
 	if err != OK:
 		disconnect_session()
@@ -487,6 +543,13 @@ func _on_steam_lobby_joined(lobby_id: int, _perms: int, _locked: bool, response:
 	multiplayer.multiplayer_peer = peer
 	_set_presence()
 	# lobby_joined(true) fires from connected_to_server once the socket is up
+
+# Clients only reach each other through the host: each one's moves, RPCs and the
+# "someone joined" notice are relayed. SteamMultiplayerPeer has its own switch for it
+func _relay_on(peer: MultiplayerPeer) -> void:
+	if peer.has_method("set_server_relay"):
+		peer.call("set_server_relay", true)
+	multiplayer.server_relay = true
 
 # Friend clicked "Join Game" in the overlay / friends list, or accepted an invite
 func _on_steam_join_requested(lobby_id: int, _friend_id: int) -> void:

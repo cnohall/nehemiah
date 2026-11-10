@@ -1743,29 +1743,38 @@ func _add(kind: String, xf: Transform3D, color: Color) -> void:
 	_batches[kind][0].append(xf)
 	_batches[kind][1].append(color)
 
-# A map-wide MultiMesh has one bounding box, so it's never culled: the camera sees a
-# fraction of the map, the GPU drew all of it. The big batches (~11k grass blades)
-# split into map tiles; small ones stay whole — every tile is a draw.
-const TILE := 24.0
-const TILE_MIN := 1500   # instances before a kind is worth splitting
+## Each kind is cut into square tiles this wide (m): a MultiMesh is culled as a whole, so one
+## batch over the whole map sent every instance through the depth, opaque and every shadow
+## cascade pass. In tiles, only what the camera (or a cascade) sees is drawn. The scene is
+## bound by triangles here, not pixels (tools/gpu_split.py: scatter 4.4 of 11.6 ms at 1080p)
+const TILE := 16.0
+const TILE_MIN := 48   # a smaller batch stays whole: a draw call buys nothing for it
+# Phones pay more per draw: bigger tiles, and only the big batches (~11k grass blades) split
+const TILE_MOBILE := 24.0
+const TILE_MIN_MOBILE := 1500
 
 func _flush() -> void:
 	for kind: String in _batches:
-		var mesh := _mesh_for(kind)
-		var mat := _material_for(kind)
-		var tiles := {}
 		var xfs: Array[Transform3D] = _batches[kind][0]
 		var cols: Array[Color] = _batches[kind][1]
-		var split := xfs.size() >= TILE_MIN
-		for i in xfs.size():
-			var o := xfs[i].origin
-			var key := Vector2i(floori(o.x / TILE), floori(o.z / TILE)) if split else Vector2i.ZERO
-			if not tiles.has(key):
-				tiles[key] = [[] as Array[Transform3D], [] as Array[Color]]
-			tiles[key][0].append(xfs[i])
-			tiles[key][1].append(cols[i])
+		var tiles := {}
+		var mobile := OS.has_feature("mobile")
+		var tile := TILE_MOBILE if mobile else TILE
+		# Not on the web: WebGL pays per draw call far more (not measured there yet)
+		if xfs.size() < (TILE_MIN_MOBILE if mobile else TILE_MIN) or OS.has_feature("web"):
+			tiles[Vector2i.ZERO] = [xfs, cols]
+		else:
+			for i in xfs.size():
+				var key := Vector2i(floori(xfs[i].origin.x / tile), floori(xfs[i].origin.z / tile))
+				if not tiles.has(key):
+					tiles[key] = [[] as Array[Transform3D], [] as Array[Color]]
+				tiles[key][0].append(xfs[i])
+				tiles[key][1].append(cols[i])
+		var mesh := _mesh_for(kind)
+		var mat := _material_for(kind)
 		for key: Vector2i in tiles:
 			var mmi := _multimesh(mesh, tiles[key][0], tiles[key][1], mat)
+			mmi.name = "%s~%d~%d" % [kind, key.x, key.y]   # perf probes tally by kind (tools/perf_scene.gd)
 			# Ground-hugging bits: shadows cost more than they add
 			if kind in ["pebble", "pebble_b", "pebble_c", "patch", "slab", "tuft", "tuft_b", "bed", "chip", "ember", "wash", "sheep_wool"]:
 				mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

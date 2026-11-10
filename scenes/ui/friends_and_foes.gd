@@ -336,30 +336,31 @@ static func _look(e: Dictionary) -> Dictionary:
 	if e.has("slot"):
 		return CharacterRig.worker_look(e["slot"], Palette.CREW[e["slot"]])
 	if e.has("enemy"):
-		return CharacterRig.enemy_look(e["enemy"])
+		return CharacterRig.enemy_look(e["enemy"], String(e["enemy"]).hash())
+	# Foes share the crew's skin range (CharacterRig.SKIN): the cloth tells them apart
 	var foe := { "outline": Color(0.36, 0.07, 0.05), "brows": true, "tool": false, "bare_arms": false,
 		"sculpted_builder": true, "sculpted_body": true }
 	match e["key"]:
 		"nehemiah":
-			return { "skin": CharacterRig.SKIN[1], "hair": CharacterRig.HAIR_BROWN, "beard": "full",
+			return { "skin": CharacterRig.SKIN[2], "hair": CharacterRig.HAIR_BROWN, "beard": "full",
 				"hat": "wrap", "hat_color": Color(0.96, 0.94, 0.89), "band": Color(0.80, 0.62, 0.26),
 				"robe": Color(0.93, 0.90, 0.83), "vest": Color(0.20, 0.30, 0.52), "long_robe": true,
 				"trim": Color(0.80, 0.62, 0.26), "sash": Color(0.80, 0.62, 0.26),
 				"outline": CharacterRig.OUTLINE_PLAYER, "no_outline": true, "tool": false,
 				"sculpted_builder": true, "sculpted_body": true }
 		"sanballat":
-			foe.merge({ "skin": Color(0.64, 0.44, 0.30), "hair": Color(0.10, 0.08, 0.07), "beard": "long",
+			foe.merge({ "skin": CharacterRig.SKIN[1], "hair": Color(0.10, 0.08, 0.07), "beard": "long",
 				"hat": "wrap", "hat_color": Color(0.30, 0.10, 0.09), "band": Color(0.74, 0.54, 0.26),
 				"robe": Color(0.42, 0.14, 0.11), "vest": Color(0.22, 0.10, 0.09), "long_robe": true,
 				"trim": Color(0.74, 0.54, 0.26), "sash": Color(0.74, 0.54, 0.26) })
 		"tobiah":
-			foe.merge({ "skin": Color(0.58, 0.40, 0.27), "hair": Color(0.14, 0.10, 0.08), "beard": "full",
+			foe.merge({ "skin": CharacterRig.SKIN[0], "hair": Color(0.14, 0.10, 0.08), "beard": "full",
 				"hat": "band", "hat_color": Color(0.30, 0.28, 0.16),
 				"robe": Color(0.36, 0.34, 0.20), "vest": Color(0.20, 0.18, 0.12), "long_robe": true,
 				"trim": Color(0.20, 0.18, 0.12), "sash": Color(0.52, 0.16, 0.12),
 				"scroll": Color(0.90, 0.82, 0.62) })
 		"geshem":
-			foe.merge({ "skin": Color(0.52, 0.35, 0.23), "hair": Color(0.08, 0.06, 0.05), "beard": "long",
+			foe.merge({ "skin": CharacterRig.SKIN[3], "hair": Color(0.08, 0.06, 0.05), "beard": "long",
 				"hat": "scarf", "hat_color": Color(0.90, 0.86, 0.76), "stripe": Color(0.52, 0.14, 0.11),
 				"robe": Color(0.76, 0.64, 0.46), "trim": Color(0.46, 0.34, 0.22),
 				"sash": Color(0.52, 0.14, 0.11), "cape": Color(0.30, 0.20, 0.14), "long_robe": true })

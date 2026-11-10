@@ -62,8 +62,9 @@ func _spawn() -> void:
 		looks.append(CharacterRig.worker_look(i, Palette.CREW[i]))
 	for kind in ["man", "woman", "child", "elder", "governor", "priest", "scribe"]:
 		looks.append(_folk_look(kind))
-	for kind in ["scout", "brute", "raider"]:
-		looks.append(CharacterRig.enemy_look(kind))
+	# Every skin tone on a foe too: the crew's range, never darker
+	for v in 4:
+		looks.append(CharacterRig.enemy_look(["scout", "brute", "raider", "scout"][v], v))
 	var cols := 7
 	for i in looks.size():
 		var rig := CharacterRig.new()

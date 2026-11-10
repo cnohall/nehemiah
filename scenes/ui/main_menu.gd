@@ -518,6 +518,8 @@ func _on_lobby_joined(success: bool) -> void:
 	if success:
 		_stop_world()   # a Steam invite joins straight from the menu
 		get_tree().change_scene_to_file(GAME_SCENE)
+	elif not NetworkManager.join_error.is_empty():
+		_join_failed(NetworkManager.join_error)
 	else:
 		var why := NetworkManager.last_error
 		_join_failed(why if not why.is_empty() else "Connection failed. Check the address and that the host is running.")

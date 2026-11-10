@@ -703,6 +703,9 @@ msgstr "Erst diesen Bauabschnitt fertigstellen: {drop} zum Ablegen, dann {intera
 msgid "This wall is finished"
 msgstr "Diese Mauer ist fertig"
 
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
+msgstr "Diese Mauer ist fertig. {drop} zum Absetzen, dann {interact} zum Hinüberklettern"
+
 msgid "Caught it"
 msgstr "Gefangen"
 
@@ -1491,6 +1494,9 @@ msgstr "Gehen  {move}"
 
 msgid "Pick up  {interact}"
 msgstr "Aufheben  {interact}"
+
+msgid "Carry it here"
+msgstr "Hierher tragen"
 
 msgid "Deliver  {interact}"
 msgstr "Abliefern  {interact}"
@@ -2676,3 +2682,6 @@ msgstr "Ein Schild über deiner nächsten Aufgabe, bis du sie einmal erledigt ha
 
 msgid "Aim and throw"
 msgstr "Zielen und schleudern"
+
+msgid "Your game and the host's are different versions. Both of you need the same build to play together."
+msgstr "Dein Spiel und das des Gastgebers sind verschiedene Versionen. Ihr braucht beide dieselbe Version, um zusammen zu spielen."

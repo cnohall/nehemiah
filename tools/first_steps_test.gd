@@ -3,7 +3,7 @@ extends SceneTree
 # The first day teaches itself (FirstSteps, DayDirector's first-load wait, GDD §5.26):
 #   Godot --path . --script res://tools/first_steps_test.gd -- --nostory --hints [<out_dir>]
 #     no foe and no sun until the first load; each tag in turn, by really doing each job
-#     (real interact RPCs); a bot's load doesn't end the wait; a sling tag once a foe is near
+#     (real interact RPCs; the load is walked in, no press); a bot's load doesn't end the wait; a sling tag once a foe is near
 #   ... -- --nostory --hints --waitout    the wait gives up at FIRST_LOAD_WAIT
 #   ... -- --nostory                      hints off: no tag, foes and sun at once
 #   ... -- --nostory --hints --learned    all learned: no tag, the wait still holds
@@ -123,8 +123,18 @@ func _process(delta: float) -> bool:
 			if _t - _mark > 0.3:
 				_check(not _me().carried_kind.is_empty(), "picked up %s" % _me().carried_kind)
 				_check(_settings.has_learned("carry"), "carrying is learned")
-				_check("Deliver" in _steps._guide.text, "tag on the wall: '%s'" % _steps._guide.text)
+				_check("Carry it here" in _steps._guide.text, "tag on the wall: '%s'" % _steps._guide.text)
+				_check(_steps._trail.visible and _steps._trail.multimesh.visible_instance_count > 0,
+					"a trail to the wall (%d prints)" % _steps._trail.multimesh.visible_instance_count)
 				_shot("deliver")
+				_walk_in()
+				_mark = _t
+				_state = "at_wall"
+		"at_wall":
+			if _t - _mark > 0.3:
+				_check(_me().loads_brought == 0, "walking in alone doesn't deliver")
+				_check("Deliver" in _steps._guide.text, "at the wall the tag names the button: '%s'" % _steps._guide.text)
+				_shot("deliver_press")
 				_give()
 				_mark = _t
 				_state = "delivered"
@@ -132,6 +142,7 @@ func _process(delta: float) -> bool:
 			if _t - _mark > 0.3:
 				_check(_me().loads_brought == 1, "delivered (%d)" % _me().loads_brought)
 				_check(_settings.has_learned("deliver"), "delivering is learned")
+				_check(not _steps._trail.visible, "the trail is gone once delivered")
 				_check(not _gs.sun_held, "the first load lets the sun go")
 				_check(_main.get_node("WaveManager")._active, "the first load lets the waves go")
 				_mark = _t
@@ -227,7 +238,8 @@ func _network() -> bool:
 		"client_give":
 			if _t - _mark > 0.5:
 				_check(_settings.has_learned("carry"), "client: carrying is learned")
-				_check("Deliver" in _steps._guide.text, "client: tag on the wall")
+				_check("Carry it here" in _steps._guide.text, "client: tag on the wall")
+				_check(_steps._trail.visible, "client: a trail to the wall")
 				_give()
 				_mark = _t
 				_state = "client_done"
@@ -264,9 +276,14 @@ func _take() -> void:
 	_me().global_position = pile.global_position + Vector3(1.0, 0, 1.0)
 	_me()._server_interact.rpc_id(1, _me().global_position)
 
-func _give() -> void:
+## Walk the load up to the wall
+func _walk_in() -> void:
 	var site: Node3D = _site()
 	_me().global_position = site.approach_point(_me().global_position, 0.6)
+
+## Walk the load in and press interact, as the player would
+func _give() -> void:
+	_walk_in()
 	_me()._server_interact.rpc_id(1, _me().global_position)
 
 func _nearest_foe() -> Node3D:

@@ -19,11 +19,11 @@ msgid_plural "%d days to spare"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:1050
+#: scenes\ui\game_hud.gd:1063
 msgid "%d days to the fifty-second"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1233
+#: scenes\ui\game_hud.gd:1282
 msgid "%d foe"
 msgid_plural "%d foes"
 msgstr[0] ""
@@ -35,19 +35,19 @@ msgid_plural "%d got in"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:1149
+#: scenes\ui\game_hud.gd:1198
 msgid "%d got through"
 msgid_plural "%d got through"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:1231
+#: scenes\ui\game_hud.gd:1280
 msgid "%d load"
 msgid_plural "%d loads"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:1320
+#: scenes\ui\game_hud.gd:1369
 msgid "%d of %d builders here"
 msgstr ""
 
@@ -55,7 +55,7 @@ msgstr ""
 msgid "%d of %d stand"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:663
+#: scenes\ui\game_hud.gd:670
 msgid "%d of %d stand, %d days left"
 msgstr ""
 
@@ -66,7 +66,7 @@ msgstr ""
 msgid "%d of 3 marks. Your best here stays as it was."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:552
+#: scenes\ui\game_hud.gd:556
 msgid "%d piece still to finish. Look for the amber footing"
 msgid_plural "%d pieces still to finish. Look for the amber footings"
 msgstr[0] ""
@@ -84,7 +84,7 @@ msgid_plural "%d scouts"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:1032
+#: scenes\ui\game_hud.gd:1045
 msgid "%d slipped through, but the wall stands."
 msgid_plural "%d slipped through, but the wall stands."
 msgstr[0] ""
@@ -98,7 +98,7 @@ msgstr ""
 msgid "%d%% more foes"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1150
+#: scenes\ui\game_hud.gd:1199
 msgid "%d%% sound"
 msgstr ""
 
@@ -124,10 +124,6 @@ msgstr ""
 
 #: scenes\ui\action_lens.gd:125
 msgid "%s Climb over"
-msgstr ""
-
-#: scenes\ui\action_lens.gd:118
-msgid "%s Deliver the %s"
 msgstr ""
 
 #: scenes\ui\action_lens.gd:130
@@ -166,11 +162,11 @@ msgstr ""
 msgid "%s is back on their feet"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1682
+#: scenes\ui\game_hud.gd:1731
 msgid "%s is joining…"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1529
+#: scenes\ui\game_hud.gd:1578
 msgid "%s was just taken. Pick another trade."
 msgstr ""
 
@@ -182,11 +178,11 @@ msgstr ""
 msgid "%s · day %d"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1707
+#: scenes\ui\game_hud.gd:1756
 msgid "%s · joining…"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:971
+#: scenes\ui\game_hud.gd:984
 msgid "%s: %d of %d"
 msgstr ""
 
@@ -225,11 +221,11 @@ msgstr ""
 msgid "A brute! He'll batter the wall"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1682
+#: scenes\ui\game_hud.gd:1731
 msgid "A builder is joining…"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:539
+#: scenes\ui\game_hud.gd:543
 msgid "A finished piece was knocked down. Build it back up"
 msgstr ""
 
@@ -252,7 +248,7 @@ msgstr ""
 msgid "A new best for this stretch: %d of 3 marks."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:647
+#: scenes\ui\game_hud.gd:654
 msgid "A new stretch: %s  ·  %s"
 msgstr ""
 
@@ -291,7 +287,7 @@ msgstr ""
 msgid "After him, Shemaiah the son of Shecaniah, the keeper of the east gate, made repairs."
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:72
+#: scenes\first_steps\first_steps.gd:87
 msgid "Aim and throw"
 msgstr ""
 
@@ -299,7 +295,7 @@ msgstr ""
 msgid "All %d stretches standing · %d of %d marks"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:227
+#: scenes\messenger\messenger.gd:231
 msgid "All quiet on the road for now"
 msgstr ""
 
@@ -311,11 +307,11 @@ msgstr ""
 msgid "Ammon"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:109
+#: scenes\messenger\messenger.gd:113
 msgid "An open letter: “You would be their king”"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:155
+#: scenes\messenger\messenger.gd:159
 msgid "Answer him"
 msgstr ""
 
@@ -347,7 +343,7 @@ msgstr ""
 msgid "At the gate! Torches!"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:419
+#: scenes\ui\friends_and_foes.gd:420
 msgid "Back"
 msgstr ""
 
@@ -401,7 +397,7 @@ msgstr ""
 msgid "Bot"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1372
+#: scenes\ui\game_hud.gd:1421
 msgid "Bot skill: %s"
 msgstr ""
 
@@ -413,7 +409,7 @@ msgstr ""
 msgid "Both ends. Mind the lanes!"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1371
+#: scenes\ui\game_hud.gd:1420
 msgid "Bots: %d"
 msgstr ""
 
@@ -424,15 +420,15 @@ msgstr ""
 msgid "Branches enough. {interact} to build it"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:771
+#: scenes\ui\game_hud.gd:784
 msgid "Breaches"
 msgstr ""
 
-#: scenes\ui\action_lens.gd:122
+#: scenes\ui\action_lens.gd:118
 msgid "Bring %s"
 msgstr ""
 
-#: scenes\player\player.gd:932
+#: scenes\player\player.gd:954
 msgid "Bring it to a wall"
 msgstr ""
 
@@ -452,7 +448,7 @@ msgstr ""
 msgid "Brutes for the priests' houses!"
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:94
+#: scenes\first_steps\first_steps.gd:113
 msgid "Build  {interact}"
 msgstr ""
 
@@ -464,15 +460,15 @@ msgstr ""
 msgid "Build booths with branches from the mount: %d of %d"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:567
+#: scenes\ui\game_hud.gd:571
 msgid "Build it up: %s at the gate"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:567
+#: scenes\ui\game_hud.gd:571
 msgid "Build it up: %s at the wall"
 msgstr ""
 
-#: scenes\player\player.gd:940
+#: scenes\player\player.gd:962
 msgid "Build this stage first: {drop} to drop, then {interact} to work"
 msgstr ""
 
@@ -508,7 +504,7 @@ msgstr ""
 msgid "But we made our prayer to our God, and set a watch against them day and night, because of them."
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:173
+#: scenes\input_mode\input_mode.gd:224
 msgid "Button %d"
 msgstr ""
 
@@ -516,11 +512,11 @@ msgstr ""
 msgid "By a hair! The stars are coming out!"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1046
+#: scenes\ui\game_hud.gd:1059
 msgid "By a hair: the gap closed in the enemy's face."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1045
+#: scenes\ui\game_hud.gd:1058
 msgid "By a hair: the last stone was set as the stars came out."
 msgstr ""
 
@@ -532,12 +528,16 @@ msgstr ""
 msgid "Camera"
 msgstr ""
 
-#: scenes\shared\character_rig.gd:184
+#: scenes\shared\character_rig.gd:188
 msgid "Carpenter"
 msgstr ""
 
 #: scenes\game_state\game_state.gd:51
 msgid "Carry in bundles"
+msgstr ""
+
+#: scenes\first_steps\first_steps.gd:19
+msgid "Carry it here"
 msgstr ""
 
 #: scenes\story\twist_card.gd:41
@@ -548,7 +548,7 @@ msgstr ""
 msgid "Carry the mortar to the wall"
 msgstr ""
 
-#: scenes\player\player.gd:986
+#: scenes\player\player.gd:1017
 msgid "Caught it"
 msgstr ""
 
@@ -576,7 +576,7 @@ msgstr ""
 msgid "Click"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1417
+#: scenes\ui\game_hud.gd:1466
 msgid "Click to change"
 msgstr ""
 
@@ -584,7 +584,7 @@ msgstr ""
 msgid "Come down to Ono"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:107
+#: scenes\messenger\messenger.gd:111
 msgid "Come down to the plain of Ono"
 msgstr ""
 
@@ -599,7 +599,7 @@ msgstr ""
 msgid "Connecting…"
 msgstr ""
 
-#: scenes\ui\main_menu.gd:523
+#: scenes\ui\main_menu.gd:525
 msgid "Connection failed. Check the address and that the host is running."
 msgstr ""
 
@@ -607,7 +607,7 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:205
+#: scenes\ui\game_hud.gd:209
 msgid "Controller disconnected. Reconnect it to carry on"
 msgstr ""
 
@@ -615,11 +615,11 @@ msgstr ""
 msgid "Controllers: remap buttons in Steam Input."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2209
+#: scenes\ui\game_hud.gd:2258
 msgid "Copied"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2204
+#: scenes\ui\game_hud.gd:2253
 msgid "Copy code"
 msgstr ""
 
@@ -627,7 +627,7 @@ msgstr ""
 msgid "Could not create an online room."
 msgstr ""
 
-#: scenes\network_manager\network_manager.gd:90
+#: scenes\network_manager\network_manager.gd:92
 msgid "Could not open port %d."
 msgstr ""
 
@@ -651,15 +651,15 @@ msgstr ""
 msgid "Credits"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2190
+#: scenes\ui\game_hud.gd:2239
 msgid "Crew"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1706
+#: scenes\ui\game_hud.gd:1755
 msgid "Crew %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1440
+#: scenes\ui\game_hud.gd:1489
 msgid "Crew and difficulty"
 msgstr ""
 
@@ -667,19 +667,19 @@ msgstr ""
 msgid "D-Pad   Choose          %s   Build          %s   Back"
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:170
+#: scenes\input_mode\input_mode.gd:221
 msgid "D-Pad Down"
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:171
+#: scenes\input_mode\input_mode.gd:222
 msgid "D-Pad Left"
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:172
+#: scenes\input_mode\input_mode.gd:223
 msgid "D-Pad Right"
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:169
+#: scenes\input_mode\input_mode.gd:220
 msgid "D-Pad Up"
 msgstr ""
 
@@ -687,14 +687,14 @@ msgstr ""
 msgid "Dash"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:601
+#: scenes\ui\game_hud.gd:605
 msgid "Dawn. Ready the workers"
 msgstr ""
 
 msgid "Day"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:667
+#: scenes\ui\game_hud.gd:674
 msgid "Day %d"
 msgstr ""
 
@@ -702,7 +702,7 @@ msgstr ""
 msgid "Day %d  ·  %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1030
+#: scenes\ui\game_hud.gd:1043
 msgid "Day %d complete"
 msgstr ""
 
@@ -741,11 +741,11 @@ msgstr ""
 msgid "Day info"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:424
+#: scenes\ui\game_hud.gd:428
 msgid "Daylight"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:769
+#: scenes\ui\game_hud.gd:782
 msgid "Days built"
 msgstr ""
 
@@ -756,7 +756,7 @@ msgstr ""
 msgid "Deliver"
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:92
+#: scenes\first_steps\first_steps.gd:20
 msgid "Deliver  {interact}"
 msgstr ""
 
@@ -764,7 +764,7 @@ msgstr ""
 msgid "Development"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1368
+#: scenes\ui\game_hud.gd:1417
 msgid "Difficulty: %s"
 msgstr ""
 
@@ -804,11 +804,11 @@ msgstr ""
 msgid "Double-thick wall"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:537
+#: scenes\ui\game_hud.gd:541
 msgid "Down. A crewmate has to help you up"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1891
+#: scenes\ui\game_hud.gd:1940
 msgid "Downed"
 msgstr ""
 
@@ -842,7 +842,7 @@ msgstr ""
 msgid "Eliashib the high priest and his brothers the priests take up the work at the Sheep Gate."
 msgstr ""
 
-#: scenes\player\player.gd:1629
+#: scenes\player\player.gd:1664
 msgid "Enough hands here"
 msgstr ""
 
@@ -889,7 +889,7 @@ msgstr ""
 msgid "Fifty-two days"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:457
+#: scenes\ui\game_hud.gd:461
 msgid "Finish before the stars appear: the %s must stand tonight"
 msgstr ""
 
@@ -925,12 +925,16 @@ msgstr ""
 msgid "Foes at the wall!"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1088
+#: scenes\ui\game_hud.gd:1103
 msgid "Foes felled"
 msgstr ""
 
 #: scenes\ui\section_picker.gd:385
 msgid "Foes here"
+msgstr ""
+
+#: scenes\ui\game_hud.gd:2267
+msgid "Fold"
 msgstr ""
 
 #: scenes\ui\settings_panel.gd:428
@@ -953,7 +957,7 @@ msgstr ""
 msgid "Friend"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:422
+#: scenes\ui\friends_and_foes.gd:423
 msgid "Friends and Foes"
 msgstr ""
 
@@ -977,7 +981,7 @@ msgstr ""
 msgid "From the first day"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:112
+#: scenes\messenger\messenger.gd:116
 msgid "From the villages: “Wherever you turn, they will attack us”"
 msgstr ""
 
@@ -1000,7 +1004,7 @@ msgstr ""
 msgid "Gather in the ring: blows land harder there"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:597
+#: scenes\ui\game_hud.gd:601
 msgid "Gathering the crew"
 msgstr ""
 
@@ -1028,7 +1032,7 @@ msgstr ""
 msgid "Go up to the house of God, by the Sheep Gate"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:154
+#: scenes\messenger\messenger.gd:158
 msgid "Go with him"
 msgstr ""
 
@@ -1036,11 +1040,11 @@ msgstr ""
 msgid "Go your way. Eat the fat, drink the sweet, and send portions to him for whom nothing is prepared."
 msgstr ""
 
-#: scenes\messenger\messenger.gd:65
+#: scenes\messenger\messenger.gd:69
 msgid "Going down to Ono…"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:115
+#: scenes\messenger\messenger.gd:119
 msgid "Going to hide in the temple…"
 msgstr ""
 
@@ -1068,7 +1072,7 @@ msgstr ""
 msgid "Hananiah the perfumer"
 msgstr ""
 
-#: scenes\player\player.gd:931
+#: scenes\player\player.gd:953
 msgid "Hands full: deliver it, or {drop} to drop"
 msgstr ""
 
@@ -1112,7 +1116,7 @@ msgstr ""
 msgid "He laughs at the work from the start, joins the plot against the city, and with Sanballat invites Nehemiah down to the plain of Ono."
 msgstr ""
 
-#: scenes\messenger\messenger.gd:226
+#: scenes\messenger\messenger.gd:230
 msgid "He points to where they'll come. Watch there!"
 msgstr ""
 
@@ -1120,7 +1124,7 @@ msgstr ""
 msgid "He prays to the God of the heavens, then asks the king to send him to rebuild the city of his forefathers. The king grants it."
 msgstr ""
 
-#: scenes\messenger\messenger.gd:194
+#: scenes\messenger\messenger.gd:198
 msgid "He talks and talks. Your work goes slower. {interact} to answer him"
 msgstr ""
 
@@ -1148,7 +1152,7 @@ msgstr ""
 msgid "Hear Ezra read the Law at the Water Gate"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:155
+#: scenes\messenger\messenger.gd:159
 msgid "Hear him"
 msgstr ""
 
@@ -1156,7 +1160,7 @@ msgstr ""
 msgid "Heard far away"
 msgstr ""
 
-#: scenes\player\player.gd:1021
+#: scenes\player\player.gd:1055
 msgid "Heavy: a partner can take the other end {interact}"
 msgstr ""
 
@@ -1168,23 +1172,23 @@ msgstr ""
 msgid "Help"
 msgstr ""
 
-#: scenes\player\player.gd:286
+#: scenes\player\player.gd:297
 msgid "Help up"
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:159
+#: scenes\first_steps\first_steps.gd:180
 msgid "Here"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:148
+#: scenes\messenger\messenger.gd:152
 msgid "Hide in the temple. They come tonight to kill you"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:232
+#: scenes\messenger\messenger.gd:236
 msgid "Hide in the temple? {interact} go with him, or walk on"
 msgstr ""
 
-#: scenes\settings\settings.gd:90
+#: scenes\settings\settings.gd:92
 msgid "High"
 msgstr ""
 
@@ -1196,7 +1200,7 @@ msgstr ""
 msgid "Hold"
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:99
+#: scenes\input_mode\input_mode.gd:150
 msgid "Hold %s"
 msgstr ""
 
@@ -1224,7 +1228,7 @@ msgstr ""
 msgid "Hold your peace, for the day is holy. Don’t be grieved."
 msgstr ""
 
-#: scenes\player\player.gd:837
+#: scenes\player\player.gd:855
 msgid "Holding the other end. {interact} to let go"
 msgstr ""
 
@@ -1236,7 +1240,7 @@ msgstr ""
 msgid "Horn"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:48
+#: scenes\ui\game_hud.gd:50
 msgid "Horn: rally the crew (stronger blows in its ring)"
 msgstr ""
 
@@ -1247,11 +1251,11 @@ msgstr ""
 msgid "Host Game"
 msgstr ""
 
-#: scenes\ui\main_menu.gd:564
+#: scenes\ui\main_menu.gd:566
 msgid "Host a room"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:414
+#: scenes\ui\game_hud.gd:418
 msgid "Households fed: %d of %d"
 msgstr ""
 
@@ -1259,11 +1263,11 @@ msgstr ""
 msgid "How will you meet it?"
 msgstr ""
 
-#: scenes\player\player.gd:1788
+#: scenes\player\player.gd:1823
 msgid "Hurt? Drink at the well"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:218
+#: scenes\messenger\messenger.gd:222
 msgid "I am doing a great work. I can't come down!"
 msgstr ""
 
@@ -1279,7 +1283,7 @@ msgstr ""
 msgid "I'm ready"
 msgstr ""
 
-#: scenes\player\player.gd:1579
+#: scenes\player\player.gd:1614
 msgid "I've fallen! Help me up!"
 msgstr ""
 
@@ -1287,7 +1291,7 @@ msgstr ""
 msgid "I've got your back!"
 msgstr ""
 
-#: scenes\ui\main_menu.gd:756
+#: scenes\ui\main_menu.gd:755
 msgid "IP address"
 msgstr ""
 
@@ -1307,7 +1311,7 @@ msgstr ""
 msgid "Inner face"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:299
+#: scenes\ui\game_hud.gd:303
 msgid "Invite friends"
 msgstr ""
 
@@ -1346,11 +1350,11 @@ msgstr ""
 msgid "Join Game"
 msgstr ""
 
-#: scenes\ui\main_menu.gd:751
+#: scenes\ui\main_menu.gd:750
 msgid "Join a crew"
 msgstr ""
 
-#: scenes\ui\main_menu.gd:566
+#: scenes\ui\main_menu.gd:568
 msgid "Join with code"
 msgstr ""
 
@@ -1378,7 +1382,7 @@ msgstr ""
 msgid "Knack"
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:93
+#: scenes\input_mode\input_mode.gd:144
 msgid "L Stick"
 msgstr ""
 
@@ -1390,7 +1394,7 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:555
+#: scenes\ui\game_hud.gd:559
 msgid "Last piece!  %s"
 msgstr ""
 
@@ -1405,7 +1409,7 @@ msgstr ""
 msgid "Leave to Title"
 msgstr ""
 
-#: scenes\player\player.gd:833
+#: scenes\player\player.gd:851
 msgid "Let go of the beam"
 msgstr ""
 
@@ -1452,11 +1456,11 @@ msgstr ""
 msgid "Loaded workers walk %d%% slower"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1087
+#: scenes\ui\game_hud.gd:1102
 msgid "Loads carried"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2205
+#: scenes\ui\game_hud.gd:2254
 msgid "Lobby code %s"
 msgstr ""
 
@@ -1512,7 +1516,7 @@ msgstr ""
 msgid "Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:773
+#: scenes\ui\game_hud.gd:786
 msgid "Marks"
 msgstr ""
 
@@ -1584,7 +1588,7 @@ msgstr ""
 msgid "Mortar takes %d%% more time to mix"
 msgstr ""
 
-#: scenes\input_mode\input_mode.gd:148
+#: scenes\input_mode\input_mode.gd:199
 msgid "Mouse %d"
 msgstr ""
 
@@ -1596,7 +1600,7 @@ msgstr ""
 msgid "Mouse 5"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:43
+#: scenes\ui\game_hud.gd:45
 msgid "Move"
 msgstr ""
 
@@ -1616,7 +1620,7 @@ msgstr ""
 msgid "Move up"
 msgstr ""
 
-#: scenes\settings\settings.gd:159
+#: scenes\settings\settings.gd:161
 msgid "Music"
 msgstr ""
 
@@ -1628,7 +1632,7 @@ msgstr ""
 msgid "Narrow lanes: one at a time"
 msgstr ""
 
-#: scenes\player\player.gd:937
+#: scenes\player\player.gd:959
 msgid "Needs {need} first"
 msgstr ""
 
@@ -1687,7 +1691,7 @@ msgstr ""
 msgid "Next"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:923
+#: scenes\ui\game_hud.gd:936
 msgid "Next stretch"
 msgstr ""
 
@@ -1703,11 +1707,11 @@ msgstr ""
 msgid "Next to him, Uzziel the son of Harhaiah, goldsmiths, made repairs."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:571
+#: scenes\ui\game_hud.gd:575
 msgid "Next: bring %s to the gate"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:571
+#: scenes\ui\game_hud.gd:575
 msgid "Next: bring %s to the wall"
 msgstr ""
 
@@ -1723,14 +1727,14 @@ msgstr ""
 msgid "Night watch"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1036
+#: scenes\ui\game_hud.gd:1049
 msgid "Nightfall on day %d"
 msgstr ""
 
 msgid "Nine days, two stretches of wall, and the enemy has sent a brute. %d days and %d stretches remain, and they will only grow bolder."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2218
+#: scenes\ui\game_hud.gd:2293
 msgid "No friends online"
 msgstr ""
 
@@ -1745,7 +1749,7 @@ msgstr ""
 msgid "No stone pile here"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:221
+#: scenes\messenger\messenger.gd:225
 msgid "No such things are done as you say!"
 msgstr ""
 
@@ -1761,7 +1765,7 @@ msgstr ""
 msgid "Not every stretch starts bare: old courses still stand in places, and burned timbers must be pulled down before anything is built"
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:92
+#: scenes\first_steps\first_steps.gd:108
 msgid "Not needed here  {drop}"
 msgstr ""
 
@@ -1784,7 +1788,7 @@ msgstr ""
 msgid "Nothing moves until you resume."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:565
+#: scenes\ui\game_hud.gd:569
 msgid "Nothing needs %s now. Drop it (%s)"
 msgstr ""
 
@@ -1846,7 +1850,7 @@ msgstr ""
 msgid "Online play not configured"
 msgstr ""
 
-#: scenes\network_manager\network_manager.gd:196
+#: scenes\network_manager\network_manager.gd:203
 msgid "Online plugin missing"
 msgstr ""
 
@@ -1885,11 +1889,11 @@ msgstr ""
 msgid "Outer face"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:303
+#: scenes\ui\game_hud.gd:307
 msgid "Overlay off. Use the Crew panel"
 msgstr ""
 
-#: scenes\shared\character_rig.gd:184
+#: scenes\shared\character_rig.gd:188
 msgid "Overseer"
 msgstr ""
 
@@ -1897,22 +1901,22 @@ msgstr ""
 msgid "Pass loads over rather than queue"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:51
+#: scenes\ui\game_hud.gd:53
 msgid "Pause · menu"
 msgstr ""
 
 msgid "Paused"
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:98
+#: scenes\first_steps\first_steps.gd:117
 msgid "Pick up  {interact}"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:44
+#: scenes\ui\game_hud.gd:46
 msgid "Pick up · deliver · build"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1093
+#: scenes\ui\game_hud.gd:1108
 msgid "Piles scattered"
 msgstr ""
 
@@ -1920,15 +1924,15 @@ msgstr ""
 msgid "Plaques"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:925
+#: scenes\ui\game_hud.gd:938
 msgid "Play again"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:920
+#: scenes\ui\game_hud.gd:933
 msgid "Play it again"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1541
+#: scenes\ui\game_hud.gd:1590
 msgid "Player %d"
 msgstr ""
 
@@ -1953,7 +1957,7 @@ msgstr ""
 msgid "Progress is saved at the dawn of each new stretch."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:665
+#: scenes\ui\game_hud.gd:672
 msgid "Progress saved. Continue from the title screen"
 msgstr ""
 
@@ -2004,7 +2008,7 @@ msgstr ""
 msgid "Raise both pillars of the gate"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:659
+#: scenes\ui\game_hud.gd:666
 msgid "Raise the whole stretch: %d day before the stars"
 msgid_plural "Raise the whole stretch: %d days before the stars"
 msgstr[0] ""
@@ -2014,7 +2018,7 @@ msgstr[1] ""
 msgid "Rallied: your blows land harder here"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:110
+#: scenes\messenger\messenger.gd:114
 msgid "Reading the letter…"
 msgstr ""
 
@@ -2047,7 +2051,7 @@ msgstr ""
 msgid "Room code or address"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1981
+#: scenes\ui\game_hud.gd:2030
 msgid "Room code — tap to copy"
 msgstr ""
 
@@ -2117,7 +2121,7 @@ msgstr ""
 msgid "Section %d of %d  ·  %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1042
+#: scenes\ui\game_hud.gd:1055
 msgid "Section %d of %d complete"
 msgstr ""
 
@@ -2129,7 +2133,7 @@ msgstr ""
 msgid "Section %s of %s · Days %d–%d"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:770
+#: scenes\ui\game_hud.gd:783
 msgid "Sections"
 msgstr ""
 
@@ -2141,7 +2145,7 @@ msgstr ""
 msgid "Sent by Sanballat and Geshem"
 msgstr ""
 
-#: scenes\player\player.gd:929
+#: scenes\player\player.gd:951
 msgid "Set it down first: {drop}, then {interact} to drink"
 msgstr ""
 
@@ -2157,7 +2161,7 @@ msgstr ""
 msgid "Sets the stones and raises the wall course by course, a basket of stones on the back and a hammer at the belt."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2151
+#: scenes\ui\game_hud.gd:2200
 msgid "Settings"
 msgstr ""
 
@@ -2181,7 +2185,7 @@ msgstr ""
 msgid "Sheep Gate"
 msgstr ""
 
-#: scenes\messenger\messenger.gd:114
+#: scenes\messenger\messenger.gd:118
 msgid "Shemaiah, shut in at home: “Let us meet together in God's house”"
 msgstr ""
 
@@ -2197,11 +2201,11 @@ msgstr ""
 msgid "Short of hands: the hungry were not fed"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1342
+#: scenes\ui\game_hud.gd:1391
 msgid "Short of hands? Add bots to the crew."
 msgstr ""
 
-#: scenes\messenger\messenger.gd:116
+#: scenes\messenger\messenger.gd:120
 msgid "Should a man like me flee? Back to the wall!"
 msgstr ""
 
@@ -2225,11 +2229,11 @@ msgstr ""
 msgid "Sling"
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:73
+#: scenes\first_steps\first_steps.gd:88
 msgid "Sling it  {throw}"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:47
+#: scenes\ui\game_hud.gd:49
 msgid "Sling: charge, then throw"
 msgstr ""
 
@@ -2265,7 +2269,7 @@ msgstr ""
 msgid "Speed"
 msgstr ""
 
-#: scenes\player\player.gd:917
+#: scenes\player\player.gd:939
 msgid "Stage built!"
 msgstr ""
 
@@ -2277,19 +2281,19 @@ msgstr ""
 msgid "Steady hands, a fair aim"
 msgstr ""
 
-#: scenes\network_manager\network_manager.gd:447
+#: scenes\network_manager\network_manager.gd:501
 msgid "Steam could not create a lobby (result %d)."
 msgstr ""
 
-#: scenes\network_manager\network_manager.gd:457
+#: scenes\network_manager\network_manager.gd:512
 msgid "Steam host socket failed (err %d)."
 msgstr ""
 
-#: scenes\network_manager\network_manager.gd:129
+#: scenes\network_manager\network_manager.gd:133
 msgid "Steam is not running."
 msgstr ""
 
-#: scenes\network_manager\network_manager.gd:417
+#: scenes\network_manager\network_manager.gd:471
 msgid "Steam plugin failed to load"
 msgstr ""
 
@@ -2315,23 +2319,23 @@ msgstr ""
 msgid "Sword and sling hit harder"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:564
+#: scenes\ui\game_hud.gd:568
 msgid "Take the %s to the gate"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:564
+#: scenes\ui\game_hud.gd:568
 msgid "Take the %s to the wall"
 msgstr ""
 
-#: scenes\player\player.gd:172
+#: scenes\player\player.gd:183
 msgid "Take the other end"
 msgstr ""
 
-#: scenes\player\player.gd:602
+#: scenes\player\player.gd:619
 msgid "Take the other end  [%s]"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1508
+#: scenes\ui\game_hud.gd:1557
 msgid "Taken by %s"
 msgstr ""
 
@@ -2347,7 +2351,7 @@ msgstr ""
 msgid "Thank you for building with us."
 msgstr ""
 
-#: scenes\player\player.gd:830
+#: scenes\player\player.gd:848
 msgid "Thank you, friend!"
 msgstr ""
 
@@ -2355,7 +2359,7 @@ msgstr ""
 msgid "That's a Steam lobby code. Start Steam first."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:545
+#: scenes\ui\game_hud.gd:549
 msgid "The %s pile is scattered. Nothing to take until you gather it up (%s at the pile)"
 msgstr ""
 
@@ -2363,7 +2367,7 @@ msgstr ""
 msgid "The %s stands"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:755
+#: scenes\ui\game_hud.gd:768
 msgid "The %s was not finished by nightfall. Gather the workers and begin again."
 msgstr ""
 
@@ -2415,7 +2419,7 @@ msgstr ""
 msgid "The builders"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:607
+#: scenes\ui\game_hud.gd:611
 msgid "The city has fallen"
 msgstr ""
 
@@ -2430,7 +2434,7 @@ msgstr ""
 msgid "The conspiracy"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:654
+#: scenes\ui\game_hud.gd:661
 msgid "The crew chose: %s"
 msgstr ""
 
@@ -2438,7 +2442,7 @@ msgstr ""
 msgid "The crew · A trade to choose"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:603
+#: scenes\ui\game_hud.gd:607
 msgid "The day's work is done"
 msgstr ""
 
@@ -2461,7 +2465,7 @@ msgstr ""
 msgid "The foe comes out of the dark"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:260
+#: scenes\ui\game_hud.gd:264
 msgid "The game keeps running for your crew while this is open."
 msgstr ""
 
@@ -2477,11 +2481,11 @@ msgstr ""
 msgid "The horn"
 msgstr ""
 
-#: scenes\player\player.gd:1805
+#: scenes\player\player.gd:1840
 msgid "The horn was just sounded"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:960
+#: scenes\ui\game_hud.gd:973
 msgid "The host's pick decides (or most of the crew)"
 msgstr ""
 
@@ -2501,7 +2505,7 @@ msgstr ""
 msgid "The joy of Jerusalem was heard far away"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:661
+#: scenes\ui\game_hud.gd:668
 msgid "The last day of this stretch: it must stand before the stars appear"
 msgstr ""
 
@@ -2596,7 +2600,7 @@ msgstr ""
 msgid "The stars appeared"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1037
+#: scenes\ui\game_hud.gd:1050
 msgid "The stars appeared: %d wall piece left for tomorrow."
 msgid_plural "The stars appeared: %d wall pieces left for tomorrow."
 msgstr[0] ""
@@ -2606,11 +2610,11 @@ msgstr[1] ""
 msgid "The strength of the bearers of burdens is fading, and there is much rubble; so that we are not able to build the wall."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:591
+#: scenes\ui\game_hud.gd:595
 msgid "The stretch"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:551
+#: scenes\ui\game_hud.gd:555
 msgid "The stretch stands"
 msgstr ""
 
@@ -2621,7 +2625,7 @@ msgstr ""
 msgid "The stretch was not finished by nightfall. Try it again."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:457
+#: scenes\ui\game_hud.gd:461
 msgid "The sun is low"
 msgstr ""
 
@@ -2783,15 +2787,19 @@ msgstr ""
 msgid "This booth stands"
 msgstr ""
 
-#: scenes\player\player.gd:941
+#: scenes\player\player.gd:965
 msgid "This wall is finished"
+msgstr ""
+
+#: scenes\player\player.gd:964
+msgid "This wall is finished. {drop} to set it down, then {interact} to climb over"
 msgstr ""
 
 #: scenes\ui\friends_and_foes.gd:73
 msgid "Those against the work"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:995
+#: scenes\ui\game_hud.gd:1008
 msgid "Time"
 msgstr ""
 
@@ -2807,7 +2815,7 @@ msgstr ""
 msgid "Today is holy to Yahweh your God. Don’t mourn, nor weep."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:591
+#: scenes\ui\game_hud.gd:595
 msgid "Today's work"
 msgstr ""
 
@@ -2815,7 +2823,7 @@ msgstr ""
 msgid "Toggle"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:756
+#: scenes\ui\game_hud.gd:769
 msgid "Too many enemies reached the inner city. Gather the workers and begin again."
 msgstr ""
 
@@ -2841,7 +2849,7 @@ msgstr ""
 msgid "Trough"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:927
+#: scenes\ui\game_hud.gd:940
 msgid "Try the stretch again"
 msgstr ""
 
@@ -2880,7 +2888,7 @@ msgid_plural "Waiting for %d builders"
 msgstr[0] ""
 msgstr[1] ""
 
-#: scenes\ui\game_hud.gd:975
+#: scenes\ui\game_hud.gd:988
 msgid "Waiting for the host or most of the crew"
 msgstr ""
 
@@ -2890,7 +2898,7 @@ msgstr ""
 msgid "Walk"
 msgstr ""
 
-#: scenes\first_steps\first_steps.gd:77
+#: scenes\first_steps\first_steps.gd:92
 msgid "Walk  {move}"
 msgstr ""
 
@@ -2938,7 +2946,7 @@ msgstr ""
 msgid "Watch the %s: %s"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:152
+#: scenes\ui\game_hud.gd:156
 msgid "Watch the carpenter: two to a beam"
 msgstr ""
 
@@ -2949,7 +2957,7 @@ msgstr ""
 msgid "Water Gate"
 msgstr ""
 
-#: scenes\shared\character_rig.gd:184
+#: scenes\shared\character_rig.gd:188
 msgid "Water carrier"
 msgstr ""
 
@@ -2964,7 +2972,7 @@ msgstr ""
 msgid "Wave"
 msgstr ""
 
-#: scenes\player\player.gd:1837
+#: scenes\player\player.gd:1874
 msgid "Wave called in early: the crew is spurred"
 msgstr ""
 
@@ -2999,7 +3007,7 @@ msgstr ""
 msgid "What is this thing that you are doing? Will you rebel against the king?"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:458
+#: scenes\ui\game_hud.gd:462
 msgid "What isn't built by the stars waits for tomorrow"
 msgstr ""
 
@@ -3019,7 +3027,7 @@ msgstr ""
 msgid "Wherever you hear the sound of the trumpet, rally there to us. Our God will fight for us."
 msgstr ""
 
-#: scenes\messenger\messenger.gd:66
+#: scenes\messenger\messenger.gd:70
 msgid "Why should the work stop? Back to the wall!"
 msgstr ""
 
@@ -3053,7 +3061,7 @@ msgstr ""
 msgid "Yet now our flesh is as the flesh of our brothers, our children as their children."
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1216
+#: scenes\ui\game_hud.gd:1265
 msgid "You"
 msgstr ""
 
@@ -3081,19 +3089,23 @@ msgstr ""
 msgid "Your best here"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1510
+#: scenes\network_manager\network_manager.gd:399
+msgid "Your game and the host's are different versions. Both of you need the same build to play together."
+msgstr ""
+
+#: scenes\ui\game_hud.gd:1559
 msgid "Your trade: %s"
 msgstr ""
 
-#: scenes\player\player.gd:1663
+#: scenes\player\player.gd:1698
 msgid "Your trade: quicker hands at this work"
 msgstr ""
 
-#: scenes\player\player.gd:1023
+#: scenes\player\player.gd:1057
 msgid "Your trade: quicker with a load"
 msgstr ""
 
-#: scenes\player\player.gd:1126
+#: scenes\player\player.gd:1161
 msgid "Your trade: your blows land harder"
 msgstr ""
 
@@ -3113,11 +3125,11 @@ msgstr ""
 msgid "[%s] Sound the horn: whoever stands in its ring strikes harder"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1149
+#: scenes\ui\game_hud.gd:1198
 msgid "all through the section"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1541
+#: scenes\ui\game_hud.gd:1590
 msgid "another player"
 msgstr ""
 
@@ -3137,7 +3149,7 @@ msgstr ""
 msgid "by yd · CC0 · opengameart.org"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:1148
+#: scenes\ui\game_hud.gd:1197
 msgid "day %d of %d"
 msgstr ""
 
@@ -3176,15 +3188,15 @@ msgstr ""
 msgid "from the west"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2223
+#: scenes\ui\game_hud.gd:2298
 msgid "in game"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2229
+#: scenes\ui\game_hud.gd:2304
 msgid "invite failed"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:2229
+#: scenes\ui\game_hud.gd:2304
 msgid "invited"
 msgstr ""
 
@@ -3200,11 +3212,11 @@ msgstr ""
 msgid "none got in"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:160
+#: scenes\ui\game_hud.gd:164
 msgid "of %d"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:316
+#: scenes\ui\game_hud.gd:320
 msgid "or press %s to begin"
 msgstr ""
 
@@ -3272,7 +3284,7 @@ msgstr ""
 msgid "“Remember me, my God, for good.”"
 msgstr ""
 
-#: scenes\ui\game_hud.gd:38
+#: scenes\ui\game_hud.gd:40
 msgid "“So the wall was finished in the twenty-fifth day of Elul, in fifty-two days.”"
 msgstr ""
 
@@ -3331,7 +3343,7 @@ msgstr ""
 msgid "←  →   Choose          E · Click   Confirm"
 msgstr ""
 
-#: scenes\ui\friends_and_foes.gd:409
+#: scenes\ui\friends_and_foes.gd:410
 msgid "← →   Choose          Drag   Turn          Esc   Back"
 msgstr ""
 

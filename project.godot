@@ -182,7 +182,7 @@ locale/translations=PackedStringArray("res://locale/es.po", "res://locale/pt_BR.
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true
-lights_and_shadows/directional_shadow/size=8192
+lights_and_shadows/directional_shadow/size=4096
 lights_and_shadows/directional_shadow/size.mobile=1024
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=1

@@ -43,6 +43,7 @@ const WALL_STANDOFF     := 0.6    # where a wrecker stands, measured out from th
 const SEP_RADIUS        := 1.0    # enemies closer than this (× body scale) push each other apart
 const SEP_WEIGHT        := 1.3    # push strength vs. the heading (1 = equal pull)
 const SEP_INTERVAL      := 0.12   # neighbour sweep period; the push is reused between sweeps
+const STEER_RATE        := 10.0   # 1/s: heading eases toward the path + push (~0.1 s lag)
 const SEP_SETTLE_SPEED  := 1.2    # m/s slide that spreads attackers out round their target
 
 # Distinct silhouette per type (CharacterRig.enemy_look), one dark colour family
@@ -90,6 +91,11 @@ var anim := "idle_down":
 		anim = value
 		if _sprite != null and _sprite.animation != value:
 			_sprite.play(value)
+
+# Replicated position + server clock; clients draw it smoothed (NetSmooth)
+var net_pos: Vector4:
+	get: return NetSmooth.stamp(self)
+	set(v): NetSmooth.receive(self, v)
 
 # Replicated hit counter — every change flashes the sprite on all peers
 var hits := 0:
@@ -139,6 +145,7 @@ var _climb_t := 0.0
 var _no_headway := 0.0
 var _sep := Vector3.ZERO   # cached push away from crowding neighbours
 var _sep_t := randf() * SEP_INTERVAL
+var _steer := Vector3.ZERO   # heading eased toward path + push: the push steps every sweep
 var _pace := randf_range(0.93, 1.07)   # a wave doesn't march in lockstep
 
 @onready var nav: NavigationAgent3D = $NavigationAgent3D
@@ -152,7 +159,8 @@ func _ready() -> void:
 	_bar.position.y = 2.6 * SCALE[type]
 	add_child(_bar)
 	add_to_group("enemies")
-	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type]), SCALE[type])
+	# Skin by name: the spawner gives every peer the same one
+	_sprite.setup(CharacterRig.enemy_look(_LOOKS[type], String(name).hash()), SCALE[type])
 	GameState.mark_met(_LOOKS[type])
 	_sprite.speed_scale = SPEED[type] / 3.5  # stride matches ground speed
 	_sprite.play(anim)
@@ -272,6 +280,11 @@ func _move_to(dest: Vector3, delta: float) -> void:
 		var steer := dir + _sep * SEP_WEIGHT
 		if steer.length_squared() > 0.0001:
 			dir = steer.normalized()
+		# Eased, or each separation sweep (and nav corner) snaps the heading and the
+		# figure twists back and forth as it walks
+		_steer = _steer.lerp(dir, clampf(delta * STEER_RATE, 0.0, 1.0))
+		if _steer.length_squared() > 0.04:
+			dir = _steer.normalized()
 		velocity = dir * SPEED[type] * _pace * Terrain.ground_drag(global_position.x, global_position.z)
 		move_and_slide()
 	else:
@@ -485,7 +498,8 @@ func _die() -> void:
 
 # Every peer: the fallen foe goes in a puff of dust just before he's freed
 func _vanish() -> void:
-	DustFx.puff(get_parent(), global_position + Vector3.UP * 0.3, 8, 0.6)   # outlives him
+	# Outlives him. Not under the enemies root: everything iterating it expects Enemy children
+	DustFx.puff(get_tree().current_scene, global_position + Vector3.UP * 0.3, 8, 0.6)
 	create_tween().tween_property(_sprite, "scale", Vector3.ONE * 0.01, VANISH_TIME) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 
