@@ -30,6 +30,7 @@ var _scale := -1.0
 var _art := -1
 var _window := Vector2i.ZERO
 var _hide: Array[String] = []
+var _scatter := false   # --scatter: list the scatter batches by triangles drawn
 var _offed := false
 var _last_us := 0
 var _rows := {}   # name -> PackedFloat64Array
@@ -60,6 +61,8 @@ func _initialize() -> void:
 			_window = Vector2i(wh[0].to_int(), wh[1].to_int())
 		elif a.begins_with("--hide="):
 			_hide.append(a.trim_prefix("--hide="))
+		elif a == "--scatter":
+			_scatter = true
 		elif a == "--tally":
 			_tally = true
 	root.size = Vector2i(1920, 1080)
@@ -131,6 +134,8 @@ func _process(delta: float) -> bool:
 				_main.get_node(h).set("visible", false)
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		_main.director.begin()
+		if _scatter:
+			_tally_scatter()
 	if _frame < 3:
 		return false
 	_t += delta
@@ -236,3 +241,31 @@ func _walk(n: Node, by: Dictionary) -> void:
 		by[k] = by.get(k, 0) + 1
 	for c in n.get_children():
 		_walk(c, by)
+
+## Every scatter kind (its tiles summed): instances, triangles per instance, triangles in all,
+## tiles, shadow on/off
+func _tally_scatter() -> void:
+	var kinds := {}
+	for mmi: MultiMeshInstance3D in _main.get_node("ScatterLayer").find_children("*", "MultiMeshInstance3D", false, false):
+		var mm := mmi.multimesh
+		var mesh := mm.mesh
+		var tris := 0
+		for s in mesh.get_surface_count():
+			var a := mesh.surface_get_arrays(s)
+			tris += (a[Mesh.ARRAY_INDEX].size() if a[Mesh.ARRAY_INDEX] != null else a[Mesh.ARRAY_VERTEX].size()) / 3
+		var kind := String(mmi.name).get_slice("~", 0)
+		if not kinds.has(kind):
+			kinds[kind] = [kind, 0, tris, 0, 0, mmi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF]
+		kinds[kind][1] += mm.instance_count
+		kinds[kind][3] += mm.instance_count * tris
+		kinds[kind][4] += 1
+	var rows := kinds.values()
+	rows.sort_custom(func(a, b): return a[3] > b[3])
+	var total := 0
+	var nodes := 0
+	for r in rows:
+		total += r[3]
+		nodes += r[4]
+	print("scatter: %d kinds in %d batches, %d triangles" % [rows.size(), nodes, total])
+	for r in rows.slice(0, 30):
+		print("  %-16s n=%6d  tris/inst=%5d  tris=%8d  tiles=%3d  shadow=%s" % r)
