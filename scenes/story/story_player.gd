@@ -106,6 +106,7 @@ func _with_company() -> bool:
 func close() -> void:
 	if not _root.visible:
 		return
+	Sfx.stop_narration()
 	_kill_tweens()
 	var tw := create_tween()
 	tw.tween_property(_root, "modulate:a", 0.0, 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
@@ -412,6 +413,7 @@ func _show_slide(slide: Dictionary) -> void:
 	_set_label(_eyebrow, slide.get("eyebrow", ""))
 	_set_label(_title, slide.get("title", ""))
 	_set_label(_text, slide.get("text", ""))
+	Sfx.narrate(slide.get("text", ""))   # read aloud (English); a slide without narration stops the last
 	_set_label(_verse, slide.get("verse", ""))
 	var ref: String = slide.get("ref", "")
 	_set_label(_ref, GameState.long_ref(ref) if not ref.is_empty() else "")
@@ -466,6 +468,7 @@ func _finish() -> void:
 	if _done:
 		return
 	_done = true
+	Sfx.stop_narration()   # this reader is through (or skipped): don't read on into the day
 	if _type_tween:
 		_type_tween.kill()
 	_reveal_all()

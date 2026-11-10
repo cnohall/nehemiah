@@ -27,6 +27,8 @@ var on_credits := Callable()
 @onready var _music_val:  Label  = %MusicValue
 @onready var _sfx:        HSlider = %Sfx
 @onready var _sfx_val:    Label  = %SfxValue
+@onready var _voice:      HSlider = %Voice
+@onready var _voice_val:  Label  = %VoiceValue
 @onready var _done:       Button = %Done
 @onready var _modal:      PanelContainer = $Center/Modal
 @onready var _grid:       GridContainer = $Center/Modal/VBox/Grid
@@ -95,6 +97,8 @@ func _ready() -> void:
 	_music.drag_ended.connect(func(_changed): Settings.save())
 	_sfx.value_changed.connect(_on_sfx)
 	_sfx.drag_ended.connect(func(_changed): Settings.save())
+	_voice.value_changed.connect(_on_voice)
+	_voice.drag_ended.connect(func(_changed): Settings.save())
 	_done.pressed.connect(_on_done)
 	_build_extra_rows()
 	_even_rows(_grid)
@@ -150,6 +154,8 @@ func open() -> void:
 	_music_val.text = "%d%%" % roundi(_music.value)
 	_sfx.set_value_no_signal(Settings.sfx_volume * 100.0)
 	_sfx_val.text = "%d%%" % roundi(_sfx.value)
+	_voice.set_value_no_signal(Settings.voice_volume * 100.0)
+	_voice_val.text = "%d%%" % roundi(_voice.value)
 	_select_language()
 	_select_graphics()
 	if _window_size != null:
@@ -285,7 +291,7 @@ func _build_side_sheet() -> void:
 		vbox.get_node("Grid/" + n).hide()
 	_grid.add_theme_constant_override("h_separation", 20)
 	_grid.add_theme_constant_override("v_separation", 4)
-	for slider: HSlider in [_volume, _music, _sfx]:
+	for slider: HSlider in [_volume, _music, _sfx, _voice]:
 		slider.custom_minimum_size = Vector2(130, 48)   # the whole row is the target
 	for b: Button in [_shake_on, _shake_off]:
 		b.custom_minimum_size = Vector2(65, 48)   # the pair spans a slider's width
@@ -372,6 +378,11 @@ func _slide_in() -> void:
 	_sheet_tween = create_tween()
 	_sheet_tween.tween_property(_modal, "position:x", get_viewport_rect().size.x + w, 0.28) \
 		.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+
+func _on_voice(v: float) -> void:
+	Settings.voice_volume = v / 100.0
+	Settings.apply()
+	_voice_val.text = "%d%%" % roundi(v)
 
 # ── Extra rows / keys page ─────────────────────────────────
 

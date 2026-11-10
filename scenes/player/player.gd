@@ -233,6 +233,11 @@ func _ready() -> void:
 	add_to_group("players")
 	if is_multiplayer_authority() and not is_bot():
 		local = self
+	# Owned workers move on physics ticks; draw them between ticks (remote ones: NetSmooth)
+	if is_multiplayer_authority():
+		var ts := TickSmooth.new()
+		ts.name = "TickSmooth"
+		add_child(ts)
 	# Server-owned (host) player: don't replicate to a client still loading the
 	# game scene — its copy of this node doesn't exist yet
 	$MultiplayerSynchronizer.add_visibility_filter(func(id: int) -> bool:
