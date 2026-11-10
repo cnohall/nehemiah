@@ -177,7 +177,7 @@ var _last_pose: Dictionary = {}
 var _dip := 0.0             # knees giving under a load picked up, a landing, a blow (squash)
 var _dip_tween: Tween
 var _hand_items: Array[Node3D] = []   # things put in the right hand from outside (attach_to_hand)
-var _baked: BakedFigure               # a Blender figure worn over the pivots (look "baked")
+var _baked_figure: BakedFigure        # a Blender figure worn over the pivots (look "baked")
 
 static var _meshes: Dictionary = {}
 static var _part_mat: ShaderMaterial
@@ -309,7 +309,7 @@ func set_look(look: Dictionary) -> void:
 	_ankles.clear()
 	_elbows.clear()
 	_tails.clear()
-	_baked = null
+	_baked_figure = null
 	_build(look)
 	_apply_pose()
 	for c in at_chest:
@@ -430,8 +430,8 @@ func _process(delta: float) -> void:
 	_update_facing(delta)
 	_apply_pose()
 	_secondary(delta)
-	if _baked != null:
-		_baked.pose()
+	if _baked_figure != null:
+		_baked_figure.pose()
 	posed.emit(delta)
 
 # Posing is most of a figure's frame (the script, then every part's moved transform):
@@ -1515,7 +1515,7 @@ func _build(look: Dictionary) -> void:
 		_tool_visible()
 	_proportions()
 	if look.has("baked"):
-		_baked = BakedFigure.apply(self, look["baked"])
+		_baked_figure = BakedFigure.apply(self, look["baked"])
 
 func _proportions() -> void:
 	if _head != null:
