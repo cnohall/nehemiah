@@ -225,7 +225,7 @@ static func slides_for_day(day: int) -> Array:
 ## It was the Valley Gate (5) until Nov 2026: too late, past where most crews stopped
 const CHOICES_FROM := 3
 static func choice_offered(section_index: int) -> bool:
-	return section_index >= CHOICES_FROM and not GameState.is_replay() and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
+	return section_index >= CHOICES_FROM and not GameState.is_replay() and not GameState.free_play() and not GameState.attract
 
 const TWIST_TITLES := {
 	"doors": "Hang the doors", "mortar": "Mortar", "posts": "The watch", "beams": "Beams take two", "salvage": "Stone from the rubble",

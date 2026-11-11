@@ -4,7 +4,7 @@ extends RefCounted
 # The four trades of the crew (GDD §5.10, Neh. 4): anyone can do any job, each trade
 # does one thing better. Hands-on work takes WORK_MULT longer than before; a trade's own
 # work runs PACE faster, which is the old pace. Water carriers walk loaded faster; the
-# overseer hits harder. Off with `-- --no-trades` or in the simple game (GameState.trades_on()): every worker plain,
+# overseer hits harder. Off with `-- --no-trades` (GameState.trades_on()): every worker plain,
 # work at the old times.
 
 enum { BUILDER, WATER_CARRIER, CARPENTER, OVERSEER }

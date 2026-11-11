@@ -71,16 +71,12 @@ var _mood_tween: Tween
 var _slowmo_gen := 0
 var _wall_cam: Tween
 var _carvings: Array[Label3D] = []   # names on their tablets
-var _look: LookPass
-
-func _on_art_style_changed() -> void:
-	_look.look = LookPass.STYLES[Settings.art_style]
 
 func _ready() -> void:
 	add_to_group("camera_rig")
 	CharacterRig.prewarm()   # while loading, not at the first brute's spawn
-	# Drawn looks over the world and its tags (under the HUD), on trial: Settings'
-	# art style; `-- --look=litho|cel` overrides, F10 cycles, F9 over the HUD too (debug)
+	# Drawn looks over the world and its tags (under the HUD), debug only: the game plays
+	# plain; `-- --look=litho|cel` picks one, F10 cycles, F9 over the HUD too
 	var look := LookPass.new(($WorldEnvironment as WorldEnvironment).environment)
 	look.cycle_key = true
 	look.keep_film = true
@@ -89,15 +85,7 @@ func _ready() -> void:
 		look.base_layer = -1     # the title menu draws on layer 0, over the world
 	look.whole_screen = "--look-world" not in OS.get_cmdline_user_args()
 	add_child(look)
-	var forced := LookPass.from_args()
-	_look = look
-	if forced != LookPass.PLAIN:
-		look.look = forced
-	else:
-		# A bound method, not a lambda holding `look`: the connection to the autoload
-		# drops with this scene when a new day reloads it
-		_on_art_style_changed()
-		Settings.art_style_changed.connect(_on_art_style_changed)
+	look.look = LookPass.from_args()
 	# The stretch's own arc: the enemy answers the work at half and at the last unit
 	var beats := SectionBeats.new()
 	beats.name = "SectionBeats"

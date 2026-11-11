@@ -21,7 +21,7 @@ Everything below is a **first pass** until playtest 3 (`PLAYTEST_3.md`). **Featu
 | End of the first act: camp gathers, Jeshanah climax, camp reveal, yard choice from the Broad Wall | 5.28 | `--old-camp` `--card-choice` | built 10 Nov 2026; `tools/camp_reveal_shots.gd`, `tools/yard_choice_test.gd`; needs playtest 4 |
 | Hardships on stretch replays (Thronefall mutators) | 5.21 | n/a | spec only; build if anyone replays after a win |
 | The well: drink to mend | 5.22 | `--no-well` | pending |
-| Simple game (depth without load) | 5.23 | Settings → Game → Simple (host's choice, `GameState.simplified()`) | built 6 Oct 2026; test `tools/simple_game_test.gd --day=34`; needs playtest 4 |
+| Simple game (depth without load) | 5.23 | REMOVED 12 Nov 2026: full game only, no choice | cut |
 | Play stats from the web build (where sessions stop) | 5.24 | Settings → Advanced → Play stats (web only, on by default) | built 13 Oct 2026; test `tools/telemetry_test.gd`; Worker side in `web-port` (`worker/src/stats.js`), not deployed |
 | The call: context ping, bots take it as an order (fun alone) | 5.25 | `--no-calls` | prototype 1 Nov 2026; test `tools/calls_test.gd`; needs playtest 4 (solo sessions) |
 | Choice before each stretch (boons) | 6.5, 5.28 | `--boon=<key>` `--card-choice` | from the Broad Wall, in the yard (10 Nov 2026); pending |

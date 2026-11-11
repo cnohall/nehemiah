@@ -410,7 +410,7 @@ func _route(at: Vector3) -> PackedVector3Array:
 
 ## Server: a worker calls the next wave in. False when it isn't allowed or isn't worth it.
 func call_early() -> bool:
-	if not _active or not Settings.exp_call_early or GameState.simplified() or GameState.has_twist("horn") or not GameState.waves 			or _surge_left > 0 or _surge_timer < CALL_EARLY_MIN:
+	if not _active or not Settings.exp_call_early or GameState.has_twist("horn") or not GameState.waves 			or _surge_left > 0 or _surge_timer < CALL_EARLY_MIN:
 		return false
 	_surge_timer = WAVE_WARN + 0.01
 	if not _forecasted:

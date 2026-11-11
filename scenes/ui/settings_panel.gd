@@ -3,7 +3,7 @@ extends Control
 # Modal settings sheet, shared by the title screen and the in-game menu.
 # Writes straight through to the Settings autoload; Esc / Done closes.
 # Two more pages, built in code: "Keys" rebinds the keyboard / mouse, "Advanced" holds what
-# most players never touch (looks and rules on trial, the view and HUD alternatives).
+# most players never touch (rules on trial, the view and HUD alternatives).
 
 signal closed
 
@@ -40,8 +40,6 @@ const EXPERIMENTS := [
 
 var _exp_btns := {}         # Settings property → [Off, On]
 var _forecast_btns: Array[Button]   # indexed by Settings.FORECAST_*
-var _full_game: Button
-var _simple_game: Button
 var _hints_on: Button
 var _hints_off: Button
 var _stats_on: Button
@@ -69,7 +67,6 @@ var _window_size: OptionButton
 var _window_sizes: Array[Vector2i] = []
 var _quality_btns: Array[Button] = []
 var _scale_btns: Array[Button] = []
-var _style_btns: Array[Button] = []
 var _listening := ""        # action waiting for a key press, or ""
 
 func _ready() -> void:
@@ -150,8 +147,6 @@ func open() -> void:
 	_map_view.button_pressed     = Settings.turn_to_map
 	_hold.button_pressed         = not Settings.toggle_charge
 	_toggle_mode.button_pressed  = Settings.toggle_charge
-	_full_game.button_pressed     = not Settings.simple_game
-	_simple_game.button_pressed   = Settings.simple_game
 	_hints_on.button_pressed      = Settings.hints
 	_hints_off.button_pressed     = not Settings.hints
 	if _stats_on != null:
@@ -270,7 +265,7 @@ func _build_extra_rows() -> void:
 	_build_advanced_rows()
 	_adv_btn.pressed.connect(_show_page.bind(_adv_page))
 
-# The Advanced page: views, looks and rules most players leave as they are
+# The Advanced page: views and rules most players leave as they are
 func _build_advanced_rows() -> void:
 	_adv_page = VBoxContainer.new()
 	_adv_page.add_theme_constant_override("separation", 22)
@@ -298,14 +293,7 @@ func _build_advanced_rows() -> void:
 	_map_view = pair[1]
 	_game_view.pressed.connect(_toggle.bind("turn_to_map", false))
 	_map_view.pressed.connect(_toggle.bind("turn_to_map", true))
-	_heading("Look")
-	_style_btns = _choice_row("Art style", Settings.ART_STYLES, 110)
-	for i in _style_btns.size():
-		_style_btns[i].pressed.connect(func():
-			Settings.art_style = i
-			Settings.save())
 	_heading("Rules")
-	_build_game_row()
 	_build_hints_row()
 	_build_experimental_rows()
 	if Telemetry.available():
@@ -319,21 +307,6 @@ func _heading(text: String) -> void:
 	h.theme_type_variation = &"Eyebrow"
 	_target.add_child(h)
 	_target.add_child(Control.new())
-
-# Full or simple game (Settings.simple_game): the host's pick, sent to the crew at once
-func _build_game_row() -> void:
-	var pair := _segment_row("Game", "Full", "Simple")
-	_full_game = pair[0]
-	_simple_game = pair[1]
-	_full_game.pressed.connect(_set_simple.bind(false))
-	_simple_game.pressed.connect(_set_simple.bind(true))
-	_add_label("")
-	var note := Label.new()
-	note.theme_type_variation = &"Caption"
-	note.text = "Host's choice. Simple keeps the wall, the fight and each stretch's new twist; it drops trades, the saboteur, the choice before each stretch, hungry households, and the life in the streets."
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.custom_minimum_size = Vector2(300, 0)
-	_target.add_child(note)
 
 # First-day hints (FirstSteps): turning them on shows every one again
 func _build_hints_row() -> void:
@@ -367,10 +340,6 @@ func _build_stats_row() -> void:
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size = Vector2(300, 0)
 	_target.add_child(note)
-
-func _set_simple(on: bool) -> void:
-	_toggle("simple_game", on)
-	GameState.share_rules()
 
 # Ideas being tried with playtesters (GDD §5.21): the host's pick rules
 func _build_experimental_rows() -> void:
@@ -446,8 +415,6 @@ func _save_graphics() -> void:
 	Settings.save()
 
 func _select_graphics() -> void:
-	for i in _style_btns.size():
-		_style_btns[i].button_pressed = i == Settings.art_style
 	for i in _quality_btns.size():
 		_quality_btns[i].button_pressed = i == Settings.quality
 	# The nearest preset: an auto step-down or an old cfg can leave an in-between value
