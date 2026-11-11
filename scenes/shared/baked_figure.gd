@@ -8,7 +8,9 @@ extends Node3D
 ## (hammer, paddle, sword) stay as the rig's own parts.
 
 const SHADER := preload("res://assets/shaders/baked_figure.gdshader")
+const SHADER_TEX := preload("res://assets/shaders/baked_figure_tex.gdshader")
 static var _material: ShaderMaterial
+static var _textured := {}           # glb path → ShaderMaterial (figures with painted textures)
 
 var _rig: Node3D
 var _skeleton: Skeleton3D
@@ -84,17 +86,32 @@ static func apply(rig: Node3D, path: String) -> BakedFigure:
 	var fig := BakedFigure.new()
 	fig.name = "Baked"
 	rig.add_child(fig)
-	fig._setup(rig, scene.instantiate())
+	fig._setup(rig, scene.instantiate(), _material_for(path))
 	return fig
 
-func _setup(rig: Node3D, inst: Node3D) -> void:
-	_rig = rig
-	add_child(inst)
+## Figures from build_crew.py come with textures beside the glb (<name>_albedo.png, _normal,
+## _aux); the fused ones (build_figure.py) carry their paint per vertex.
+static func _material_for(path: String) -> ShaderMaterial:
+	var base := path.get_basename()
+	if ResourceLoader.exists(base + "_albedo.png"):
+		if not _textured.has(path):
+			var m := ShaderMaterial.new()
+			m.shader = SHADER_TEX
+			m.set_shader_parameter("albedo_tex", load(base + "_albedo.png"))
+			m.set_shader_parameter("normal_tex", load(base + "_normal.png"))
+			m.set_shader_parameter("aux_tex", load(base + "_aux.png"))
+			_textured[path] = m
+		return _textured[path]
 	if _material == null:
 		_material = ShaderMaterial.new()
 		_material.shader = SHADER
+	return _material
+
+func _setup(rig: Node3D, inst: Node3D, material: ShaderMaterial) -> void:
+	_rig = rig
+	add_child(inst)
 	for mi: MeshInstance3D in inst.find_children("*", "MeshInstance3D", true, false):
-		mi.material_override = _material
+		mi.material_override = material
 		mi.set_instance_shader_parameter("dye", rig._look.get("hat_color", Color.WHITE))
 		rig._parts.append(mi)
 	var found := inst.find_children("*", "Skeleton3D", true, false)
@@ -108,7 +125,9 @@ func _setup(rig: Node3D, inst: Node3D) -> void:
 	for b in _skeleton.get_bone_count():
 		var bone_name := _skeleton.get_bone_name(b)
 		if not map.has(bone_name):
-			push_warning("BakedFigure: no pivot for bone %s" % bone_name)
+			# A look without head-band tails has no pivot for them: the bone rides its parent
+			if not bone_name.begins_with("tail_"):
+				push_warning("BakedFigure: no pivot for bone %s" % bone_name)
 			continue
 		var depth := 0
 		var p := _skeleton.get_bone_parent(b)

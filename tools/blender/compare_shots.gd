@@ -2,16 +2,17 @@ extends SceneTree
 
 # The builder as built in code (left of each pair) and baked in Blender (right), in a few
 # poses, for review:
-#   Godot --path . --fixed-fps 30 --script res://tools/blender/compare_shots.gd -- <out_dir> [tag]
+#   Godot --path . --fixed-fps 30 --script res://tools/blender/compare_shots.gd -- <out_dir> [tag] [glb]
 var _out := "res://build/blender/compare"
 var _tag := "builder"
+var _glb := "res://assets/models/figures/builder.glb"
 var _frame := 0
 var _rigs: Array[CharacterRig] = []
 var _camera: Camera3D
 var _view := 0
 var _stage: Node3D
 const ANIMS := ["idle_down", "walk_down", "run_down", "build_down"]
-const VIEWS := ["front", "iso", "back", "close", "head", "head_side", "body"]
+const VIEWS := ["front", "iso", "back", "close", "head", "head_side", "body", "game"]
 const SHOOT_AT := 40
 
 func _initialize() -> void:
@@ -23,6 +24,8 @@ func _initialize() -> void:
 		_out = rest[0]
 	if rest.size() > 1:
 		_tag = rest[1]
+	if rest.size() > 2:
+		_glb = rest[2]
 	DirAccess.make_dir_recursive_absolute(_out)
 	root.size = Vector2i(1920, 1000)
 	root.msaa_3d = Viewport.MSAA_4X
@@ -59,7 +62,7 @@ func _initialize() -> void:
 func _spawn() -> void:
 	var look := CharacterRig.worker_look(0, Palette.CREW[0])
 	var baked := look.duplicate()
-	baked["baked"] = "res://assets/models/figures/builder.glb"
+	baked["baked"] = _glb
 	var i := 0
 	for anim: String in ANIMS:
 		for l: Dictionary in [look, baked]:
@@ -77,13 +80,17 @@ func _spawn() -> void:
 func _set_view() -> void:
 	# The figures face the camera's "down" on their own (CharacterRig turns itself): orbit
 	# the camera instead
-	var yaw: float = [0.0, 0.6, PI, 0.35, 0.25, 0.9, 0.3][_view]
+	var yaw: float = [0.0, 0.6, PI, 0.35, 0.25, 0.9, 0.3, 0.0][_view]
 	var v: String = VIEWS[_view]
 	var close := v == "close"
 	var head := v.begins_with("head") or v == "body"
 	var target := Vector3(-4.5, 1.25, 0) if close else (Vector3(-4.5, 1.72 if v != "body" else 0.85, 0) if head else Vector3(0, 1.0, 0))
 	_camera.size = 2.4 if close else (1.15 if head else 5.6)
 	_camera.look_at_from_position(target + Vector3(sin(yaw) * 8.0, 3.0 if head else (5.0 if close else 6.0), cos(yaw) * 8.0), target)
+	if v == "game":
+		# The play camera's angle and zoom (as tools/cast_lineup.gd)
+		_camera.size = 12.0
+		_camera.look_at_from_position(Vector3(0, 1.1, 0) + Vector3(0, 16, 19.8), Vector3(0, 1.1, 0))
 
 func _process(_delta: float) -> bool:
 	_frame += 1

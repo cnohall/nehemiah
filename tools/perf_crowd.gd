@@ -1,11 +1,12 @@
 extends SceneTree
 
 # Draw-call / frame-time probe: a crowd of enemies on an iso camera.
-#   Godot --path . --disable-vsync --script res://tools/perf_crowd.gd -- [--old] [--count=40] [--builder [--baked]]
+#   Godot --path . --disable-vsync --script res://tools/perf_crowd.gd -- [--old] [--count=40] [--builder [--baked | --v2]]
 # --builder: a crowd of the builder instead; --baked: his Blender figure (BakedFigure)
 var _old := false
 var _builder := false
 var _baked := false
+var _glb := "res://assets/models/figures/builder.glb"
 var _count := 40
 var _frame := 0
 var _t0 := 0
@@ -18,6 +19,9 @@ func _initialize() -> void:
 			_builder = true
 		elif a == "--baked":
 			_baked = true
+		elif a == "--v2":   # the builder authored in Blender (tools/blender/build_crew.py)
+			_baked = true
+			_glb = "res://assets/models/figures/builder_v2.glb"
 		elif a.begins_with("--count="):
 			_count = int(a.substr(8))
 	root.size = Vector2i(1920, 1080)
@@ -39,7 +43,7 @@ func _initialize() -> void:
 		if _builder:
 			look = CharacterRig.worker_look(0, Palette.CREW[0])
 			if _baked:
-				look["baked"] = "res://assets/models/figures/builder.glb"
+				look["baked"] = _glb
 		if _old:
 			look["sculpted_body"] = false
 			look["sculpted_builder"] = false

@@ -205,6 +205,9 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 			look.merge({"skin": SKIN[0], "hair": HAIR_BROWN, "beard": "full", "hair_style": "short",
 				"strap": true, "basket": true, "basket_stones": true, "trim": LINEN.darkened(0.1),
 				"sculpted_builder": true, "sculpted_body": true}, true)
+			# Spike: the builder authored in Blender (tools/blender/build_crew.py), opt-in
+			if "--crew-v2" in OS.get_cmdline_user_args():
+				look["baked"] = "res://assets/models/figures/builder_v2.glb"
 		1:
 			look.merge({"skin": SKIN[2], "hair": HAIR_BLACK, "beard": "short", "hair_style": "curly",
 				"hat": "scarf", "hat_color": Color(0.95, 0.92, 0.85), "stripe": dye,
