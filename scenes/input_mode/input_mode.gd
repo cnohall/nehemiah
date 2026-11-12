@@ -147,7 +147,7 @@ func key(action: String) -> String:
 			func(m: String) -> String: return key_label(m)))
 	var a: String = ACTION.get(action, action)
 	var label := _pad_label(a) if using_pad else key_label(a)
-	if action == "throw" and not Settings.toggle_charge:
+	if action == "throw":
 		return tr("Hold %s") % label
 	return label
 

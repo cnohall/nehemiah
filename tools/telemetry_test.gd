@@ -9,7 +9,7 @@ extends SceneTree
 
 # The only keys a beacon may carry (the Worker's allow-list in worker/src/stats.js matches)
 const ALLOWED := ["k", "s", "t", "sc", "mode", "sec", "day", "ph", "done", "tot", "br", "crew",
-	"simple", "fps", "lang", "vw", "vh"]
+	"fps", "lang", "vw", "vh"]
 
 var _fails := 0
 var _got: Array[Dictionary] = []
@@ -33,7 +33,7 @@ func _process(_delta: float) -> bool:
 	var b: Dictionary = _got[0]
 	_check(b["sec"] == 1 and b["day"] == 5 and b["ph"] == "WORK", "…saying section 1, day 5, WORK")
 	_check(b["done"] == 2 and b["tot"] == 6 and b["br"] == 0, "…and 2 of 6 pieces, no breaches")
-	_check(b["mode"] == "campaign" and b["simple"] == 0, "…a campaign in the full game")
+	_check(b["mode"] == "campaign", "…a campaign")
 	_check(str(b["s"]).length() == 12, "…with a 12-character session id")
 
 	_got.clear()
@@ -65,13 +65,6 @@ func _process(_delta: float) -> bool:
 	tel.event("beat")
 	_check(_got[0]["mode"] == "replay", "a section replay reads as replay")
 	gs.replay_section = -1
-
-	# The simple game
-	settings.simple_game = true
-	_got.clear()
-	tel.event("beat")
-	_check(_got[0]["simple"] == 1, "the simple game is flagged")
-	settings.simple_game = false
 
 	# The off switch
 	settings.share_stats = false

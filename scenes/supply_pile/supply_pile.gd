@@ -8,8 +8,6 @@ extends StaticBody3D
 ## Present only in sections with this twist; "!twist" = only in sections WITHOUT it
 ## (empty = always)
 @export var twist: String = ""
-## Switched off by its owner (Households in the simple game): gone like an out-of-section pile
-var off := false
 ## Rubble heap look + limited stock (0 = endless stockpile)
 @export var rubble_stock: int = 0
 
@@ -129,8 +127,6 @@ func _refresh_active() -> void:
 		remove_from_group("scattered_piles")
 
 func _in_section() -> bool:
-	if off:
-		return false
 	if GameState.first_stretch() and not kind in ["stone", "wood"]:
 		return false   # the first stretch: timber and stone only
 	if twist.is_empty():

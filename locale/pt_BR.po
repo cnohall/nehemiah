@@ -2665,3 +2665,102 @@ msgstr "Mire e lance"
 
 msgid "Your game and the host's are different versions. Both of you need the same build to play together."
 msgstr "O seu jogo e o do anfitrião são versões diferentes. Vocês dois precisam da mesma versão para jogar juntos."
+
+msgid "Opening the gates"
+msgstr "Abrindo as portas"
+
+msgid "Gathering the builders"
+msgstr "Reunindo os construtores"
+
+msgid "Back to the city"
+msgstr "De volta à cidade"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Carry the load to the wall, then work it up with your own hands."
+msgstr "Leve a carga até a muralha e depois levante-a com as próprias mãos."
+
+msgid "Foes come while you build. Drive them off, then go back to the work."
+msgstr "Os inimigos chegam enquanto você constrói. Expulse-os e volte à obra."
+
+msgid "If ten foes reach the inner city, the city falls."
+msgstr "Se dez inimigos chegarem ao interior da cidade, a cidade cai."
+
+msgid "Each stretch has three marks to earn: In good time, None got through, The wall holds."
+msgstr "Cada trecho tem três marcas a conquistar: No tempo certo, Ninguém passou, A muralha resiste."
+
+msgid "The campaign is kept at the start of each stretch. Continue picks it up from there."
+msgstr "A campanha é salva no início de cada trecho. Continuar retoma dali."
+
+msgid "Every stretch you have built can be played again from the map."
+msgstr "Todo trecho que você construiu pode ser jogado de novo pelo mapa."
+
+msgid "Playing alone: bots fill the crew, and come to the work or the fight when you call."
+msgstr "Jogando sozinho: os bots completam a equipe e vêm para a obra ou para a luta quando você chama."
+
+msgid "Rush"
+msgstr "Correria"
+
+msgid "Pincer"
+msgstr "Pinça"
+
+msgid "Ram"
+msgstr "Aríete"
+
+msgid "Raid"
+msgstr "Pilhagem"
+
+msgid "Scouts running in: %s!"
+msgstr "Batedores correndo: %s!"
+
+msgid "Both ends at once: %s!"
+msgstr "As duas pontas de uma vez: %s!"
+
+msgid "Brutes for the wall: %s!"
+msgstr "Brutamontes contra a muralha: %s!"
+
+msgid "Raiders for the piles: %s!"
+msgstr "Saqueadores atrás das pilhas: %s!"
+
+msgid "The army of Samaria is camping on the hill!"
+msgstr "O exército de Samaria está acampando no monte!"
+
+msgid "Geshem's Arabs have joined them!"
+msgstr "Os árabes de Gesém se juntaram a eles!"
+
+msgid "Sanballat's men, both ends! Hold the old gate!"
+msgstr "Os homens de Sambalate, nas duas pontas! Segurem a porta velha!"
+
+msgid "Will they revive the stones out of the heaps of rubbish, since they are burned?"
+msgstr "Farão reviver as pedras dos montões de entulho, já que estão queimadas?"
+
+msgid "Set a watch"
+msgstr "Pôr guarda"
+
+msgid "How will you meet it? Stand in a ring"
+msgstr "Como vão enfrentar? Fiquem dentro de um círculo"
+
+msgid "%s!"
+msgstr "%s!"
+
+msgid "General"
+msgstr "Geral"
+
+msgid "Audio"
+msgstr "Áudio"
+
+msgid "Controls"
+msgstr "Controles"
+
+msgid "Experimental"
+msgstr "Experimental"
+
+msgid "Reset keys"
+msgstr "Restaurar teclas"
+
+msgid "Saved at the start of each stretch. Continue from the title screen"
+msgstr "Salvo no início de cada trecho. Continue pela tela inicial"
+
+msgid "Stand here to choose"
+msgstr "Fique aqui para escolher"

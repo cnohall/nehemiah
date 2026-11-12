@@ -368,7 +368,7 @@ func _on_festival() -> void:
 	NetworkManager.disconnect_session()
 	GameState.replay_section = -1
 	GameState.festival = true
-	get_tree().change_scene_to_file(GAME_SCENE)
+	LoadCover.go(GAME_SCENE)
 
 # Opens on the first stretch not yet built (the last one once all stand)
 func _open_picker() -> void:
@@ -394,17 +394,31 @@ func _set_starts_disabled(on: bool) -> void:
 func _host() -> void:
 	_stop_world()
 	_set_starts_disabled(true)
+	# On screen before the work starts: the first host hashes every script (~1.5 s)
 	match _net_mode():
 		Net.STEAM:
-			net_status.text = "Creating Steam lobby…"
+			if not await LoadCover.wait("Opening the gates", tr("Creating Steam lobby…"), _cancel_host):
+				return
 			NetworkManager.host_steam()
 		Net.ONLINE:
-			net_status.text = "Opening a room…"
+			if not await LoadCover.wait("Opening the gates", tr("Opening a room…"), _cancel_host):
+				return
 			NetworkManager.host_online()
 		_:
+			if not await LoadCover.wait("Opening the gates"):
+				return
 			NetworkManager.host()
 
+# Tired of waiting on Steam: a lobby landing later is left at once (_steam_pending)
+func _cancel_host() -> void:
+	NetworkManager.disconnect_session()
+	_set_starts_disabled(false)
+	_show_default_status()
+	_resume_world()
+	(_continue_btn if _continue_btn else host_btn).grab_focus()
+
 func _on_host_failed(reason: String) -> void:
+	LoadCover.lift()
 	# No online server: still let them build — a solo game needs no network
 	if _net_mode() == Net.ONLINE:
 		net_status.text = "%s Starting a solo game…" % reason
@@ -416,7 +430,7 @@ func _on_host_failed(reason: String) -> void:
 	_resume_world()
 
 func _on_lobby_created() -> void:
-	get_tree().change_scene_to_file(GAME_SCENE)
+	LoadCover.go(GAME_SCENE, "Gathering the builders", GameState.start_section())
 
 # ── Join ───────────────────────────────────────────────────
 
@@ -461,7 +475,8 @@ func _fill_friend_games() -> void:
 			status_label.text = tr("Joining %s…") % g.name
 			connect_btn.disabled = true   # in flight: Back cancels it
 			_stop_world()
-			NetworkManager.join_steam(g.lobby))
+			if await LoadCover.wait("Opening the gates", tr("Joining %s…") % g.name, _cancel_join):
+				NetworkManager.join_steam(g.lobby))
 		box.add_child(b)
 		if first == null:
 			first = b
@@ -474,19 +489,24 @@ func _on_connect() -> void:
 			else "Enter an address or lobby code first.")
 		return
 	NetworkManager.last_error = ""
+	var room := NetworkManager.is_room_code(addr) and NetworkManager.online_available()
+	if not room and OS.has_feature("web"):
+		status_label.text = "Room codes are 5 letters, like KXBQM."
+		return
+	# Steam lobby ids are 64-bit numbers; anything else is treated as an IP/hostname
+	var steam_code := not room and addr.is_valid_int() and addr.length() > 12
+	if steam_code and not NetworkManager.steam_available():
+		status_label.text = "That's a Steam lobby code. Start Steam first."
+		return
 	status_label.text = "Connecting…"
 	connect_btn.disabled = true
 	_stop_world()
-	if NetworkManager.is_room_code(addr) and NetworkManager.online_available():
-		status_label.text = tr("Joining room %s…") % addr.to_upper()
+	var wait_text := tr("Joining room %s…") % addr.to_upper() if room else tr("Connecting…")
+	if not await LoadCover.wait("Opening the gates", wait_text, _cancel_join):
+		return
+	if room:
 		NetworkManager.join_online(addr)
-	elif OS.has_feature("web"):
-		_join_failed("Room codes are 5 letters, like KXBQM.")
-	# Steam lobby ids are 64-bit numbers; anything else is treated as an IP/hostname
-	elif addr.is_valid_int() and addr.length() > 12:
-		if not NetworkManager.steam_available():
-			_join_failed("That's a Steam lobby code. Start Steam first.")
-			return
+	elif steam_code:
 		NetworkManager.join_steam(addr.to_int())
 	else:
 		NetworkManager.join(addr)
@@ -501,10 +521,21 @@ func _on_back() -> void:
 	connect_btn.disabled = false
 	join_btn.grab_focus()
 
+# Cancel on the cover: drop the attempt but stay in the panel to try again
+func _cancel_join() -> void:
+	NetworkManager.disconnect_session()
+	_resume_world()
+	status_label.text = ""
+	connect_btn.disabled = false
+	if join_panel.visible:
+		connect_btn.grab_focus()
+	else:
+		join_btn.grab_focus()
+
 func _on_lobby_joined(success: bool) -> void:
 	if success:
 		_stop_world()   # a Steam invite joins straight from the menu
-		get_tree().change_scene_to_file(GAME_SCENE)
+		LoadCover.go(GAME_SCENE)
 	elif not NetworkManager.join_error.is_empty():
 		_join_failed(NetworkManager.join_error)
 	else:
@@ -513,6 +544,7 @@ func _on_lobby_joined(success: bool) -> void:
 
 # Panel may be hidden when the join came from a Steam invite, so surface it
 func _join_failed(msg: String) -> void:
+	LoadCover.lift()
 	_open_join()
 	status_label.text = msg
 	connect_btn.disabled = false

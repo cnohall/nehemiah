@@ -14,7 +14,6 @@ extends MeshInstance3D
 
 enum { PLAIN, LITHO, MOSAIC, PLAN, CEL, LINES }
 const UNDER_HUD := 2     # over the world tags (WorldTag.LAYER 1), under GameHUD (3)
-const STYLES := [PLAIN, LITHO, CEL]     # Settings.ART_STYLES, in order
 const NAMES :={ "plain": PLAIN, "litho": LITHO, "mosaic": MOSAIC, "plan": PLAN, "cel": CEL }
 
 ## The environment whose tonemap is switched while a look is on (may be null)

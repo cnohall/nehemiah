@@ -24,6 +24,7 @@ const POLE      := Color(0.40, 0.29, 0.18)
 const MARKER_SHADER := preload("res://assets/shaders/ground_marker.gdshader")
 
 var _cooldown := 0.0
+var _last_ms := -1000000   # when the horn last sounded (any peer's clock; for the bots' gap)
 var _calls: Array = []   # { root, at, until (msec), ring, told: {worker_id: true} }
 
 func _ready() -> void:
@@ -47,6 +48,10 @@ func rally_damage(pos: Vector3) -> float:
 
 func rally_sword_cd(pos: Vector3) -> float:
 	return RALLY_SWORD_CD if not call_at(pos).is_empty() else 1.0
+
+## Seconds since the horn last sounded
+func since_blown() -> float:
+	return (Time.get_ticks_msec() - _last_ms) * 0.001
 
 ## The standing call a bot should gather to (the newest), or {}
 func open_call() -> Dictionary:
@@ -85,6 +90,7 @@ func request(worker: Node3D, at: Vector3) -> bool:
 
 @rpc("authority", "call_local", "reliable")
 func _sound(at: Vector3, color: Color) -> void:
+	_last_ms = Time.get_ticks_msec()
 	Sfx.play("horn")
 	get_tree().call_group("camera_rig", "shake", 0.12)
 	get_tree().call_group("townsfolk", "heard_horn")

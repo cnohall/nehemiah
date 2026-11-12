@@ -1,6 +1,6 @@
 extends SceneTree
 
-# The settings sheet: the main page, then the Advanced page. Nothing is saved.
+# The settings sheet, one shot per tab. Nothing is saved.
 #   Godot --path . --script res://tools/settings_shots.gd -- <out_dir>
 var _out := ""
 var _panel: Control
@@ -24,10 +24,11 @@ func _process(_delta: float) -> bool:
 	_frame += 1
 	if _frame == 3:
 		_panel.open()
-	elif _frame == 20:
-		root.get_texture().get_image().save_png("%s/settings_main.png" % _out)
-		_panel._show_page(_panel._adv_page)
-	elif _frame == 40:
-		root.get_texture().get_image().save_png("%s/settings_advanced.png" % _out)
-		return true
+		_panel._show_tab(0)
+	elif _frame > 3 and _frame % 20 == 0:
+		var tab: int = _frame / 20 - 1
+		root.get_texture().get_image().save_png("%s/settings_%s.png" % [_out, _panel.TABS[tab].to_lower()])
+		if tab + 1 >= _panel.TABS.size():
+			return true
+		_panel._show_tab(tab + 1)
 	return false

@@ -20,6 +20,7 @@ const TALLY_HOLD    := 5.6
 const TALLY_COUNT   := 0.55    # seconds each number takes to count up
 const TALLY_STEP    := 0.3     # between one number starting and the next
 const WALL_CAM_HOLD := 3.3     # Main.WALL_CAM_TIME + its lead-in, less a beat
+const CAMP_REVEAL_HOLD := 4.7  # Main.CAMP_GLIDE + CAMP_HOLD: the enemy's camp after the wall cam
 const BANNER_PAD    := 28.0    # space above and below the banner text
 const BANNER_TOP    := -12.0   # Banner offset_top (as in the scene)
 const SCREEN_EDGE   := 16.0    # the tally never runs closer than this to the screen's top or bottom
@@ -93,7 +94,6 @@ var _tally_builders: Control  # the "next to him…" names: first to go when the
 var _invite_fold := Callable()   # (folded: bool) — the Steam invite panel tucks away once the work starts
 var _tally_waiting: Array = []   # latest DayDirector ready state for the tally
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
-var _next_line: Label        # day plaque: what to do next, for the local player
 var _next_poll := 0.0
 const NEXT_POLL := 0.25
 const KNOCKED_MS := 4000
@@ -105,11 +105,10 @@ var _households_line: Label  # day plaque: households fed, Fountain Gate stretch
 var _sun_dial: SunDial
 var _sun_time: Label
 var _sun_warned := false     # "the sun is low" said once a day
-# Diegetic HUD (Settings.diegetic_hud): no plaques — the sun tells the time, the scribe
-# keeps the record, the watchmen call the threats. The "Next:" line stays, as a caption
-# low on the screen.
+# Diegetic HUD: no day or threat plaque (always hidden) — the sun tells the time, the
+# scribe keeps the record, the watchmen call the threats. The "Next:" line stays, as a
+# caption low on the screen.
 var _next_caption: Label
-var _style_world := false
 # Where this stretch lies on the real wall, and which way north is in the view (the same
 # plan and needle as Explore Jerusalem's journal), top right under the threat plaque
 var _compass: RingCompass
@@ -126,15 +125,14 @@ func _ready() -> void:
 	banner.resized.connect(banner.queue_redraw)
 	_build_player_cards()
 	_build_controls_hint()
-	_build_next_line()
 	_build_next_caption()
 	_build_compass()
 	_build_sun_row()
 	_build_households_line()
 	_build_joining_plaque()
 	# The practice has no day to count or waves to warn of; its own plaque says the step
-	_style_world = not Settings.diegetic_hud   # forces the first _apply_style
-	_apply_style()
+	$Root/DayPlaque.hide()
+	threat.hide()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -201,6 +199,7 @@ func _ready() -> void:
 	GameState.phase_changed.connect(_on_phase_changed)
 	GameState.progress_changed.connect(_on_progress_changed)
 	GameState.breaches_changed.connect(_on_breaches_changed)
+	GameState.boon_changed.connect(_on_boon_changed)
 	refresh_day(GameState.current_day)
 	_on_breaches_changed(GameState.breaches)
 	_on_phase_changed(GameState.phase)
@@ -243,6 +242,9 @@ func _open_pause() -> void:
 	vb.get_node("Title").text = "Paused" if _solo() else "Menu"
 	vb.get_node("Hint").text = "Nothing moves until you resume." if _solo() \
 		else "The game keeps running for your crew while this is open."
+	# Said here, where a player goes to quit, not on the dawn banner
+	if GameState.saves_campaign() and not GameState.campaign_save().is_empty():
+		vb.get_node("Hint").text = tr(vb.get_node("Hint").text) + "\n" + tr("Saved at the start of each stretch. Continue from the title screen")
 	for r in _host_refreshers:
 		r.call()
 	UiFx.fade_in(pause_menu, 0.16)
@@ -348,7 +350,7 @@ func _leave() -> void:
 	get_tree().paused = false
 	NetworkManager.disconnect_session()
 	GameState.reset()
-	get_tree().change_scene_to_file(MENU_SCENE)
+	LoadCover.go(MENU_SCENE, "Back to the city")
 
 # ── Day / Section ──────────────────────────────────────────
 
@@ -359,19 +361,6 @@ func refresh_day(day: int) -> void:
 	circuit.day = day
 
 # ── Next step ──────────────────────────────────────────────
-
-# One plain line under today's work: where the next load goes, or that it's time to
-# build. New players read this rather than decoding the world tags.
-func _build_next_line() -> void:
-	_next_line = Label.new()
-	_next_line.theme_type_variation = &"Caption"
-	_next_line.add_theme_color_override("font_color", UiStyle.INK)
-	_next_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_next_line.custom_minimum_size.x = 300
-	_next_line.visible = false
-	var vb := $Root/DayPlaque/VBox
-	vb.add_child(_next_line)
-	vb.move_child(_next_line, work_row.get_index() + 1)
 
 # Fountain Gate stretch: how many hungry households are fed (each adds to the work, Neh. 5)
 func _build_households_line() -> void:
@@ -437,30 +426,18 @@ func _refresh_sun() -> void:
 			if GameState.last_day_of_section() else tr("What isn't built by the stars waits for tomorrow"), 2.2)
 
 func _process(delta: float) -> void:
-	if _style_world != Settings.diegetic_hud:
-		_apply_style()
 	_place_compass()
 	if _sun_row != null:
 		_refresh_sun()
 	_refresh_households()
 	_next_poll -= delta
-	if _next_poll > 0.0 or _next_line == null:
+	if _next_poll > 0.0 or _next_caption == null:
 		return
 	_next_poll = NEXT_POLL
 	# A first-day tag points the way itself (FirstSteps); two voices would talk over each other
 	var text := "" if GameState.free_play() or FirstSteps.speaking else _next_text()
-	var line := _next_caption if _style_world else _next_line
-	(_next_line if _style_world else _next_caption).visible = false
-	line.visible = not text.is_empty()
-	line.text = text
-
-# Plaques, or the world telling it (the setting can change mid-game from the menu)
-func _apply_style() -> void:
-	_style_world = Settings.diegetic_hud
-	var plaques := not _style_world and not GameState.free_play() and not end_screen.visible
-	$Root/DayPlaque.visible = plaques
-	threat.visible = plaques
-	_next_poll = 0.0
+	_next_caption.visible = not text.is_empty()
+	_next_caption.text = text
 
 # Low and centred, clear of the crew cards and the controls card: a slim parchment
 # plaque, like the rest of the HUD
@@ -598,6 +575,14 @@ func set_ready_state(kind: String, waiting: Array) -> void:
 	if _ready_row != null and is_instance_valid(_ready_row):
 		_ready_row.set_waiting(waiting)
 
+## The crew picked in the yard (YardChoice) during the dawn: say what it gives and costs
+func _on_boon_changed() -> void:
+	if GameState.phase != GameState.Phase.DAWN or not GameState.BOONS.has(GameState.boon):
+		return
+	var lines := GameState.boon_lines(GameState.boon)
+	_show_banner(tr("The crew chose: %s") % tr(GameState.BOONS[GameState.boon]["title"]),
+		"  ·  ".join(lines["gain"] + lines["cost"]))
+
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	_refresh_progress()
 	# A tally held open for the ready check goes when the dusk does
@@ -615,14 +600,14 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			_sun_warned = false
 			var first_day := GameState.day_in_section(GameState.current_day).x == 0
 			var sub: String = (tr("A new stretch: %s  ·  %s") if first_day else "%s  ·  %s") % [tr(section["name"]), GameState.short_ref(section["ref"])]
-			# First day of a section that brings something new: say what
+			# The dawn banner is where, when, how long: nothing else. What's new was just
+			# drawn on the twist cards, the yard rings say "stand here" themselves, a card
+			# choice was made on its card, the save note lives in the pause menu. Only a twist
+			# no card showed (no captions, or the story off) still gets its line here
 			if first_day:
 				for twist: String in GameState.new_twists():
-					sub += "\n" + tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
-				if GameState.BOONS.has(GameState.boon):
-					var lines := GameState.boon_lines(GameState.boon)
-					sub += "\n" + tr("The crew chose: %s") % tr(GameState.BOONS[GameState.boon]["title"])
-					sub += "  ·  " + "  ·  ".join(lines["gain"] + lines["cost"])
+					if StoryData.disabled() or TwistCard.captions(twist).is_empty():
+						sub += "\n" + tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
 			if GameState.sun_total > 0.0:
 				var pos := GameState.day_in_section(GameState.current_day)
 				if pos.x == 0:
@@ -631,8 +616,6 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 					sub += "\n" + tr("The last day of this stretch: it must stand before the stars appear")
 				else:
 					sub += "\n" + tr("%d of %d stand, %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
-			if first_day and GameState.dawn_saved():
-				sub += "\n" + tr("Progress saved. Continue from the title screen")
 			if not GameState.free_play():
 				_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:
@@ -746,7 +729,7 @@ func _show_end(won: bool) -> void:
 	stats.add_child(_stat("%d / %d" % [sections_done, GameState.SECTIONS.size()], "Sections"))
 	stats.add_child(_stat(str(GameState.breaches), "Breaches"))
 	if sections_done > 0:
-		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.marks_in_play().size()], "Marks"))
+		stats.add_child(_stat("%d / %d" % [GameState.total_marks(), sections_done * GameState.MARKS.size()], "Marks"))
 	if GameState.is_replay():
 		_replay_end(won, vb, stats)
 	_build_end_map(won)
@@ -966,7 +949,10 @@ func show_tally(stats: Dictionary) -> void:
 	_last_tally = stats
 	# A stretch that stands gets its wall cam first (Main)
 	var wall_cam := stats.has("names") and not GameState.attract
-	await get_tree().create_timer(TALLY_DELAY + (WALL_CAM_HOLD if wall_cam else 0.0), true, false, true).timeout
+	var hold := WALL_CAM_HOLD if wall_cam else 0.0
+	if wall_cam and ScatterLayer.camp_reveal_at() != Vector3.INF:
+		hold += CAMP_REVEAL_HOLD   # and the enemy's camp after it
+	await get_tree().create_timer(TALLY_DELAY + hold, true, false, true).timeout
 	if GameState.phase != GameState.Phase.DUSK:
 		return
 	if _tally == null:
@@ -1062,8 +1048,7 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(_crew_line(crew))
 	# The tally stays until everyone is ready (playtest 2) — the title screen's crew
 	# has nobody to ask, so there it fades as before
-	# Simple game: a stretch's last tally moves on by itself (DayDirector.SECTION_DUSK_TIME)
-	var waits := not GameState.attract and not (stats.has("marks") and GameState.simplified())
+	var waits := not GameState.attract
 	if waits:
 		_ready_row = ReadyRow.new(false)
 		_ready_row.holdable = true
@@ -1076,7 +1061,7 @@ func show_tally(stats: Dictionary) -> void:
 
 	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (BUILDERS_H if marks_line and builders_shown else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("\n") * SUB_LINE_H
 	_tally.show()
-	_show_banner(title, sub, -1.0 if waits or (stats.has("marks") and GameState.simplified()) else TALLY_HOLD, true)
+	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
 	if strip and unfinished == 0:
 		# Today's cell fills in: the day's work, banked
@@ -1140,7 +1125,7 @@ func _marks_line(stats: Dictionary, big := false) -> Control:
 		GameState.Mark.CLEAN: tr("all through the section") if mask & GameState.Mark.CLEAN 			else tr_n("%d got through", "%d got through", stats["section_breaches"]) % stats["section_breaches"],
 		GameState.Mark.SOUND: tr("%d%% sound") % roundi(stats["wall"] * 100.0),
 	}
-	for m: int in GameState.marks_in_play():
+	for m: int in GameState.MARKS:
 		var earned := bool(mask & m)
 		# Big: the hero of the tally — a large gem with its name and proof stacked beneath
 		var chip: BoxContainer = VBoxContainer.new() if big else HBoxContainer.new()
@@ -1399,7 +1384,7 @@ func _build_trade_row(vb: Control, at: int, in_menu: bool) -> void:
 	tiles.alignment = BoxContainer.ALIGNMENT_CENTER
 	tiles.add_theme_constant_override("separation", 6)
 	var about := _host_caption()
-	# The simple game has no trades: the row hides while it's in play (the host may switch)
+	# No trades in play (`--no-trades`, synced by the host): the row hides
 	var show_row := func():
 		if is_instance_valid(tiles):
 			tiles.visible = GameState.trades_on()
@@ -1630,7 +1615,7 @@ func set_player_present(slot: int, present: bool, is_local: bool, is_bot := fals
 	card.who.text = tr("%s · joining…") % who if loading else who
 	card.root.modulate.a = 0.6 if loading else 1.0
 
-## The trade under a card's name — or "Builder" for all with no trades in play (the simple game)
+## The trade under a card's name — or "Builder" for all with no trades in play
 func _card_title(card: Dictionary) -> void:
 	var t: int = card.trade if card.trade >= 0 else card.slot
 	card.name.text = CharacterRig.TRADES[t % CharacterRig.TRADES.size()] if GameState.trades_on() else "Builder"
@@ -1757,7 +1742,7 @@ func _refresh_controls() -> void:
 		_controls_tween.tween_callback(_controls.hide)
 
 func _build_player_cards() -> void:
-	# The simple game has no trades: every card reads "Builder" (the host may switch mid-game)
+	# No trades in play: every card reads "Builder" (the host's rules arrive on join)
 	GameState.rules_changed.connect(func():
 		for card in _cards:
 			_card_title(card))

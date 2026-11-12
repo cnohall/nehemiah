@@ -57,12 +57,23 @@ func _process(delta: float) -> void:
 ## WaveManager (every peer): a wave or a surge is about to come in at `at`
 ## A flank is named by its true quarter on the real wall (RingCompass): out across the
 ## wall and toward that end of the stretch
-func warn_wave(at: Vector3, horn: bool) -> void:
+## YardChoice: the crew has picked; the watch calls it out (the title, already translated)
+func call_choice(title: String) -> void:
+	_call(_men[0], tr("%s!") % title, false)
+
+## A shaped wave (WaveManager v2) says what kind of pack, so the crew knows what to do
+const SHAPE_CALLS := {
+	"Rush": "Scouts running in: %s!",
+	"Pincer": "Both ends at once: %s!",
+	"Ram": "Brutes for the wall: %s!",
+	"Raid": "Raiders for the piles: %s!",
+}
+func warn_wave(at: Vector3, horn: bool, shape := "Wave") -> void:
 	var where := tr("straight at the gate")
 	if absf(at.x) > 6.0:
 		where = RingCompass.quarter(GameState.current_section_index, Vector3(signf(at.x), 0.0, -1.0))
-	var line := (tr("Up the valley: %s!") if horn else tr("They're coming: %s!")) % where
-	_call(_nearest_man(at.x), line, true)
+	var call: String = "Up the valley: %s!" if horn else SHAPE_CALLS.get(shape, "They're coming: %s!")
+	_call(_nearest_man(at.x), tr(call) % where, true)
 
 func _watch_walls() -> void:
 	var now := Time.get_ticks_msec()
@@ -171,6 +182,8 @@ func _build_stand(side: int) -> Dictionary:
 	look["sword"] = false
 	look.erase("satchel")
 	look["weapon"] = "spear"
+	if look.has("baked"):
+		look["baked"] = "res://assets/models/figures/watchman_v2.glb"   # the water carrier without his load
 	rig.setup(look, 0.9)
 	rig.set_ring_color(Color(0, 0, 0, 0))
 	rig.play("idle_down")

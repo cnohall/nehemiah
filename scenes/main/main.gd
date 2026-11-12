@@ -71,10 +71,6 @@ var _mood_tween: Tween
 var _slowmo_gen := 0
 var _wall_cam: Tween
 var _carvings: Array[Label3D] = []   # names on their tablets
-var _look: LookPass
-
-func _on_art_style_changed() -> void:
-	_look.look = LookPass.STYLES[Settings.art_style]
 
 func _ready() -> void:
 	if OS.has_feature("web"):   # WebGL: vignette only, no screen-texture tilt-shift
@@ -83,8 +79,8 @@ func _ready() -> void:
 		$PostFX/Vignette.material = mat
 	add_to_group("camera_rig")
 	CharacterRig.prewarm()   # while loading, not at the first brute's spawn
-	# Drawn looks over the world and its tags (under the HUD), on trial: Settings'
-	# art style; `-- --look=litho|cel` overrides, F10 cycles, F9 over the HUD too (debug)
+	# Drawn looks over the world and its tags (under the HUD), debug only: the game plays
+	# plain; `-- --look=litho|cel` picks one, F10 cycles, F9 over the HUD too
 	var look := LookPass.new(($WorldEnvironment as WorldEnvironment).environment)
 	look.cycle_key = true
 	look.keep_film = true
@@ -93,19 +89,14 @@ func _ready() -> void:
 		look.base_layer = -1     # the title menu draws on layer 0, over the world
 	look.whole_screen = "--look-world" not in OS.get_cmdline_user_args()
 	add_child(look)
-	var forced := LookPass.from_args()
-	_look = look
-	if forced != LookPass.PLAIN:
-		look.look = forced
-	else:
-		# A bound method, not a lambda holding `look`: the connection to the autoload
-		# drops with this scene when a new day reloads it
-		_on_art_style_changed()
-		Settings.art_style_changed.connect(_on_art_style_changed)
+	look.look = LookPass.from_args()
 	# The stretch's own arc: the enemy answers the work at half and at the last unit
 	var beats := SectionBeats.new()
 	beats.name = "SectionBeats"
 	add_child(beats)
+	var choice := YardChoice.new()   # how the crew meets a stretch: stand in a ring at its first dawn
+	choice.name = "YardChoice"       # same path on every peer, for its RPCs
+	add_child(choice)
 	# The day's record and its threats, kept in the world (diegetic HUD)
 	add_child(Scribe.new())
 	add_child(Watchmen.new())
@@ -485,12 +476,132 @@ func _play_wall_cam(names: Array) -> void:
 	_wall_cam.tween_property(camera, "global_position", start, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_wall_cam.parallel().tween_property(camera, "size", WALL_CAM_SIZE, 0.35)
 	_wall_cam.tween_property(camera, "global_position", end, WALL_CAM_TIME).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var camp := ScatterLayer.camp_reveal_at()
+	if camp != Vector3.INF:
+		_wall_cam.tween_callback(_camp_arrival.bind(camp))
+		_wall_cam.tween_property(camera, "global_position", camp + Vector3(0, 0, CAMP_LOOK_Z) + _cam_offset(), CAMP_GLIDE) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		_wall_cam.parallel().tween_property(camera, "size", CAMP_CAM_SIZE, CAMP_GLIDE)
+		_wall_cam.tween_interval(CAMP_HOLD)
 	_wall_cam.tween_callback(func():
 		_cam_base = camera.global_position
 		if _fixed_cam():
 			return   # the fixed camera eases back to its own framing
 		_mood_tween = create_tween()
 		_mood_tween.tween_property(camera, "size", DUSK_CAM_SIZE, 0.8).set_trans(Tween.TRANS_SINE))
+
+# Camp reveal (GDD §5.28): a stretch that stands before the enemy gathers ends on the
+# threat, not on the tally. The camera leaves the wall for the hill outside, a column of
+# torches comes over it and the new camp's fires catch; the watch names who has come.
+# No card, nothing to read but the call: a crew that skips the story still sees it.
+# The camp itself stands from the next stretch on (ScatterLayer.camp_stage); this is
+# only the arrival, freed when the stretch changes.
+const CAMP_GLIDE      := 1.3
+const CAMP_HOLD       := 3.4     # with CAMP_GLIDE = GameHud.CAMP_REVEAL_HOLD (the tally waits)
+const CAMP_CAM_SIZE   := 15.0
+const CAMP_LOOK_Z     := 2.5     # a little this side of the camp: it sits mid-frame, the wall in the corner
+const CAMP_MARCH      := 3.6     # s, the column from over the hill to the camp
+const CAMP_TORCHES    := 12
+# The camp's own hearth (ScatterLayer._soldier_camp / _arab_camp), by stage
+const CAMP_FIRES      := { 2: [Vector3(-0.8, 0, 1.0)], 3: [Vector3(0.6, 0, 1.4)] }
+const CAMP_CALLS := {
+	2: "The army of Samaria is camping on the hill!",
+	3: "Geshem's Arabs have joined them!",
+}
+
+func _camp_arrival(at: Vector3) -> void:
+	var arrival := Node3D.new()
+	arrival.name = "CampArrival"
+	add_child(arrival)
+	GameState.section_changed.connect(func(_i): if is_instance_valid(arrival): arrival.queue_free(), CONNECT_ONE_SHOT)
+	GameState.day_changed.connect(func(_d): if is_instance_valid(arrival): arrival.queue_free(), CONNECT_ONE_SHOT)
+	var side := -1.0 if at.x < 0.0 else 1.0
+	var flame_mat := StandardMaterial3D.new()
+	flame_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	flame_mat.albedo_color = Color(1.0, 0.62, 0.22)
+	var flame_mesh := SphereMesh.new()
+	flame_mesh.radius = 0.15
+	flame_mesh.height = 0.4
+	var stage := ScatterLayer.camp_stage(GameState.current_section_index + 1)
+	var looks: Array = ["scout", "brute"] if stage == 2 else ["raider"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4552
+	# Torch-bearers, two abreast, from over the hill on the camp's own side
+	for i in CAMP_TORCHES:
+		var man := CharacterRig.new()
+		arrival.add_child(man)
+		man.setup(CharacterRig.enemy_look(looks[i % looks.size()], 4552 + i), 1.0)
+		var flame := MeshInstance3D.new()
+		flame.mesh = flame_mesh
+		flame.material_override = flame_mat
+		flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		flame.position = Vector3(0.3, 1.9, 0.0)
+		man.add_child(flame)
+		var lick := flame.create_tween().set_loops().set_ignore_time_scale(true)
+		lick.tween_property(flame, "scale", Vector3(0.85, 1.2, 0.85), 0.2 + (i % 3) * 0.03)
+		lick.tween_property(flame, "scale", Vector3(1.05, 0.9, 1.05), 0.22)
+		if i % 4 == 0:
+			var lamp := OmniLight3D.new()
+			lamp.light_color = Color(1.0, 0.62, 0.32)
+			lamp.omni_range = 5.0
+			lamp.light_energy = 1.4
+			lamp.position = flame.position
+			man.add_child(lamp)
+		var row := floori(i / 2.0)
+		var lane := (i % 2) * 1.1 - 0.55
+		var from := at + Vector3(side * (26.0 + row * 1.6), 0, -3.0 + lane)
+		var to := at + Vector3(rng.randf_range(-5.0, 5.0), 0, rng.randf_range(0.5, 3.5))
+		from.y = Terrain.height(from.x, from.z)
+		to.y = Terrain.height(to.x, to.z)
+		man.position = from
+		man.play("walk_left" if side > 0.0 else "walk_right")
+		var walk := man.create_tween().set_ignore_time_scale(true)
+		walk.tween_interval(i * 0.06)
+		walk.tween_property(man, "position", to, CAMP_MARCH).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		walk.tween_callback(man.play.bind("idle_down"))
+	# The tents go up as the column comes in
+	var tents: Node3D = $ScatterLayer.build_arriving_camp()
+	if tents != null:
+		tents.reparent(arrival)
+		tents.scale = Vector3(1.0, 0.01, 1.0)
+		var pitch := tents.create_tween().set_ignore_time_scale(true)
+		pitch.tween_interval(CAMP_MARCH * 0.55)
+		pitch.tween_property(tents, "scale:y", 1.0, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# Their fires catch one after another as they come in
+	var fires: Array = CAMP_FIRES.get(stage, [])
+	for k in fires.size():
+		var spot: Vector3 = at + fires[k]
+		spot.y = Terrain.height(spot.x, spot.z) + 0.45
+		var fire := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.32
+		mesh.height = 0.9
+		fire.mesh = mesh
+		fire.material_override = flame_mat
+		fire.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		fire.position = spot
+		fire.scale = Vector3.ONE * 0.01
+		arrival.add_child(fire)
+		var glow := OmniLight3D.new()
+		glow.light_color = Color(1.0, 0.6, 0.3)
+		glow.omni_range = 8.0
+		glow.light_energy = 0.0
+		glow.position = spot + Vector3(0, 0.4, 0)
+		arrival.add_child(glow)
+		var catch := fire.create_tween().set_ignore_time_scale(true)
+		catch.tween_interval(CAMP_MARCH * 0.6 + k * 0.45)
+		catch.tween_property(fire, "scale", Vector3.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		catch.parallel().tween_property(glow, "light_energy", 2.2, 0.5)
+		catch.tween_callback(func():
+			var flicker := fire.create_tween().set_loops()
+			flicker.tween_property(fire, "scale", Vector3(0.9, 1.15, 0.9), 0.22)
+			flicker.tween_property(fire, "scale", Vector3(1.05, 0.9, 1.05), 0.26))
+	# The watch on that end calls who has come
+	var line: String = CAMP_CALLS.get(stage, "")
+	if not line.is_empty():
+		Sfx.play("alert")
+		for w in get_tree().get_nodes_in_group("watchmen"):
+			w._call(w._nearest_man(at.x), tr(line), true)
 
 ## A worker's name for the stone: their Steam name, else their trade (bots, LAN)
 func _carved_name(id: int, crew: Array) -> String:

@@ -1,7 +1,7 @@
 extends SceneTree
 
 # The first stretch (GameState.first_stretch), offline, no bots:
-#   Godot --path . --script res://tools/first_stretch_test.gd -- --nostory [--simple]
+#   Godot --path . --script res://tools/first_stretch_test.gd -- --nostory
 # Sheep Gate, in either game:
 # - timber and stone piles only (no mortar); no watch posts
 # - frames cost timber, courses stone, the finish stone; walls start bare
@@ -53,7 +53,6 @@ func _posts() -> Array:
 	return _main.find_children("*", "", true, false).filter(func(n): return n.has_method("fortify"))
 
 func _run() -> void:
-	print("  (%s game)" % ("simple" if _gs.simplified() else "full"))
 	_check(_gs.first_stretch(), "Sheep Gate is the first stretch")
 	_check(_kinds() == ["stone", "wood"], "timber and stone only (%s)" % [_kinds()])
 	_check(not _posts().is_empty() and _posts().all(func(p): return not p.visible) and get_nodes_in_group("watch_posts").is_empty(),
