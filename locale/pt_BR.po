@@ -2680,3 +2680,18 @@ msgstr "Como vão enfrentar? Fiquem dentro de um círculo"
 
 msgid "%s!"
 msgstr "%s!"
+
+msgid "General"
+msgstr "Geral"
+
+msgid "Audio"
+msgstr "Áudio"
+
+msgid "Controls"
+msgstr "Controles"
+
+msgid "Experimental"
+msgstr "Experimental"
+
+msgid "Reset keys"
+msgstr "Restaurar teclas"

@@ -94,7 +94,6 @@ var _tally_builders: Control  # the "next to him…" names: first to go when the
 var _invite_fold := Callable()   # (folded: bool) — the Steam invite panel tucks away once the work starts
 var _tally_waiting: Array = []   # latest DayDirector ready state for the tally
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
-var _next_line: Label        # day plaque: what to do next, for the local player
 var _next_poll := 0.0
 const NEXT_POLL := 0.25
 const KNOCKED_MS := 4000
@@ -106,11 +105,10 @@ var _households_line: Label  # day plaque: households fed, Fountain Gate stretch
 var _sun_dial: SunDial
 var _sun_time: Label
 var _sun_warned := false     # "the sun is low" said once a day
-# Diegetic HUD (Settings.diegetic_hud): no plaques — the sun tells the time, the scribe
-# keeps the record, the watchmen call the threats. The "Next:" line stays, as a caption
-# low on the screen.
+# Diegetic HUD: no day or threat plaque (always hidden) — the sun tells the time, the
+# scribe keeps the record, the watchmen call the threats. The "Next:" line stays, as a
+# caption low on the screen.
 var _next_caption: Label
-var _style_world := false
 # Where this stretch lies on the real wall, and which way north is in the view (the same
 # plan and needle as Explore Jerusalem's journal), top right under the threat plaque
 var _compass: RingCompass
@@ -127,15 +125,14 @@ func _ready() -> void:
 	banner.resized.connect(banner.queue_redraw)
 	_build_player_cards()
 	_build_controls_hint()
-	_build_next_line()
 	_build_next_caption()
 	_build_compass()
 	_build_sun_row()
 	_build_households_line()
 	_build_joining_plaque()
 	# The practice has no day to count or waves to warn of; its own plaque says the step
-	_style_world = not Settings.diegetic_hud   # forces the first _apply_style
-	_apply_style()
+	$Root/DayPlaque.hide()
+	threat.hide()
 	# Under the banner and menus, over the world-facing plaques
 	var alerts := OffscreenAlerts.new()
 	$Root.add_child(alerts)
@@ -360,19 +357,6 @@ func refresh_day(day: int) -> void:
 
 # ── Next step ──────────────────────────────────────────────
 
-# One plain line under today's work: where the next load goes, or that it's time to
-# build. New players read this rather than decoding the world tags.
-func _build_next_line() -> void:
-	_next_line = Label.new()
-	_next_line.theme_type_variation = &"Caption"
-	_next_line.add_theme_color_override("font_color", UiStyle.INK)
-	_next_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_next_line.custom_minimum_size.x = 300
-	_next_line.visible = false
-	var vb := $Root/DayPlaque/VBox
-	vb.add_child(_next_line)
-	vb.move_child(_next_line, work_row.get_index() + 1)
-
 # Fountain Gate stretch: how many hungry households are fed (each adds to the work, Neh. 5)
 func _build_households_line() -> void:
 	_households_line = Label.new()
@@ -437,30 +421,18 @@ func _refresh_sun() -> void:
 			if GameState.last_day_of_section() else tr("What isn't built by the stars waits for tomorrow"), 2.2)
 
 func _process(delta: float) -> void:
-	if _style_world != Settings.diegetic_hud:
-		_apply_style()
 	_place_compass()
 	if _sun_row != null:
 		_refresh_sun()
 	_refresh_households()
 	_next_poll -= delta
-	if _next_poll > 0.0 or _next_line == null:
+	if _next_poll > 0.0 or _next_caption == null:
 		return
 	_next_poll = NEXT_POLL
 	# A first-day tag points the way itself (FirstSteps); two voices would talk over each other
 	var text := "" if GameState.free_play() or FirstSteps.speaking else _next_text()
-	var line := _next_caption if _style_world else _next_line
-	(_next_line if _style_world else _next_caption).visible = false
-	line.visible = not text.is_empty()
-	line.text = text
-
-# Plaques, or the world telling it (the setting can change mid-game from the menu)
-func _apply_style() -> void:
-	_style_world = Settings.diegetic_hud
-	var plaques := not _style_world and not GameState.free_play() and not end_screen.visible
-	$Root/DayPlaque.visible = plaques
-	threat.visible = plaques
-	_next_poll = 0.0
+	_next_caption.visible = not text.is_empty()
+	_next_caption.text = text
 
 # Low and centred, clear of the crew cards and the controls card: a slim parchment
 # plaque, like the rest of the HUD

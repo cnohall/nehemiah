@@ -2664,3 +2664,18 @@ msgstr "어떻게 맞서겠습니까? 원 안에 서십시오"
 
 msgid "%s!"
 msgstr "%s!"
+
+msgid "General"
+msgstr "일반"
+
+msgid "Audio"
+msgstr "오디오"
+
+msgid "Controls"
+msgstr "조작"
+
+msgid "Experimental"
+msgstr "실험"
+
+msgid "Reset keys"
+msgstr "키 초기화"

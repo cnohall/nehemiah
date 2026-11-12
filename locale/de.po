@@ -2680,3 +2680,18 @@ msgstr "Wie geht ihr es an? Stellt euch in einen Kreis"
 
 msgid "%s!"
 msgstr "%s!"
+
+msgid "General"
+msgstr "Allgemein"
+
+msgid "Audio"
+msgstr "Audio"
+
+msgid "Controls"
+msgstr "Steuerung"
+
+msgid "Experimental"
+msgstr "Experimentell"
+
+msgid "Reset keys"
+msgstr "Tasten zurücksetzen"

@@ -54,6 +54,7 @@ const CHASE_RANGE   := 10.0   # empty hands this close to a saboteur inside the 
 const HORN_PACK_RANGE := 14.0 # foes this close…
 const HORN_PACK       := 6    # …six or more: sound the horn
 const HORN_BOT_CD     := 45.0 # a bot sounds it at most this often (s)
+const HORN_CREW_GAP  := 30.0 # no bot sounds it within this long of any horn (s): bots alone blew it every ~15 s
 const HORN_JOIN_RANGE := 16.0 # only bots this near a standing call drop work to gather
 const COVER_RANGE   := 24.0   # how far a free bot comes to stand by a person at work…
 const COVER_THREAT  := 8.0    # …with a foe this close to them
@@ -246,7 +247,7 @@ func _decide() -> void:
 				if _dist(call["root"]) < HORN_JOIN_RANGE:
 					_set_job(Job.RALLY, call["root"])
 					return
-			elif Time.get_ticks_msec() * 0.001 >= _horn_ready:
+			elif Time.get_ticks_msec() * 0.001 >= _horn_ready and horn.since_blown() >= HORN_CREW_GAP:
 				var pack := 0
 				for e: Node3D in foes_about:
 					if _dist(e) < HORN_PACK_RANGE:

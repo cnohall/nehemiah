@@ -226,6 +226,17 @@ static func _buttons(t: Theme) -> void:
 	t.set_font("font", "Segment", tracked(CINZEL_SEMI, 2))
 	t.set_font_size("font_size", "Segment", 14)
 
+	# Tab (settings pages): bare text over a rule; the open one stands on a terracotta bar
+	t.set_type_variation("Tab", "Button")
+	var t_pad := Vector2(14, 10)
+	var t_normal := bordered(box(Color(0, 0, 0, 0), t_pad, 0), Color(RULE, 0.6), 0, 1)
+	var t_hover  := bordered(box(Color(PARCHMENT_DEEP, 0.5), t_pad, 0), TERRACOTTA, 0, 1)
+	var t_on     := bordered(box(Color(0, 0, 0, 0), t_pad, 0), TERRACOTTA, 0, 3)
+	_button_styles(t, "Tab", t_normal, t_hover, t_on, t_normal, _focus_ring(0))
+	_button_colors(t, "Tab", INK_MUTED, TERRACOTTA_DEEP, INK, Color(INK_MUTED, 0.6))
+	t.set_font("font", "Tab", tracked(CINZEL_BOLD, 2))
+	t.set_font_size("font_size", "Tab", 15)
+
 static func _panels(t: Theme) -> void:
 	t.set_stylebox("panel", "PanelContainer", plaque())
 	t.set_type_variation("Plaque", "PanelContainer")

@@ -19,7 +19,11 @@ const RING_Z      := 6.6     # just wall-side of the start (z 8), clear of the B
 const SETTLE      := 1.5     # s every person must stand in a ring before it closes
 const TIMEOUT     := 25.0
 const POLL        := 0.15
+const RING_ZS     := [6.6, 10.2, 11.4, 9.0, 12.2]    # tried in turn when the base spot is taken (YARD_BACK 13.5)
+const RING_DX     := [0.0, 1.5, 3.0, -1.5, 4.5, 6.0, -3.0]  # outward from the start spot first
 const COLORS      := [Color(0.80, 0.52, 0.22), Color(0.42, 0.50, 0.30)]   # amber, olive
+const GAIN        := Color(0.98, 0.95, 0.89)   # cream on the dark plaque
+const COST        := Color(0.94, 0.62, 0.48)   # warm terracotta, still bright on dark
 
 var open := false
 var _keys: Array = []
@@ -27,9 +31,10 @@ var _counts := [0, 0]
 var _settled := 0.0
 var _left := 0.0
 var _poll := 0.0
+var _spots: Array[Vector3] = []
 var _rings: Array[Node3D] = []
-var _labels: Array[Label3D] = []    # per ring: what it gives and costs (and who stands in it)
-var _titles: Array[Label3D] = []
+var _tags: Array[WorldTag] = []     # per ring: a dark plaque, title + what it gives and costs
+var _lines: Array[VBoxContainer] = []   # per ring: the gain/cost lines (and who stands in it)
 var _standards: Array[Node3D] = []
 
 func _ready() -> void:
@@ -38,10 +43,53 @@ func _ready() -> void:
 		open = false
 		_clear())
 
-## Where ring `i` stands this stretch
-static func ring_at(i: int) -> Vector3:
+## Where ring `i` stands this stretch (worked out when the choice opens)
+func ring_at(i: int) -> Vector3:
+	return _spots[i] if i < _spots.size() else _base_spot(i)
+
+func _base_spot(i: int) -> Vector3:
 	var yard := GameState.yard_center()
 	return Vector3(yard.x + (-RING_X if i == 0 else RING_X), 0.0, RING_Z)
+
+# The base spot, or the nearest clear one: some stretches put houses (Horse Gate's
+# priests), piles or heaps there. Same terrain on every peer, so the same spots.
+func _place_rings() -> void:
+	_spots.clear()
+	var terrain := get_node_or_null("../SectionTerrain")
+	for i in 2:
+		var base := _base_spot(i)
+		var out := -1.0 if i == 0 else 1.0
+		# First spot with room all round; failing that, the one with the most room
+		var pick := base
+		var best := -INF
+		for z: float in RING_ZS:
+			for dx: float in RING_DX:
+				var p := Vector3(base.x + dx * out, 0.0, z)
+				var room := _room(terrain, p, i)
+				if room > best:
+					best = room
+					pick = p
+				if room >= 0.0:
+					break
+			if best >= 0.0:
+				break
+		_spots.append(pick)
+
+# Clearance (m) to the nearest thing a ring mustn't sit on: below 0 = crowded
+func _room(terrain: Node, p: Vector3, i: int) -> float:
+	var flat := Vector2(p.x, p.z)
+	var room := INF
+	if terrain != null:
+		if terrain.blocks(flat, RING_RADIUS + 0.3):
+			return -10.0   # inside a house or a wall: never, unless nothing else
+		for k: Vector2 in terrain.keep_clear():   # piles carry jars and baskets round them
+			room = minf(room, flat.distance_to(k) - (RING_RADIUS + 3.0))
+		for prop: Array in terrain.props:   # jars, baskets: not solid, but clutter in a ring
+			var at: Vector3 = prop[1]
+			room = minf(room, flat.distance_to(Vector2(at.x, at.z)) - (RING_RADIUS + 0.3))
+	if i == 1:   # never on top of the other ring
+		room = minf(room, flat.distance_to(Vector2(_spots[0].x, _spots[0].z)) - RING_RADIUS * 2.6)
+	return room
 
 ## Server: open the choice for the stretch starting now
 func begin(keys: Array) -> void:
@@ -93,6 +141,7 @@ func _process(delta: float) -> void:
 func _show(keys: Array) -> void:
 	_clear()
 	_keys = keys
+	_place_rings()
 	for i in 2:
 		var at := ring_at(i)
 		at.y = Terrain.height(at.x, at.z)
@@ -119,32 +168,46 @@ func _show(keys: Array) -> void:
 		standard.position = at + Vector3(0, 0, -RING_RADIUS + 0.2)
 		add_child(standard)
 		_standards.append(standard)
-		var title := _label(56, 0.014)
-		title.text = tr(GameState.BOONS[keys[i]]["title"])
-		title.modulate = COLORS[i].lightened(0.45)
-		title.position = at + Vector3(0, 1.5, 0)
-		add_child(title)
-		_titles.append(title)
-		var label := _label(34, 0.012)
-		label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-		label.position = at + Vector3(0, 1.1, 0)
-		add_child(label)
-		_labels.append(label)
+		# A dark plaque in screen space (like the pile/site tags): reads on any ground
+		var body := VBoxContainer.new()
+		body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.add_theme_constant_override("separation", 2)
+		var title := _text(tr(GameState.BOONS[keys[i]]["title"]).to_upper(),
+			UiStyle.tracked(UiStyle.CINZEL_BOLD, 2), 20, COLORS[i].lightened(0.4))
+		body.add_child(title)
+		var rule := ColorRect.new()
+		rule.color = Color(UiStyle.GOLD, 0.35)
+		rule.custom_minimum_size = Vector2(0, 1)
+		body.add_child(rule)
+		var lines := VBoxContainer.new()
+		lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lines.add_theme_constant_override("separation", 0)
+		body.add_child(lines)
+		var tag := WorldTag.make(WorldTag.Kind.STATION)
+		tag.custom = body
+		tag.see_through_alpha = 0.8   # the choice has to stay readable; a worker still shows through
+		# Over the standard (the ring's wall side): the crew comes from the start spot,
+		# below it on screen, so a worker in the ring doesn't sit under it and fade it
+		tag.position = standard.position + Vector3(0, 2.9, 0)
+		add_child(tag)
+		_tags.append(tag)
+		_lines.append(lines)
 	_show_counts(_counts, 0)
 
 @rpc("authority", "call_local", "reliable")
 func _show_counts(counts: Array, people: int) -> void:
 	_counts = counts
-	for i in _labels.size():
+	for i in _lines.size():
+		var box := _lines[i]
+		for c in box.get_children():
+			c.free()
 		var lines := GameState.boon_lines(_keys[i])
-		var text: PackedStringArray = []
 		for g: String in lines["gain"]:
-			text.append("+ " + g)
+			box.add_child(_text("+ " + g, UiStyle.SPECTRAL_MEDIUM, 17, GAIN))
 		for c: String in lines["cost"]:
-			text.append("- " + c)
+			box.add_child(_text("- " + c, UiStyle.SPECTRAL_MEDIUM, 17, COST))
 		if people > 1 and counts[i] > 0:
-			text.append("● ".repeat(counts[i]).strip_edges())
-		_labels[i].text = "\n".join(text)
+			box.add_child(_text("● ".repeat(counts[i]).strip_edges(), UiStyle.WORLD_FONT, 16, WorldTag.TEXT))
 
 @rpc("authority", "call_local", "reliable")
 func _chosen(pick: int) -> void:
@@ -154,15 +217,15 @@ func _chosen(pick: int) -> void:
 		var gone := ring.create_tween()
 		gone.tween_property(ring, "scale", Vector3.ONE * (1.4 if i == pick else 0.2), 0.5).set_trans(Tween.TRANS_SINE)
 		gone.tween_callback(ring.queue_free)
-		_labels[i].queue_free()
-		_titles[i].queue_free()
+		if i < _tags.size():
+			_tags[i].queue_free()
 		if i != pick:
 			var down := _standards[i].create_tween()
 			down.tween_property(_standards[i], "scale", Vector3(1, 0.01, 1), 0.4)
 			down.tween_callback(_standards[i].queue_free)
 	_rings.clear()
-	_labels.clear()
-	_titles.clear()
+	_tags.clear()
+	_lines.clear()
 	var keep: Node3D = _standards[pick] if pick < _standards.size() else null
 	_standards.clear()
 	if keep != null:
@@ -173,22 +236,20 @@ func _clear() -> void:
 	for n in get_children():
 		n.queue_free()
 	_rings.clear()
-	_labels.clear()
-	_titles.clear()
+	_tags.clear()
+	_lines.clear()
 	_standards.clear()
 
-func _label(size: int, pixel := 0.012) -> Label3D:
-	var l := Label3D.new()
-	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	l.no_depth_test = true
-	l.pixel_size = pixel
-	l.font_size = size
-	l.outline_size = 12
-	l.modulate = Color(0.98, 0.94, 0.82)
-	l.outline_modulate = Color(0.16, 0.11, 0.08)
+func _text(t: String, font: Font, size: int, color: Color) -> Label:
+	var l := Label.new()
+	l.text = t
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED   # put together translated
+	l.add_theme_font_override("font", font)
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	l.add_theme_constant_override("line_spacing", -4)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
 
 # A pole with a cloth in the ring's colour; a work standard carries a mallet head on top,

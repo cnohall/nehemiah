@@ -1108,8 +1108,8 @@ func _handle_attack(delta: float) -> void:
 			release_throw()
 		return
 	_update_aim(_pad_aim_point() if InputMode.using_pad else _cursor_on_ground())
-	# Toggle mode (accessibility): a second press throws; otherwise letting go does
-	if (_throw_just_pressed() if Settings.toggle_charge else not Input.is_action_pressed("throw_charge")):
+	# Letting go throws
+	if not Input.is_action_pressed("throw_charge"):
 		release_throw()
 
 # Right stick picks the direction; left alone, the throw goes the way we're walking /
