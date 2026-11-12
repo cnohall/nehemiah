@@ -283,6 +283,7 @@ func repair(_fraction: float) -> void:
 ## A townsman, woman, child, elder or priest in festival clothes
 static func look_for(kind: String, dye: Color, seed_value: int) -> Dictionary:
 	var l := CharacterRig.worker_look(seed_value % 4, dye)
+	l.erase("baked")   # the crew's Blender figure (BakedFigure) would drop what is changed below
 	l["tool"] = false
 	l["sword"] = false
 	for k in ["basket", "basket_stones", "strap", "planks", "apron", "satchel", "scroll", "tool_always", "bracers"]:

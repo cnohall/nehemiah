@@ -373,6 +373,7 @@ func _build_frame() -> void:
 	_frame.add_child(_slinger)
 	_slinger.position = Vector3(-0.15, DECK_Y + 0.07, -0.1)
 	var look := CharacterRig.worker_look(1, SLINGER_COLOR)
+	look.erase("baked")   # the crew's Blender figure (BakedFigure) would drop what is changed below
 	look["tool"] = false
 	_slinger.setup(look, 0.9)
 	_slinger.set_ring_color(Color(0, 0, 0, 0))

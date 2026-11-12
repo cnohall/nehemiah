@@ -112,7 +112,7 @@ func _setup(rig: Node3D, inst: Node3D, material: ShaderMaterial) -> void:
 	add_child(inst)
 	for mi: MeshInstance3D in inst.find_children("*", "MeshInstance3D", true, false):
 		mi.material_override = material
-		mi.set_instance_shader_parameter("dye", rig._look.get("hat_color", Color.WHITE))
+		mi.set_instance_shader_parameter("dye", rig._look.get("dye", rig._look.get("hat_color", Color.WHITE)))
 		rig._parts.append(mi)
 	var found := inst.find_children("*", "Skeleton3D", true, false)
 	if found.is_empty():

@@ -5,6 +5,6 @@ $godot = 'C:\Users\chris\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-st
 $days = [ordered]@{ doors = 1; mortar = 5; posts = 18; beams = 9; salvage = 42; ruins = 42; thick = 13; mixing = 34; horn = 24; haul = 30; spring = 34; night = 37; cramped = 42; schemes = 48 }
 foreach ($t in $days.Keys) {
 	if ($Only -and $Only -notcontains $t) { continue }
-	& $godot --path (Join-Path $PSScriptRoot '..') --script res://tools/twist_pics.gd -- --nostory --day=$($days[$t]) $t 2>&1 | Select-String 'saved|ERROR'
+	& $godot --path (Join-Path $PSScriptRoot '..') --always-on-top --script res://tools/twist_pics.gd -- --nostory --day=$($days[$t]) $t 2>&1 | Select-String 'saved|ERROR'
 }
 & $godot --path (Join-Path $PSScriptRoot '..') --headless --import 2>&1 | Out-Null

@@ -186,6 +186,8 @@ static var _outlines: Dictionary = {}
 # ── Looks ──────────────────────────────────────────────────
 
 const TRADES := ["Builder", "Water carrier", "Carpenter", "Overseer"]
+const CREW_FIGURES := ["res://assets/models/figures/builder_v2.glb", "res://assets/models/figures/water_carrier_v2.glb",
+	"res://assets/models/figures/carpenter_v2.glb", "res://assets/models/figures/overseer_v2.glb"]
 
 ## A worker, one trade per player slot (the crew of Neh. 4 — builders, burden-bearers,
 ## craftsmen, and one giving directions). The slot colour is the dye each trade wears:
@@ -199,15 +201,13 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 	var look := {
 		"robe": LINEN, "trim": LINEN.darkened(0.12), "sash": LEATHER, "band": BAND,
 		"outline": OUTLINE_PLAYER, "no_outline": true, "tool": true, "sword": true, "hat": "band", "hat_color": dye,
+		"dye": dye,   # the crew colour a baked figure (BakedFigure) multiplies its dyed cloth by
 	}
 	match slot % 4:
 		0:
 			look.merge({"skin": SKIN[0], "hair": HAIR_BROWN, "beard": "full", "hair_style": "short",
 				"strap": true, "basket": true, "basket_stones": true, "trim": LINEN.darkened(0.1),
 				"sculpted_builder": true, "sculpted_body": true}, true)
-			# Spike: the builder authored in Blender (tools/blender/build_crew.py), opt-in
-			if "--crew-v2" in OS.get_cmdline_user_args():
-				look["baked"] = "res://assets/models/figures/builder_v2.glb"
 		1:
 			look.merge({"skin": SKIN[2], "hair": HAIR_BLACK, "beard": "short", "hair_style": "curly",
 				"hat": "scarf", "hat_color": Color(0.95, 0.92, 0.85), "stripe": dye,
@@ -225,6 +225,10 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 				"vest": dye, "long_robe": true, "scroll": Color(0.90, 0.82, 0.62),
 				"trim": dye.darkened(0.2), "brow": Color(0.62, 0.60, 0.56),
 				"sculpted_builder": true, "sculpted_body": true}, true)
+	# The crew as authored in Blender (tools/blender/build_crew.py), worn over the rig's pivots
+	# (BakedFigure). --crew-v1 falls back to the figures built in code.
+	if not "--crew-v1" in OS.get_cmdline_user_args():
+		look["baked"] = CREW_FIGURES[slot % 4]
 	return look
 
 ## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type. Never told apart by

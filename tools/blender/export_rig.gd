@@ -24,6 +24,7 @@ func _process(_delta: float) -> bool:
 	if _frame < 2:
 		return false
 	var look := CharacterRig.worker_look(_slot, Palette.CREW[_slot])
+	look.erase("baked")   # the code rig itself: its pivots and parts
 	var rig := CharacterRig.new()
 	rig._build(look)
 	_export(rig, look)

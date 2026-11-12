@@ -25,11 +25,18 @@ import sys
 import numpy as np
 argv = sys.argv[sys.argv.index("--") + 1:]
 SRC, OUT = argv[0], argv[1]
+# The crew slot (CharacterRig.worker_look): 0 builder, 1 water carrier, 2 carpenter, 3 overseer
+SLOT = int(argv[2]) if len(argv) > 2 else 0
 TEX = 1024
 PAD = 4
 TAU = math.tau
-SKIN = np.array([0.76, 0.55, 0.40])
-HAIR = np.array([0.20, 0.105, 0.06])
+# CharacterRig.SKIN / HAIR_* for the slot
+SKIN = np.array([[0.76, 0.55, 0.40], [0.63, 0.44, 0.31], [0.81, 0.62, 0.47], [0.54, 0.38, 0.27]][SLOT])
+HAIR = np.array([[0.20, 0.105, 0.06], [0.16, 0.11, 0.08], [0.50, 0.27, 0.11], [0.62, 0.60, 0.56]][SLOT])
+ROBE = np.array([0.93, 0.90, 0.83])    # the overseer's long robe and head-wrap, undyed
+WOOD = np.array([0.66, 0.46, 0.27])
+APRON = np.array([0.58, 0.40, 0.25])
+CREAM = np.array([0.95, 0.92, 0.85])   # the water carrier's undyed scarf
 LINEN = np.array([0.89, 0.83, 0.70])
 LEATHER = np.array([0.40, 0.23, 0.12])
 FLUSH = np.array([0.86, 0.46, 0.38])
@@ -200,7 +207,12 @@ TUNIC = [  # v, y, rx, rz, cx, cz
     (0.94, 0.985, 0.26, 0.19, 0, 0.0),
     (1.00, 1.005, 0.17, 0.15, 0, 0.0),
 ]
+if SLOT == 3:
+    # The overseer's robe, long to the ankle and flared, so the legs walk inside it
+    TUNIC = [(0.00, 0.17, 0.40, 0.355, 0, 0.0), (0.03, 0.12, 0.455, 0.405, 0, 0.01), (0.20, 0.30, 0.395, 0.325, 0, 0.005),
+        (0.40, 0.50, 0.325, 0.240, 0, 0.0)] + TUNIC[4:]
 TUNIC_E = 2.6
+HEM_Y = 0.12 if SLOT == 3 else 0.172
 TUNIC_Y = [(k[1], k[2], k[3]) for k in TUNIC[1:]]   # by height, for what's worn over it
 
 # ── Parts ────────────────────────────────────────────────────────────────────
@@ -377,21 +389,23 @@ Part("moustache", moustache_shape, 8, 8, lambda c: hair_paint(c, 6.0, c.V), W("h
 
 # Beard: a patch round the jaw, ear to ear, its lower edge cut into locks
 BEARD_A = 112.0
+# Full (the builder) or short and close (the water carrier): its length down the chin, its
+# depth off the jaw, its rows of curls
+BEARD_LEN, BEARD_THICK, BEARD_ROWS = [(1.0, 1.0, 3.0), (0.62, 0.62, 2.0), (1.0, 1.05, 3.0), (1.6, 1.1, 4.0)][SLOT]
 
 def beard_shape(U, V):
     deg = BEARD_A * (2.0 * U - 1.0)
     a = np.radians(deg)
-    y = beard_top(deg) + (beard_bottom(deg) - beard_top(deg)) * V
+    y = beard_top(deg) + (beard_bottom(deg) - beard_top(deg)) * BEARD_LEN * V
     base = skull_r(a, np.maximum(y, 1.0)) * (1.0 - 0.35 * sstep(1.0, 0.78, y))
     edge = sstep(0.0, 0.10, U) * sstep(1.0, 0.90, U)
-    thick = (0.05 + 0.085 * np.cos(np.radians(deg * 90.0 / BEARD_A)) ** 1.2) * edge
+    thick = (0.05 + 0.085 * np.cos(np.radians(deg * 90.0 / BEARD_A)) ** 1.2) * edge * BEARD_THICK
     bulge = np.sin(math.pi * np.clip(V, 0, 1) ** 0.62) ** 0.75
     r = base - 0.014 + (thick + 0.014) * bulge
     r = r * (1.0 - 0.3 * sstep(0.8, 1.0, V))
+    if BEARD_LEN > 1.2:
+        r = r + 0.10 * sstep(0.95, 0.72, y) * np.cos(a) ** 2
     return polar(a, y, r)
-
-BEARD_ROWS = 3.0
-
 
 def beard_locks(U, V):
     """Rows of curls, each row set half a curl across from the one above (as beards were cut
@@ -406,7 +420,7 @@ def beard_locks(U, V):
 
 
 def beard_form(U, V, P):
-    return 0.034 * (beard_locks(U, V) - 0.55) * sstep(0.03, 0.14, V) * sstep(0.0, 0.08, U) * sstep(1.0, 0.92, U)
+    return 0.034 * BEARD_THICK * (beard_locks(U, V) - 0.55) * sstep(0.03, 0.14, V) * sstep(0.0, 0.08, U) * sstep(1.0, 0.92, U)
 
 
 def beard_paint(c):
@@ -418,12 +432,17 @@ def beard_paint(c):
 Part("beard", beard_shape, 44, 16, beard_paint, W("head"), closed=False, form=beard_form, ref=HC, res=1.3)
 
 # Head cloth: the crew colour, seen first from the play camera. A length of dyed cloth wound
-# round the head (the band) over a cloth crown, knotted behind, its two ends hanging
-BAND_R, BAND_H = 0.058, 0.086
+# round the head (the band) over a cloth crown, knotted behind, its two ends hanging.
+# The water carrier's is a narrower scarf, undyed with dyed stripes, tied low round his curls
+# with no crown: the curls heap up over it
+# The carpenter's is a plain dyed band round a bush of hair; the overseer's a narrow dyed band
+# over a tall undyed wrap, its cloth falling behind to the shoulders
+BAND_R, BAND_H, BAND_LIFT, BAND_OUT = [(0.058, 0.086, 0.05, 0.05), (0.046, 0.058, 0.03, 0.058),
+    (0.044, 0.054, 0.035, 0.075), (0.042, 0.05, 0.035, 0.085)][SLOT]
 
 def band_centre(a):
-    y = rim_y(a) + 0.05
-    return y, skull_r(a, y) + 0.05
+    y = rim_y(a) + BAND_LIFT
+    return y, skull_r(a, y) + BAND_OUT
 
 def band_shape(U, V):
     a = TAU * U
@@ -438,22 +457,37 @@ def band_form(U, V, P):
     w = band_wind(U, V)
     return (0.013 * np.cos(TAU * w) + 0.004 * np.sin(TAU * (w * 2.0 + 0.3))) * np.sin(math.pi * np.clip(V, 0, 1)) ** 0.5
 
+def scarf_stripes(fr):
+    """Across a length of the scarf (fr 0..1 edge to edge): a broad dyed stripe down its
+    middle, a fine one either side, undyed between: 1 where dyed."""
+    d = np.abs(fr - 0.5)
+    return np.maximum(sstep(0.20, 0.18, d), 0.9 * sstep(0.022, 0.012, np.abs(d - 0.30)))
+
 def band_paint(c):
     w = band_wind(c.U, c.V)
+    if SLOT in (2, 3):
+        return dyed(c)
+    if SLOT == 1:
+        return scarf(c, scarf_stripes(w % 1.0))
     stripe = sstep(0.035, 0.05, 0.07 - np.abs((w + 0.5) % 1.0 - 0.5)) * sstep(0.1, 0.2, c.V) * sstep(0.9, 0.8, c.V)
     return dyed(c, 0.9 * stripe)
+
+CROWN_TOP, CROWN_PUFF = (1.80, 0.05) if SLOT == 3 else (1.735, 0.0)
 
 def crown_shape(U, V):
     a = TAU * U
     y0, r0 = band_centre(a)
     y0 = y0 + 0.03
     t = np.sin(np.clip(V, 0, 1) * math.pi / 2.0)
-    y = y0 + (1.735 - y0) * t ** 1.1
-    r = (r0 + 0.012) * np.cos(np.clip(V, 0, 1) * math.pi / 2.0) ** 0.75
+    y = y0 + (CROWN_TOP - y0) * t ** 1.1
+    r = (r0 + 0.012 + CROWN_PUFF * np.sin(math.pi * np.clip(V, 0, 1) * 0.8)) * np.cos(np.clip(V, 0, 1) * math.pi / 2.0) ** 0.75
     return polar(a, y, r) + np.array([0.0, 0.0, -0.012])
 
 KNOT = np.array([-0.195, 1.47, -0.425])
 KNOT_A = math.atan2(KNOT[0], KNOT[2])
+# The knot rides on the band: lower with it on the water carrier's scarf
+KNOT_DY = float(band_centre(KNOT_A)[0]) - float(rim_y(KNOT_A) + 0.05)
+KNOT = KNOT + np.array([0.0, KNOT_DY, 0.0])
 
 def crown_form(U, V, P):
     a = TAU * U
@@ -468,29 +502,56 @@ def dyed(c, stripes=None):
         dye = 1.0 - stripes
     return out(rgb, h=threads(c), rough=0.9, dye=dye)
 
+def scarf(c, dye):
+    """Undyed cloth (the water carrier's scarf) with dyed stripes woven in: `dye` 1 where dyed."""
+    rgb = cloth(c, CREAM, 1.0)
+    rgb = mixc(rgb, np.array([0.93, 0.93, 0.93]) * (0.9 + 0.1 * fbm(c.P * 9.0))[..., None], dye)
+    return out(rgb, h=threads(c), rough=0.9, dye=dye)
+
+def knot_paint(c):
+    if SLOT == 1:
+        return scarf(c, scarf_stripes((c.U * 3.0) % 1.0))
+    return dyed(c)
+
+def wrap_paint(c):
+    """The overseer's head-wrap: undyed linen, wound."""
+    return out(cloth(c, ROBE, 1.0), h=threads(c), rough=0.9)
+
 Part("band", band_shape, 28, 7, band_paint, W("head"), form=band_form, ref=HC, res=1.2)
-Part("crown", crown_shape, 20, 6, dyed, W("head"), form=crown_form, ref=HC, res=1.0)
-Part("knot", lambda U, V: ellipsoid(KNOT, (0.066, 0.056, 0.05), U, V), 8, 5, dyed, W("head"), res=0.8)
+if SLOT == 0:
+    Part("crown", crown_shape, 20, 6, dyed, W("head"), form=crown_form, ref=HC, res=1.0)
+if SLOT == 3:
+    Part("crown", crown_shape, 24, 8, wrap_paint, W("head"), form=lambda U, V, P: 1.3 * crown_form(U, V, P), ref=HC, res=1.0)
+if SLOT != 3:
+    Part("knot", lambda U, V: ellipsoid(KNOT, (0.066, 0.056, 0.05), U, V), 8, 5, knot_paint, W("head"), res=0.8)
 
 def tail(name, bone, pts):
-    keys = [(t, x, y, z, ra, 0.011) for t, x, y, z, ra in pts]
+    keys = [(t, x, y + KNOT_DY, z, ra, 0.011) for t, x, y, z, ra in pts]
     def form(U, V, P):
         return 0.006 * np.sin(V * 9.0 + (2.0 if bone == "tail_1" else 0.0)) * np.cos(TAU * U)
     def paint(c):
+        if SLOT == 1:
+            # Striped along its length, as the cloth was woven; a fringe at the end
+            o = scarf(c, scarf_stripes((c.U * 2.0 + 0.25) % 1.0) * sstep(0.93, 0.90, c.V))
+            o["rgb"] = o["rgb"] * (1.0 - 0.3 * sstep(0.93, 0.95, c.V) * (0.5 + 0.5 * np.sin(TAU * c.U * 12.0)))[..., None]
+            return o
         return dyed(c, sstep(0.01, 0.02, 0.03 - np.abs(c.V - 0.86)))
     Part(name, lambda U, V: tube(keys, U, V, e=3.0), 6, 7, paint, W(bone), form=form, res=0.9)
 
-tail("tail_a", "tail_0", [(0, -0.21, 1.465, -0.44, 0.02), (0.3, -0.27, 1.36, -0.475, 0.052), (0.7, -0.325, 1.235, -0.49, 0.06),
+if SLOT != 3:
+  tail("tail_a", "tail_0", [(0, -0.21, 1.465, -0.44, 0.02), (0.3, -0.27, 1.36, -0.475, 0.052), (0.7, -0.325, 1.235, -0.49, 0.06),
     (0.97, -0.355, 1.15, -0.48, 0.052), (1.0, -0.358, 1.142, -0.478, 0.004)])
-tail("tail_b", "tail_1", [(0, -0.18, 1.46, -0.445, 0.02), (0.3, -0.16, 1.37, -0.48, 0.048), (0.7, -0.135, 1.275, -0.495, 0.054),
+  tail("tail_b", "tail_1", [(0, -0.18, 1.46, -0.445, 0.02), (0.3, -0.16, 1.37, -0.48, 0.048), (0.7, -0.135, 1.275, -0.495, 0.054),
     (0.97, -0.122, 1.205, -0.485, 0.048), (1.0, -0.12, 1.198, -0.483, 0.004)])
 
 # Hair: a mass of curls at the back, below the cloth, and locks out from under its edge
+HAIR_A0 = [68.0, 56.0, 62.0, 68.0][SLOT]       # from in front of one ear round the nape to the other
+
 def hair_back_shape(U, V):
-    a = np.radians(68.0 + 224.0 * U)
+    a = np.radians(HAIR_A0 + (360.0 - 2.0 * HAIR_A0) * U)
     side = np.abs(np.cos(a))                    # 0 at the ears, 1 at the nape
     bottom = 1.215 - 0.085 * sstep(0.2, 0.9, side) - 0.04 * np.abs(np.sin(a * 5.5))
-    top = rim_y(a) + 0.035
+    top = rim_y(a) + BAND_LIFT - 0.015
     y = top + (bottom - top) * V
     edge = sstep(0.0, 0.07, U) * sstep(1.0, 0.93, U)
     thick = -0.012 + (0.03 + 0.05 * sstep(0.0, 0.5, V) * sstep(1.0, 0.86, V)) * edge
@@ -502,8 +563,9 @@ def hair_back_form(U, V, P):
     curls = np.sin(np.radians(a) * 13.0 + 2.2 * np.sin(P[..., 1] * 34.0)) * np.sin(P[..., 1] * 40.0 + a * 0.05)
     return 0.012 * curls * sstep(0.12, 0.3, V) * sstep(1.0, 0.9, V)
 
-Part("hair_back", hair_back_shape, 24, 8, lambda c: hair_paint(c, 20.0, sstep(0.6, 1.0, c.V)), W("head"), closed=False,
-    form=hair_back_form, ref=HC, res=1.0)
+if SLOT in (0, 2):
+    Part("hair_back", hair_back_shape, 24, 8, lambda c: hair_paint(c, 20.0, sstep(0.6, 1.0, c.V)), W("head"), closed=False,
+        form=hair_back_form, ref=HC, res=1.0)
 
 def lock(name, a0, sweep, length, width, y_off=0.0, first=None):
     y0 = float(rim_y(math.radians(a0))) + y_off
@@ -518,20 +580,137 @@ def lock(name, a0, sweep, length, width, y_off=0.0, first=None):
         res=1.0, rect_of=first)
 
 _first = None
-for i, (a0, sweep, length, width) in enumerate([(-8, 22, 0.062, 0.05), (14, 24, 0.05, 0.048), (-30, -22, 0.055, 0.05),
-        (36, 20, 0.07, 0.05), (-52, -18, 0.075, 0.048), (57, 14, 0.085, 0.046), (-70, -8, 0.10, 0.044), (74, 6, 0.11, 0.044)]):
-    p = lock("lock%d" % i, a0, sweep, length, width, first=_first)
-    _first = _first or p
+if SLOT == 0:
+    for i, (a0, sweep, length, width) in enumerate([(-8, 22, 0.062, 0.05), (14, 24, 0.05, 0.048), (-30, -22, 0.055, 0.05),
+            (36, 20, 0.07, 0.05), (-52, -18, 0.075, 0.048), (57, 14, 0.085, 0.046), (-70, -8, 0.10, 0.044), (74, 6, 0.11, 0.044)]):
+        p = lock("lock%d" % i, a0, sweep, length, width, first=_first)
+        _first = _first or p
 # Sideburns, down in front of the ears to meet the beard
-lock("burn_l", 66, -6, 0.23, 0.04, -0.03, _first)
-lock("burn_r", -66, 6, 0.23, 0.04, -0.03, _first)
+if SLOT in (0, 2, 3):
+    _b = lock("burn_l", 66, -6, 0.23, 0.04, -0.03, _first)
+    lock("burn_r", -66, 6, 0.23, 0.04, -0.03, _first or _b)
+
+# The water carrier's curls: a cap of tight curls heaped over the scarf, in rows (each row
+# set half a curl across from the one below, like the beard), a fringe of them under its
+# front edge
+CURL_T = 0.045                                     # the cap's depth off the skull
+
+def curls_y0(a):
+    return rim_y(a) + BAND_LIFT - 0.045 - 0.03 * sstep(0.3, 0.9, np.cos(a))
+
+def curls_shape(U, V):
+    a = TAU * U
+    y0 = curls_y0(a)
+    top = HC[1] + HRY + CURL_T
+    y = y0 + (top - y0) * np.sin(np.clip(V, 0, 1) * math.pi / 2.0) ** 0.85
+    f = (1.0 - np.clip(np.abs((y - HC[1]) / (HRY + CURL_T)), 0.0, 1.0) ** HE) ** (1.0 / HE)
+    r = ell_r(a, HRX + CURL_T, HRZ + CURL_T) * f
+    return polar(a, y, r)
+
+def worley(p, seed=0.0):
+    """Distance from each point (..., 3) to the nearest of a jittered lattice of points, one
+    per unit cell: 0 at a feature, about 0.5..0.9 at the borders between them."""
+    f = np.floor(p)
+    best = np.full(p.shape[:-1], 9.0)
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                c = f + np.array([dx, dy, dz], float)
+                ix, iy, iz = c[..., 0], c[..., 1], c[..., 2]
+                j = np.stack([_hash(ix, iy, iz + seed), _hash(ix + 31, iy, iz + seed), _hash(ix, iy + 57, iz + seed)], -1)
+                d = np.linalg.norm(c + 0.15 + 0.7 * j - p, axis=-1)
+                best = np.minimum(best, d)
+    return best
+
+CURL_CELL = 0.072      # metres between curls
+
+def curl_bumps(P):
+    """1 on a curl's crown, 0 in the furrows: round, uneven, measured in space (no seams, no
+    pole), so it is the same where the cap, the nape and the fringe meet."""
+    d = worley(P / CURL_CELL, 3.0)
+    return np.sqrt(np.clip(1.0 - (d / 0.62) ** 2, 0.0, 1.0))
+
+def curls_form(U, V, P):
+    return 0.03 * (curl_bumps(P) - 0.5) * sstep(0.0, 0.08, V)
+
+def curls_paint(c):
+    o = hair_paint(c, 30.0)
+    b = curl_bumps(c.P)
+    o["rgb"] = o["rgb"] * (0.68 + 0.5 * b)[..., None]
+    # Each curl a tight coil: a few fine turns round its crown
+    ang = np.arctan2(c.y - HC[1], c.x) * 0.0 + fbm(c.P * 80.0)
+    o["h"] = 0.0008 * np.sin(TAU * (b * 3.0 + ang))
+    return o
+
+# The carpenter's bush: a quiet cap of hair, and over it broad locks swept from the brow back
+# over the crown (as on the code rig), so the crown is a lock, not a point where seams meet
+def bush_form(U, V, P):
+    d = worley((P - HC) / np.array([0.08, 0.07, 0.14]), 7.0)
+    return 0.012 * (np.sqrt(np.clip(1.0 - (d / 0.7) ** 2, 0.0, 1.0)) - 0.5) * sstep(0.0, 0.1, V) + 0.02 * np.sin(math.pi * np.clip(V, 0, 1))
+
+def bush_paint(c):
+    o = hair_paint(c, 22.0)
+    o["rgb"] = o["rgb"] * 0.78
+    return o
+
+def sweep_lock(name, x0, width, lift, first):
+    """A lock in the plane x = x0: up from over the brow, over the top, down the back."""
+    T = 0.06 + lift
+    keys = []
+    for t, psi, out_, ra in [(0.0, 31, 0.0, 0.01), (0.08, 38, 0.035, width * 0.8), (0.35, 70, 0.05, width), (0.65, 115, 0.045, width * 0.95),
+            (0.92, 150, 0.025, width * 0.6), (1.0, 158, 0.0, 0.006)]:
+        k = math.sqrt(max(1.0 - (x0 / (HRX + T)) ** 2, 0.05))
+        r_y, r_z = (HRY + T + out_) * k, (HRZ + T + out_) * k
+        ps = math.radians(psi)
+        keys.append((t, x0 * (1.0 + 0.15 * math.sin(ps)), HC[1] + r_y * math.sin(ps) * 0.97, HC[2] + r_z * math.cos(ps), ra, 0.034))
+    return Part(name, lambda U, V: tube(keys, U, V, side=(1.0, 0.0, 0.0)), 8, 10, lambda c: hair_paint(c, 6.0, 0.4 * sstep(0.4, 0.0, np.abs(c.V - 0.4))),
+        W("head"), form=lock_form, res=1.0, rect_of=first)
+
+if SLOT == 2:
+    CURL_T = 0.06
+    Part("bush", curls_shape, 44, 14, bush_paint, W("head"), form=bush_form, ref=HC, res=1.1)
+    _l = None
+    for i, (x0, w, lift) in enumerate([(0.0, 0.085, 0.012), (0.13, 0.08, 0.0), (-0.13, 0.08, 0.004), (0.245, 0.065, -0.012), (-0.245, 0.065, -0.01)]):
+        p = sweep_lock("sweep%d" % i, x0, w, lift, _l)
+        _l = _l or p
+if SLOT == 1:
+    Part("curls", curls_shape, 64, 20, curls_paint, W("head"), form=curls_form, ref=HC, res=1.2)
+    Part("hair_back", hair_back_shape, 36, 10, curls_paint, W("head"), closed=False,
+        form=lambda U, V, P: curls_form(U, V, P) * sstep(1.0, 0.85, V), ref=HC, res=1.0)
+
+VEIL_A0 = 64.0
+
+def veil_shape(U, V):
+    deg = VEIL_A0 + (360.0 - 2.0 * VEIL_A0) * U
+    a = np.radians(deg)
+    top = rim_y(a) + BAND_LIFT - BAND_H * 0.6
+    bottom = 1.10 - 0.11 * sstep(95.0, 150.0, np.minimum(deg, 360.0 - deg))   # past the jaw at the sides, to the shoulders behind
+    y = top + (bottom - top) * V
+    side = sstep(0.0, 0.08, U) * sstep(1.0, 0.92, U)
+    r = skull_r(a, np.maximum(y, 1.12)) + BAND_OUT + 0.01 + 0.09 * np.clip(V, 0, 1) ** 1.4 - 0.02 * (1.0 - side)
+    return polar(a, y, r)
+
+def veil_form(U, V, P):
+    a = np.radians(VEIL_A0 + (360.0 - 2.0 * VEIL_A0) * U)
+    return 0.012 * np.sin(a * 7.0 + 1.5 * vnoise(P * 4.0)) * sstep(0.1, 0.5, V)
+
+def veil_paint(c):
+    return scarf(c, sstep(0.012, 0.006, np.abs(c.V - 0.93)))   # a dyed stripe along its hem
+
+def veil_w(P, U, V):
+    deg = VEIL_A0 + (360.0 - 2.0 * VEIL_A0) * U
+    back = sstep(115.0, 145.0, np.minimum(deg, 360.0 - deg))
+    return {"head": 1.0 - back, "veil": back}
+
+if SLOT == 3:
+    Part("veil", veil_shape, 30, 9, veil_paint, veil_w, closed=False, form=veil_form, ref=HC, res=0.9)
 
 # Body ------------------------------------------------------------------------
 def tunic_form(U, V, P):
     x, y, z = P[..., 0], P[..., 1], P[..., 2]
     a = np.arctan2(x, z)
     live = sstep(0.03, 0.07, V)
-    pleats = 0.017 * sstep(0.53, 0.33, y) * np.sin(9.0 * a + 1.2 * np.sin(y * 8.0))
+    pleats = 0.017 * sstep(0.53, 0.33, y) * np.sin(9.0 * a + 1.2 * np.sin(y * 8.0)) * (1.4 if SLOT == 3 else 1.0)
     gather = 0.011 * sstep(0.55, 0.62, y) * sstep(0.84, 0.64, y) * np.sin(13.0 * a + 2.0 * vnoise(P * 4.0))
     hem = 0.016 * sstep(0.42, 0.18, y) * np.sin(6.0 * a + 0.7)
     blouse = 0.010 * g1(y - 0.615, 0.03)
@@ -540,13 +719,18 @@ def tunic_form(U, V, P):
 def tunic_paint(c):
     y = c.y
     a = np.arctan2(c.x, c.z)
-    rgb = cloth(c, LINEN, 1.0)
-    rgb = mixc(rgb, DUST, 0.4 * sstep(0.36, 0.17, y) * (0.6 + 0.4 * fbm(c.P * 14.0)))
+    hy = HEM_Y - 0.172
+    rgb = cloth(c, ROBE if SLOT == 3 else LINEN, 1.0)
+    rgb = mixc(rgb, DUST, 0.4 * sstep(0.36 + hy, 0.17 + hy, y) * (0.6 + 0.4 * fbm(c.P * 14.0)))
     rgb = rgb * (1.0 - 0.10 * g1(np.abs(np.sin(a)) - 1.0, 0.012) * sstep(0.95, 0.85, y))[..., None]    # side seams
-    stripe = np.maximum(sstep(0.012, 0.017, 0.022 - np.abs(y - 0.222)), sstep(0.004, 0.007, 0.009 - np.abs(y - 0.262)))
+    stripe = np.maximum(sstep(0.012, 0.017, 0.022 - np.abs(y - 0.222 - hy)), sstep(0.004, 0.007, 0.009 - np.abs(y - 0.262 - hy)))
     collar = sstep(0.945, 0.955, c.V)
     dye = np.maximum(stripe, collar)
-    rgb = mixc(rgb, np.array([0.93, 0.93, 0.93]) * (0.9 + 0.1 * fbm(c.P * 9.0))[..., None], dye)
+    shade = 0.93 if SLOT != 2 else 0.5          # the carpenter's trim a deeper dye than his tunic
+    rgb = mixc(rgb, np.array([shade] * 3) * (0.9 + 0.1 * fbm(c.P * 9.0))[..., None], dye)
+    if SLOT == 2:
+        # The carpenter's tunic is dyed all over, a little muted (worker_look: dye toward undyed wool)
+        dye = np.maximum(dye, 0.82 * (1.0 - dye))
     rgb = rgb * (0.45 + 0.55 * sstep(0.01, 0.03, c.V))[..., None]      # up inside the hem
     return out(rgb, h=threads(c, 0.007), rough=0.92, dye=dye)
 
@@ -557,9 +741,11 @@ def tunic_w(P, U, V):
 Part("tunic", lambda U, V: lathe(TUNIC, U, V, TUNIC_E), 32, 20, tunic_paint, tunic_w, form=tunic_form, res=1.0)
 
 def sleeve_paint(c):
-    rgb = cloth(c, LINEN)
+    rgb = cloth(c, ROBE if SLOT == 3 else LINEN)
     dye = sstep(0.018, 0.026, 0.035 - np.abs(c.V - 0.775))
-    rgb = mixc(rgb, np.array([0.93, 0.93, 0.93]), dye)
+    rgb = mixc(rgb, np.array([0.93 if SLOT != 2 else 0.5] * 3), dye)
+    if SLOT == 2:
+        dye = np.maximum(dye, 0.82 * (1.0 - dye))
     rgb = rgb * (0.45 + 0.55 * sstep(0.96, 0.92, c.V))[..., None]
     return out(rgb, h=threads(c, 0.007), rough=0.92, dye=dye)
 
@@ -588,6 +774,15 @@ def arm_paint(c):
     return o
 
 Part("arm", lambda U, V: tube(ARM, U, V), 10, 9, arm_paint, arm_w, mirror=True, res=0.8)
+if SLOT == 2:
+    BRACER = [(0, 0.365, 0.565, 0.006, 0.084, 0.087), (0.5, 0.364, 0.50, 0.009, 0.088, 0.091), (1.0, 0.363, 0.44, 0.01, 0.072, 0.074)]
+    def bracer_paint(c):
+        o = leather_paint(c, 0.9)
+        lace = sstep(0.75, 0.95, np.abs(np.sin(TAU * c.V * 3.0))) * sstep(0.08, 0.02, np.abs(c.U - 0.75))
+        o["rgb"] = o["rgb"] * (1.0 - 0.25 * g1(c.V - 0.05, 0.03) - 0.25 * g1(c.V - 0.95, 0.03))[..., None]
+        o["rgb"] = mixc(o["rgb"], LEATHER * 0.5, lace)
+        return o
+    Part("bracer", lambda U, V: tube(BRACER, U, V), 10, 3, bracer_paint, arm_w, mirror=True, res=0.8)
 HAND = np.array([0.36, 0.352, 0.012])
 
 def hand_form(U, V, P):
@@ -664,10 +859,18 @@ def tunic_ring(a, y, off):
     ex = 2.0 / TUNIC_E
     return np.stack([(k[..., 0] + off) * spow(np.sin(a), ex), y, (k[..., 1] + off) * spow(np.cos(a), ex)], -1)
 
+# The builder and water carrier wear a dyed sash; the carpenter and overseer a leather belt
+SASH_Y, SASH_H, SASH_OUT = (0.488, 0.118, 0.046) if SLOT in (0, 1) else (0.515, 0.07, 0.03)
+
 def sash_shape(U, V):
     a = TAU * U
-    y = 0.488 + 0.118 * V + 0.006 * np.sin(a * 2.0 + 1.0)
-    return tunic_ring(a, y, -0.014 + 0.046 * np.sin(math.pi * np.clip(V, 0, 1)) ** 0.5)
+    y = SASH_Y + SASH_H * V + 0.006 * np.sin(a * 2.0 + 1.0)
+    return tunic_ring(a, y, -0.014 + SASH_OUT * np.sin(math.pi * np.clip(V, 0, 1)) ** 0.5)
+
+def belt_paint(c):
+    o = leather_paint(c, 0.85)
+    o["rgb"] = o["rgb"] * (1.0 - 0.3 * sstep(0.75, 0.95, np.abs(np.cos(math.pi * c.V))))[..., None]
+    return o
 
 def sash_form(U, V, P):
     return 0.006 * np.cos(TAU * 3.0 * (V + 0.04 * np.sin(TAU * U * 2.0))) * np.sin(math.pi * V)
@@ -676,8 +879,11 @@ def sash_w(P, U, V):
     sk = sstep(0.60, 0.47, P[:, 1])
     return {"torso": 1.0 - sk, "skirt": sk}
 
-Part("sash", sash_shape, 32, 5, dyed, sash_w, closed=True, form=sash_form, ref=(0, 0.55, 0), res=1.0)
-Part("sash_knot", lambda U, V: ellipsoid((0.105, 0.548, 0.272), (0.058, 0.05, 0.04), U, V), 8, 5, dyed, sash_w, res=0.8)
+if SLOT in (0, 1):
+    Part("sash", sash_shape, 32, 5, dyed, sash_w, closed=True, form=sash_form, ref=(0, 0.55, 0), res=1.0)
+    Part("sash_knot", lambda U, V: ellipsoid((0.105, 0.548, 0.272), (0.058, 0.05, 0.04), U, V), 8, 5, dyed, sash_w, res=0.8)
+else:
+    Part("belt", sash_shape, 32, 3, belt_paint, sash_w, closed=True, ref=(0, 0.55, 0), res=1.0)
 
 def sash_end(name, pts):
     keys = [(t, x, y, z, ra, 0.011) for t, x, y, z, ra in pts]
@@ -689,11 +895,22 @@ def sash_end(name, pts):
     Part(name, lambda U, V: tube(keys, U, V, e=3.0), 6, 6, paint, sash_w,
         form=lambda U, V, P: 0.005 * np.sin(V * 8.0) * np.cos(TAU * U), res=0.9)
 
-sash_end("sash_end_a", [(0, 0.10, 0.535, 0.275, 0.022), (0.4, 0.085, 0.44, 0.292, 0.042), (0.97, 0.07, 0.315, 0.30, 0.05), (1.0, 0.07, 0.308, 0.30, 0.004)])
-sash_end("sash_end_b", [(0, 0.125, 0.535, 0.275, 0.022), (0.4, 0.158, 0.455, 0.288, 0.04), (0.97, 0.182, 0.365, 0.292, 0.046), (1.0, 0.183, 0.358, 0.292, 0.004)])
-# The basket's strap: over the left shoulder, across the chest to the right hip
+if SLOT == 0:
+    sash_end("sash_end_a", [(0, 0.10, 0.535, 0.275, 0.022), (0.4, 0.085, 0.44, 0.292, 0.042), (0.97, 0.07, 0.315, 0.30, 0.05), (1.0, 0.07, 0.308, 0.30, 0.004)])
+    sash_end("sash_end_b", [(0, 0.125, 0.535, 0.275, 0.022), (0.4, 0.158, 0.455, 0.288, 0.04), (0.97, 0.182, 0.365, 0.292, 0.046), (1.0, 0.183, 0.358, 0.292, 0.004)])
+elif SLOT == 1:
+    # The water carrier's hang long, down the front of the skirt: more of the crew colour
+    # where the play camera sees it
+    sash_end("sash_end_a", [(0, 0.10, 0.535, 0.275, 0.024), (0.35, 0.08, 0.42, 0.30, 0.046), (0.7, 0.062, 0.31, 0.318, 0.054),
+        (0.97, 0.05, 0.22, 0.322, 0.054), (1.0, 0.05, 0.212, 0.322, 0.004)])
+    sash_end("sash_end_b", [(0, 0.125, 0.535, 0.275, 0.022), (0.35, 0.16, 0.44, 0.295, 0.042), (0.7, 0.19, 0.345, 0.31, 0.05),
+        (0.97, 0.205, 0.27, 0.31, 0.048), (1.0, 0.206, 0.262, 0.31, 0.004)])
+# The basket's strap: over the left shoulder, across the chest to the right hip. The water
+# carrier's goes the other way, over the right shoulder (the waterskin's neck rides there)
 STRAP = [(0, 0.80, 150), (0.12, 0.92, 145), (0.22, 0.975, 125), (0.30, 0.998, 90), (0.40, 0.96, 45), (0.55, 0.86, 15),
     (0.70, 0.76, -20), (0.85, 0.67, -55), (1.0, 0.62, -100)]   # v, height, angle round the torso
+if SLOT == 1:
+    STRAP = [(v, y, -a) for v, y, a in STRAP]
 
 
 def strap_centre(V):
@@ -708,7 +925,16 @@ def strap_paint(c):
     return o
 
 
-Part("strap", lambda U, V: ribbon(strap_centre, U, V, 0.036, 0.008, (0, 0.75, 0)), 8, 26, strap_paint, W("torso"), res=0.9)
+def rope_paint(c):
+    """Twisted hemp: the carpenter's planks are lashed on with it."""
+    twist = 0.5 + 0.5 * np.sin(TAU * (c.V * 70.0 + c.U * 2.0))
+    rgb = np.ones(c.U.shape + (3,)) * np.array([0.70, 0.58, 0.40]) * (0.7 + 0.35 * twist)[..., None]
+    return out(rgb, h=0.0012 * twist, rough=0.9)
+
+if SLOT in (0, 1):
+    Part("strap", lambda U, V: ribbon(strap_centre, U, V, 0.036, 0.008, (0, 0.75, 0)), 8, 26, strap_paint, W("torso"), res=0.9)
+if SLOT == 2:
+    Part("strap", lambda U, V: ribbon(strap_centre, U, V, 0.022, 0.012, (0, 0.75, 0)), 6, 26, rope_paint, W("torso"), res=0.9)
 
 # Basket on the back, stones in it
 BASKET_Z = -0.44
@@ -743,7 +969,8 @@ def basket_paint(c):
     rgb = mixc(rgb, rubble, load)
     return out(rgb, h=0.004 * wv * (1.0 - inner) + 0.006 * grit * load, rough=0.7 + 0.2 * load)
 
-Part("basket", lambda U, V: lathe(BASKET, U, V, linear=True), 24, 14, basket_paint, W("torso"), res=1.0)
+if SLOT == 0:
+    Part("basket", lambda U, V: lathe(BASKET, U, V, linear=True), 24, 14, basket_paint, W("torso"), res=1.0)
 
 def stone(name, c0, r, seed, first):
     """A rough-hewn block: few faces, flat shaded, so it reads as broken stone."""
@@ -760,11 +987,174 @@ def stone(name, c0, r, seed, first):
 
 # Heaped: bedded in the rubble, shoulder to shoulder, one on top
 _first = None
-for i, (c0, r) in enumerate([((-0.17, 1.0, -0.475), 0.095), ((-0.01, 1.025, -0.505), 0.10), ((0.15, 1.0, -0.485), 0.095),
-        ((-0.20, 0.995, -0.375), 0.08), ((-0.07, 1.02, -0.385), 0.10), ((0.085, 1.03, -0.40), 0.095), ((0.21, 0.99, -0.39), 0.08),
-        ((0.02, 1.085, -0.445), 0.09)]):
-    p = stone("stone%d" % i, c0, r, i * 7.1, _first)
-    _first = _first or p
+if SLOT == 0:
+    for i, (c0, r) in enumerate([((-0.17, 1.0, -0.475), 0.095), ((-0.01, 1.025, -0.505), 0.10), ((0.15, 1.0, -0.485), 0.095),
+            ((-0.20, 0.995, -0.375), 0.08), ((-0.07, 1.02, -0.385), 0.10), ((0.085, 1.03, -0.40), 0.095), ((0.21, 0.99, -0.39), 0.08),
+            ((0.02, 1.085, -0.445), 0.09)]):
+        p = stone("stone%d" % i, c0, r, i * 7.1, _first)
+        _first = _first or p
+
+# The water carrier's goatskin, slung across his back: the whole hide sewn shut, full and
+# sagging low, its neck up over his right shoulder tied off with cord, the legs tied in stubs
+GOAT = np.array([0.40, 0.25, 0.14])
+SKIN_BAG = [(0.00, 0.30, 0.50, -0.43, 0.012, 0.012), (0.08, 0.275, 0.53, -0.435, 0.16, 0.13),
+    (0.28, 0.17, 0.64, -0.46, 0.27, 0.235), (0.50, 0.06, 0.77, -0.455, 0.25, 0.215),
+    (0.74, -0.06, 0.91, -0.43, 0.18, 0.16), (0.92, -0.15, 1.01, -0.40, 0.10, 0.09), (1.0, -0.165, 1.035, -0.39, 0.07, 0.065)]
+SKIN_NECK = [(0, -0.15, 1.01, -0.40, 0.075, 0.07), (0.35, -0.22, 1.05, -0.32, 0.052, 0.05),
+    (0.7, -0.27, 1.04, -0.20, 0.046, 0.044), (0.95, -0.285, 1.02, -0.11, 0.04, 0.038), (1.0, -0.286, 1.018, -0.10, 0.004, 0.004)]
+
+def goat_paint(c, wet=0.0, cord=None):
+    wet = wet + np.zeros(c.U.shape)
+    n = fbm(c.P * 18.0)
+    rgb = np.ones(c.U.shape + (3,)) * GOAT * (0.8 + 0.4 * n)[..., None]
+    span = max(float(np.abs(c.f).max()), 1e-4)
+    rgb = rgb * (1.0 + 0.35 * np.clip(c.f / span, -1.0, 1.0))[..., None]
+    rgb = rgb * (1.0 - 0.25 * wet)[..., None]                      # darker where it's damp
+    rough = 0.62 - 0.25 * wet
+    if cord is not None:
+        rgb = mixc(rgb, LINEN * 0.75 * (0.85 + 0.3 * np.sin(TAU * (c.U * 3.0 + c.V * 30.0)))[..., None], cord)
+        rough = rough + 0.25 * cord
+    return out(rgb, h=0.0008 * fbm(c.P * 70.0), rough=rough)
+
+def bag_form(U, V, P):
+    a = TAU * U
+    sag = 0.03 * sstep(0.5, 0.15, V) * np.sin(a) ** 2               # full at the bottom
+    creases = 0.008 * np.sin(a * 5.0 + V * 22.0 + 2.0 * vnoise(P * 6.0)) * sstep(0.55, 0.85, V)
+    return sag + creases
+
+def bag_paint(c):
+    o = goat_paint(c, wet=sstep(0.35, 0.05, c.V) * (0.6 + 0.4 * fbm(c.P * 7.0)))
+    # The seam along its edges, stitched with sinew
+    edge = np.abs(np.cos(TAU * c.U))
+    seam = sstep(0.985, 0.998, edge) * sstep(0.0, 0.2, np.cos(TAU * c.U)) * sstep(0.04, 0.1, c.V) * sstep(0.96, 0.9, c.V)
+    stitch = seam * sstep(0.2, 0.6, np.sin(TAU * c.V * 34.0))
+    o["rgb"] = mixc(o["rgb"] * (1.0 - 0.2 * seam)[..., None], DUST * 0.9, 0.5 * stitch)
+    # Worn pale where it rubs, darker in the hollows the load pulls
+    o["rgb"] = mixc(o["rgb"], GOAT * 1.5, 0.35 * sstep(0.55, 0.85, fbm(c.P * 6.0 + 4.0)))
+    return o
+
+def neck_paint(c):
+    cord = np.maximum(sstep(0.04, 0.025, np.abs(c.V - 0.62)), sstep(0.03, 0.018, np.abs(c.V - 0.74)))
+    return goat_paint(c, wet=sstep(0.85, 1.0, c.V), cord=cord)
+
+def leg_stub(name, pts, first):
+    keys = [(t, x, y, z, r, r * 0.9) for t, x, y, z, r in pts]
+    def paint(c):
+        return goat_paint(c, cord=sstep(0.06, 0.04, np.abs(c.V - 0.55)))
+    return Part(name, lambda U, V: tube(keys, U, V), 6, 5, paint, W("torso"), res=0.9, rect_of=first)
+
+if SLOT == 1:
+    Part("waterskin", lambda U, V: tube(SKIN_BAG, U, V), 18, 14, bag_paint, W("torso"), form=bag_form, res=1.0)
+    Part("waterskin_neck", lambda U, V: tube(SKIN_NECK, U, V), 8, 6, neck_paint, W("torso"),
+        form=lambda U, V, P: 0.004 * np.sin(V * 18.0) * np.cos(TAU * U * 2.0), res=1.2)
+    _s = leg_stub("skin_leg_a", [(0, 0.28, 0.53, -0.44, 0.048), (0.6, 0.36, 0.47, -0.45, 0.038), (1.0, 0.385, 0.45, -0.45, 0.006)], None)
+    leg_stub("skin_leg_b", [(0, 0.22, 0.86, -0.46, 0.045), (0.6, 0.30, 0.92, -0.47, 0.036), (1.0, 0.325, 0.94, -0.47, 0.006)], _s)
+
+def tunic_front_z(x, y, off=0.0):
+    k = ip(TUNIC_Y, y)
+    rx, rz = k[..., 0] + off, k[..., 1] + off
+    t = np.clip(np.abs(x) / rx, 0.0, 0.999)
+    return rz * (1.0 - t ** TUNIC_E) ** (1.0 / TUNIC_E)
+
+# The carpenter's leather apron: from the belt to the knee, a pocket with his tools in it
+def apron_shape(U, V):
+    y = 0.53 - 0.33 * V
+    half = 0.17 + 0.04 * V
+    x = (2.0 * U - 1.0) * half
+    z = tunic_front_z(x * 0.9, y, 0.012) + 0.012 + 0.02 * V
+    return np.stack([x, y, z], -1)
+
+def apron_form(U, V, P):
+    return 0.004 * np.sin(U * 9.0 + V * 3.0) * sstep(0.2, 0.8, V)
+
+def apron_paint(c):
+    rgb = np.ones(c.U.shape + (3,)) * APRON * (0.82 + 0.3 * fbm(c.P * 20.0))[..., None]
+    rgb = mixc(rgb, APRON * 0.6, 0.5 * fbm(c.P * 6.0 + 3.0) * sstep(0.3, 1.0, c.V))       # worn dark
+    edge = np.maximum(sstep(0.05, 0.0, c.U) + sstep(0.95, 1.0, c.U), sstep(0.96, 1.0, c.V))
+    rgb = rgb * (1.0 - 0.3 * np.clip(edge, 0, 1))[..., None]
+    # The pocket: a patch sewn on, its stitches pale
+    px, py = (c.U - 0.68) / 0.2, (c.V - 0.5) / 0.22
+    patch = sstep(1.0, 0.95, np.maximum(np.abs(px), np.abs(py)))
+    seam = patch * sstep(0.85, 0.9, np.maximum(np.abs(px), np.abs(py))) * sstep(0.2, 0.6, np.sin(TAU * (c.U + c.V) * 40.0))
+    rgb = rgb * (1.0 - 0.15 * patch * sstep(0.9, 0.6, py + 1.0))[..., None]
+    rgb = mixc(rgb, DUST, 0.7 * seam)
+    return out(rgb, h=0.0008 * fbm(c.P * 60.0) + 0.002 * patch, rough=0.6)
+
+def handle(name, pts, colour, first=None):
+    keys = [(t, x, y, z, r, r) for t, x, y, z, r in pts]
+    def paint(c):
+        rgb = np.ones(c.U.shape + (3,)) * colour * (0.85 + 0.3 * fbm(c.P * np.array([20.0, 80.0, 20.0])))[..., None]
+        return out(rgb, h=0.0005 * fbm(c.P * 90.0), rough=0.6)
+    return Part(name, lambda U, V: tube(keys, U, V), 6, 4, paint, W("skirt"), res=1.0, rect_of=first)
+
+# Planks: three boards lashed in a bundle, slung corner to corner across his back
+PLANK_A, PLANK_B = np.array([0.46, 0.50]), np.array([-0.40, 1.14])
+
+def plank(name, dz, shift, length_trim, first):
+    d = PLANK_B - PLANK_A
+    n = np.array([-d[1], d[0]]) / np.linalg.norm(d)
+    a = PLANK_A + n * shift + d * length_trim
+    b = PLANK_B + n * shift - d * length_trim * 0.5
+    z = -0.32 - dz
+    u = (b - a) / np.linalg.norm(b - a)
+    a0, b0 = a - u * 0.006, b + u * 0.006
+    keys = [(0.0, a0[0], a0[1], z, 0.066, 0.011), (0.006, a[0], a[1], z, 0.09, 0.018), (0.5, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, z, 0.09, 0.018),
+        (0.994, b[0], b[1], z, 0.09, 0.018), (1.0, b0[0], b0[1], z, 0.066, 0.011)]   # square-sawn ends, the arrises eased
+    def paint(c):
+        grain = fbm(np.stack([c.U * 6.0, c.V * 1.5, c.U * 0.0 + dz * 40.0], -1) * np.array([1.0, 1.0, 1.0]) * 3.0)
+        rings = 0.5 + 0.5 * np.sin(TAU * (c.U * 3.0 + 2.0 * grain))
+        rgb = np.ones(c.U.shape + (3,)) * WOOD * (0.78 + 0.25 * rings + 0.1 * grain)[..., None]
+        ends = np.maximum(sstep(0.03, 0.0, c.V), sstep(0.97, 1.0, c.V))
+        rgb = mixc(rgb, WOOD * 0.62, ends)
+        lash = np.maximum(g1(c.V - 0.3, 0.018), g1(c.V - 0.72, 0.018))
+        rgb = mixc(rgb, np.array([0.70, 0.58, 0.40]) * (0.75 + 0.3 * np.sin(TAU * c.U * 8.0 + c.V * 300.0))[..., None], sstep(0.4, 0.6, lash))
+        return out(rgb, h=0.0008 * rings + 0.003 * lash, rough=0.75)
+    p = Part(name, lambda U, V: tube(keys, U, V, hint=(0, 0, 1), e=8.0), 8, 6, paint, W("torso"), res=0.9, rect_of=first)
+    return p
+
+if SLOT == 2:
+    Part("apron", apron_shape, 8, 8, apron_paint, lambda P, U, V: {"torso": 1.0 - sstep(0.50, 0.42, P[:, 1]), "skirt": sstep(0.50, 0.42, P[:, 1])},
+        closed=False, form=apron_form, ref=(0, 0.4, 0), res=1.0)
+    # A mallet's handle and a chisel's out of the pocket, a rule by them
+    _h = handle("tool_a", [(0, 0.075, 0.37, 0.31, 0.016), (0.6, 0.085, 0.47, 0.322, 0.017), (1.0, 0.09, 0.52, 0.325, 0.02)], WOOD * 0.85)
+    handle("tool_b", [(0, 0.125, 0.37, 0.31, 0.013), (0.7, 0.14, 0.455, 0.322, 0.014), (1.0, 0.145, 0.48, 0.324, 0.016)], WOOD * 0.6, _h)
+    _p = plank("plank_a", 0.0, 0.0, 0.0, None)
+    plank("plank_b", 0.034, 0.05, 0.03, _p)
+    plank("plank_c", 0.068, -0.04, 0.06, _p)
+
+# The overseer's open vest, dyed, over his robe from the shoulders to below the knee, open
+# down the front so the robe shows; a scroll tucked in his belt
+def vest_open(y):
+    return np.radians(17.0 + 12.0 * sstep(0.62, 0.3, y))
+
+def vest_shape(U, V):
+    y = 0.97 - 0.66 * V
+    a0 = vest_open(y)
+    a = a0 + (TAU - 2.0 * a0) * U
+    off = 0.016 + 0.014 * sstep(0.5, 0.3, y)
+    return tunic_ring(a, y, off)
+
+def vest_paint(c):
+    o = dyed(c)
+    edge = np.maximum(sstep(0.04, 0.0, c.U) + sstep(0.96, 1.0, c.U), sstep(0.97, 1.0, c.V))
+    o["rgb"] = mixc(o["rgb"], o["rgb"] * 0.62, np.clip(edge, 0, 1))         # a deeper dyed edging
+    return o
+
+def scroll_paint(c):
+    paper = np.array([0.88, 0.80, 0.60]) * (0.88 + 0.2 * fbm(c.P * 30.0))[..., None]
+    rgb = np.ones(c.U.shape + (3,)) * paper
+    tie = np.maximum(g1(c.V - 0.3, 0.025), g1(c.V - 0.7, 0.025))
+    rgb = mixc(rgb, LEATHER * 0.8, sstep(0.4, 0.6, tie))
+    ends = np.maximum(sstep(0.04, 0.0, c.V), sstep(0.96, 1.0, c.V))
+    rgb = mixc(rgb, paper * 0.75 * (0.8 + 0.4 * np.sin(TAU * c.U * 3.0))[..., None], ends)
+    return out(rgb, h=0.002 * tie, rough=0.8)
+
+if SLOT == 3:
+    Part("vest", vest_shape, 30, 14, vest_paint, tunic_w, closed=False, form=lambda U, V, P: 0.6 * tunic_form(U, V, P),
+        ref=(0, 0.6, 0), res=1.0)
+    SCROLL = [(0, 0.10, 0.44, 0.285, 0.004, 0.004), (0.02, 0.105, 0.445, 0.285, 0.05, 0.05), (0.98, 0.255, 0.70, 0.27, 0.05, 0.05),
+        (1.0, 0.26, 0.705, 0.27, 0.004, 0.004)]
+    Part("scroll", lambda U, V: tube(SCROLL, U, V), 10, 6, scroll_paint, W("torso"), res=1.0)
 
 # ── Atlas ────────────────────────────────────────────────────────────────────
 def pack(parts):

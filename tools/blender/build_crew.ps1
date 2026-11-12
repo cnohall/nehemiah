@@ -14,11 +14,11 @@ try {
 	if (-not (Test-Path $json)) {
 		& $godot --headless --path . --script res://tools/blender/export_rig.gd -- "res://$json" $Slot | Out-Null
 	}
-	& $blender -b --factory-startup -P tools/blender/build_crew.py -- $json "assets/models/figures/$Name.glb" |
+	& $blender -b --factory-startup -P tools/blender/build_crew.py -- $json "assets/models/figures/$Name.glb" $Slot |
 		Select-String -Pattern "atlas|figure:|wrote|Error|Traceback|File |SystemExit|part "
 	& $godot --headless --path . --import | Select-String -Pattern "ERROR"
 	if ($Shots) {
-		& $godot --path . --fixed-fps 30 --script res://tools/blender/compare_shots.gd -- $Shots $Name "res://assets/models/figures/$Name.glb" |
+		& $godot --path . --always-on-top --fixed-fps 30 --script res://tools/blender/compare_shots.gd -- $Shots $Name "res://assets/models/figures/$Name.glb" $Slot |
 			Select-String -Pattern "ERROR"
 	}
 } finally { Pop-Location }

@@ -178,6 +178,7 @@ func _build_stand(side: int) -> Dictionary:
 	rig.position = Vector3(0, DECK_Y + 0.06, -0.1)
 	# One of the city's own, with a spear (Neh. 4:13)
 	var look := CharacterRig.worker_look(1, LOOK)
+	look.erase("baked")   # the crew's Blender figure (BakedFigure) would drop what is changed below
 	look["tool"] = false
 	look["sword"] = false
 	look.erase("satchel")
