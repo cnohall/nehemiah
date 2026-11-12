@@ -95,6 +95,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE and _root != null:
 		_root.queue_free()
 
+## Every tag at once (a finished stretch's tally sits over the world: no labels through it)
+static func hide_all(hidden: bool) -> void:
+	if _layer != null and is_instance_valid(_layer):
+		_layer.visible = not hidden
+
 static func _overlay(vp: Viewport) -> CanvasLayer:
 	if _layer == null or not is_instance_valid(_layer):
 		_layer = CanvasLayer.new()

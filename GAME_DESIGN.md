@@ -318,12 +318,12 @@ Three rules, each on by default and each switched off from the command line to A
 - **Twists with a decision in them:**
   - *salvage:* rubble heaps outside the wall hold twice the stone, in the enemy's reach
   - *thick:* a double-thick piece takes half of every blow, so the extra stone pays back against brutes
-  - *haul:* a relay mat halfway (`RelayMat`). A load dropped on it stacks in a free place, so one worker can run the yard end and another the wall end. A porter NPC runs the wall end on his own: he lifts the mat's loads and carries them to the wall that wants them — when the mat is full, or 15 s after the first load lands; four loads a trip — and walks back (slower than a running worker; a surplus is set down beside the wall). The water-carrier bot runs the yard end
+  - *haul:* a porter halfway (`RelayMat`), standing on his mat in plain view. Hand him a load with [E], the same press as at a wall (Nov 12 2026: was a [drop] on a "relay mat" with the porter hidden until a trip; playtesters and bots didn't get it). He carries the mat's loads to the wall that wants them when the mat is full, or 5 s after the first load lands; four loads a trip, slower than a running worker; a surplus is set down beside the wall. Any bot hands loads over when the mat lies on its way and the wall is well past it; bots never take loads back off the mat (that loop undid every relay), and count the mat's loads as already on their way
 - **Leaders on the rise — cut 3 Nov 2026.** Sanballat, Tobiah and Geshem used to walk to a rise beyond the wall at the arc's peaks and call across it in speech bubbles. Cut with the taunts: the story cards already introduce all three (and mark them met for Friends and Foes); in play they were unhittable figures talking over the work
 - **The far goal in view:** every tally says "4 of 12 stretches stand · 36 days to the fifty-second"
 - **Session log** (`user://sessions.log`): one line per game left, recording where it stopped. It's for playtest 3 (PLAYTEST_3 §4a)
 
-**Not yet:** harder variants of a three-mark stretch (e.g. Broad Wall at night); the title-screen world changing with progress; the finished stretches staying visible from the next one; relay behaviour for people-only crews (the mat works, but only bots are told to use it).
+**Not yet:** harder variants of a three-mark stretch (e.g. Broad Wall at night); the title-screen world changing with progress; the finished stretches staying visible from the next one; porter mat untested with people (Nov 12 2026 rework).
 
 **Watch in playtests:** do people read the cards or skip them? Is the lens used without prompting? Does the saboteur park a player in the yard? Do crews come back to Continue?
 

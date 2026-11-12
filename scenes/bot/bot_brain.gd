@@ -209,7 +209,7 @@ func _decide() -> void:
 			site = _nearest_site(func(s): return s.needs(_p.carried_kind))
 		if site == null:
 			site = _nearest_post(func(s): return s.needs(_p.carried_kind) and (s.built or _posts_ok()))
-		# The long haul: the yard runner sets it on the relay mat for the wall end
+		# The long haul: hand it to the porter halfway when the wall is far
 		var mat := _relay_for(site)
 		if mat != null:
 			_set_job(Job.RELAY, mat)
@@ -308,8 +308,6 @@ func _decide() -> void:
 		return
 	_set_job(Job.GUARD, _nearest_site(func(_s): return true))
 
-## "haul": a relay mat worth stopping at on the way to `site` — for the water carrier
-## (the crew's hauler), when the mat has room and lies well short of the wall
 func get_tree_horn() -> Node:
 	return _p.get_tree().get_first_node_in_group("horn")
 
@@ -362,12 +360,14 @@ func _follow_order() -> bool:
 			_set_job(Job.WORK, target)
 	return true
 
+## "haul": the porter's mat, when it lies on the way to `site` and well short of it
 func _relay_for(site: Node3D) -> Node3D:
-	if site == null or not GameState.has_twist("haul") or _p.trade != Trade.WATER_CARRIER or _p.carried_kind == "beam" \
-			or "--no-relay" in OS.get_cmdline_user_args():
+	if site == null or not GameState.has_twist("haul") or "--no-relay" in OS.get_cmdline_user_args():
 		return null
 	for mat: Node3D in _p.get_tree().get_nodes_in_group("relay_mats"):
-		if mat.free_slot() != Vector3.INF and _dist(mat) > 3.0 and _dist(site) > _dist(mat) + 8.0:
+		# Worth it only on the way: the wall well past the mat, the mat not behind us
+		if mat.needs(_p.carried_kind) and _dist(mat) > 3.0 and _dist(site) > _dist(mat) + 8.0 \
+				and mat.global_position.distance_to(site.global_position) < _dist(site):
 			return mat
 	return null
 
@@ -502,6 +502,11 @@ func _pick_fetch() -> Node3D:
 	if trough != null and missing.get("mortar", 0) >= 2:
 		for kind: String in ["lime", "water"]:
 			missing[kind] = missing.get(kind, 0) + 1
+	for mat: Node3D in _p.get_tree().get_nodes_in_group("relay_mats"):
+		var on_way: Dictionary = mat.pending_kinds()
+		for k: String in on_way:
+			if missing.has(k):
+				missing[k] -= on_way[k]
 	for w in _p.get_tree().get_nodes_in_group("players"):
 		if w == _p:
 			continue
@@ -638,10 +643,11 @@ func _debris_to_haul() -> Node3D:
 func _nearest_source(kind: String) -> Node3D:
 	var best: Node3D = null
 	var best_d := INF
+	var mats := _p.get_tree().get_nodes_in_group("relay_mats")
 	for group in ["dropped_items", "supply_piles"]:
 		for n in _p.get_tree().get_nodes_in_group(group):
-			if n.kind != kind:
-				continue
+			if n.kind != kind or group == "dropped_items" and mats.any(func(m): return m.on_mat(n)):
+				continue   # a load on the porter's mat is his to carry
 			var d := _dist(n)
 			if d < best_d:
 				best_d = d
@@ -685,6 +691,11 @@ func _act(delta: float) -> void:
 		Job.GUARD:
 			if _target != null:
 				_walk_to(_guard_spot(_target), delta, 1.0)
+		Job.RELAY when _target.is_in_group("relay_mats"):
+			if not _target.needs(_p.carried_kind):
+				_set_job(Job.IDLE, null)   # filled up on the way: think again
+			else:
+				_go_and_press(_target, Player.INTERACT_REACH - 0.6, Player.Act.DELIVER, delta)
 		Job.RELAY:
 			if _flat(_target.global_position - _p.global_position).length() < 1.2:
 				_press("drop")

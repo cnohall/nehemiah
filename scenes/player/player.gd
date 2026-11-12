@@ -683,6 +683,8 @@ func _interact_choice(at: Vector3) -> Array:
 		var dest := _nearest_in_reach("build_sites", at, func(s): return s.needs(carried_kind))
 		if dest == null:   # a hungry household of the Fountain Gate (Neh. 5)
 			dest = _nearest_in_reach("households", at, func(h): return h.needs(carried_kind))
+		if dest == null:   # the long haul: hand it to the porter on the mat
+			dest = _nearest_in_reach("relay_mats", at, func(m): return m.needs(carried_kind))
 		# No climbing laden: a missed delivery press used to throw you over the wall.
 		# Set the load down ([drop]) first, then climb.
 		return [Act.DELIVER, dest]
@@ -1038,7 +1040,7 @@ func _drop_carried(at: Vector3) -> void:
 				item.position = Vector3(slot.x, GROUND_Y, slot.z)
 				if not RelayMat.told:
 					RelayMat.told = true
-					_tell("Left on the relay mat: the porter carries it to the wall")
+					_tell("Left with the porter: he carries it to the wall")
 	# Filter must be in place before add_child — the spawner snapshots visibility on enter
 	NetworkManager.gate_sync(item.get_node("MultiplayerSynchronizer"))
 	items.add_child(item, true)

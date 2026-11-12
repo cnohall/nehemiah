@@ -14,11 +14,22 @@ func _process(_delta: float) -> bool:
 		gs.current_section_index = 2
 		gs.phase = gs.Phase.DUSK
 		var mask := 7
+		var close := ""
 		for a in OS.get_cmdline_user_args():
 			if a.begins_with("--marks="):
 				mask = a.trim_prefix("--marks=").to_int()
+			elif a.begins_with("--section="):  # `--section=N`: that stretch, on its last day
+				gs.current_section_index = a.trim_prefix("--section=").to_int()
+				gs.current_day = gs.SECTIONS[gs.current_section_index]["days"].back()
+			elif a.begins_with("--close="):    # `--close=gap|stars`: the close-call line
+				close = a.trim_prefix("--close=")
+		var solo := "--solo" in OS.get_cmdline_user_args()   # one worker: totals row, no cards
 		_hud = load("res://scenes/ui/game_hud.tscn").instantiate()
 		root.add_child(_hud)
+		# Slot colours and trades as Main hands them out (portraits, marks, card edges)
+		var cols := [Color("#3f6fb5"), Color("#c0463a"), Color("#6f8f3a"), Color("#d9a33a")]
+		for i in cols.size():
+			_hud.set_player_color(i, cols[i], i)
 		if "--day" in OS.get_cmdline_user_args():
 			# An ordinary day (`-- --day`): no marks, today's own counts
 			_hud.show_tally({"breaches": 0, "time": 155, "loads": 20, "foes": 10, "unfinished": 0,
@@ -28,9 +39,9 @@ func _process(_delta: float) -> bool:
 		_hud.show_tally({
 			"breaches": 0, "marks": mask, "section_breaches": 0 if mask & 2 else 2,
 			"section_time": 155.0, "par": 540.0, "section_day": 2, "section_days": 5, "pace_needed": 2, "wall": 0.68 if not mask & 4 else 0.95,
-			"section_time_": 155, "section_loads": 63, "section_foes": 47, "section_crew": [
+			"section_time_": 155, "section_loads": 63, "section_foes": 47, "section_crew": [[1, 63, 47]] if solo else [
 				[1, 24, 5], [2, 16, 9], [3, 10, 17], [4, 13, 16]],
-			"time": 155, "loads": 20, "foes": 10, "crew": [], "spare": 3, "unfinished": 0,
+			"time": 155, "loads": 20, "foes": 10, "crew": [], "spare": 3, "unfinished": 0, "close": close,
 		})
 	_frame += 1
 	return false

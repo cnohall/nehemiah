@@ -84,7 +84,7 @@ const TWIST_INTRO := {
 	"ruins": "Not every stretch starts bare: old courses still stand in places, and burned timbers must be pulled down before anything is built",
 	"thick": "The Broad Wall: raise the outer face, then the inner, then fill between. Room for four at the work, and it takes half the blows",
 	"horn": "They come up the valley in surges. {horn} sounds the horn: gather in its ring and your blows land harder",
-	"haul": "A long haul from the yard: leave loads on the relay mat halfway and a porter carries them to the wall, or hand one to a friend",
+	"haul": "A long haul from the yard: hand loads to the porter halfway and he carries them to the wall, or hand one to a friend",
 	"spring": "A quiet stretch by the Pool of Shelah. The water is close at hand. Three households within the wall are hungry: carry each a portion from the baskets. Every family fed comes back to the work and builds faster; leave them hungry and the next stretch is short of hands",
 	"night": "Night falls on the work. Keep to the torchlight; they come out of the dark",
 	"cramped": "Each priest builds in front of his own house. Mind the narrow lanes",

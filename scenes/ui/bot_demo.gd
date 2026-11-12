@@ -14,7 +14,7 @@ var _shows := {
 	"beams": [func(b: Player): return b.helping_id != 0, "two to a beam"],
 	"mixing": [func(b: Player): return b.carried_kind in ["lime", "water"], "lime and water go to the trough"],
 	"salvage": [func(b: Player): return b.carried_kind == "stone", "stone comes out of the rubble"],
-	"haul": [func(b: Player): return b.carried_kind != "" and _near_relay(b), "loads stack on the relay mat"],
+	"haul": [func(b: Player): return b.carried_kind != "" and _near_relay(b), "hand loads to the porter halfway"],
 }
 var _shown := {}   # twist → true, this section
 

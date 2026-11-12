@@ -32,7 +32,6 @@ const MARKS_BIG_H   := 172.0  # (a finished stretch: big gems, captions beneath)
 const STRIP_H       := 32.0    # (an ordinary day: the campaign strip above its counts)
 const TALLY_SMALL_H := 84.0   # (and then its counts, smaller)
 const READY_H       := 56.0    # …plus who's ready to go on
-const BUILDERS_H    := 58.0   # (a finished stretch: the "next to him…" names, one or two lines)
 const SUB_LINE_H    := 28.0   # …plus each extra line under the title (days to spare, the campaign)
 const BANNER_Y      := 0.2     # Banner anchor: dawn banners up top…
 const TALLY_Y       := 0.6     # …the tally low, clear of the cheering crew mid-screen
@@ -90,10 +89,11 @@ var _pause_what: Label       # controls card: what the pause key does
 var _host_refreshers: Array[Callable] = []   # bot / difficulty rows (gather panel + pause menu)
 var _tally_band: CanvasItem   # second layer of the band: numbers stay legible over world labels
 var _ready_row: ReadyRow      # under the tally: hold [E] to go on, who else is ready
-var _tally_builders: Control  # the "next to him…" names: first to go when the tally won't fit
 var _invite_fold := Callable()   # (folded: bool) — the Steam invite panel tucks away once the work starts
 var _tally_waiting: Array = []   # latest DayDirector ready state for the tally
 var _slot_colors: Array[Color] = [Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE]
+var _tally_stretch := false   # the tally on screen is a finished stretch's (_fit_tally centres it)
+var _slot_trades: Array[int] = [-1, -1, -1, -1]   # (the tally's portraits dress as the HUD's)
 var _next_poll := 0.0
 const NEXT_POLL := 0.25
 const KNOCKED_MS := 4000
@@ -311,6 +311,7 @@ func _close_pause() -> void:
 func _exit_tree() -> void:
 	InputMode.set_menu_open(false)
 	get_tree().paused = false
+	WorldTag.hide_all(false)   # the tag layer outlives the HUD: never leave it veiled
 	_log_session()
 
 # Playtest 3: where does a session stop? One line per game left (user://sessions.log):
@@ -587,6 +588,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 	if phase != GameState.Phase.DUSK and _tally != null and _tally.visible:
 		_tally.hide()
 		banner.hide()
+	if phase != GameState.Phase.DUSK:
+		_veil(false)
 	gather.visible = phase == GameState.Phase.GATHER
 	# Open while the crew gathers, folded once the work starts (a click brings it back)
 	if _invite_fold.is_valid():
@@ -666,6 +669,7 @@ func _show_banner(title: String, sub: String, hold := BANNER_HOLD, with_tally :=
 	banner_sub.custom_minimum_size.x = minf(banner.get_viewport_rect().size.x * 0.84, 1100.0)
 	if _tally != null and not with_tally:
 		_tally.hide()
+		_veil(false)
 	banner.offset_top = BANNER_TOP   # _fit_tally may have moved it…
 	banner.scale = Vector2.ONE       # …or shrunk it
 	if not with_tally:
@@ -977,52 +981,69 @@ func show_tally(stats: Dictionary) -> void:
 	# The whole section is done (rated) — say so, and how many days it had to spare
 	elif stats.has("marks"):
 		title = tr("The %s stands") % tr(section["name"])
-		# One line: the marks below already say pace, breaches and soundness
-		sub = tr("Section %d of %d complete") % [GameState.current_section_index + 1, GameState.SECTIONS.size()]
+		# The campaign's circuit strip below shows how far round the wall the crew has
+		# come; a replay has no strip, so it says it
+		sub = tr("Section %d of %d complete") % [GameState.current_section_index + 1, GameState.SECTIONS.size()] \
+			if GameState.is_replay() else ""
 		# A close call earns its own line (DayDirector._close_call)
+		var close := ""
 		match stats.get("close", ""):
-			"stars": sub = tr("By a hair: the last stone was set as the stars came out.") + "\n" + sub
-			"gap":   sub = tr("By a hair: the gap closed in the enemy's face.") + "\n" + sub
+			"stars": close = tr("By a hair: the last stone was set as the stars came out.")
+			"gap":   close = tr("By a hair: the gap closed in the enemy's face.")
+		if close != "":
+			sub = close + ("\n" + sub if sub != "" else "")
 	# Where the campaign stands: the far goal in view every evening (a pull to day 52)
 	var campaign := not GameState.is_replay() and not GameState.attract
-	if campaign:
+	if campaign and day < GameState.TOTAL_DAYS:   # the fifty-second itself counts nothing down
 		var days_left := tr("%d days to the fifty-second") % (GameState.TOTAL_DAYS - day)
-		sub += ("\n" if unfinished > 0 else "  ·  ") + days_left if sub != "" else days_left
+		sub += ("\n" if unfinished > 0 or stats.has("marks") else "  ·  ") + days_left if sub != "" else days_left
 
 	# A finished stretch leads with its marks (the payoff); an ordinary day with the
 	# campaign strip, today's cell filling. Counts beneath either way, smaller.
 	var marks_line: Control = null
-	var builders_shown := false
-	_tally_builders = null
 	var strip: CircuitStrip = null
-	if stats.has("marks") and unfinished == 0:
+	_tally_stretch = stats.has("marks") and unfinished == 0
+	if _tally_stretch:
+		if campaign:
+			# The circuit by stretch: this one fills in before the marks land
+			strip = _strip()
+			strip.stretch = GameState.current_section_index
 		var gap := Control.new()
 		gap.custom_minimum_size.y = 10
 		_tally.add_child(gap)
 		marks_line = _marks_line(stats, true)
-		_tally.add_child(marks_line)
-		var builders := _builders_line()
-		if builders:
-			builders_shown = true
-			_tally_builders = builders
-			_tally.add_child(builders)
-		var after := Control.new()  # air between the marks and the counts
-		after.custom_minimum_size.y = 8
+		var stretch_crew: Array = stats["section_crew"]
+		if stretch_crew.size() > 1:
+			# The crew flanks the marks, portraits facing in: one band, not two rows
+			var hero := HBoxContainer.new()
+			hero.alignment = BoxContainer.ALIGNMENT_CENTER
+			hero.add_theme_constant_override("separation", 28)
+			hero.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var half := ceili(stretch_crew.size() / 2.0)
+			hero.add_child(_crew_column(stretch_crew, range(half), false))
+			hero.add_child(marks_line)
+			hero.add_child(_crew_column(stretch_crew, range(half, stretch_crew.size()), true))
+			_tally.add_child(hero)
+		else:
+			_tally.add_child(marks_line)
+		var after := Control.new()  # air between the marks and what's beneath
+		after.custom_minimum_size.y = 14
 		_tally.add_child(after)
 	elif campaign:
-		strip = CircuitStrip.new()
+		strip = _strip()
 		strip.day = day
-		strip.custom_minimum_size = Vector2(600, 22)
-		strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_tally.add_child(strip)
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 0)
-	_tally.add_child(row)
 	# A stretch that stands counts the whole stretch, not just its last day
 	var rated := stats.has("marks")
 	var pre := "section_" if rated else ""
+	var crew: Array = stats[pre + "crew"]
+	# A finished stretch with a crew: the cards beneath already carry the counts, so the
+	# totals row goes (the marks are the payoff; the screen stays three tiers)
+	var totals := not (marks_line and crew.size() > 1)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 0)
+	if totals:
+		_tally.add_child(row)
 	var secs := int(stats[pre + "time"])
 	var counts: Array = [
 		[stats[pre + "loads"], "Loads carried", func(v: int): return str(v)],
@@ -1032,7 +1053,7 @@ func show_tally(stats: Dictionary) -> void:
 		counts.push_front([secs, "Time", func(v: int): return "%d:%02d" % [v / 60, v % 60]])
 	if stats.get("scattered", 0) > 0 and not rated:
 		counts.append([stats["scattered"], "Piles scattered", func(v: int): return str(v)])
-	for i in counts.size():
+	for i in (counts.size() if totals else 0):
 		if i > 0:
 			row.add_child(_rule_v(40))
 		var cell := _stat(counts[i][2].call(0), counts[i][1], 32 if (marks_line or strip) else 0)
@@ -1041,8 +1062,10 @@ func show_tally(stats: Dictionary) -> void:
 		row.add_child(cell)
 		_count_up(cell.get_child(0), counts[i][0], counts[i][2], i * TALLY_STEP + 0.5)
 
-	var crew: Array = stats[pre + "crew"]
-	if crew.size() > 1:
+	if not totals:
+		row.queue_free()
+	var crew_row := crew.size() > 1 and not marks_line   # (a finished stretch flanks its marks)
+	if crew_row:
 		_tally.add_child(_crew_line(crew))
 	# The tally stays until everyone is ready (playtest 2) — the title screen's crew
 	# has nobody to ask, so there it fades as before
@@ -1057,27 +1080,48 @@ func show_tally(stats: Dictionary) -> void:
 		_tally.add_child(_ready_row)
 		_ready_row.set_waiting(_tally_waiting)
 
-	banner.offset_bottom = BANNER_H + (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) + (CREW_H if crew.size() > 1 else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (BUILDERS_H if marks_line and builders_shown else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("\n") * SUB_LINE_H
+	var totals_h := (TALLY_SMALL_H if (marks_line or strip) else TALLY_H) if totals else 0.0
+	banner.offset_bottom = BANNER_H + totals_h + (CREW_H if crew_row else 0.0) 		+ (MARKS_BIG_H if marks_line else 0.0) + (STRIP_H if strip else 0.0) + (READY_H if waits else 0.0) 		+ sub.count("\n") * SUB_LINE_H
 	_tally.show()
+	_veil(_tally_stretch)
 	_show_banner(title, sub, -1.0 if waits else TALLY_HOLD, true)
 	UiFx.stagger(_tally.get_children(), 0.45, 0.12, 0.3)
 	if strip and unfinished == 0:
-		# Today's cell fills in: the day's work, banked
+		# Today's cell (or the finished stretch) fills in: the work, banked
 		var tw := create_tween()
-		tw.tween_interval(0.8)
+		tw.tween_interval(0.6 if marks_line else 0.8)
 		tw.tween_property(strip, "today_progress", 1.0, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_callback(Sfx.play.bind("tally_land"))
 	if marks_line:
 		# Taller than a plain tally: ride higher so the prompt stays on screen
 		banner.anchor_top = 0.5
 		banner.anchor_bottom = 0.5
-		_pop_marks(marks_line, 0.7)
+		_pop_marks(marks_line, 1.5 if strip else 0.7)
 		# The title lands like a set stone
 		banner_title.pivot_offset = banner_title.size * 0.5
 		banner_title.scale = Vector2.ONE * 1.08
 		create_tween().tween_property(banner_title, "scale", Vector2.ONE, 0.4) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT).set_delay(0.2)
 	_fit_tally()
+
+## A finished stretch's tally has the screen to itself: the side cards (their faces are
+## in the tally) and the world's tags step back, and come back when it goes
+var _veil_on := false
+var _veil_tween: Tween
+
+func _veil(on: bool) -> void:
+	if on == _veil_on:
+		return
+	_veil_on = on
+	WorldTag.hide_all(on)
+	if _veil_tween:
+		_veil_tween.kill()
+	_veil_tween = create_tween()
+	_veil_tween.tween_property(players_row, "modulate:a", 0.0 if on else 1.0, 0.35 if on else 0.6)
+
+## True while a finished stretch's tally is up (Main lifts the camera above it)
+func stretch_tally_up() -> bool:
+	return _veil_on
 
 ## The heights above are a guess: builder names wrap to two lines, a crew row joins, a
 ## language runs longer. Once laid out, grow the band to what it holds and lift it so
@@ -1092,25 +1136,29 @@ func _fit_tally() -> void:
 	var room := vp_h - SCREEN_EDGE * 2.0
 	var vbox := $Root/Banner/VBox as Control
 	var content := vbox.get_combined_minimum_size().y + BANNER_PAD * 2.0
-	# A finished stretch with a crew runs taller than a 1080 screen: the builders'
-	# names go first (flavour), so the ready prompt beneath always shows
-	if content > room and _tally_builders != null and _tally_builders.visible:
-		var freed := _tally_builders.get_combined_minimum_size().y \
-			+ float(_tally.get_theme_constant("separation"))
-		_tally_builders.hide()
-		content -= freed
-		banner.offset_bottom -= freed
-	var h := maxf(banner.offset_bottom - banner.offset_top, content)
+	# A finished stretch hugs what it holds (the guesses above run tall) and sits in the
+	# middle of the screen; the others keep their guess and their place
+	var h := content if _tally_stretch else maxf(banner.offset_bottom - banner.offset_top, content)
 	# Still too tall: shrink the whole band from its top centre to fit
 	var s := minf(1.0, room / h)
 	banner.pivot_offset = Vector2(banner.size.x * 0.5, 0.0)
 	banner.scale = Vector2.ONE * s
 	var top := banner.anchor_top * vp_h + banner.offset_top
+	if _tally_stretch:
+		top = (vp_h - h * s) * 0.5
 	top = clampf(top, SCREEN_EDGE, maxf(SCREEN_EDGE, vp_h - h * s - SCREEN_EDGE))
 	banner.anchor_top = 0.0
 	banner.anchor_bottom = 0.0
 	banner.offset_top = top
 	banner.offset_bottom = top + h
+
+func _strip() -> CircuitStrip:
+	var strip := CircuitStrip.new()
+	strip.custom_minimum_size = Vector2(600, 22)
+	strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tally.add_child(strip)
+	return strip
 
 # The section's three marks, each with what earned it (or what it needed)
 func _marks_line(stats: Dictionary, big := false) -> Control:
@@ -1120,7 +1168,8 @@ func _marks_line(stats: Dictionary, big := false) -> Control:
 	line.add_theme_constant_override("separation", 24 if big else 44)
 	var details := {
 		GameState.Mark.PACE: tr("day %d of %d") % [stats["section_day"], stats["section_days"]],
-		GameState.Mark.CLEAN: tr("all through the section") if mask & GameState.Mark.CLEAN 			else tr_n("%d got through", "%d got through", stats["section_breaches"]) % stats["section_breaches"],
+		# Earned, the name says it all ("None got through"); only a miss needs the count
+		GameState.Mark.CLEAN: "" if mask & GameState.Mark.CLEAN 			else tr_n("%d got through", "%d got through", stats["section_breaches"]) % stats["section_breaches"],
 		GameState.Mark.SOUND: tr("%d%% sound") % roundi(stats["wall"] * 100.0),
 	}
 	for m: int in GameState.MARKS:
@@ -1165,6 +1214,19 @@ func _pop_marks(line: Control, delay: float) -> void:
 		if gem.lit:
 			tw.tween_callback(Sfx.play.bind("tally_land")).set_delay(at + 0.2)
 			tw.tween_property(gem, "shine", 1.0, 0.6).from(0.0).set_delay(at + 0.25)
+	# Every mark: the three answer together, once, with a deeper thud. No words; the
+	# full row of gold says it
+	var gems: Array = line.get_children().map(func(c): return c.get_child(0))
+	if gems.all(func(g): return g.lit):
+		var at := delay + gems.size() * 0.42 + 0.35
+		var tw := create_tween().set_parallel()
+		tw.tween_callback(Sfx.play.bind("tally_land", null, 0.7)).set_delay(at)
+		for g: MarkGem in gems:
+			tw.tween_property(g, "shine", 1.0, 0.7).from(0.0).set_delay(at)
+			tw.tween_property(g, "scale", Vector2.ONE * 1.18, 0.14).set_delay(at) \
+				.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			tw.tween_property(g, "scale", Vector2.ONE, 0.4).set_delay(at + 0.14) \
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # Each worker's share as a small card edged in their colour, name over numbers;
 # the day's best carrier and best shot in terracotta
@@ -1209,28 +1271,72 @@ func _crew_line(crew: Array) -> Control:
 		line.add_child(card)
 	return line
 
+## A finished stretch's crew beside its marks: each worker a portrait in their colour,
+## name over their share. `mirror` (the right-hand column) puts the portrait outside,
+## on the right, so both columns face the gems
+func _crew_column(crew: Array, slots: Array, mirror: bool) -> Control:
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 10)
+	col.custom_minimum_size.x = 220
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var top_loads: int = crew.map(func(r): return r[1]).max()
+	var top_foes: int = crew.map(func(r): return r[2]).max()
+	var align := HORIZONTAL_ALIGNMENT_RIGHT if not mirror else HORIZONTAL_ALIGNMENT_LEFT
+	for slot: int in slots:
+		var r: Array = crew[slot]
+		var color := _slot_colors[slot % _slot_colors.size()]
+		var tile := HBoxContainer.new()
+		tile.add_theme_constant_override("separation", 12)
+		tile.alignment = BoxContainer.ALIGNMENT_END if not mirror else BoxContainer.ALIGNMENT_BEGIN
+		var face := CrewPortrait.new()
+		face.custom_minimum_size = Vector2(58, 58)
+		face.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		# Dressed once it's in the tree (its rig builds there), as the HUD's cards are
+		face.ready.connect(face.set_worker.bind(_slot_trades[slot] if _slot_trades[slot] >= 0 else slot, color), CONNECT_ONE_SHOT)
+		var text := VBoxContainer.new()
+		text.alignment = BoxContainer.ALIGNMENT_CENTER
+		text.add_theme_constant_override("separation", -2)
+		var worker := _worker(r[0])
+		var me: bool = r[0] == multiplayer.get_unique_id()
+		var who: String = "You" if me \
+			else (worker.trade_name() if worker != null else CharacterRig.TRADES[slot % CharacterRig.TRADES.size()])
+		var name_row := HBoxContainer.new()
+		name_row.add_theme_constant_override("separation", 6)
+		name_row.alignment = BoxContainer.ALIGNMENT_END if not mirror else BoxContainer.ALIGNMENT_BEGIN
+		var mark := CrewMark.make(11)
+		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mark.set_mark(slot, color)
+		var name_l := _crew_label(who, UiStyle.INK)
+		name_l.add_theme_font_size_override("font_size", 18)
+		if me:
+			name_l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
+		if mirror:
+			name_row.add_child(mark)
+			name_row.add_child(name_l)
+		else:
+			name_row.add_child(name_l)
+			name_row.add_child(mark)
+		text.add_child(name_row)
+		var loads := _crew_num(tr_n("%d load", "%d loads", r[1]) % r[1], r[1] > 0 and r[1] == top_loads)
+		var foes := _crew_num(tr_n("%d foe", "%d foes", r[2]) % r[2], r[2] > 0 and r[2] == top_foes)
+		for l: Label in [loads, foes]:
+			l.horizontal_alignment = align
+			text.add_child(l)
+		if mirror:
+			tile.add_child(face)
+			tile.add_child(text)
+		else:
+			tile.add_child(text)
+			tile.add_child(face)
+		col.add_child(tile)
+	return col
+
 func _crew_num(text: String, best: bool, color := UiStyle.INK_SOFT) -> Label:
 	var l := _crew_label(text, UiStyle.TERRACOTTA if best else color)
 	l.add_theme_font_size_override("font_size", 15)
 	if best:
 		l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
-	return l
-
-# Who built this stretch, from Neh 3's "next to him…" chain (StoryData.BUILDERS)
-func _builders_line() -> Control:
-	var i := GameState.SECTIONS.find(GameState.get_current_section())  # as the title above
-	if i < 0 or i >= StoryData.BUILDERS.size():
-		return null
-	var l := Label.new()
-	l.text = tr(StoryData.BUILDERS[i])
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.custom_minimum_size.x = 640
-	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.add_theme_font_override("font", UiStyle.SPECTRAL_MEDIUM)
-	l.add_theme_font_size_override("font_size", 16)
-	l.add_theme_color_override("font_color", UiStyle.INK_SOFT)
 	return l
 
 # A hairline between the tally's counts
@@ -1648,6 +1754,7 @@ func set_player_color(slot: int, color: Color, trade := -1) -> void:
 	if slot >= _cards.size():
 		return
 	_slot_colors[slot] = color
+	_slot_trades[slot] = trade
 	(_cards[slot].portrait as CrewPortrait).set_worker(trade if trade >= 0 else slot, color)
 	(_cards[slot].mark as CrewMark).set_mark(slot, color)
 	var card := (UiStyle.theme_card() as StyleBoxFlat).duplicate() as StyleBoxFlat

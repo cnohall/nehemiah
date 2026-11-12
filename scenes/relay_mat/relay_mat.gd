@@ -2,11 +2,11 @@ class_name RelayMat
 extends Node3D
 
 # The long haul ("haul" twist, Gate of the Ash Heaps): a reed mat halfway between the far yard and the
-# wall. A load dropped on it is stacked in a free place instead of landing loose, so one
-# worker can run the yard end and another the wall end. A porter works the second half: he
-# carries what lies on the mat to the wall that wants it — when the mat is full, or a
-# little after the first load lands. Loads on the mat stay ordinary dropped items until he
-# lifts them: anyone may still take one with [E]. Every peer builds it.
+# wall, with its porter standing on it. Hand him a load with [E] (the same press as at a
+# wall) and he carries it the rest of the way: the mat halves a runner's trip. He goes
+# when the mat is full, or a few seconds after the first load lands. Loads on the mat stay
+# ordinary dropped items until he lifts them: anyone may still take one with [E]. Every
+# peer builds it.
 
 const AT      := Vector3(15.0, 0.0, 7.5)   # between the Gate of the Ash Heaps yard (30, 9) and the gate
 const SLOTS   := 6
@@ -18,7 +18,7 @@ const NEAR := 8.0          # the mat explains itself to anyone this close
 static var told := false
 
 const DROPPED_ITEM := preload("res://scenes/dropped_item/dropped_item.tscn")
-const PORTER_EVERY := 15.0   # a trip leaves this long after the first load lands…
+const PORTER_EVERY := 5.0    # a trip leaves this long after the first load lands…
 const PORTER_SPEED := 3.2    # …or at once when the mat is full; slower than a running worker
 const PORTER_LOADS := 4      # what he can take in one trip (the mat holds SLOTS)
 const PORTER_STOP  := 2.5    # he halts this far short of the wall's centre
@@ -64,6 +64,37 @@ func _refresh() -> void:
 	if not on:
 		_reset_porter()
 
+## Delivery API (as a wall's): a load the mat takes with [E]: one some wall still wants,
+## while there's room
+func needs(kind: String) -> bool:
+	return visible and kind != "beam" and kind != "debris" and free_slot() != Vector3.INF \
+		and _site_for(kind) != null
+
+func can_build() -> bool:
+	return false
+
+## Server: set the load on a free place of the mat
+func deposit(kind: String, _n: int) -> bool:
+	if not needs(kind):
+		return false
+	var at := free_slot()
+	_spawn_item(kind, at)
+	return true
+
+## Loads on their way to a wall through the mat (lying on it, or in the porter's arms)
+func pending_kinds() -> Dictionary:
+	var out := {}
+	for it: Node3D in get_tree().get_nodes_in_group("dropped_items"):
+		if on_mat(it):
+			out[it.kind] = out.get(it.kind, 0) + 1
+	for k: String in _kinds:
+		out[k] = out.get(k, 0) + 1
+	return out
+
+func on_mat(it: Node3D) -> bool:
+	return visible and Vector2(it.global_position.x - global_position.x,
+		it.global_position.z - global_position.z).length() < SLOT_GAP * 1.6
+
 ## Stack places, world space, in fill order
 func slots() -> Array[Vector3]:
 	var out: Array[Vector3] = []
@@ -82,14 +113,14 @@ func free_slot() -> Vector3:
 func loads() -> int:
 	var n := 0
 	for it: Node3D in get_tree().get_nodes_in_group("dropped_items"):
-		if Vector2(it.global_position.x - global_position.x, it.global_position.z - global_position.z).length() < SLOT_GAP * 1.6:
+		if on_mat(it):
 			n += 1
 	return n
 
 func _process(delta: float) -> void:
 	if not visible or _label == null:
 		return
-	_label.text = tr("Relay mat  %d/%d") % [loads(), SLOTS]
+	_label.text = tr("Porter  %d/%d") % [loads(), SLOTS]
 	_hint.visible = Player.local != null and Player.local.global_position.distance_to(global_position) < NEAR
 	if _hint.visible:
 		_hint.text = _hint_text(loads())
@@ -101,12 +132,12 @@ func _process(delta: float) -> void:
 ## What the mat tells whoever stands near it: what it is for, then what the porter is doing
 func _hint_text(n: int) -> String:
 	if _leg == Leg.OUT:
-		return tr("The porter is carrying them to the wall")
+		return tr("Carrying them to the wall")
 	if _leg == Leg.BACK:
-		return tr("The porter walks back for more")
+		return tr("Coming back for more")
 	if n > 0:
-		return tr("The porter will carry these to the wall")
-	return tr("Drop loads here. A porter carries them to the wall")
+		return tr("Off to the wall soon")
+	return tr("Hand me loads. I carry them to the wall")
 
 ## Server: a trip leaves when the mat is full, or PORTER_EVERY after the first load landed
 func _dispatch(delta: float) -> void:
@@ -137,8 +168,7 @@ func _send_porter() -> bool:
 	for it: Node3D in get_tree().get_nodes_in_group("dropped_items"):
 		if kinds.size() >= PORTER_LOADS:
 			break
-		if it.kind == "beam" or Vector2(it.global_position.x - global_position.x,
-				it.global_position.z - global_position.z).length() >= SLOT_GAP * 1.6:
+		if it.kind == "beam" or not on_mat(it):
 			continue
 		if site == null:
 			site = _site_for(it.kind)
@@ -160,7 +190,6 @@ func _porter_go(dest: Vector3, kinds: Array) -> void:
 	_kinds = kinds
 	_leg = Leg.OUT
 	_porter.global_position = _home_stand()
-	_porter.visible = true
 	for c in _cargo.get_children():
 		c.queue_free()
 	for i in kinds.size():
@@ -225,7 +254,8 @@ func _reset_porter() -> void:
 	_leg = Leg.HOME
 	_timer = 0.0
 	if _porter != null:
-		_porter.visible = false
+		# He waits on the mat, in plain view: someone to hand loads to
+		_porter.global_position = _home_stand()
 		_rig.play("idle_down")
 		_rig.hold = ""
 		for c in _cargo.get_children():
@@ -237,11 +267,12 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 
 func _build_porter() -> void:
 	_porter = Node3D.new()
-	_porter.visible = false
 	add_child(_porter)
 	_rig = CharacterRig.new()
 	_porter.add_child(_rig)
 	_rig.setup(PORTER_LOOK)
+	_porter.position = Vector3(0, 0, SLOT_GAP * 1.6)   # _home_stand()
+	_rig.play("idle_down")
 	# The loads ride hugged at his chest, turning and bobbing with him (as a player's do)
 	_cargo = Node3D.new()
 	_cargo.position = Vector3(0, -0.12, 0.02)

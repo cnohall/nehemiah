@@ -23,9 +23,19 @@ var today_progress := 0.0:
 		today_progress = clampf(v, 0.0, 1.0)
 		queue_redraw()
 
+## A finished stretch's tally: >= 0 draws the circuit by stretch, not by day: those
+## before it filled, this one standing taller and filling with `today_progress`
+var stretch := -1:
+	set(v):
+		stretch = v
+		queue_redraw()
+
 func _draw() -> void:
 	var sections: Array = GameState.SECTIONS
 	var span := size.x - GAP * (sections.size() - 1)
+	if stretch >= 0:
+		_draw_stretches(sections, span)
+		return
 	# The current section gets at least CUR_SHARE of the strip so its day cells read;
 	# the rest share what's left in proportion to their day counts.
 	var cur_days := 0
@@ -46,6 +56,20 @@ func _draw() -> void:
 			_well(r)
 			if days.back() < day:
 				_fill(r)
+		x += w + GAP
+
+func _draw_stretches(sections: Array, span: float) -> void:
+	var x := 0.0
+	for i in sections.size():
+		var w := span * (sections[i]["days"] as Array).size() / GameState.TOTAL_DAYS
+		var here := i == stretch
+		var h := CUR_H if here else BAR_H
+		var r := Rect2(x, (size.y - h) * 0.5, w, h)
+		_well(r)
+		if i < stretch:
+			_fill(r)
+		elif here and today_progress > 0.0:
+			_fill(Rect2(r.position, Vector2(w * today_progress, h)))
 		x += w + GAP
 
 func _draw_current(r: Rect2, days: Array) -> void:

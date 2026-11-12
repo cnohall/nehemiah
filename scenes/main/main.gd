@@ -255,6 +255,7 @@ func _follow_local_player(delta: float) -> void:
 		p = local_player.global_position + _lead
 	var desired := p + _cam_offset()
 	desired.y = CAM_OFFSET.y
+	desired += _tally_lift_offset(delta)
 	if not _cam_snapped:
 		# Snap on first frame instead of swooping in from the scene origin
 		_cam_base = desired
@@ -262,6 +263,28 @@ func _follow_local_player(delta: float) -> void:
 	else:
 		_cam_base = _cam_base.lerp(desired, minf(1.0, delta * smooth))
 	camera.global_position = _cam_base + _shake_offset(delta)
+
+## A finished stretch's tally sits mid-screen (GameHud._fit_tally): the crew it names
+## shouldn't stand behind it. The view slides so the follow point sits TALLY_LIFT of the
+## screen higher, in the clear above the band, and slides back when the tally goes.
+const TALLY_LIFT := 0.24        # share of the screen's height
+const TALLY_LIFT_SPEED := 1.2   # 0→1 per second
+var _tally_lift := 0.0
+
+func _tally_lift_offset(delta: float) -> Vector3:
+	var want := 1.0 if hud != null and hud.stretch_tally_up() else 0.0
+	_tally_lift = move_toward(_tally_lift, want, delta * TALLY_LIFT_SPEED)
+	if _tally_lift <= 0.0:
+		return Vector3.ZERO
+	# Screen-up, laid on the ground: moving the camera back along it lifts the world.
+	# A ground step g shows as g·(dir·up) of screen height (size = the view's height)
+	var up := camera.global_basis.y
+	var dir := Vector3(up.x, 0.0, up.z)
+	if dir.length() < 0.01:
+		return Vector3.ZERO
+	dir = dir.normalized()
+	var g := TALLY_LIFT * camera.size / maxf(dir.dot(up), 0.2)
+	return -dir * g * smoothstep(0.0, 1.0, _tally_lift)
 
 # Explore Jerusalem wanders the whole city: it always follows
 func _fixed_cam() -> bool:
