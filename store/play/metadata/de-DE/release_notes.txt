@@ -1,6 +1,6 @@
 Neu in diesem Build:
 • Neue, handgemachte Figuren für die ganze Mannschaft, die Feinde, die Stadtleute und die Wache
 • Ein Ladebildschirm mit der Karte des Abschnitts, einem Vers aus Nehemia 3 und Tipps
-• Feinde kommen in geformten Wellen statt in einem steten Strom
+• Angriffe kommen in klareren Wellen, dazwischen nur wenige Feinde
 • Einstellungen in einer übersichtlichen Liste; weniger zum Herumprobieren
 • Kürzeres Morgenbanner: Tag, Ort und Frist

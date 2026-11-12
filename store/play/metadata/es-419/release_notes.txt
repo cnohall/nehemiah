@@ -1,6 +1,6 @@
 Novedades de esta versión:
 • Nuevas figuras hechas a mano para todo el equipo, los enemigos, la gente de la ciudad y la guardia
 • Una pantalla de carga con el mapa del tramo, un versículo de Nehemías 3 y consejos
-• Los enemigos llegan en oleadas con forma en vez de un goteo constante
+• Los ataques llegan en oleadas más claras, con pocos enemigos entre ellas
 • Ajustes en una sola lista ordenada; menos opciones que tocar
 • Anuncio del amanecer más corto: el día, el lugar y el plazo

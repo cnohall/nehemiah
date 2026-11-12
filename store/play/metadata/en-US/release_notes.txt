@@ -1,6 +1,6 @@
 New in this build:
 • New hand-made figures for the whole crew, enemies, townsfolk and the watch
 • A loading screen with the stretch map, a verse from Nehemiah 3 and tips
-• Enemies come in shaped waves instead of a steady trickle
+• Attacks come in clearer waves, with a thin stream of enemies between
 • Settings in one tidy list; fewer options to fiddle with
 • Shorter dawn banner: the day, the place and the deadline

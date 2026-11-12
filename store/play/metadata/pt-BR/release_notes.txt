@@ -1,6 +1,6 @@
 Novidades desta versão:
 • Novas figuras feitas à mão para toda a equipe, os inimigos, o povo da cidade e a guarda
 • Uma tela de carregamento com o mapa do trecho, um versículo de Neemias 3 e dicas
-• Os inimigos chegam em ondas com forma, em vez de um fluxo constante
+• Os ataques chegam em ondas mais claras, com poucos inimigos entre elas
 • Configurações numa só lista organizada; menos opções para mexer
 • Aviso do amanhecer mais curto: o dia, o lugar e o prazo
