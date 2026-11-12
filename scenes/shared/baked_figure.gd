@@ -10,6 +10,7 @@ extends Node3D
 const SHADER := preload("res://assets/shaders/baked_figure.gdshader")
 const SHADER_TEX := preload("res://assets/shaders/baked_figure_tex.gdshader")
 static var _material: ShaderMaterial
+static var _web_shaders := {}       # shader -> its copy with plain uniforms (WebGL)
 static var _textured := {}           # glb path → ShaderMaterial (figures with painted textures)
 ## The skin tone a tinted figure (a foe, build_crew.py) is painted in: CharacterRig.SKIN[0]
 const SKIN_PAINTED := Color(0.76, 0.55, 0.40)
@@ -109,16 +110,41 @@ static func _material_for(path: String) -> ShaderMaterial:
 		_material.shader = SHADER
 	return _material
 
+static func _web_copy(m: ShaderMaterial) -> ShaderMaterial:
+	var sh := m.shader
+	if not _web_shaders.has(sh):
+		var w := Shader.new()
+		w.code = sh.code.replace("instance uniform", "uniform")
+		_web_shaders[sh] = w
+	var c := ShaderMaterial.new()
+	c.shader = _web_shaders[sh]
+	for u: Dictionary in sh.get_shader_uniform_list():
+		var v: Variant = m.get_shader_parameter(u.name)
+		if v != null:
+			c.set_shader_parameter(u.name, v)
+	return c
+
 func _setup(rig: Node3D, inst: Node3D, material: ShaderMaterial) -> void:
 	_rig = rig
 	add_child(inst)
+	var dye: Color = rig._look.get("dye", rig._look.get("hat_color", Color.WHITE))
+	var skin: Color = rig._look.get("skin", SKIN_PAINTED)
+	var worn := skin.srgb_to_linear()
+	var painted := SKIN_PAINTED.srgb_to_linear()
+	var tint := Vector3(worn.r / painted.r, worn.g / painted.g, worn.b / painted.b)
+	# WebGL drops instance uniforms (the figure came out undyed, its skin untinted): the
+	# figure gets its own material with plain uniforms, which the rig's flash also drives
+	var web := not CharacterRig._instance_uniforms
+	if web:
+		material = _web_copy(material)
+		material.set_shader_parameter("dye", dye)
+		material.set_shader_parameter("skin_tint", tint)
+		rig._web_mats[&"baked_figure"] = material
 	for mi: MeshInstance3D in inst.find_children("*", "MeshInstance3D", true, false):
 		mi.material_override = material
-		mi.set_instance_shader_parameter("dye", rig._look.get("dye", rig._look.get("hat_color", Color.WHITE)))
-		var skin: Color = rig._look.get("skin", SKIN_PAINTED)
-		var a := skin.srgb_to_linear()
-		var b := SKIN_PAINTED.srgb_to_linear()
-		mi.set_instance_shader_parameter("skin_tint", Vector3(a.r / b.r, a.g / b.g, a.b / b.b))
+		if not web:
+			mi.set_instance_shader_parameter("dye", dye)
+			mi.set_instance_shader_parameter("skin_tint", tint)
 		# A foe keeps his dark outline (CharacterRig: oxblood round the big forms)
 		if rig._outline_mat != null:
 			mi.material_overlay = rig._outline_mat
