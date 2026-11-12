@@ -57,6 +57,8 @@ var screen_lift := 0.0
 var pulse := false
 ## Never fades for a worker behind it: this tag has to be read (FirstSteps)
 var solid := false
+## How far it fades for a worker behind it (a tag that must stay readable fades less)
+var see_through_alpha := SEE_THROUGH_ALPHA
 ## Slide in from the screen edge when the spot is off-screen (false: just hide)
 var clamp_to_screen := true
 ## A site's name stacks word over word (a narrow sign over a narrow thing)
@@ -154,7 +156,7 @@ func _process(_delta: float) -> void:
 	# A worker standing behind the tag shows through it
 	var covers := not solid and _covers_player(cam, Rect2(at, sz).grow(4.0))
 	_see_through = move_toward(_see_through, 1.0 if covers else 0.0, _delta * SEE_THROUGH_SPEED)
-	_root.modulate = modulate * Color(1, 1, 1, lerpf(1.0, SEE_THROUGH_ALPHA, _see_through))
+	_root.modulate = modulate * Color(1, 1, 1, lerpf(1.0, see_through_alpha, _see_through))
 	_bump = maxf(0.0, _bump - _delta / BUMP_TIME)
 	if pulse or _bump > 0.0:
 		var k := 1.0 + (PULSE_AMOUNT * (0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.005)) if pulse else 0.0)

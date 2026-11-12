@@ -2672,3 +2672,102 @@ msgstr "조준하고 쏘기"
 
 msgid "Your game and the host's are different versions. Both of you need the same build to play together."
 msgstr "내 게임과 호스트의 게임 버전이 다릅니다. 함께 하려면 두 사람 모두 같은 버전이어야 합니다."
+
+msgid "Opening the gates"
+msgstr "성문을 여는 중"
+
+msgid "Gathering the builders"
+msgstr "일꾼들을 모으는 중"
+
+msgid "Back to the city"
+msgstr "도성으로 돌아가는 중"
+
+msgid "Cancel"
+msgstr "취소"
+
+msgid "Carry the load to the wall, then work it up with your own hands."
+msgstr "재료를 성벽까지 나른 다음, 직접 손으로 쌓아 올리세요."
+
+msgid "Foes come while you build. Drive them off, then go back to the work."
+msgstr "건축하는 동안 적이 몰려옵니다. 물리친 다음 다시 일하러 가세요."
+
+msgid "If ten foes reach the inner city, the city falls."
+msgstr "적 열 명이 성 안쪽까지 들어오면 성이 함락됩니다."
+
+msgid "Each stretch has three marks to earn: In good time, None got through, The wall holds."
+msgstr "구간마다 얻을 수 있는 표식이 셋 있습니다: 제때 완공, 침입 없음, 성벽이 견고함."
+
+msgid "The campaign is kept at the start of each stretch. Continue picks it up from there."
+msgstr "캠페인은 각 구간이 시작될 때 저장됩니다. 이어하기로 거기서부터 계속하세요."
+
+msgid "Every stretch you have built can be played again from the map."
+msgstr "완성한 구간은 지도에서 다시 플레이할 수 있습니다."
+
+msgid "Playing alone: bots fill the crew, and come to the work or the fight when you call."
+msgstr "혼자 할 때는 봇이 작업단을 채우고, 부르면 작업이나 싸움에 달려옵니다."
+
+msgid "Rush"
+msgstr "돌격"
+
+msgid "Pincer"
+msgstr "협공"
+
+msgid "Ram"
+msgstr "공성"
+
+msgid "Raid"
+msgstr "약탈"
+
+msgid "Scouts running in: %s!"
+msgstr "척후병이 달려옵니다: %s!"
+
+msgid "Both ends at once: %s!"
+msgstr "양쪽 끝에서 동시에: %s!"
+
+msgid "Brutes for the wall: %s!"
+msgstr "난폭자들이 성벽으로: %s!"
+
+msgid "Raiders for the piles: %s!"
+msgstr "약탈자들이 더미로: %s!"
+
+msgid "The army of Samaria is camping on the hill!"
+msgstr "사마리아 군대가 언덕에 진을 칩니다!"
+
+msgid "Geshem's Arabs have joined them!"
+msgstr "게셈의 아랍인들이 합류했습니다!"
+
+msgid "Sanballat's men, both ends! Hold the old gate!"
+msgstr "산발랏의 부하들, 양쪽 끝입니다! 옛 문을 지키십시오!"
+
+msgid "Will they revive the stones out of the heaps of rubbish, since they are burned?"
+msgstr "불탄 돌을 잿더미에서 다시 살려 내겠다는 것인가?"
+
+msgid "Set a watch"
+msgstr "파수꾼 세우기"
+
+msgid "How will you meet it? Stand in a ring"
+msgstr "어떻게 맞서겠습니까? 원 안에 서십시오"
+
+msgid "%s!"
+msgstr "%s!"
+
+msgid "General"
+msgstr "일반"
+
+msgid "Audio"
+msgstr "오디오"
+
+msgid "Controls"
+msgstr "조작"
+
+msgid "Experimental"
+msgstr "실험"
+
+msgid "Reset keys"
+msgstr "키 초기화"
+
+msgid "Saved at the start of each stretch. Continue from the title screen"
+msgstr "각 구간이 시작될 때 저장됩니다. 타이틀 화면에서 이어하기"
+
+msgid "Stand here to choose"
+msgstr "여기 서서 고르기"

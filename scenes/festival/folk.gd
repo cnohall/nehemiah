@@ -311,4 +311,17 @@ static func look_for(kind: String, dye: Color, seed_value: int) -> Dictionary:
 			l.merge({"beard": "long", "hair": Color(0.7, 0.68, 0.64), "hat": "wrap", "hat_color": Color(0.97, 0.96, 0.92),
 				"band": Palette.MUREX, "robe": Color(0.95, 0.93, 0.88), "long_robe": true, "vest": Palette.MUREX,
 				"scroll": Color(0.90, 0.82, 0.62)}, true)
+	# Each kind authored in Blender (tools/blender/build_crew.py) on a crew figure's frame. A
+	# baked figure takes one dye (BakedFigure): the townsperson's own, or the colour that marks
+	# the office (the priest's indigo, the governor's saffron, the scribe's murex)
+	l.erase("baked")
+	if not "--crew-v1" in OS.get_cmdline_user_args() and kind in ["man", "woman", "child", "elder", "priest", "scribe", "governor"]:
+		l["baked"] = "res://assets/models/figures/%s_v2.glb" % kind
+		match kind:
+			"priest":
+				l["dye"] = Palette.INDIGO
+			"scribe":
+				l["dye"] = Palette.MUREX
+			"governor":
+				l["dye"] = Palette.SAFFRON
 	return l

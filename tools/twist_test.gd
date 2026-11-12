@@ -199,9 +199,11 @@ func _finish() -> bool:
 	quit(0 if _fails == 0 else 1)
 	return true
 
+## Pointers with this text; "Wave" counts every wave shape (WaveManager v2 names its packs)
 func _pings(text: String) -> int:
 	var alerts = _main.get_tree().get_first_node_in_group("offscreen_alerts")
-	return alerts._pings.filter(func(p): return p[2] == text).size()
+	var names: Array = ["Wave", "Rush", "Pincer", "Ram", "Raid"] if text == "Wave" else [text]
+	return alerts._pings.filter(func(p): return p[2] in names).size()
 
 func _press(action := "interact") -> void:
 	Input.action_press(action)

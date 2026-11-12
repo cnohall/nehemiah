@@ -1,11 +1,14 @@
 extends SceneTree
 
 # Draw-call / frame-time probe: a crowd of enemies on an iso camera.
-#   Godot --path . --disable-vsync --script res://tools/perf_crowd.gd -- [--old] [--count=40] [--builder [--baked]]
+#   Godot --path . --disable-vsync --script res://tools/perf_crowd.gd -- [--old] [--count=40] [--builder [--baked | --v2]]
 # --builder: a crowd of the builder instead; --baked: his Blender figure (BakedFigure)
+# --crew: the four crew figures in turn, as the game shows them (add --crew-v1 for the code rigs)
 var _old := false
 var _builder := false
+var _crew := false
 var _baked := false
+var _glb := "res://assets/models/figures/builder.glb"
 var _count := 40
 var _frame := 0
 var _t0 := 0
@@ -14,10 +17,15 @@ func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a == "--old":
 			_old = true
+		elif a == "--crew":
+			_crew = true
 		elif a == "--builder":
 			_builder = true
 		elif a == "--baked":
 			_baked = true
+		elif a == "--v2":   # the builder authored in Blender (tools/blender/build_crew.py)
+			_baked = true
+			_glb = "res://assets/models/figures/builder_v2.glb"
 		elif a.begins_with("--count="):
 			_count = int(a.substr(8))
 	root.size = Vector2i(1920, 1080)
@@ -36,10 +44,13 @@ func _initialize() -> void:
 	var kinds := ["scout", "brute", "raider"]
 	for i in _count:
 		var look := CharacterRig.enemy_look(kinds[i % 3])
-		if _builder:
+		if _crew:
+			look = CharacterRig.worker_look(i % 4, Palette.CREW[i % 4])
+		elif _builder:
 			look = CharacterRig.worker_look(0, Palette.CREW[0])
+			look.erase("baked")
 			if _baked:
-				look["baked"] = "res://assets/models/figures/builder.glb"
+				look["baked"] = _glb
 		if _old:
 			look["sculpted_body"] = false
 			look["sculpted_builder"] = false
@@ -60,7 +71,7 @@ func _process(_d: float) -> bool:
 		_t0 = Time.get_ticks_usec()
 	if _frame == 360:
 		var ms := (Time.get_ticks_usec() - _t0) / 300.0 / 1000.0
-		print("%s count=%d draws=%d prims=%d objs=%d frame=%.2f ms" % ["BAKED" if _baked else ("BUILDER" if _builder else ("OLD" if _old else "NEW")), _count,
+		print("%s count=%d draws=%d prims=%d objs=%d frame=%.2f ms" % ["CREW" if _crew else "BAKED" if _baked else ("BUILDER" if _builder else ("OLD" if _old else "NEW")), _count,
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), ms])

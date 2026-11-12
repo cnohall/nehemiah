@@ -27,8 +27,8 @@ func _ready() -> void:
 
 func _before_tick() -> void:
 	var n := get_parent() as Node3D
-	if n == null or not _ready_once:
-		return
+	if n == null or not _ready_once or not is_inside_tree():
+		return   # the tree's signal still reaches a node lifted out with its scene
 	if n.global_position.is_equal_approx(_drawn):
 		n.global_position = _curr   # undo the blend: physics runs from the true spot
 	else:

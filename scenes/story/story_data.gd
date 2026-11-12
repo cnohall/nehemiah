@@ -44,6 +44,24 @@ const SECTION_LINES := [
 	"The last stretch: from the Inspection Gate back around to the Sheep Gate. Close the circuit.",
 ]
 
+# One verse of Neh 3 per stretch (index = GameState.SECTIONS index), quoted from the WEB:
+# shown on the load cover over the map. The same lines the festival's builders speak
+# (Festival.BUILDERS), so the catalogs already carry them.
+const VERSES := [
+	["Then Eliashib the high priest rose up with his brothers the priests, and they built the sheep gate.", "Neh. 3:1"],
+	["The sons of Hassenaah built the fish gate. They laid its beams, and set up its doors, its bolts, and its bars.", "Neh. 3:3"],
+	["Joiada the son of Paseah and Meshullam the son of Besodeiah repaired the old gate.", "Neh. 3:6"],
+	["Next to him, Hananiah, one of the perfumers, made repairs, and they fortified Jerusalem even to the wide wall.", "Neh. 3:8"],
+	["Malchijah the son of Harim and Hasshub the son of Pahathmoab repaired another portion and the tower of the furnaces.", "Neh. 3:11"],
+	["Hanun and the inhabitants of Zanoah repaired the valley gate.", "Neh. 3:13"],
+	["Malchijah the son of Rechab, the ruler of the district of Beth Haccherem, repaired the dung gate.", "Neh. 3:14"],
+	["Shallun the son of Colhozeh, the ruler of the district of Mizpah, repaired the spring gate.", "Neh. 3:15"],
+	["Now the temple servants lived in Ophel, to the place opposite the water gate toward the east, and the tower that stands out.", "Neh. 3:26"],
+	["Above the horse gate, the priests made repairs, everyone across from his own house.", "Neh. 3:28"],
+	["After him, Shemaiah the son of Shecaniah, the keeper of the east gate, made repairs.", "Neh. 3:29"],
+	["Malchijah, one of the goldsmiths to the house of the temple servants, and of the merchants, made repairs opposite the gate of Hammiphkad and to the ascent of the corner.", "Neh. 3:31"],
+]
+
 # Who built each stretch, in Neh 3's own "next to him" chain (index = GameState.SECTIONS
 # index). Shown on the tally when the stretch stands. Names only, picked from the chapter's
 # verses for that stretch — the real texture of the passage; trimmed to fit a line or two.
@@ -190,7 +208,7 @@ static func slides_for_day(day: int) -> Array:
 			"title": TWIST_TITLES.get(twist, twist),
 			"twist": twist,
 		})
-	if choice_offered(i):
+	if choice_offered(i) and not GameState.yard_choice:   # else it's made in the yard (YardChoice)
 		slides.append({
 			"eyebrow": "Before the work",
 			"title": "How will you meet it?",
@@ -201,11 +219,13 @@ static func slides_for_day(day: int) -> Array:
 		})
 	return slides
 
-## The last card before a new stretch asks how the crew will meet it (campaign only, from the
-## Valley Gate: the first five stretches each bring one new thing, and a choice is another)
-const CHOICES_FROM := 5
+## How the crew will meet a new stretch: asked in the yard at its first dawn (YardChoice), or
+## with `--card-choice` on the last card before it. Campaign only, from the Broad Wall: the
+## answer to Samaria's army on the hill at the Jeshanah Gate's end (Neh. 4:2, 4:9; GDD §5.28).
+## It was the Valley Gate (5) until Nov 2026: too late, past where most crews stopped
+const CHOICES_FROM := 3
 static func choice_offered(section_index: int) -> bool:
-	return section_index >= CHOICES_FROM and not GameState.is_replay() and not GameState.free_play() and not GameState.attract 		and not GameState.simplified()
+	return section_index >= CHOICES_FROM and not GameState.is_replay() and not GameState.free_play() and not GameState.attract
 
 const TWIST_TITLES := {
 	"doors": "Hang the doors", "mortar": "Mortar", "posts": "The watch", "beams": "Beams take two", "salvage": "Stone from the rubble",

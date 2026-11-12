@@ -186,6 +186,10 @@ static var _outlines: Dictionary = {}
 # ── Looks ──────────────────────────────────────────────────
 
 const TRADES := ["Builder", "Water carrier", "Carpenter", "Overseer"]
+const FOE_FIGURES := {"scout": "res://assets/models/figures/scout_v2.glb", "brute": "res://assets/models/figures/brute_v2.glb",
+	"raider": "res://assets/models/figures/raider_v2.glb", "saboteur": "res://assets/models/figures/saboteur_v2.glb"}
+const CREW_FIGURES := ["res://assets/models/figures/builder_v2.glb", "res://assets/models/figures/water_carrier_v2.glb",
+	"res://assets/models/figures/carpenter_v2.glb", "res://assets/models/figures/overseer_v2.glb"]
 
 ## A worker, one trade per player slot (the crew of Neh. 4 — builders, burden-bearers,
 ## craftsmen, and one giving directions). The slot colour is the dye each trade wears:
@@ -199,6 +203,7 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 	var look := {
 		"robe": LINEN, "trim": LINEN.darkened(0.12), "sash": LEATHER, "band": BAND,
 		"outline": OUTLINE_PLAYER, "no_outline": true, "tool": true, "sword": true, "hat": "band", "hat_color": dye,
+		"dye": dye,   # the crew colour a baked figure (BakedFigure) multiplies its dyed cloth by
 	}
 	match slot % 4:
 		0:
@@ -222,6 +227,10 @@ static func worker_look(slot: int, color: Color) -> Dictionary:
 				"vest": dye, "long_robe": true, "scroll": Color(0.90, 0.82, 0.62),
 				"trim": dye.darkened(0.2), "brow": Color(0.62, 0.60, 0.56),
 				"sculpted_builder": true, "sculpted_body": true}, true)
+	# The crew as authored in Blender (tools/blender/build_crew.py), worn over the rig's pivots
+	# (BakedFigure). --crew-v1 falls back to the figures built in code.
+	if not "--crew-v1" in OS.get_cmdline_user_args():
+		look["baked"] = CREW_FIGURES[slot % 4]
 	return look
 
 ## Enemies: dark goat-hair cloth, oxblood rim, a silhouette per type. Never told apart by
@@ -251,6 +260,8 @@ static func enemy_look(kind: String, variant := 0) -> Dictionary:
 			base.merge({"robe": Color(0.36, 0.28, 0.22), "sash": Color(0.62, 0.20, 0.14),
 				"hat": "hood", "hat_color": Color(0.17, 0.14, 0.13), "beard": "short", "weapon": "spear"})
 	base.merge({"belt_color": base["sash"], "sculpted_builder": true, "sculpted_body": true})
+	if not "--crew-v1" in OS.get_cmdline_user_args() and FOE_FIGURES.has(kind):
+		base["baked"] = FOE_FIGURES[kind]
 	return base
 
 # ── Setup ──────────────────────────────────────────────────
@@ -1642,12 +1653,21 @@ func _part(parent: Node3D, mesh: Mesh, color: Color, pos: Vector3, rot := Vector
 static var _merged: Dictionary = {}   # look → Array of merged meshes, in group order
 
 func _merge_parts(look: Dictionary) -> void:
-	var is_part := {}
+	# A Blender figure (BakedFigure) is already one skinned mesh, tinted per instance (dye,
+	# skin_tint): folding it would lose both and its skinning, so it stays as it is
+	var kept: Array[GeometryInstance3D] = []
+	var merge: Array[GeometryInstance3D] = []
 	for p in _parts:
+		if _baked_figure != null and _baked_figure.is_ancestor_of(p):
+			kept.append(p)
+		else:
+			merge.append(p)
+	var is_part := {}
+	for p in merge:
 		is_part[p] = true
 	var groups: Array[Dictionary] = []
 	var by_key := {}
-	for p: GeometryInstance3D in _parts:
+	for p: GeometryInstance3D in merge:
 		var mi := p as MeshInstance3D
 		# Parts can hang off other parts (a scarf's stripe off its tail): fold up to the pivot
 		var xf := mi.transform
@@ -1672,10 +1692,10 @@ func _merge_parts(look: Dictionary) -> void:
 		for g in groups:
 			meshes.append(MeshFold.fold(g.items))
 		_merged[cache_key] = meshes
-	for p in _parts:
+	for p in merge:
 		if is_instance_valid(p) and not is_part.has(p.get_parent()):
 			p.free()   # takes any parts hanging off it along
-	_parts.clear()
+	_parts.assign(kept)
 	for i in groups.size():
 		var g: Dictionary = groups[i]
 		var mi := MeshInstance3D.new()

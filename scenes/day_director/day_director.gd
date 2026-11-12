@@ -42,9 +42,9 @@ const SETBACK_LINES := {
 }
 const DAWN_TIME        := 5.0
 const FRESH_DAWN_TIME  := 9.0   # a new stretch's first dawn: time to look round before the work starts
+const CHOSEN_DAWN      := 3.0   # after the yard choice closes: time to see the pick before the work
 const DUSK_TIME        := 9.0   # long enough to read the tally (title screen: nobody to wait for)
 const DUSK_MIN         := 4.0   # the cheer plays out even if everyone is ready at once
-const SECTION_DUSK_TIME := 11.0 # simple game: a stretch's last tally (after the wall cam) moves on by itself
 const CELEBRATE_STEP   := 0.12  # seconds between each finished unit's flourish
 const NAV_REBAKE_DELAY := 0.4
 const REPAIR_ON_DAWN   := 0.5   # fraction of lost health restored overnight
@@ -163,6 +163,10 @@ func _process(delta: float) -> void:
 	_tick_nav(delta)
 	match GameState.phase:
 		GameState.Phase.DAWN:
+			var yard := _yard_choice()
+			if yard != null and yard.open:
+				_timer = CHOSEN_DAWN   # the crew is choosing in the yard; once it closes, a breath and to work
+				return
 			_timer -= delta
 			if _timer <= 0.0:
 				GameState.set_phase(GameState.Phase.WORK)
@@ -223,7 +227,7 @@ func _setback_at_dawn() -> void:
 		_setback_report.rpc("lifted", 0.0, 0)
 	if pos.x == 0 and GameState.hungry_left > 0:
 		_setback_report.rpc("hungry", 0.0, GameState.hungry_left)
-	if LETTER.get(i, -1) == pos.x and pos.x < pos.y - 1 and not GameState.simplified():
+	if LETTER.get(i, -1) == pos.x and pos.x < pos.y - 1:
 		_letter_open = true
 		_setback_report.rpc("letter", 0.0, 0)
 	if FOX.get(i, -1) == pos.x:
@@ -285,11 +289,10 @@ func _night_raid() -> void:
 		return
 	for n in RAID_STAGES:
 		piece._degrade()
-	# "Much rubble": the yard's loads are strewn too, tidied like a saboteur's (§5.9).
-	# Not in the simple game, which has no tidying up
+	# "Much rubble": the yard's loads are strewn too, tidied like a saboteur's (§5.9)
 	var strewn := 0
 	for pile: Node in get_tree().get_nodes_in_group("supply_piles"):
-		if not GameState.simplified() and strewn < RAID_STREWN and pile.kind in ["stone", "wood"] and pile.scatter():
+		if strewn < RAID_STREWN and pile.kind in ["stone", "wood"] and pile.scatter():
 			strewn += 1
 	print("DayDirector: night raid pulled down %s, strewed %d piles" % [piece.name, strewn])
 	_setback_report.rpc("hit", piece.global_position.x, 0)
@@ -351,7 +354,12 @@ func _begin_day() -> void:
 			for arg in OS.get_cmdline_user_args():
 				if arg.begins_with("--boon=") and GameState.BOONS.has(arg.trim_prefix("--boon=")):
 					_chosen_boon = arg.trim_prefix("--boon=")
-		GameState.set_boon(_chosen_boon)
+		var yard := _yard_choice()
+		if _chosen_boon.is_empty() and yard != null and GameState.yard_choice 				and StoryData.choice_offered(GameState.current_section_index):
+			GameState.set_boon("")
+			yard.begin(GameState.choices_for(GameState.current_section_index))   # the dawn waits for it
+		else:
+			GameState.set_boon(_chosen_boon)
 		_chosen_boon = ""
 		if GameState.boon_posts():
 			get_tree().call_group("watch_posts", "fortify")
@@ -439,9 +447,6 @@ func _end_day(nightfall := false) -> void:
 	# crew has nobody to wait for
 	if GameState.attract:
 		_timer = DUSK_TIME
-	elif _section_done() and GameState.simplified():
-		# Simple game: the story cards that follow are the one stop; this tally doesn't wait
-		_timer = SECTION_DUSK_TIME
 	else:
 		_timer = DUSK_MIN
 		_open_wait("tally")
@@ -454,7 +459,7 @@ func _rate_section() -> void:
 	var spare := pos.y - 1 - pos.x
 	var health := _wall_health()
 	var mask := 0
-	if spare >= GameState.pace_spare_needed(i) and GameState.Mark.PACE in GameState.marks_in_play():
+	if spare >= GameState.pace_spare_needed(i):
 		mask |= GameState.Mark.PACE
 	if GameState.breaches == _section_breaches:
 		mask |= GameState.Mark.CLEAN
@@ -550,6 +555,10 @@ func _end_story() -> void:
 		_hide_story.rpc_id(id)
 	_begin_day()
 
+## The yard choice (Main adds it), or null in a harness without it
+func _yard_choice() -> YardChoice:
+	return get_parent().get_node_or_null("YardChoice") as YardChoice
+
 ## Every peer: this reader's pick for the stretch (the choice card)
 func cast_choice(key: String) -> void:
 	if multiplayer.is_server():
@@ -570,7 +579,7 @@ func _peer_choice(id: int, key: String) -> void:
 ## "" where no choice was offered (the first stretch, a replay, the practice)
 func _resolve_boon() -> String:
 	var options: Array = GameState.choices_for(GameState.current_section_index)
-	if not StoryData.choice_offered(GameState.current_section_index):
+	if not StoryData.choice_offered(GameState.current_section_index) or GameState.yard_choice:
 		_choices.clear()
 		return ""
 	var counts := {}
@@ -735,12 +744,16 @@ func _restart(choice: String) -> void:
 func _reload(replay: int, picker: int) -> void:
 	GameState.replay_section = replay
 	GameState.picker_return = picker
-	get_tree().paused = false
 	Engine.time_scale = 1.0
+	# Where the next run opens, for the cover's map: the replay's stretch, the stretch
+	# lost (started again from its first day), else a campaign begun anew
+	var section := replay if replay >= 0 else (GameState.current_section_index if GameState.phase == GameState.Phase.LOST else 0)
+	if GameState.festival:
+		section = -1
 	var restart := GameState.restart_day
 	GameState.reset()
 	GameState.restart_day = restart
-	get_tree().reload_current_scene.call_deferred()
+	LoadCover.go(get_tree().current_scene.scene_file_path, "Gathering the builders", section)
 
 # Host plus every client whose Main scene exists — a peer still loading in has
 # nowhere to receive these RPCs (it catches up via send_story_to)

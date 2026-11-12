@@ -2,7 +2,7 @@ extends SceneTree
 
 # Frame-time probe on the real game: Main as a solo host with bots, a day under way.
 #   Godot --path . --script res://tools/perf_scene.gd -- --nostory [--day=N] [--warm=8] [--secs=20] [--tally]
-#       [--off=<script.gd>] [--quality=0..2] [--scale=0.5..1] [--art=0..2] [--window=WxH] [--hide=<node>|@<group>]
+#       [--off=<script.gd>] [--quality=0..2] [--scale=0.5..1] [--window=WxH] [--hide=<node>|@<group>]
 # Prints the frame split (node _process / _physics_process time, physics step, render CPU,
 # GPU), draws/objects/triangles and, with --tally, the processing nodes by script.
 # --off stops that script's callbacks for the measured window (to price one script).
@@ -27,7 +27,6 @@ var _tally := false
 var _off := ""
 var _quality := -1
 var _scale := -1.0
-var _art := -1
 var _window := Vector2i.ZERO
 var _hide: Array[String] = []
 var _scatter := false   # --scatter: list the scatter batches by triangles drawn
@@ -54,8 +53,6 @@ func _initialize() -> void:
 			_quality = a.trim_prefix("--quality=").to_int()
 		elif a.begins_with("--scale="):
 			_scale = a.trim_prefix("--scale=").to_float()
-		elif a.begins_with("--art="):
-			_art = a.trim_prefix("--art=").to_int()
 		elif a.begins_with("--window="):
 			var wh := a.trim_prefix("--window=").split("x")
 			_window = Vector2i(wh[0].to_int(), wh[1].to_int())
@@ -120,8 +117,6 @@ func _process(delta: float) -> bool:
 			settings.quality = _quality
 		if _scale > 0.0:
 			settings.render_scale = _scale
-		if _art >= 0:
-			settings.art_style = _art
 		settings._apply_graphics()
 		if _window != Vector2i.ZERO:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)

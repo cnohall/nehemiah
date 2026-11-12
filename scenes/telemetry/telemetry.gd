@@ -79,7 +79,6 @@ func snapshot(kind: String) -> Dictionary:
 		"sc": scene.name if scene != null else "",
 		"mode": _mode(),
 		"sec": 0, "day": 0, "ph": "GATHER", "done": 0, "tot": 0, "br": 0, "crew": 0,
-		"simple": 1 if Settings.simple_game else 0,
 		"fps": roundi(Engine.get_frames_per_second()),
 		"lang": Settings.current_language(),
 	}
@@ -91,7 +90,6 @@ func snapshot(kind: String) -> Dictionary:
 		d["tot"] = GameState.targets_total
 		d["br"] = GameState.breaches
 		d["crew"] = GameState.crew_size
-		d["simple"] = 1 if GameState.simplified() else 0
 	if kind == "open":
 		var size := get_viewport().get_visible_rect().size
 		d["vw"] = roundi(size.x)

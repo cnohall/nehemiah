@@ -1117,10 +1117,8 @@ func _handle_attack(delta: float) -> void:
 		_update_aim(_touch_aim())
 	else:
 		_update_aim(_pad_aim_point() if InputMode.using_pad else _cursor_on_ground())
-	# Toggle mode (accessibility): a second press throws; otherwise letting go does.
-	# The touch sling is always press-drag-release.
-	var toggle := Settings.toggle_charge and not _touch_charge
-	if (_throw_just_pressed() if toggle else not Input.is_action_pressed("throw_charge")):
+	# Letting go throws
+	if not Input.is_action_pressed("throw_charge"):
 		release_throw()
 
 # Right stick picks the direction; left alone, the throw goes the way we're walking /

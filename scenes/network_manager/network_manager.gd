@@ -461,7 +461,7 @@ func _on_connection_failed() -> void:
 # Host left — drop back to the menu instead of running against a dead peer
 func _on_server_disconnected() -> void:
 	disconnect_session()
-	get_tree().change_scene_to_file(MENU_SCENE)
+	LoadCover.go(MENU_SCENE, "Back to the city")
 
 # ── Steam internals ────────────────────────────────────────
 
@@ -560,7 +560,7 @@ func _on_steam_join_requested(lobby_id: int, _friend_id: int) -> void:
 	var scene := get_tree().current_scene
 	if scene and scene.scene_file_path != MENU_SCENE:
 		disconnect_session()
-		get_tree().change_scene_to_file(MENU_SCENE)
+		LoadCover.go(MENU_SCENE, "Back to the city")
 	join_steam(lobby_id)
 
 # Rich presence "connect" makes "Join Game" appear on us in friends' lists

@@ -22,24 +22,12 @@ var music_volume := 0.6   # Music bus (created here), linear 0..1
 var sfx_volume := 0.8     # SFX bus (created here) — effects + jingles, linear 0..1
 var voice_volume := 0.8   # Voice bus (created here) — story narration (English), linear 0..1; 0 = off
 var screen_shake := true
-# Drawn look over the world, on trial with playtesters: index into ART_STYLES (LookPass)
-signal art_style_changed
-const ART_STYLES := ["Standard", "Lithograph", "Cel"]
-var art_style := 0:
-	set(v):
-		if v != art_style:
-			art_style = v
-			art_style_changed.emit()
-# Day, progress and threats told by the world (sun, scribe, watchmen) — false brings
-# back the day plaque and the threat plaque
-var diegetic_hud := true
 # Camera holds the whole stretch in view (Overcooked-style) instead of following you
 var fixed_camera := false
 # Turn the view on every stretch so north sits up-screen, the wall lying as it does on the
 # map (as Explore Jerusalem does) — off keeps the game's one view, outside always far
 var turn_to_map := false
 var rumble := true
-var toggle_charge := false   # sling: press to start, press again to throw (instead of hold)
 # Keyboard / mouse rebinds: action → {"key": physical keycode} or {"mouse": button index}.
 # Only an action's primary key / mouse event is rebindable; pad remaps go through Steam Input.
 var bindings := {}
@@ -52,12 +40,6 @@ var bot_skill := 1   # index into BotBrain.SKILLS
 var difficulty := 1
 # This player's trade (Trade), or -1 for their place in the crew's own
 var trade := -1
-# Simple game (GDD §5.23): the core loop and each stretch's twist, without the rules
-# everyone must learn on top — no trades, saboteur, boons, rumour, strewn yard, hungry
-# households, jars, birds, townsfolk, wandering sheep, "In good time" mark, stretch-end ready check or calling waves
-# early. Skill depth stays (true shot, turning the blow, mending, the well, posts).
-# Host's choice, synced (GameState.simple)
-var simple_game := false
 # Anonymous play stats from the web build (Telemetry): where a game stops, how it runs
 var share_stats := true
 # Tags over the next job until this player has done it once (FirstSteps). The host's also
@@ -66,9 +48,9 @@ var hints := true
 var learned := {}   # FirstSteps lesson → true
 # Experimental (GDD §5.21); the host's choice rules the crew like difficulty
 # Wave forecast: how many and what, ~22 s ahead, spot ringed and route drawn on the ground.
-# On by default when one person plays (bots or not): information is worth most alone (§5.25)
+# On by default for everyone since Nov 2026 (it was Solo: a group, more chaotic, got only the bell)
 enum { FORECAST_OFF, FORECAST_SOLO, FORECAST_ALWAYS }
-var exp_forecast := FORECAST_SOLO
+var exp_forecast := FORECAST_ALWAYS
 var exp_call_early := false  # off by default: [Horn] brings the next wave forward for a short work boost
 
 # pace: multiplies enemy numbers and spawn rate (on top of each section's pressure)
@@ -131,30 +113,30 @@ func _ready() -> void:
 		sfx_volume = cfg.get_value("audio", "sfx_volume", sfx_volume)
 		voice_volume = cfg.get_value("audio", "voice_volume", voice_volume)
 		screen_shake = cfg.get_value("display", "screen_shake", screen_shake)
-		art_style = clampi(cfg.get_value("display", "art_style", art_style), 0, ART_STYLES.size() - 1)
-		diegetic_hud = cfg.get_value("display", "diegetic_hud", diegetic_hud)
 		fixed_camera = cfg.get_value("display", "fixed_camera", fixed_camera)
 		turn_to_map = cfg.get_value("display", "turn_to_map", turn_to_map)
 		rumble = cfg.get_value("controls", "rumble", rumble)
-		toggle_charge = cfg.get_value("controls", "toggle_charge", toggle_charge)
 		bindings = cfg.get_value("controls", "bindings", bindings)
 		language = cfg.get_value("general", "language", language)
 		bot_count = cfg.get_value("bots", "count", bot_count)
 		bot_skill = cfg.get_value("bots", "skill", bot_skill)
 		difficulty = clampi(cfg.get_value("general", "difficulty", difficulty), 0, DIFFICULTIES.size() - 1)
 		trade = clampi(cfg.get_value("general", "trade", trade), -1, CharacterRig.TRADES.size() - 1)
-		simple_game = cfg.get_value("general", "simple_game", simple_game)
 		share_stats = cfg.get_value("general", "share_stats", share_stats)
 		hints = cfg.get_value("general", "hints", hints)
 		learned = cfg.get_value("general", "learned", learned)
 		# "forecast" was an on/off bool before Nov 2026: on stays on, off takes the new default
 		var old_forecast: bool = cfg.get_value("experimental", "forecast", false)
-		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode",
-			FORECAST_ALWAYS if old_forecast else exp_forecast), FORECAST_OFF, FORECAST_ALWAYS)
+		var mode: int = cfg.get_value("experimental", "forecast_mode",
+			FORECAST_ALWAYS if old_forecast else exp_forecast)
+		# Before 10 Nov 2026 Solo was the default (a group got only the bell): a saved Solo
+		# takes the new default, Off and Always stay as picked
+		if not cfg.has_section_key("experimental", "forecast_mode2") and mode == FORECAST_SOLO:
+			mode = FORECAST_ALWAYS
+		exp_forecast = clampi(cfg.get_value("experimental", "forecast_mode2", mode), FORECAST_OFF, FORECAST_ALWAYS)
 		exp_call_early = cfg.get_value("experimental", "call_early", exp_call_early)
-	# Test harnesses (`--script`) never take the player's saved game mode: `-- --simple` asks for it
+	# Test harnesses (`--script`) never take the player's saved settings
 	if "--script" in OS.get_cmdline_args():
-		simple_game = "--simple" in OS.get_cmdline_user_args()
 		exp_forecast = FORECAST_OFF   # the default game as it was: tests switch it on themselves
 		hints = "--hints" in OS.get_cmdline_user_args()
 		learned = {}
@@ -329,8 +311,6 @@ func save() -> void:
 	cfg.set_value("display", "window_w", window_size.x)
 	cfg.set_value("display", "window_h", window_size.y)
 	cfg.set_value("display", "screen_shake", screen_shake)
-	cfg.set_value("display", "art_style", art_style)
-	cfg.set_value("display", "diegetic_hud", diegetic_hud)
 	cfg.set_value("display", "fixed_camera", fixed_camera)
 	cfg.set_value("display", "turn_to_map", turn_to_map)
 	cfg.set_value("audio", "volume", volume)
@@ -338,18 +318,16 @@ func save() -> void:
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	cfg.set_value("audio", "voice_volume", voice_volume)
 	cfg.set_value("controls", "rumble", rumble)
-	cfg.set_value("controls", "toggle_charge", toggle_charge)
 	cfg.set_value("controls", "bindings", bindings)
 	cfg.set_value("general", "language", language)
 	cfg.set_value("bots", "count", bot_count)
 	cfg.set_value("bots", "skill", bot_skill)
 	cfg.set_value("general", "difficulty", difficulty)
 	cfg.set_value("general", "trade", trade)
-	cfg.set_value("general", "simple_game", simple_game)
 	cfg.set_value("general", "share_stats", share_stats)
 	cfg.set_value("general", "hints", hints)
 	cfg.set_value("general", "learned", learned)
-	cfg.set_value("experimental", "forecast_mode", exp_forecast)
+	cfg.set_value("experimental", "forecast_mode2", exp_forecast)
 	cfg.set_value("experimental", "call_early", exp_call_early)
 	cfg.save(PATH)
 

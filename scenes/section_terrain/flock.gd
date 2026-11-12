@@ -119,8 +119,7 @@ func _multimesh(mesh: Mesh, count: int) -> MultiMesh:
 # ── Every frame ───────────────────────────────────────────────
 
 func _process(delta: float) -> void:
-	# The simple game: the sheep stay where they stand, scenery that doesn't catch the eye
-	if _sheep.is_empty() or GameState.simplified():
+	if _sheep.is_empty():
 		return
 	_t += delta
 	var players := get_tree().get_nodes_in_group("players")

@@ -2,11 +2,11 @@ extends SceneTree
 
 # Dump a CharacterRig at rest for Blender (tools/blender/build_figure.py): every part's mesh in
 # the rig's space with its colour, surface kind, bone and fuse group, and every bone's rest.
-#   Godot --headless --path . --script res://tools/blender/export_rig.gd -- <out.json> [slot]
+#   Godot --headless --path . --script res://tools/blender/export_rig.gd -- <out.json> [slot | enemy kind]
 # Coordinates stay Godot's (y up, +z the figure's front); the Blender side converts.
 
 var _out := "res://build/blender/builder_rig.json"
-var _slot := 0
+var _fig := "0"
 var _frame := 0
 
 func _initialize() -> void:
@@ -17,13 +17,13 @@ func _initialize() -> void:
 	if rest.size() > 0:
 		_out = rest[0]
 	if rest.size() > 1:
-		_slot = int(rest[1])
+		_fig = rest[1]
 
 func _process(_delta: float) -> bool:
 	_frame += 1
 	if _frame < 2:
 		return false
-	var look := CharacterRig.worker_look(_slot, Palette.CREW[_slot])
+	var look := code_look(_fig)   # the code rig itself: its pivots and parts
 	var rig := CharacterRig.new()
 	rig._build(look)
 	_export(rig, look)
@@ -145,3 +145,24 @@ static func _near(a: Color, b: Color) -> bool:
 
 static func _v(v: Vector3) -> Array:
 	return [v.x, v.y, v.z]
+
+## A crew slot ("0".."3"), an enemy kind ("scout", "brute", "raider", "saboteur"), a townsperson
+## (Folk.look_for kinds) or "watchman", as built in code
+static func code_look(fig: String) -> Dictionary:
+	var look: Dictionary
+	if fig.is_valid_int():
+		look = CharacterRig.worker_look(int(fig), Palette.CREW[int(fig)])
+	elif fig == "watchman":
+		look = CharacterRig.worker_look(1, Palette.CREW[1])
+		look.erase("satchel")
+		look.merge({"tool": false, "sword": false, "weapon": "spear"}, true)
+	elif fig in ["man", "child"]:
+		# Townsfolk (Folk.look_for, which needs the game's autoloads): their bones are those of the
+		# crew figure they're built on, set by the head cloth (a band's tails, a wrap's veil)
+		look = CharacterRig.worker_look(2, Palette.CREW[2])
+	elif fig in ["woman", "elder", "priest", "scribe", "governor"]:
+		look = CharacterRig.worker_look(3, Palette.CREW[3])
+	else:
+		look = CharacterRig.enemy_look(fig)
+	look.erase("baked")
+	return look
