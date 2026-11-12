@@ -25,15 +25,54 @@ import sys
 import numpy as np
 argv = sys.argv[sys.argv.index("--") + 1:]
 SRC, OUT = argv[0], argv[1]
-# The crew slot (CharacterRig.worker_look): 0 builder, 1 water carrier, 2 carpenter, 3 overseer
-SLOT = int(argv[2]) if len(argv) > 2 else 0
+# The figure: a crew slot (CharacterRig.worker_look): 0 builder, 1 water carrier, 2 carpenter,
+# 3 overseer; or an enemy kind (CharacterRig.enemy_look), built as SLOT 4 with FOE its look
+FOES = {
+    "scout": dict(robe=(0.36, 0.28, 0.22), sash=(0.62, 0.20, 0.14), hood=(0.17, 0.14, 0.13), beard="short"),
+    "brute": dict(robe=(0.34, 0.22, 0.16), sash=(0.22, 0.14, 0.10), helmet=(0.60, 0.45, 0.25), armour=(0.50, 0.33, 0.19),
+        beard="full", shield=(0.56, 0.18, 0.12)),
+    "raider": dict(robe=(0.20, 0.17, 0.18), sash=(0.60, 0.16, 0.12), hood=(0.46, 0.12, 0.10), beard="short", cape=(0.52, 0.13, 0.11)),
+    "saboteur": dict(robe=(0.16, 0.14, 0.13), sash=(0.30, 0.22, 0.14), hood=(0.10, 0.09, 0.09), beard="short", sack=(0.58, 0.48, 0.32)),
+}
+# Townsfolk (Folk.look_for) and the watch, each built on a crew figure's frame (base): the band
+# and swept hair of the carpenter, the wrap, veil and long robe of the overseer, the water
+# carrier without his load. Dye masks: robe_mask how much of the dye the robe takes (worker_look
+# tints it toward the dye), wrap_mask the wrap's; band_fixed / robe / wrap paint a set colour
+UNDYED = (0.83, 0.77, 0.65)
+MUREX = (0.47, 0.22, 0.27)
+NPCS = {
+    "man": dict(base=2, beard="short", hair=(0.20, 0.12, 0.07), robe_mask=0.25),
+    "child": dict(base=2, beard="", hair=(0.20, 0.12, 0.07), robe_mask=0.0),
+    "woman": dict(base=3, beard="", hair=(0.20, 0.12, 0.07), robe_mask=0.55, wrap_mask=0.6, band_shade=0.8, vest=True),
+    "elder": dict(base=3, beard="long", hair=(0.82, 0.80, 0.76), band_fixed=(0.24, 0.16, 0.11), wrap=(0.90, 0.86, 0.77)),
+    "priest": dict(base=3, beard="long", hair=(0.30, 0.20, 0.12), vest=True, robe=(0.95, 0.93, 0.88), wrap=(0.97, 0.96, 0.92)),
+    "scribe": dict(base=3, beard="long", hair=(0.70, 0.68, 0.64), vest=True, robe=(0.95, 0.93, 0.88), wrap=(0.97, 0.96, 0.92),
+        scroll=True),
+    "governor": dict(base=3, beard="full", hair=(0.20, 0.105, 0.06), vest=True, wrap_mask=1.0, band_fixed=MUREX,
+        robe=tuple(m + (u - m) * 0.35 for m, u in zip(MUREX, UNDYED))),
+    "watchman": dict(base=1, nopack=True),
+}
+_fig = argv[2] if len(argv) > 2 else "0"
+FOE = FOES.get(_fig)
+NPC = NPCS.get(_fig, {})
+SLOT = 4 if FOE else NPC["base"] if NPC else int(_fig)
+FOE = FOE or {}
+FOE_TRIM = np.array([0.12, 0.09, 0.08])
 TEX = 1024
 PAD = 4
 TAU = math.tau
 # CharacterRig.SKIN / HAIR_* for the slot
-SKIN = np.array([[0.76, 0.55, 0.40], [0.63, 0.44, 0.31], [0.81, 0.62, 0.47], [0.54, 0.38, 0.27]][SLOT])
-HAIR = np.array([[0.20, 0.105, 0.06], [0.16, 0.11, 0.08], [0.50, 0.27, 0.11], [0.62, 0.60, 0.56]][SLOT])
-ROBE = np.array([0.93, 0.90, 0.83])    # the overseer's long robe and head-wrap, undyed
+# A foe is painted in the first skin tone and tinted to his own at runtime (BakedFigure's
+# skin_tint, by the albedo's alpha): foes draw from the crew's SKIN range, never darker
+SKIN = np.array([[0.76, 0.55, 0.40], [0.63, 0.44, 0.31], [0.81, 0.62, 0.47], [0.54, 0.38, 0.27], [0.76, 0.55, 0.40]][SLOT])
+HAIR = np.array([[0.20, 0.105, 0.06], [0.16, 0.11, 0.08], [0.50, 0.27, 0.11], [0.62, 0.60, 0.56], [0.19, 0.12, 0.08]][SLOT])
+TINT_SKIN = SLOT == 4 or bool(NPC)
+if NPC:
+    SKIN = np.array([0.76, 0.55, 0.40])      # painted in the first tone, tinted to the person's
+    if "hair" in NPC:
+        HAIR = np.array(NPC["hair"])
+
+ROBE = np.array(NPC.get("robe", (0.93, 0.90, 0.83)))    # the overseer's long robe and head-wrap, undyed
 WOOD = np.array([0.66, 0.46, 0.27])
 APRON = np.array([0.58, 0.40, 0.25])
 CREAM = np.array([0.95, 0.92, 0.85])   # the water carrier's undyed scarf
@@ -302,10 +341,12 @@ def head_paint(c):
     rgb = mixc(rgb, np.array([0.34, 0.15, 0.12]), g2(x, y - 1.112, 0.06, 0.008) * front)
     rgb = mixc(rgb, np.array([0.74, 0.42, 0.36]), 0.8 * g2(x, y - 1.082, 0.05, 0.016) * front)
     # Under the beard and the hair the skin is shaded to them: no pale gap at their edges
-    under = sstep(beard_top(deg) + 0.03, beard_top(deg) - 0.01, y) * sstep(118, 108, deg)
+    under = sstep(beard_top(deg) + 0.03, beard_top(deg) - 0.01, y) * sstep(118, 108, deg) * (1.0 if NPC.get("beard", "x") else 0.0)
     crown = np.maximum(sstep(1.46, 1.52, y), sstep(75, 95, deg) * sstep(1.12, 1.2, y))
     rgb = mixc(rgb, HAIR * 0.9, np.maximum(under, crown))
-    return out(rgb, rough=0.80 - 0.08 * g2(x, y - 1.22, 0.05, 0.05) * front)
+    o = out(rgb, rough=0.80 - 0.08 * g2(x, y - 1.22, 0.05, 0.05) * front)
+    o["skin"] = 1.0 - np.maximum(under, crown)
+    return o
 
 Part("head", head_shape, 40, 26, head_paint, W("head"), form=head_form, res=1.7)
 
@@ -317,7 +358,9 @@ def ear_paint(c):
     rgb = np.ones(c.U.shape + (3,)) * SKIN
     rgb = mixc(rgb, FLUSH, 0.3 + 0.0 * c.x)
     rgb = mixc(rgb, SKIN * 0.5, 0.8 * g2(c.y - 1.285, c.z, 0.045, 0.026) * sstep(0.39, 0.43, c.x))
-    return out(rgb, rough=0.75)
+    o = out(rgb, rough=0.75)
+    o["skin"] = 1.0
+    return o
 
 Part("ear", lambda U, V: ellipsoid((0.365, 1.29, 0.0), (0.075, 0.108, 0.062), U, V), 8, 6, ear_paint, W("head"),
     form=ear_form, mirror=True, res=1.2)
@@ -347,12 +390,16 @@ def eye_part(tag, cx):
         # a calm look up at the camera, not a stare
         rgb = mixc(rgb, np.array([0.16, 0.08, 0.05]), 0.45 * sstep(0.84, 0.97, r))
         lid_y = 0.86 - 0.2 * ex * ex
+        if SLOT == 4:
+            lid_y = 0.58 - 0.18 * ex * ex - 0.22 * ex * inward
         rgb = mixc(rgb, rgb * 0.85, sstep(lid_y - 0.3, lid_y, ey))                  # its shadow
         rgb = mixc(rgb, np.array([0.15, 0.08, 0.05]), 0.85 * g1(ey - lid_y, 0.03))        # lash line
         lid = SKIN * 0.9 + (FLUSH - SKIN) * 0.1
         rgb = mixc(rgb, lid, sstep(lid_y + 0.03, lid_y + 0.08, ey))
         rough = 0.30 + 0.45 * sstep(lid_y + 0.03, lid_y + 0.08, ey)
-        return out(rgb, rough=rough)
+        o = out(rgb, rough=rough)
+        o["skin"] = sstep(lid_y + 0.03, lid_y + 0.08, ey)
+        return o
     Part("eye_" + tag, shape, 8, 8, paint, W("eye_" + tag), closed=False, res=3.2, ref=c0 - np.array([0, 0, 0.3]))
 
 eye_part("l", 0.155)
@@ -368,10 +415,15 @@ def hair_paint(c, flow=40.0, tip=0.0):
     h = 0.0011 * np.sin(TAU * c.U * flow * 0.9 + 4.0 * streak)
     return out(rgb, h=h, rough=0.8)
 
+BROW = [(0, 0.05, 1.44, 0.004, 0.004), (0.12, 0.075, 1.448, 0.02, 0.016), (0.5, 0.165, 1.46, 0.023, 0.018),
+    (0.88, 0.255, 1.432, 0.017, 0.014), (1.0, 0.282, 1.414, 0.004, 0.004)]
+if SLOT == 4:
+    BROW = [(0, 0.045, 1.398, 0.004, 0.004), (0.12, 0.07, 1.405, 0.026, 0.02), (0.5, 0.165, 1.44, 0.028, 0.022),
+        (0.88, 0.25, 1.462, 0.02, 0.016), (1.0, 0.275, 1.462, 0.004, 0.004)]
+
 def brow_shape(U, V):
     keys = []
-    for t, x, y, ra, rb in [(0, 0.05, 1.44, 0.004, 0.004), (0.12, 0.075, 1.448, 0.02, 0.016), (0.5, 0.165, 1.46, 0.023, 0.018),
-            (0.88, 0.255, 1.432, 0.017, 0.014), (1.0, 0.282, 1.414, 0.004, 0.004)]:
+    for t, x, y, ra, rb in BROW:
         keys.append((t, x, y, float(skull_z(x, y)) + 0.02, ra, rb))
     return tube(keys, U, V)
 
@@ -385,13 +437,18 @@ def moustache_shape(U, V):
 def lock_form(U, V, P):
     return 0.004 * np.sin(TAU * U * 3.0) * np.sin(V * math.pi)
 
-Part("moustache", moustache_shape, 8, 8, lambda c: hair_paint(c, 6.0, c.V), W("head"), form=lock_form, mirror=True, res=1.5)
+if NPC.get("beard", "x"):
+  Part("moustache", moustache_shape, 8, 8, lambda c: hair_paint(c, 6.0, c.V), W("head"), form=lock_form, mirror=True, res=1.5)
 
 # Beard: a patch round the jaw, ear to ear, its lower edge cut into locks
 BEARD_A = 112.0
 # Full (the builder) or short and close (the water carrier): its length down the chin, its
 # depth off the jaw, its rows of curls
-BEARD_LEN, BEARD_THICK, BEARD_ROWS = [(1.0, 1.0, 3.0), (0.62, 0.62, 2.0), (1.0, 1.05, 3.0), (1.6, 1.1, 4.0)][SLOT]
+BEARD_LEN, BEARD_THICK, BEARD_ROWS = [(1.0, 1.0, 3.0), (0.62, 0.62, 2.0), (1.0, 1.05, 3.0), (1.6, 1.1, 4.0),
+    (0.62, 0.62, 2.0) if FOE.get("beard") == "short" else (1.0, 1.0, 3.0)][SLOT]
+if "beard" in NPC:
+    BEARD_LEN, BEARD_THICK, BEARD_ROWS = {"short": (0.62, 0.62, 2.0), "full": (1.0, 1.0, 3.0), "long": (1.6, 1.1, 4.0),
+        "": (1.0, 1.0, 3.0)}[NPC["beard"]]
 
 def beard_shape(U, V):
     deg = BEARD_A * (2.0 * U - 1.0)
@@ -429,7 +486,8 @@ def beard_paint(c):
     return o
 
 
-Part("beard", beard_shape, 44, 16, beard_paint, W("head"), closed=False, form=beard_form, ref=HC, res=1.3)
+if NPC.get("beard", "x"):
+    Part("beard", beard_shape, 44, 16, beard_paint, W("head"), closed=False, form=beard_form, ref=HC, res=1.3)
 
 # Head cloth: the crew colour, seen first from the play camera. A length of dyed cloth wound
 # round the head (the band) over a cloth crown, knotted behind, its two ends hanging.
@@ -438,7 +496,7 @@ Part("beard", beard_shape, 44, 16, beard_paint, W("head"), closed=False, form=be
 # The carpenter's is a plain dyed band round a bush of hair; the overseer's a narrow dyed band
 # over a tall undyed wrap, its cloth falling behind to the shoulders
 BAND_R, BAND_H, BAND_LIFT, BAND_OUT = [(0.058, 0.086, 0.05, 0.05), (0.046, 0.058, 0.03, 0.058),
-    (0.044, 0.054, 0.035, 0.075), (0.042, 0.05, 0.035, 0.085)][SLOT]
+    (0.044, 0.054, 0.035, 0.075), (0.042, 0.05, 0.035, 0.085), (0.05, 0.06, 0.03, 0.06)][SLOT]
 
 def band_centre(a):
     y = rim_y(a) + BAND_LIFT
@@ -463,8 +521,19 @@ def scarf_stripes(fr):
     d = np.abs(fr - 0.5)
     return np.maximum(sstep(0.20, 0.18, d), 0.9 * sstep(0.022, 0.012, np.abs(d - 0.30)))
 
+def npc_cloth(c, fixed=None, mask=1.0, shade=1.0):
+    """A townsperson's cloth: a set colour, or dyed (by `mask` of the dye) from a pale shade."""
+    if fixed is not None:
+        return out(cloth(c, np.array(fixed), 1.0), h=threads(c), rough=0.9)
+    o = dyed(c)
+    o["rgb"] = o["rgb"] * shade
+    o["dye"] = o["dye"] * mask
+    return o
+
 def band_paint(c):
     w = band_wind(c.U, c.V)
+    if NPC and SLOT in (2, 3):
+        return npc_cloth(c, NPC.get("band_fixed"), 1.0, NPC.get("band_shade", 1.0))
     if SLOT in (2, 3):
         return dyed(c)
     if SLOT == 1:
@@ -515,14 +584,17 @@ def knot_paint(c):
 
 def wrap_paint(c):
     """The overseer's head-wrap: undyed linen, wound."""
-    return out(cloth(c, ROBE, 1.0), h=threads(c), rough=0.9)
+    if NPC.get("wrap_mask"):
+        return npc_cloth(c, None, NPC["wrap_mask"])
+    return out(cloth(c, np.array(NPC.get("wrap", ROBE)), 1.0), h=threads(c), rough=0.9)
 
-Part("band", band_shape, 28, 7, band_paint, W("head"), form=band_form, ref=HC, res=1.2)
+if SLOT < 4:
+    Part("band", band_shape, 28, 7, band_paint, W("head"), form=band_form, ref=HC, res=1.2)
 if SLOT == 0:
     Part("crown", crown_shape, 20, 6, dyed, W("head"), form=crown_form, ref=HC, res=1.0)
 if SLOT == 3:
     Part("crown", crown_shape, 24, 8, wrap_paint, W("head"), form=lambda U, V, P: 1.3 * crown_form(U, V, P), ref=HC, res=1.0)
-if SLOT != 3:
+if SLOT < 3:
     Part("knot", lambda U, V: ellipsoid(KNOT, (0.066, 0.056, 0.05), U, V), 8, 5, knot_paint, W("head"), res=0.8)
 
 def tail(name, bone, pts):
@@ -538,14 +610,14 @@ def tail(name, bone, pts):
         return dyed(c, sstep(0.01, 0.02, 0.03 - np.abs(c.V - 0.86)))
     Part(name, lambda U, V: tube(keys, U, V, e=3.0), 6, 7, paint, W(bone), form=form, res=0.9)
 
-if SLOT != 3:
+if SLOT < 3:
   tail("tail_a", "tail_0", [(0, -0.21, 1.465, -0.44, 0.02), (0.3, -0.27, 1.36, -0.475, 0.052), (0.7, -0.325, 1.235, -0.49, 0.06),
     (0.97, -0.355, 1.15, -0.48, 0.052), (1.0, -0.358, 1.142, -0.478, 0.004)])
   tail("tail_b", "tail_1", [(0, -0.18, 1.46, -0.445, 0.02), (0.3, -0.16, 1.37, -0.48, 0.048), (0.7, -0.135, 1.275, -0.495, 0.054),
     (0.97, -0.122, 1.205, -0.485, 0.048), (1.0, -0.12, 1.198, -0.483, 0.004)])
 
 # Hair: a mass of curls at the back, below the cloth, and locks out from under its edge
-HAIR_A0 = [68.0, 56.0, 62.0, 68.0][SLOT]       # from in front of one ear round the nape to the other
+HAIR_A0 = [68.0, 56.0, 62.0, 68.0, 68.0][SLOT]       # from in front of one ear round the nape to the other
 
 def hair_back_shape(U, V):
     a = np.radians(HAIR_A0 + (360.0 - 2.0 * HAIR_A0) * U)
@@ -563,7 +635,7 @@ def hair_back_form(U, V, P):
     curls = np.sin(np.radians(a) * 13.0 + 2.2 * np.sin(P[..., 1] * 34.0)) * np.sin(P[..., 1] * 40.0 + a * 0.05)
     return 0.012 * curls * sstep(0.12, 0.3, V) * sstep(1.0, 0.9, V)
 
-if SLOT in (0, 2):
+if SLOT in (0, 2) or "helmet" in FOE:
     Part("hair_back", hair_back_shape, 24, 8, lambda c: hair_paint(c, 20.0, sstep(0.6, 1.0, c.V)), W("head"), closed=False,
         form=hair_back_form, ref=HC, res=1.0)
 
@@ -586,7 +658,7 @@ if SLOT == 0:
         p = lock("lock%d" % i, a0, sweep, length, width, first=_first)
         _first = _first or p
 # Sideburns, down in front of the ears to meet the beard
-if SLOT in (0, 2, 3):
+if (SLOT in (0, 2, 3) or "helmet" in FOE) and NPC.get("beard", "x"):
     _b = lock("burn_l", 66, -6, 0.23, 0.04, -0.03, _first)
     lock("burn_r", -66, 6, 0.23, 0.04, -0.03, _first or _b)
 
@@ -695,6 +767,15 @@ def veil_form(U, V, P):
     return 0.012 * np.sin(a * 7.0 + 1.5 * vnoise(P * 4.0)) * sstep(0.1, 0.5, V)
 
 def veil_paint(c):
+    if NPC.get("wrap_mask"):
+        return npc_cloth(c, None, NPC["wrap_mask"])
+    if NPC:
+        o = wrap_paint(c)
+        if NPC.get("vest"):
+            stripe = sstep(0.012, 0.006, np.abs(c.V - 0.93))
+            o["rgb"] = mixc(o["rgb"], np.array([0.93] * 3), stripe)
+            o["dye"] = stripe
+        return o
     return scarf(c, sstep(0.012, 0.006, np.abs(c.V - 0.93)))   # a dyed stripe along its hem
 
 def veil_w(P, U, V):
@@ -720,7 +801,7 @@ def tunic_paint(c):
     y = c.y
     a = np.arctan2(c.x, c.z)
     hy = HEM_Y - 0.172
-    rgb = cloth(c, ROBE if SLOT == 3 else LINEN, 1.0)
+    rgb = cloth(c, np.array(FOE["robe"]) if SLOT == 4 else ROBE if SLOT == 3 else LINEN, 1.0)
     rgb = mixc(rgb, DUST, 0.4 * sstep(0.36 + hy, 0.17 + hy, y) * (0.6 + 0.4 * fbm(c.P * 14.0)))
     rgb = rgb * (1.0 - 0.10 * g1(np.abs(np.sin(a)) - 1.0, 0.012) * sstep(0.95, 0.85, y))[..., None]    # side seams
     stripe = np.maximum(sstep(0.012, 0.017, 0.022 - np.abs(y - 0.222 - hy)), sstep(0.004, 0.007, 0.009 - np.abs(y - 0.262 - hy)))
@@ -728,9 +809,15 @@ def tunic_paint(c):
     dye = np.maximum(stripe, collar)
     shade = 0.93 if SLOT != 2 else 0.5          # the carpenter's trim a deeper dye than his tunic
     rgb = mixc(rgb, np.array([shade] * 3) * (0.9 + 0.1 * fbm(c.P * 9.0))[..., None], dye)
-    if SLOT == 2:
+    if SLOT == 4:
+        # A foe's cloth is dark goat hair, its trim darker still: nothing dyed for the crew colour
+        rgb = mixc(rgb, cloth(c, FOE_TRIM, 0.3), dye)
+        dye = dye * 0.0
+    if SLOT == 2 and not NPC:
         # The carpenter's tunic is dyed all over, a little muted (worker_look: dye toward undyed wool)
         dye = np.maximum(dye, 0.82 * (1.0 - dye))
+    elif NPC.get("robe_mask"):
+        dye = np.maximum(dye, NPC["robe_mask"] * (1.0 - dye))
     rgb = rgb * (0.45 + 0.55 * sstep(0.01, 0.03, c.V))[..., None]      # up inside the hem
     return out(rgb, h=threads(c, 0.007), rough=0.92, dye=dye)
 
@@ -741,11 +828,15 @@ def tunic_w(P, U, V):
 Part("tunic", lambda U, V: lathe(TUNIC, U, V, TUNIC_E), 32, 20, tunic_paint, tunic_w, form=tunic_form, res=1.0)
 
 def sleeve_paint(c):
+    if SLOT == 4:
+        return out(cloth(c, np.array(FOE["robe"])), h=threads(c, 0.007), rough=0.92)
     rgb = cloth(c, ROBE if SLOT == 3 else LINEN)
     dye = sstep(0.018, 0.026, 0.035 - np.abs(c.V - 0.775))
     rgb = mixc(rgb, np.array([0.93 if SLOT != 2 else 0.5] * 3), dye)
-    if SLOT == 2:
+    if SLOT == 2 and not NPC:
         dye = np.maximum(dye, 0.82 * (1.0 - dye))
+    elif NPC.get("robe_mask"):
+        dye = np.maximum(dye, NPC["robe_mask"] * (1.0 - dye))
     rgb = rgb * (0.45 + 0.55 * sstep(0.96, 0.92, c.V))[..., None]
     return out(rgb, h=threads(c, 0.007), rough=0.92, dye=dye)
 
@@ -757,7 +848,9 @@ Part("sleeve", lambda U, V: tube(SLEEVE, U, V), 14, 8, sleeve_paint,
 
 def skin_paint(c):
     rgb = np.ones(c.U.shape + (3,)) * SKIN * (0.97 + 0.06 * fbm(c.P * 8.0))[..., None]
-    return out(rgb, rough=0.74)
+    o = out(rgb, rough=0.74)
+    o["skin"] = 1.0
+    return o
 
 def arm_w(P, U, V):
     y = P[:, 1]
@@ -771,10 +864,19 @@ ARM = [(0, 0.365, 0.84, 0.0, 0.078, 0.078), (0.3, 0.365, 0.70, 0.0, 0.081, 0.083
 def arm_paint(c):
     o = skin_paint(c)
     o["rgb"] = mixc(o["rgb"], FLUSH, 0.22 * g1(c.y - 0.606, 0.03))
+    if SLOT == 4:
+        sleeve = sstep(0.43, 0.45, c.y)
+        cuff = sstep(0.43, 0.445, c.y) * sstep(0.48, 0.465, c.y)
+        cl = cloth(c, np.array(FOE["robe"]))
+        cl = mixc(cl, FOE_TRIM, cuff)
+        o["rgb"] = mixc(o["rgb"], cl, sleeve)
+        o["skin"] = 1.0 - sleeve
+        o["h"] = threads(c, 0.007) * sleeve
+        o["rough"] = 0.74 + 0.18 * sleeve
     return o
 
 Part("arm", lambda U, V: tube(ARM, U, V), 10, 9, arm_paint, arm_w, mirror=True, res=0.8)
-if SLOT == 2:
+if SLOT == 2 and not NPC:
     BRACER = [(0, 0.365, 0.565, 0.006, 0.084, 0.087), (0.5, 0.364, 0.50, 0.009, 0.088, 0.091), (1.0, 0.363, 0.44, 0.01, 0.072, 0.074)]
     def bracer_paint(c):
         o = leather_paint(c, 0.9)
@@ -840,6 +942,7 @@ def foot_paint(c):
     rgb = mixc(rgb, DUST, 0.3 * sstep(0.09, 0.055, c.y))
     strap = sstep(0.35, 0.6, foot_straps(c.P))
     o["rgb"] = mixc(rgb, LEATHER * (0.8 + 0.4 * fbm(c.P * 30.0))[..., None], strap)
+    o["skin"] = 1.0 - strap
     o["rough"] = 0.74 - 0.12 * strap
     return o
 
@@ -860,7 +963,7 @@ def tunic_ring(a, y, off):
     return np.stack([(k[..., 0] + off) * spow(np.sin(a), ex), y, (k[..., 1] + off) * spow(np.cos(a), ex)], -1)
 
 # The builder and water carrier wear a dyed sash; the carpenter and overseer a leather belt
-SASH_Y, SASH_H, SASH_OUT = (0.488, 0.118, 0.046) if SLOT in (0, 1) else (0.515, 0.07, 0.03)
+SASH_Y, SASH_H, SASH_OUT = (0.488, 0.118, 0.046) if SLOT in (0, 1, 4) else (0.515, 0.07, 0.03)
 
 def sash_shape(U, V):
     a = TAU * U
@@ -882,6 +985,12 @@ def sash_w(P, U, V):
 if SLOT in (0, 1):
     Part("sash", sash_shape, 32, 5, dyed, sash_w, closed=True, form=sash_form, ref=(0, 0.55, 0), res=1.0)
     Part("sash_knot", lambda U, V: ellipsoid((0.105, 0.548, 0.272), (0.058, 0.05, 0.04), U, V), 8, 5, dyed, sash_w, res=0.8)
+elif SLOT == 4:
+    # A foe's sash: a band of red (or dun) cloth, knotted at the side
+    def foe_sash(c):
+        return out(cloth(c, np.array(FOE["sash"]), 1.0), h=threads(c), rough=0.9)
+    Part("sash", sash_shape, 32, 5, foe_sash, sash_w, closed=True, form=sash_form, ref=(0, 0.55, 0), res=1.0)
+    Part("sash_knot", lambda U, V: ellipsoid((-0.22, 0.548, 0.21), (0.05, 0.05, 0.04), U, V), 8, 5, foe_sash, sash_w, res=0.8)
 else:
     Part("belt", sash_shape, 32, 3, belt_paint, sash_w, closed=True, ref=(0, 0.55, 0), res=1.0)
 
@@ -931,9 +1040,9 @@ def rope_paint(c):
     rgb = np.ones(c.U.shape + (3,)) * np.array([0.70, 0.58, 0.40]) * (0.7 + 0.35 * twist)[..., None]
     return out(rgb, h=0.0012 * twist, rough=0.9)
 
-if SLOT in (0, 1):
+if SLOT in (0, 1) and not NPC:
     Part("strap", lambda U, V: ribbon(strap_centre, U, V, 0.036, 0.008, (0, 0.75, 0)), 8, 26, strap_paint, W("torso"), res=0.9)
-if SLOT == 2:
+if SLOT == 2 and not NPC:
     Part("strap", lambda U, V: ribbon(strap_centre, U, V, 0.022, 0.012, (0, 0.75, 0)), 6, 26, rope_paint, W("torso"), res=0.9)
 
 # Basket on the back, stones in it
@@ -1043,7 +1152,7 @@ def leg_stub(name, pts, first):
         return goat_paint(c, cord=sstep(0.06, 0.04, np.abs(c.V - 0.55)))
     return Part(name, lambda U, V: tube(keys, U, V), 6, 5, paint, W("torso"), res=0.9, rect_of=first)
 
-if SLOT == 1:
+if SLOT == 1 and not NPC.get("nopack"):
     Part("waterskin", lambda U, V: tube(SKIN_BAG, U, V), 18, 14, bag_paint, W("torso"), form=bag_form, res=1.0)
     Part("waterskin_neck", lambda U, V: tube(SKIN_NECK, U, V), 8, 6, neck_paint, W("torso"),
         form=lambda U, V, P: 0.004 * np.sin(V * 18.0) * np.cos(TAU * U * 2.0), res=1.2)
@@ -1112,7 +1221,7 @@ def plank(name, dz, shift, length_trim, first):
     p = Part(name, lambda U, V: tube(keys, U, V, hint=(0, 0, 1), e=8.0), 8, 6, paint, W("torso"), res=0.9, rect_of=first)
     return p
 
-if SLOT == 2:
+if SLOT == 2 and not NPC:
     Part("apron", apron_shape, 8, 8, apron_paint, lambda P, U, V: {"torso": 1.0 - sstep(0.50, 0.42, P[:, 1]), "skirt": sstep(0.50, 0.42, P[:, 1])},
         closed=False, form=apron_form, ref=(0, 0.4, 0), res=1.0)
     # A mallet's handle and a chisel's out of the pocket, a rule by them
@@ -1149,12 +1258,220 @@ def scroll_paint(c):
     rgb = mixc(rgb, paper * 0.75 * (0.8 + 0.4 * np.sin(TAU * c.U * 3.0))[..., None], ends)
     return out(rgb, h=0.002 * tie, rough=0.8)
 
-if SLOT == 3:
+if SLOT == 3 and (NPC.get("vest") or not NPC):
     Part("vest", vest_shape, 30, 14, vest_paint, tunic_w, closed=False, form=lambda U, V, P: 0.6 * tunic_form(U, V, P),
         ref=(0, 0.6, 0), res=1.0)
+if SLOT == 3 and (NPC.get("scroll") or not NPC):
     SCROLL = [(0, 0.10, 0.44, 0.285, 0.004, 0.004), (0.02, 0.105, 0.445, 0.285, 0.05, 0.05), (0.98, 0.255, 0.70, 0.27, 0.05, 0.05),
         (1.0, 0.26, 0.705, 0.27, 0.004, 0.004)]
     Part("scroll", lambda U, V: tube(SCROLL, U, V), 10, 6, scroll_paint, W("torso"), res=1.0)
+
+# A hood of dark goat hair over the head and down onto the shoulders, open round the face; a
+# lining so its inside shows dark where the opening lets it be seen
+HOOD_T = 0.10
+
+def hood_open(y):
+    return np.radians(62.0) * sstep(1.50, 1.42, y)          # the face opening, below the brow
+
+def hood_shape(U, V, inset=0.0, v0=0.0):
+    top = HC[1] + HRY + HOOD_T
+    V = v0 + (1.0 - v0) * V                 # the lining starts below the crown: no second pole
+    y = top - (top - 0.97) * np.clip(V, 0, 1) ** 1.15
+    a0 = hood_open(y)
+    a = a0 + (TAU - 2.0 * a0) * U
+    yy = np.maximum(y, 1.10)
+    f = (1.0 - np.clip(np.abs((yy - HC[1]) / (HRY + HOOD_T)), 0.0, 1.0) ** HE) ** (1.0 / HE)
+    r = ell_r(a, HRX + HOOD_T, HRZ + HOOD_T) * f
+    drape = sstep(1.14, 0.97, y)
+    r = r + 0.20 * drape - inset + 0.03 * drape * (np.cos(a) < 0)
+    return polar(a, y, r) + np.array([0.0, 0.0, -0.01])
+
+def hood_form(U, V, P):
+    a = np.arctan2(P[..., 0], P[..., 2])
+    return 0.016 * np.sin(a * 7.0 + 1.5 * vnoise(P * 4.0)) * sstep(1.25, 1.02, P[..., 1]) + 0.006 * np.sin(a * 11.0) * sstep(1.55, 1.75, P[..., 1])
+
+def hood_paint(c):
+    rgb = cloth(c, np.array(FOE["hood"]), 1.0)
+    edge = (sstep(0.025, 0.0, c.U) + sstep(0.975, 1.0, c.U)) * sstep(1.52, 1.44, c.y)
+    rgb = mixc(rgb, rgb * 0.62, np.clip(edge, 0, 1))                      # the rolled edge round the face
+    rgb = mixc(rgb, rgb * 0.75, sstep(0.94, 1.0, c.V))
+    return out(rgb, h=threads(c, 0.008, 1.4), rough=0.94)
+
+def hood_w(P, U, V):
+    t = sstep(1.10, 1.0, P[:, 1])
+    return {"head": 1.0 - t, "torso": t}
+
+# A pointed bronze helmet (the Assyrian and Persian kind the hill peoples copied): a rolled rim,
+# a rib up each side, a nose bar, a horsehair crest streaming back, a leather curtain at the nape
+HELM = [(0.0, 1.43, 0.405, 0.385), (0.05, 1.45, 0.415, 0.395), (0.12, 1.49, 0.40, 0.38), (0.4, 1.66, 0.345, 0.325),
+    (0.65, 1.82, 0.235, 0.22), (0.85, 1.93, 0.115, 0.108), (0.96, 1.985, 0.035, 0.035), (1.0, 1.995, 0.003, 0.003)]
+
+def helm_shape(U, V):
+    P = lathe(HELM, U, V)
+    return P + np.stack([0 * P[..., 0], 0.13 * P[..., 2] * (1.0 - sstep(0.0, 0.5, V)), 0 * P[..., 0]], -1)
+
+def helm_form(U, V, P):
+    a = TAU * U
+    rim = 0.016 * sstep(0.0, 0.025, V) * sstep(0.09, 0.05, V)
+    ribs = 0.009 * g1(np.abs(np.sin(a)) - 1.0, 0.004) * sstep(0.1, 0.2, V)
+    return rim + ribs + 0.0015 * (vnoise(P * 60.0) - 0.5)
+
+def bronze(c, base, polish=1.0):
+    n = fbm(c.P * 25.0)
+    rgb = np.ones(c.U.shape + (3,)) * base * (0.82 + 0.35 * n)[..., None]
+    rgb = mixc(rgb, np.array([0.30, 0.38, 0.30]), 0.25 * sstep(0.55, 0.8, fbm(c.P * 9.0 + 2.0)))   # patina
+    return out(rgb, h=0.0015 * (vnoise(c.P * 60.0) - 0.5), rough=0.34 + 0.25 * n * polish)
+
+def helm_paint(c):
+    o = bronze(c, np.array(FOE["helmet"]))
+    o["rgb"] = o["rgb"] * (1.0 - 0.25 * sstep(0.06, 0.09, c.V) * sstep(0.12, 0.09, c.V))[..., None]
+    return o
+
+CREST = np.array([0.62, 0.14, 0.10])
+CREST_KEYS = [(0, 0.0, 1.99, 0.03, 0.03, 0.03), (0.2, 0.0, 2.05, -0.06, 0.045, 0.10), (0.5, 0.0, 2.02, -0.24, 0.05, 0.11),
+    (0.8, 0.0, 1.90, -0.40, 0.042, 0.085), (1.0, 0.0, 1.76, -0.50, 0.01, 0.01)]
+
+def crest_paint(c):
+    strands = 0.5 + 0.5 * np.sin(TAU * c.U * 9.0 + 3.0 * fbm(c.P * 20.0))
+    rgb = np.ones(c.U.shape + (3,)) * CREST * (0.7 + 0.45 * strands)[..., None]
+    return out(rgb, h=0.001 * strands, rough=0.7)
+
+def curtain_shape(U, V):
+    deg = 95.0 + 170.0 * U
+    a = np.radians(deg)
+    y = 1.40 + 0.05 * np.cos(a) - 0.33 * V
+    r = ell_r(a, HRX, HRZ) * 0.92 + 0.07 + 0.09 * V
+    return polar(a, y, r)
+
+def curtain_paint(c):
+    o = leather_paint(c, 0.75)
+    o["rgb"] = o["rgb"] * (1.0 - 0.3 * sstep(0.92, 1.0, c.V))[..., None]
+    return o
+
+# A corselet of small bronze-and-leather scales, row on row, over the tunic
+def corselet_shape(U, V):
+    y = 0.985 - 0.47 * V
+    return tunic_ring(TAU * U, y, 0.022 + 0.01 * sstep(0.8, 1.0, V) - 0.04 * sstep(0.08, 0.0, V))
+
+def scales(c):
+    row = (0.985 - c.y) / 0.034
+    r = np.floor(row)
+    a = np.arctan2(c.x, c.z)
+    u = a / TAU * 46.0 + 0.5 * (r % 2)
+    fu, fr = u - np.floor(u), row - r
+    # each scale rounded at its foot, lying over the one below: high at its foot, low at its head
+    shape = np.clip(1.0 - ((fu - 0.5) / 0.5) ** 2 - (sstep(0.5, 1.0, fr) ** 2), 0.0, 1.0)
+    return shape * (0.4 + 0.6 * fr), r
+
+def corselet_paint(c):
+    sh, r = scales(c)
+    base = np.array(FOE["armour"])
+    glint = 0.85 + 0.3 * _hash(r, np.floor(np.arctan2(c.x, c.z) / TAU * 46.0 + 0.5 * (r % 2)), r * 0 + 2)
+    rgb = np.ones(c.U.shape + (3,)) * base * glint[..., None] * (0.55 + 0.6 * sh)[..., None]
+    edge = np.maximum(sstep(0.06, 0.0, c.V), sstep(0.94, 1.0, c.V))
+    rgb = mixc(rgb, LEATHER * 0.6, edge)
+    return out(rgb, h=0.004 * sh, rough=0.45 + 0.3 * (1.0 - sh))
+
+# A round shield of hide on a wicker frame on his left side: a dished face, a laced rim, a
+# bronze boss in a ring of rivets, a pale band painted round it
+SH_C = np.array([0.535, 0.64, 0.11])
+SH_N = np.array([1.0, 0.0, 0.62]) / np.linalg.norm([1.0, 0.0, 0.62])
+SH_R = 0.30
+
+def shield_frame():
+    up = np.array([0.0, 1.0, 0.0])
+    side = np.cross(up, SH_N)
+    return up, side / np.linalg.norm(side)
+
+def shield_shape(U, V):
+    up, side = shield_frame()
+    a = TAU * U
+    lat = (V - 0.5) * math.pi
+    d = np.cos(lat)
+    face = np.sin(lat)                                   # +1 the outer face, -1 the inner
+    depth = np.where(face > 0, 0.07 * np.abs(face) ** 0.6, 0.03 * face)
+    P = SH_C + (SH_R * d * np.cos(a))[..., None] * side + (SH_R * d * np.sin(a))[..., None] * up + depth[..., None] * SH_N
+    return P
+
+def shield_paint(c):
+    up, side = shield_frame()
+    q = c.P - SH_C
+    out_ = np.sum(q * SH_N, -1)
+    d = np.linalg.norm(q - out_[..., None] * SH_N, axis=-1) / SH_R
+    ang = np.arctan2(np.sum(q * up, -1), np.sum(q * side, -1))
+    face = sstep(-0.005, 0.01, out_)
+    rgb = np.ones(c.U.shape + (3,)) * np.array(FOE["shield"]) * (0.8 + 0.3 * fbm(c.P * 18.0))[..., None]
+    rgb = mixc(rgb, np.array([0.86, 0.78, 0.60]), sstep(0.66, 0.69, d) * sstep(0.80, 0.77, d))     # the pale band
+    rgb = mixc(rgb, LEATHER * 0.7, sstep(0.9, 0.93, d))                                            # laced rim
+    lace = sstep(0.93, 0.97, d) * sstep(0.3, 0.7, np.sin(ang * 24.0))
+    rgb = mixc(rgb, LEATHER * 0.45, lace)
+    rivet = sstep(0.05, 0.02, np.hypot(d - 0.52, (np.mod(ang * 8.0 / TAU, 1.0) - 0.5) * 0.4))
+    boss = sstep(0.2, 0.17, d)
+    rgb = mixc(rgb, np.array([0.70, 0.55, 0.30]), np.maximum(rivet, boss))
+    back = np.ones(c.U.shape + (3,)) * WICKER * 0.6 * (0.7 + 0.5 * (0.5 + 0.5 * np.sin(ang * 30.0)))[..., None]
+    rgb = mixc(back, rgb, face)
+    return out(rgb, h=0.003 * boss * face + 0.0015 * lace, rough=0.75 - 0.4 * np.maximum(rivet, boss))
+
+# A cloak from the shoulders to the calf, on the rig's cape pivot: it streams behind a run
+def cape_shape(U, V, inset=0.0):
+    y = 0.99 - 0.66 * V
+    spread = 62.0 - 8.0 * V
+    a = np.radians(180.0 - spread + 2.0 * spread * U)
+    off = 0.035 + 0.11 * V ** 1.2 - inset
+    return tunic_ring(a, y, off) + np.stack([0.0 * V, 0.0 * V, -0.02 - 0.03 * V], -1)
+
+def cape_form(U, V, P):
+    return 0.018 * np.sin(U * TAU * 3.0 + 0.6 * vnoise(P * 4.0)) * sstep(0.1, 0.5, V)
+
+def cape_paint(c, lining=False):
+    base = np.array(FOE["cape"]) * (0.55 if lining else 1.0)
+    rgb = cloth(c, base, 1.0)
+    rgb = mixc(rgb, rgb * 0.7, sstep(0.95, 1.0, c.V))
+    return out(rgb, h=threads(c, 0.008), rough=0.92)
+
+def cape_w(P, U, V):
+    t = sstep(0.96, 0.86, P[:, 1])
+    return {"torso": 1.0 - t, "cape": t}
+
+# An empty sack slung on his back: he's not here to fight
+SACK_C = np.array([0.02, 0.66, -0.42])
+
+def sack_form(U, V, P):
+    return 0.012 * np.sin(U * TAU * 5.0 + V * 7.0 + 2.0 * vnoise(P * 5.0)) + 0.02 * sstep(0.5, 0.0, V)
+
+def sack_paint(c):
+    weave = (0.5 + 0.5 * np.sin(c.P[..., 0] * 900.0)) * (0.5 + 0.5 * np.sin(c.P[..., 1] * 900.0))
+    rgb = np.ones(c.U.shape + (3,)) * np.array(FOE["sack"]) * (0.75 + 0.3 * fbm(c.P * 12.0) + 0.1 * weave)[..., None]
+    span = max(float(np.abs(c.f).max()), 1e-4)
+    rgb = rgb * (1.0 + 0.3 * np.clip(c.f / span, -1.0, 1.0))[..., None]
+    return out(rgb, h=0.0008 * weave, rough=0.95)
+
+if SLOT == 4:
+    if "hood" in FOE:
+        Part("hood", hood_shape, 44, 20, hood_paint, hood_w, closed=False, form=hood_form, ref=HC, res=1.0)
+        Part("hood_lining", lambda U, V: hood_shape(U, V, 0.012, 0.35), 30, 10,
+            lambda c: out(cloth(c, np.array(FOE["hood"]) * 0.5, 0.5), rough=0.95), hood_w, closed=False,
+            ref=HC + np.array([0.0, 0.0, 3.0]), res=0.4)
+    if "helmet" in FOE:
+        Part("helmet", helm_shape, 28, 12, helm_paint, W("head"), form=helm_form, res=1.0)
+        Part("crest", lambda U, V: tube(CREST_KEYS, U, V, side=(1.0, 0.0, 0.0)), 8, 10, crest_paint, W("head"), res=0.9)
+        Part("nosebar", lambda U, V: tube([(0, 0.0, 1.47, 0.39, 0.02, 0.012), (0.5, 0.0, 1.38, 0.425, 0.022, 0.012),
+            (1.0, 0.0, 1.31, 0.43, 0.018, 0.01)], U, V, side=(1.0, 0.0, 0.0)), 6, 4, lambda c: bronze(c, np.array(FOE["helmet"]) * 0.85),
+            W("head"), res=0.9)
+        Part("curtain", curtain_shape, 16, 5, curtain_paint, W("head"), closed=False, ref=HC, res=0.8)
+    if "armour" in FOE:
+        Part("corselet", corselet_shape, 40, 14, corselet_paint, tunic_w, ref=(0, 0.75, 0), res=1.2)
+    if "shield" in FOE:
+        Part("shield", shield_shape, 24, 10, shield_paint, W("torso"), ref=SH_C, res=1.1)
+    if "cape" in FOE:
+        Part("cape", cape_shape, 14, 12, cape_paint, cape_w, closed=False, form=cape_form, ref=(0, 0.7, 0), res=0.9)
+        Part("cape_lining", lambda U, V: cape_shape(U, V, 0.01), 14, 12, lambda c: cape_paint(c, True), cape_w, closed=False,
+            form=cape_form, ref=(0, 0.7, -3.0), res=0.4)
+    if "sack" in FOE:
+        Part("sack", lambda U, V: ellipsoid(SACK_C, (0.23, 0.27, 0.14), U, V), 14, 10, sack_paint, W("torso"), form=sack_form, res=0.9)
+        Part("sack_neck", lambda U, V: tube([(0, 0.02, 0.90, -0.42, 0.07, 0.05), (0.5, 0.05, 0.97, -0.41, 0.045, 0.04),
+            (1.0, 0.09, 1.0, -0.40, 0.03, 0.03)], U, V), 6, 4, sack_paint, W("torso"), res=0.9)
+        Part("strap", lambda U, V: ribbon(strap_centre, U, V, 0.022, 0.012, (0, 0.75, 0)), 6, 26, rope_paint, W("torso"), res=0.9)
 
 # ── Atlas ────────────────────────────────────────────────────────────────────
 def pack(parts):
@@ -1197,7 +1514,8 @@ def pack(parts):
     print("atlas: %.0f px per metre" % lo)
 
 def paint_atlas(parts):
-    albedo = np.full((TEX, TEX, 3), 0.5)
+    albedo = np.full((TEX, TEX, 4), 0.5)
+    albedo[..., 3] = 1.0
     normal = np.zeros((TEX, TEX, 3))
     normal[..., :] = (0.5, 0.5, 1.0)
     aux = np.zeros((TEX, TEX, 3))
@@ -1220,7 +1538,9 @@ def paint_atlas(parts):
         c.su, c.sv = U * p.Lu, V * p.Lv
         c.mu, c.mv = p.Lu / (w - 2 * PAD), p.Lv / (h - 2 * PAD)
         o = p.paint(c)
-        albedo[y0:y0 + h, x0:x0 + w] = np.clip(o["rgb"], 0.0, 1.0)
+        albedo[y0:y0 + h, x0:x0 + w, :3] = np.clip(o["rgb"], 0.0, 1.0)
+        if TINT_SKIN and "skin" in o:
+            albedo[y0:y0 + h, x0:x0 + w, 3] = 1.0 - np.clip(o["skin"] + np.zeros(U.shape), 0.0, 1.0)
         aux[y0:y0 + h, x0:x0 + w, 1] = o["rough"]
         aux[y0:y0 + h, x0:x0 + w, 2] = o["dye"]
         if o["h"] is not None:
@@ -1335,10 +1655,12 @@ def bake_ao(ob):
 
 def save_png(path, arr, srgb):
     h, w = arr.shape[:2]
-    img = bpy.data.images.new(os.path.basename(path), w, h, alpha=False)
+    alpha = arr.shape[2] == 4
+    img = bpy.data.images.new(os.path.basename(path), w, h, alpha=alpha)
     img.colorspace_settings.name = "sRGB" if srgb else "Non-Color"
+    img.alpha_mode = "STRAIGHT"
     rgba = np.ones((h, w, 4), np.float32)
-    rgba[..., :3] = np.clip(arr, 0.0, 1.0)
+    rgba[..., :arr.shape[2]] = np.clip(arr, 0.0, 1.0)
     img.pixels.foreach_set(rgba.ravel())
     img.filepath_raw = path
     img.file_format = "PNG"

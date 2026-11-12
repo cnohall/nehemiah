@@ -11,6 +11,8 @@ const SHADER := preload("res://assets/shaders/baked_figure.gdshader")
 const SHADER_TEX := preload("res://assets/shaders/baked_figure_tex.gdshader")
 static var _material: ShaderMaterial
 static var _textured := {}           # glb path → ShaderMaterial (figures with painted textures)
+## The skin tone a tinted figure (a foe, build_crew.py) is painted in: CharacterRig.SKIN[0]
+const SKIN_PAINTED := Color(0.76, 0.55, 0.40)
 
 var _rig: Node3D
 var _skeleton: Skeleton3D
@@ -49,7 +51,7 @@ static func bone_map(rig: Node3D) -> Dictionary:
 
 ## The props kept as the rig's own parts: shown and hidden by the pose (CharacterRig._tool_visible)
 static func kept_pivots(rig: Node3D) -> Array:
-	return [rig._tool, rig._paddle, rig._sword, rig._belt_sword, rig._belt_tool].filter(func(n): return n != null)
+	return [rig._tool, rig._paddle, rig._sword, rig._belt_sword, rig._belt_tool, rig._spear, rig._dagger].filter(func(n): return n != null)
 
 ## `node`'s transform in the rig's own space, by its parents (works off the tree too)
 static func rig_space(node: Node3D, rig: Node3D) -> Transform3D:
@@ -113,6 +115,13 @@ func _setup(rig: Node3D, inst: Node3D, material: ShaderMaterial) -> void:
 	for mi: MeshInstance3D in inst.find_children("*", "MeshInstance3D", true, false):
 		mi.material_override = material
 		mi.set_instance_shader_parameter("dye", rig._look.get("dye", rig._look.get("hat_color", Color.WHITE)))
+		var skin: Color = rig._look.get("skin", SKIN_PAINTED)
+		var a := skin.srgb_to_linear()
+		var b := SKIN_PAINTED.srgb_to_linear()
+		mi.set_instance_shader_parameter("skin_tint", Vector3(a.r / b.r, a.g / b.g, a.b / b.b))
+		# A foe keeps his dark outline (CharacterRig: oxblood round the big forms)
+		if rig._outline_mat != null:
+			mi.material_overlay = rig._outline_mat
 		rig._parts.append(mi)
 	var found := inst.find_children("*", "Skeleton3D", true, false)
 	if found.is_empty():

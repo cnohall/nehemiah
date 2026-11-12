@@ -2,11 +2,11 @@ extends SceneTree
 
 # The builder as built in code (left of each pair) and baked in Blender (right), in a few
 # poses, for review:
-#   Godot --path . --fixed-fps 30 --script res://tools/blender/compare_shots.gd -- <out_dir> [tag] [glb] [slot]
+#   Godot --path . --fixed-fps 30 --script res://tools/blender/compare_shots.gd -- <out_dir> [tag] [glb] [slot | enemy kind]
 var _out := "res://build/blender/compare"
 var _tag := "builder"
 var _glb := "res://assets/models/figures/builder.glb"
-var _slot := 0
+var _fig := "0"
 var _frame := 0
 var _rigs: Array[CharacterRig] = []
 var _camera: Camera3D
@@ -28,7 +28,7 @@ func _initialize() -> void:
 	if rest.size() > 2:
 		_glb = rest[2]
 	if rest.size() > 3:
-		_slot = int(rest[3])
+		_fig = rest[3]
 	DirAccess.make_dir_recursive_absolute(_out)
 	root.size = Vector2i(1920, 1000)
 	root.msaa_3d = Viewport.MSAA_4X
@@ -63,8 +63,7 @@ func _initialize() -> void:
 	_stage.add_child(_camera)
 
 func _spawn() -> void:
-	var look := CharacterRig.worker_look(_slot, Palette.CREW[_slot])
-	look.erase("baked")
+	var look: Dictionary = load("res://tools/blender/export_rig.gd").code_look(_fig)
 	var baked := look.duplicate()
 	baked["baked"] = _glb
 	var i := 0

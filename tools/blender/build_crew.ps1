@@ -1,7 +1,7 @@
 # Build a crew figure authored in Blender (build_crew.py): export the rig's bones (Godot) ->
 # model, paint, bake (Blender) -> import (Godot).
 #   powershell -File tools/blender/build_crew.ps1 [-Slot 0] [-Name builder_v2] [-Shots <dir>]
-param([int]$Slot = 0, [string]$Name = "builder_v2", [string]$Shots = "")
+param([string]$Slot = "0", [string]$Name = "builder_v2", [string]$Shots = "")
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path "$PSScriptRoot/../.."
 $godot = $env:GODOT

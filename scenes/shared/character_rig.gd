@@ -186,6 +186,8 @@ static var _outlines: Dictionary = {}
 # ── Looks ──────────────────────────────────────────────────
 
 const TRADES := ["Builder", "Water carrier", "Carpenter", "Overseer"]
+const FOE_FIGURES := {"scout": "res://assets/models/figures/scout_v2.glb", "brute": "res://assets/models/figures/brute_v2.glb",
+	"raider": "res://assets/models/figures/raider_v2.glb", "saboteur": "res://assets/models/figures/saboteur_v2.glb"}
 const CREW_FIGURES := ["res://assets/models/figures/builder_v2.glb", "res://assets/models/figures/water_carrier_v2.glb",
 	"res://assets/models/figures/carpenter_v2.glb", "res://assets/models/figures/overseer_v2.glb"]
 
@@ -258,6 +260,8 @@ static func enemy_look(kind: String, variant := 0) -> Dictionary:
 			base.merge({"robe": Color(0.36, 0.28, 0.22), "sash": Color(0.62, 0.20, 0.14),
 				"hat": "hood", "hat_color": Color(0.17, 0.14, 0.13), "beard": "short", "weapon": "spear"})
 	base.merge({"belt_color": base["sash"], "sculpted_builder": true, "sculpted_body": true})
+	if not "--crew-v1" in OS.get_cmdline_user_args() and FOE_FIGURES.has(kind):
+		base["baked"] = FOE_FIGURES[kind]
 	return base
 
 # ── Setup ──────────────────────────────────────────────────

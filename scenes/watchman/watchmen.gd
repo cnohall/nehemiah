@@ -178,11 +178,12 @@ func _build_stand(side: int) -> Dictionary:
 	rig.position = Vector3(0, DECK_Y + 0.06, -0.1)
 	# One of the city's own, with a spear (Neh. 4:13)
 	var look := CharacterRig.worker_look(1, LOOK)
-	look.erase("baked")   # the crew's Blender figure (BakedFigure) would drop what is changed below
 	look["tool"] = false
 	look["sword"] = false
 	look.erase("satchel")
 	look["weapon"] = "spear"
+	if look.has("baked"):
+		look["baked"] = "res://assets/models/figures/watchman_v2.glb"   # the water carrier without his load
 	rig.setup(look, 0.9)
 	rig.set_ring_color(Color(0, 0, 0, 0))
 	rig.play("idle_down")

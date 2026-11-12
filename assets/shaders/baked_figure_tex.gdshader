@@ -2,7 +2,8 @@ shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx;
 
 // A figure authored in Blender (tools/blender/build_crew.py): one skinned mesh, painted textures.
-//   albedo_tex  paint; dyed cloth is painted as its shade (near white) and takes the dye
+//   albedo_tex  paint; dyed cloth is painted as its shade (near white) and takes the dye;
+//               alpha 0 where the skin takes skin_tint (a foe painted in one tone, worn in his own)
 //   normal_tex  fine relief: weave, strands, wicker
 //   aux_tex     r ambient occlusion, g roughness, b dye mask
 
@@ -10,6 +11,7 @@ uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic;
 uniform sampler2D aux_tex : hint_default_white, filter_linear_mipmap;
 instance uniform vec4 dye : source_color = vec4(1.0);
+instance uniform vec3 skin_tint = vec3(1.0);   // linear ratio: this figure's skin over the one painted
 instance uniform float flash = 0.0;
 uniform vec4 rim_color : source_color = vec4(1.0, 0.93, 0.78, 1.0);
 uniform float rim_strength = 0.08;
@@ -18,7 +20,8 @@ uniform float normal_strength = 1.0;
 
 void fragment() {
 	vec3 aux = texture(aux_tex, UV).rgb;
-	vec3 paint = texture(albedo_tex, UV).rgb * mix(vec3(1.0), dye.rgb, aux.b);
+	vec4 albedo = texture(albedo_tex, UV);
+	vec3 paint = albedo.rgb * mix(vec3(1.0), dye.rgb, aux.b) * mix(skin_tint, vec3(1.0), albedo.a);
 	paint *= mix(1.0, aux.r, ao_strength);
 	ALBEDO = mix(paint, vec3(1.0, 0.96, 0.88), flash * 0.8);
 	NORMAL_MAP = texture(normal_tex, UV).rgb;
