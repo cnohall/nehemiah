@@ -206,6 +206,9 @@ func _show_counts(counts: Array, people: int) -> void:
 			box.add_child(_text("+ " + g, UiStyle.SPECTRAL_MEDIUM, 17, GAIN))
 		for c: String in lines["cost"]:
 			box.add_child(_text("- " + c, UiStyle.SPECTRAL_MEDIUM, 17, COST))
+		# The ask, on the thing itself (it was a line on the dawn banner)
+		if counts[i] == 0:
+			box.add_child(_text(tr("Stand here to choose"), UiStyle.SPECTRAL_MEDIUM, 15, Color(WorldTag.TEXT, 0.75)))
 		if people > 1 and counts[i] > 0:
 			box.add_child(_text("● ".repeat(counts[i]).strip_edges(), UiStyle.WORLD_FONT, 16, WorldTag.TEXT))
 

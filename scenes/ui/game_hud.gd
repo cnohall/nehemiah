@@ -240,6 +240,9 @@ func _open_pause() -> void:
 	vb.get_node("Title").text = "Paused" if _solo() else "Menu"
 	vb.get_node("Hint").text = "Nothing moves until you resume." if _solo() \
 		else "The game keeps running for your crew while this is open."
+	# Said here, where a player goes to quit, not on the dawn banner
+	if GameState.saves_campaign() and not GameState.campaign_save().is_empty():
+		vb.get_node("Hint").text = tr(vb.get_node("Hint").text) + "\n" + tr("Saved at the start of each stretch. Continue from the title screen")
 	for r in _host_refreshers:
 		r.call()
 	UiFx.fade_in(pause_menu, 0.16)
@@ -595,18 +598,14 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			_sun_warned = false
 			var first_day := GameState.day_in_section(GameState.current_day).x == 0
 			var sub: String = (tr("A new stretch: %s  ·  %s") if first_day else "%s  ·  %s") % [tr(section["name"]), GameState.short_ref(section["ref"])]
-			# First day of a section that brings something new: say what
+			# The dawn banner is where, when, how long: nothing else. What's new was just
+			# drawn on the twist cards, the yard rings say "stand here" themselves, a card
+			# choice was made on its card, the save note lives in the pause menu. Only a twist
+			# no card showed (no captions, or the story off) still gets its line here
 			if first_day:
 				for twist: String in GameState.new_twists():
-					sub += "\n" + tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
-				var yard := get_tree().get_first_node_in_group("yard_choice")
-				if yard != null and yard.open:
-					sub += "
-" + tr("How will you meet it? Stand in a ring")
-				elif GameState.BOONS.has(GameState.boon):
-					var lines := GameState.boon_lines(GameState.boon)
-					sub += "\n" + tr("The crew chose: %s") % tr(GameState.BOONS[GameState.boon]["title"])
-					sub += "  ·  " + "  ·  ".join(lines["gain"] + lines["cost"])
+					if StoryData.disabled() or TwistCard.captions(twist).is_empty():
+						sub += "\n" + tr(GameState.twist_intro(twist)).format({"horn": "[%s]" % InputMode.key("horn")})
 			if GameState.sun_total > 0.0:
 				var pos := GameState.day_in_section(GameState.current_day)
 				if pos.x == 0:
@@ -615,8 +614,6 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 					sub += "\n" + tr("The last day of this stretch: it must stand before the stars appear")
 				else:
 					sub += "\n" + tr("%d of %d stand, %d days left") % [GameState.targets_done, GameState.targets_total, pos.y - pos.x]
-			if first_day and GameState.dawn_saved():
-				sub += "\n" + tr("Progress saved. Continue from the title screen")
 			if not GameState.free_play():
 				_show_banner(tr("Day %d") % GameState.current_day, sub)
 		GameState.Phase.WON:

@@ -2679,3 +2679,9 @@ msgstr "실험"
 
 msgid "Reset keys"
 msgstr "키 초기화"
+
+msgid "Saved at the start of each stretch. Continue from the title screen"
+msgstr "각 구간이 시작될 때 저장됩니다. 타이틀 화면에서 이어하기"
+
+msgid "Stand here to choose"
+msgstr "여기 서서 고르기"

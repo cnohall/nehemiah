@@ -3357,3 +3357,8 @@ msgstr ""
 msgid "← →  or  Click   Choose          Esc   Back"
 msgstr ""
 
+msgid "Saved at the start of each stretch. Continue from the title screen"
+msgstr ""
+
+msgid "Stand here to choose"
+msgstr ""

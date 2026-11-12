@@ -2695,3 +2695,9 @@ msgstr "Experimental"
 
 msgid "Reset keys"
 msgstr "Restablecer teclas"
+
+msgid "Saved at the start of each stretch. Continue from the title screen"
+msgstr "Se guarda al inicio de cada tramo. Continúa desde la pantalla de título"
+
+msgid "Stand here to choose"
+msgstr "Ponte aquí para elegir"
