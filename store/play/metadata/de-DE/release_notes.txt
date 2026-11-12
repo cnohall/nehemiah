@@ -1,7 +1,6 @@
 Neu in diesem Build:
-• Die Geschichte wird vorgelesen (Englisch), mit eigener Lautstärke für den Erzähler
-• Mehr Musik: eigene Stimmung für Menü, Geschichte und die schwersten Abschnitte
-• Klänge besser aufeinander abgestimmt
-• Flüssigeres Online-Koop und eine klare Meldung, wenn zwei Spieler verschiedene Versionen haben
-• Lasten fliegen vom Stapel in deine Arme und auf die Mauer
-• Schnellere Schleuder; kein Klettern mit Last
+• Neue, handgemachte Figuren für die ganze Mannschaft, die Feinde, die Stadtleute und die Wache
+• Ein Ladebildschirm mit der Karte des Abschnitts, einem Vers aus Nehemia 3 und Tipps
+• Feinde kommen in geformten Wellen statt in einem steten Strom
+• Einstellungen in einer übersichtlichen Liste; weniger zum Herumprobieren
+• Kürzeres Morgenbanner: Tag, Ort und Frist

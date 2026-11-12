@@ -1,7 +1,6 @@
 New in this build:
-• The story is read aloud (English), with its own Narration volume
-• More music: its own feel for the menu, the story and the hardest stretches
-• Sounds balanced against each other
-• Smoother online co-op, and a clear message when two players have different versions
-• Loads hop from the pile into your arms and onto the wall
-• Quicker sling; no climbing while carrying
+• New hand-made figures for the whole crew, enemies, townsfolk and the watch
+• A loading screen with the stretch map, a verse from Nehemiah 3 and tips
+• Enemies come in shaped waves instead of a steady trickle
+• Settings in one tidy list; fewer options to fiddle with
+• Shorter dawn banner: the day, the place and the deadline

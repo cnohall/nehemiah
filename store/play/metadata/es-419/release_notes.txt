@@ -1,7 +1,6 @@
 Novedades de esta versión:
-• La historia se lee en voz alta (en inglés), con su propio volumen de narración
-• Más música: un ambiente propio para el menú, la historia y los tramos más duros
-• Sonidos mejor equilibrados entre sí
-• Cooperativo en línea más fluido y un aviso claro cuando dos jugadores tienen versiones distintas
-• Las cargas saltan del montón a tus brazos y al muro
-• Honda más rápida; no se puede trepar cargando
+• Nuevas figuras hechas a mano para todo el equipo, los enemigos, la gente de la ciudad y la guardia
+• Una pantalla de carga con el mapa del tramo, un versículo de Nehemías 3 y consejos
+• Los enemigos llegan en oleadas con forma en vez de un goteo constante
+• Ajustes en una sola lista ordenada; menos opciones que tocar
+• Anuncio del amanecer más corto: el día, el lugar y el plazo

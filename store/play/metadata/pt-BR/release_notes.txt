@@ -1,7 +1,6 @@
 Novidades desta versão:
-• A história é lida em voz alta (em inglês), com volume próprio de narração
-• Mais música: um clima próprio para o menu, a história e os trechos mais difíceis
-• Sons mais equilibrados entre si
-• Cooperativo online mais suave e um aviso claro quando dois jogadores têm versões diferentes
-• As cargas pulam da pilha para os seus braços e para a muralha
-• Funda mais rápida; sem escalar carregando
+• Novas figuras feitas à mão para toda a equipe, os inimigos, o povo da cidade e a guarda
+• Uma tela de carregamento com o mapa do trecho, um versículo de Neemias 3 e dicas
+• Os inimigos chegam em ondas com forma, em vez de um fluxo constante
+• Configurações numa só lista organizada; menos opções para mexer
+• Aviso do amanhecer mais curto: o dia, o lugar e o prazo
